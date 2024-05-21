@@ -7,4 +7,6 @@ according to their modules.
 .. toctree::
    :maxdepth: 1
 
-   modules/sparapy
+   modules/sparapy.radiosity
+   modules/sparapy.geometry
+   modules/sparapy.sound_object

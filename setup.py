@@ -16,6 +16,8 @@ requirements = [
     'scipy',
     'matplotlib',
     'pyfar',
+    'sofar',
+    'tqdm',
 ]
 
 setup_requirements = [
