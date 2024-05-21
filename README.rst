@@ -10,8 +10,6 @@ sparapy
     :alt: Documentation Status
 .. image:: https://circleci.com/gh/ahms5/sparapy.svg?style=shield
     :target: https://circleci.com/gh/ahms5/sparapy
-
-
 .. image:: https://mybinder.org/badge_logo.svg
     :target: https://mybinder.org/v2/gh/pyfar/gallery/main?filepath=docs/gallery
 
@@ -38,7 +36,7 @@ Use pip to install sparapy
 
     $ pip install sparapy
 
-(Requires Python 3.8 or higher)
+(Requires Python 3.9 or higher)
 
 Contributing
 ============
