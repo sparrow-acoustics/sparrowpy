@@ -17,7 +17,8 @@ class Polygon():
     pts: np.ndarray
 
     def __init__(
-            self, points: np.ndarray, up_vector: np.ndarray, normal: np.ndarray) -> None:
+            self, points: np.ndarray, up_vector: np.ndarray,
+            normal: np.ndarray) -> None:
         self.pts = np.array(points, dtype=float)
         normal = np.array(normal, dtype=float)
         self.form_factors = []

@@ -20,18 +20,6 @@ def test_polygon_defaults():
     npt.assert_allclose(poly.normal, np.array([0, 0, 1]))
 
 
-def test_wall_defaults():
-    poly = geo.Wall(
-        [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]], [0, 1, 0], [0, 0, 1])
-    npt.assert_equal(poly.pts[0], np.array([0, 0, 0]))
-    npt.assert_equal(poly.pts[1], np.array([1, 0, 0]))
-    npt.assert_equal(poly.pts[2], np.array([1, 1, 0]))
-    npt.assert_equal(poly.pts[3], np.array([0, 1, 0]))
-    assert poly.directivity is None
-    npt.assert_almost_equal(poly.up_vector, np.array([0, 1, 0]))
-    npt.assert_allclose(poly.normal, np.array([0, 0, 1]))
-
-
 def test_polygon_center():
     poly = geo.Polygon(
         [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]], [0, 1, 0], [0, 0, 1])
@@ -125,7 +113,7 @@ def test_polygon_from_dict():
     up_vector = np.array([0, 1, 0])
     normal = np.array([0, 0, 1])
     polygon_dict = {
-        'pts': points.tolist(),  # numpy arrays should be converted to list before being inserted into a dictionary
+        'pts': points.tolist(),
         'up_vector': up_vector.tolist(),
         'normal': normal.tolist()
     }

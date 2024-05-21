@@ -1,10 +1,11 @@
 [tool.ruff]
 exclude = [
-    ".git",
-    "docs",
+    '.git',
+    'docs',
+    'setup.py',
 ]
-ignore = []
-select = [
+lint.ignore = []
+lint.select = [
     "E",
     "F",
     "W",

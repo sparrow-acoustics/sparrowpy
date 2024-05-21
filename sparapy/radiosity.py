@@ -680,7 +680,9 @@ class PatchesDirectional(Patches):
                         alpha = self.absorption[i_frequency]
 
                         energy = A_k_minus1_delay * form_factor * (
-                            1-alpha) * np.exp(-self.sound_attenuation_factor[i_frequency] * distance)
+                            1-alpha) * np.exp(
+                                -self.sound_attenuation_factor[i_frequency] \
+                                    * distance)
 
                         # find directional scattering coefficient
                         difference = source_patch.center - receiver_patch.center
@@ -752,7 +754,9 @@ class PatchesDirectional(Patches):
                     delayed_energy = add_delay(energy, delay, axis=-1)
 
                     # Equation 20
-                    factor = cos_xi * (np.exp(-self.sound_attenuation_factor[i_frequency]*R)) / (np.pi * R**2)
+                    factor = cos_xi * (np.exp(
+                        -self.sound_attenuation_factor[i_frequency]*R)) / (
+                            np.pi * R**2)
                     if factor <0:
                         print(factor)
                     receiver_energy = delayed_energy * factor
@@ -843,6 +847,8 @@ class Radiosity():
 
     def to_dict(self) -> dict:
         """Convert this object to dictionary. Used for read write."""
+        is_source = hasattr(self, 'source')
+        source = self.source if is_source else None
         return {
             'patch_size': self.patch_size,
             'max_order_k': self.max_order_k,
@@ -850,9 +856,9 @@ class Radiosity():
             'speed_of_sound': self.speed_of_sound,
             'sampling_rate': self.sampling_rate,
             'patches': [patch.to_dict() for patch in self.patch_list],
-            'source_position': self.source.position.tolist() if hasattr(self, 'source') else None,
-            'source_view': self.source.view.tolist() if hasattr(self, 'source') else None,
-            'source_up': self.source.up.tolist() if hasattr(self, 'source') else None,
+            'source_position': source.position.tolist() if is_source else None,
+            'source_view': source.view.tolist() if is_source else None,
+            'source_up': source.up.tolist() if is_source else None,
         }
 
     @classmethod
@@ -946,7 +952,8 @@ class DirectionalRadiosity():
         n_bins = self.patch_list[0].n_bins
         for patches in self.patch_list:
             assert patches.n_bins == n_bins, \
-                f'Number of bins is not the same for all patches. {patches.n_bins} != {n_bins}'
+                'Number of bins is not the same for all patches. ' + \
+                f'{patches.n_bins} != {n_bins}'
 
         if source is not None:
             self.source = source
@@ -964,6 +971,8 @@ class DirectionalRadiosity():
 
     def to_dict(self) -> dict:
         """Convert this object to dictionary. Used for read write."""
+        is_source = hasattr(self, 'source')
+        source = self.source if is_source else None
         return {
             'patch_size': self.patch_size,
             'max_order_k': self.max_order_k,
@@ -971,10 +980,9 @@ class DirectionalRadiosity():
             'speed_of_sound': self.speed_of_sound,
             'sampling_rate': self.sampling_rate,
             'patches': [patch.to_dict() for patch in self.patch_list],
-            'source_position': self.source.position.tolist() if hasattr(self, 'source') else None,
-            'source_view': self.source.view.tolist() if hasattr(self, 'source') else None,
-            'source_up': self.source.up.tolist() if hasattr(self, 'source') else None,
-
+            'source_position': source.position.tolist() if is_source else None,
+            'source_view': source.view.tolist() if is_source else None,
+            'source_up': source.up.tolist() if is_source else None,
         }
 
     @classmethod
