@@ -1,3 +1,4 @@
+"""SoundObject class for spatial audio reproduction."""
 import matplotlib
 import numpy as np
 import pyfar as pf
@@ -5,10 +6,22 @@ import sofar as sf
 
 
 class DirectivityMS():
+    """Directivity class for FreeFieldDirectivityTF convention."""
+
     data: pf.FrequencyData
     receivers: pf.Coordinates
 
     def __init__(self, file_path: str, source_index=0) -> None:
+        """Init DirectivityMS.
+
+        Parameters
+        ----------
+        file_path : str
+            directivity path for sofa file.
+        source_index : int, optional
+            source index of directivity, by default 0
+
+        """
         sofa = sf.read_sofa(file_path)
         if sofa.GLOBAL_SOFAConventions != 'FreeFieldDirectivityTF':
             raise ValueError('convention need to be FreeFieldDirectivityTF')
@@ -26,6 +39,27 @@ class DirectivityMS():
             self, source_pos: np.ndarray, source_view: np.ndarray,
             source_up: np.ndarray, target_position: np.ndarray,
             i_freq: int) -> float:
+        """Get Directivity for certain position.
+
+        Parameters
+        ----------
+        source_pos : np.ndarray
+            cartesian source position in m
+        source_view : np.ndarray
+            cartesian source view in m
+        source_up : np.ndarray
+            cartesian source up in m
+        target_position : np.ndarray
+            cartesian target position in m
+        i_freq : int
+            frequency bin index
+
+        Returns
+        -------
+        float
+            nearest directivity factor for given position and orientation.
+
+        """
         (azimuth_deg, elevation_deg) = _get_metrics(
             source_pos, source_view, source_up, target_position)
         index, _ = self.receivers.find_nearest_k(
@@ -77,6 +111,7 @@ class SoundObject():
             view vector of sound object
         up : np.ndarray
             uo vector of sound object
+
         """
         self.position = np.array(position, dtype=float)
         assert self.position.shape == (3,)
@@ -87,15 +122,25 @@ class SoundObject():
         self.up /= np.sqrt(np.dot(up, up))
         assert self.up.shape == (3,)
 
-    def plot(self, ax: matplotlib.axes.Axes, color, label):
+    def plot(self, ax: matplotlib.axes.Axes, **kwargs):
+        """Plot SoundObject position and orientation.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes to plot on.
+        **kwargs
+            Keyword arguments that are passed to ``matplotlib.pyplot.scatter()``.
+
+        """
+        pf.plot.freq
         xyz = self.position
-        ax.scatter(xyz[0], xyz[1], xyz[2], color=color, label=label)
+        ax.scatter(xyz[0], xyz[1], xyz[2], kwargs)
 
 
 
 class SoundSource(SoundObject):
-    """Acoustic sound source inhered from SoundObject
-    """
+    """Acoustic sound source inhered from SoundObject."""
 
     directivity: DirectivityMS
     sound_power: float
@@ -118,6 +163,7 @@ class SoundSource(SoundObject):
             Directivity, by default None
         sound_power : float, optional
             sound power of the source in Watt, by default 1
+
         """
         super(SoundSource, self).__init__(position, view, up)
         self.sound_power = float(sound_power)
@@ -125,20 +171,49 @@ class SoundSource(SoundObject):
             assert isinstance(directivity, DirectivityMS)
         self.directivity = directivity
 
-    def plot(self, ax):
-        super(SoundSource, self).plot(ax, 'r', 'Source')
+    def plot(self, ax, **kwargs):
+        """Plot Source position and orientation.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes to plot on.
+        **kwargs
+            Keyword arguments that are passed to ``matplotlib.pyplot.scatter()``.
+
+        """
+        super(SoundSource, self).plot(ax, color='r', label='Source', **kwargs)
 
 
 class Receiver(SoundObject):
-    impulse_response: pf.Signal
+    """Receiver object inhered from SoundObject."""
 
     def __init__(
             self, position: np.ndarray, view: np.ndarray,
-            up: np.ndarray, impulse_response: pf.Signal = None) -> None:
-        super(Receiver, self).__init__(position, view, up)
-        if impulse_response is not None:
-            assert isinstance(impulse_response, pf.Signal)
-        self.impulse_response = impulse_response
+            up: np.ndarray) -> None:
+        """Init sound receiver.
 
-    def plot(self, ax):
-        super(Receiver, self).plot(ax, 'b', 'Receiver')
+        Parameters
+        ----------
+        position : np.ndarray
+            cartesian positions for receiver.
+        view : np.ndarray
+            view vector of sound receiver.
+        up : np.ndarray
+            up vector of sound receiver.
+
+        """
+        super(Receiver, self).__init__(position, view, up)
+
+    def plot(self, ax, **kwargs):
+        """Plot Receiver position and orientation.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Axes to plot on.
+        **kwargs
+            Keyword arguments that are passed to ``matplotlib.pyplot.scatter()``.
+
+        """
+        super(Receiver, self).plot(ax, color='b', label='Receiver', **kwargs)

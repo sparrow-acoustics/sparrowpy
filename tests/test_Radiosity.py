@@ -1,3 +1,4 @@
+"""Test the radiosity.Radiosity module."""
 import os
 
 import numpy as np
@@ -144,6 +145,7 @@ def test_radiosity_reference_with_read_write(max_order_k, tmpdir):
     1,
     ])
 def test_init_energy_exchange_normal(wall, patch_size):
+    """Test init energy exchange."""
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data',
         f'reference_matrix_directional_patch_size{patch_size}.far')
@@ -167,6 +169,7 @@ def test_init_energy_exchange_normal(wall, patch_size):
     1,
     ])
 def test_calc_form_factor_parallel(parallel_walls, patch_size):
+    """Test form factor calculation for parallel walls."""
     wall_source = sample_walls[parallel_walls[0]]
     wall_receiver = sample_walls[parallel_walls[1]]
     path_sofa = os.path.join(
@@ -195,6 +198,7 @@ def test_calc_form_factor_parallel(parallel_walls, patch_size):
     1,
     ])
 def test_calc_form_factor_perpendicular(perpendicular_walls, patch_size):
+    """Test form factor calculation for perpendicular walls."""
     wall_source = sample_walls[perpendicular_walls[0]]
     wall_receiver = sample_walls[perpendicular_walls[1]]
     idx_sort = [0, 0] if patch_size == 1 else perpendicular_walls
@@ -224,6 +228,7 @@ def test_calc_form_factor_perpendicular(perpendicular_walls, patch_size):
     ])
 def test_calc_form_factor_perpendicular_distance(
         perpendicular_walls, patch_size):
+    """Test form factor calculation for perpendicular walls."""
     wall_source = sample_walls[perpendicular_walls[0]]
     wall_receiver = sample_walls[perpendicular_walls[1]]
     path_sofa = os.path.join(
@@ -251,6 +256,7 @@ def test_calc_form_factor_perpendicular_distance(
     ])
 def test_energy_exchange(
         perpendicular_walls, patch_size):
+    """Test energy exchange."""
     max_order_k=3
     ir_length_s=5
     wall_source = sample_walls[perpendicular_walls[0]]
@@ -284,6 +290,7 @@ def test_energy_exchange(
 
 
 def test_Patch_to_from_dict():
+    """Test Patches from dict."""
     perpendicular_walls = [0, 2]
     patch_size = 0.5
     max_order_k=3
@@ -312,6 +319,7 @@ def test_Patch_to_from_dict():
 
 
 def test_radiosity_to_from_dict():
+    """Test Radiosity the results changes for to and from dict."""
     max_order_k = 3
     patch_size = 5
     X = 10
@@ -367,6 +375,7 @@ def test_radiosity_to_from_dict():
 
 
 def test_radiosity_read_write(tmpdir):
+    """Test Radiosity the results changes for read and write."""
     max_order_k = 3
     patch_size = 5
     X = 10

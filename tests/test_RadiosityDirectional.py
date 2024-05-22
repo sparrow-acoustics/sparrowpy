@@ -1,3 +1,5 @@
+
+"""Test the radiosity module with directional Patches."""
 import os
 
 import numpy as np
@@ -141,6 +143,7 @@ def test_radiosity_directional_reference_read_write(max_order_k, tmpdir):
 
 @pytest.mark.parametrize('wall', sample_walls)
 def test_init_energy_exchange(wall):
+    """Test vs refernces for energy_exchange."""
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ihta.E_sec_2.sofa')
     patches = radiosity.PatchesDirectional.from_sofa(wall, 0.2, [], 0, path_sofa)
@@ -174,6 +177,7 @@ def test_init_energy_exchange(wall):
     1,
     ])
 def test_init_energy_exchange_directional_omni(wall, patch_size):
+    """Test vs refernces for energy_exchange."""
     reference_path = os.path.join(
         os.path.dirname(__file__), 'test_data',
         f'reference_matrix_directional_patch_size{patch_size}.far')
@@ -201,6 +205,7 @@ def test_init_energy_exchange_directional_omni(wall, patch_size):
     ])
 def test_directional_energy_exchange(
         perpendicular_walls, patch_size):
+    """Test vs refernces for energy_exchange."""
     max_order_k=3
     ir_length_s=5
     wall_source = sample_walls[perpendicular_walls[0]]
@@ -251,6 +256,7 @@ def test_directional_energy_exchange(
     ])
 def test_directional_specular_reflections(
         perpendicular_walls, patch_size):
+    """Test vs refernces for specular_reflections."""
     max_order_k=3
     ir_length_s=5
     wall_source = sample_walls[perpendicular_walls[0]]
@@ -295,6 +301,7 @@ def test_directional_specular_reflections(
 
 
 def test_PatchDirectional_to_from_dict():
+    """Test if the results are correct with from_dict."""
     perpendicular_walls = [0, 2]
     patch_size = 0.2
     wall_source = sample_walls[perpendicular_walls[0]]
@@ -327,6 +334,7 @@ def test_PatchDirectional_to_from_dict():
 
 
 def test_RadiosityDirectional_to_from_dict():
+    """Test if the results are correct with to_dict and from_dict."""
     max_order_k = 3
     patch_size = 5
     X = 10
@@ -390,6 +398,7 @@ def test_RadiosityDirectional_to_from_dict():
 
 
 def test_RadiosityDirectional_read_write(tmpdir):
+    """Test if the results are correct with read and write."""
     max_order_k = 3
     patch_size = 5
     X = 10

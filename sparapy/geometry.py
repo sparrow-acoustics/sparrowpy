@@ -1,3 +1,4 @@
+"""Module for the geometry of the room and the environment."""
 import matplotlib.axes
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,8 +7,7 @@ from sparapy.sound_object import Receiver, SoundSource
 
 
 class Polygon():
-    """
-    Polygon constructed from greater than two points.
+    """Polygon constructed from greater than two points.
 
     Only convex polygons are allowed!
     Order of points is of course important!
@@ -19,6 +19,18 @@ class Polygon():
     def __init__(
             self, points: np.ndarray, up_vector: np.ndarray,
             normal: np.ndarray) -> None:
+        """Create a Polygon from points, up_vector and normal.
+
+        Parameters
+        ----------
+        points : np.ndarray
+            Cartesian edge points of the polygon
+        up_vector : np.ndarray
+            Cartesian up vector of the polygon
+        normal : np.ndarray
+            Cartesian up normal of the polygon
+
+        """
         self.pts = np.array(points, dtype=float)
         normal = np.array(normal, dtype=float)
         self.form_factors = []
@@ -80,8 +92,7 @@ class Polygon():
         return self.pts.shape[0]
 
     def on_surface(self, point: np.ndarray) -> bool:
-        """
-        Return if a point is on the surface of the polygon.
+        """Return if a point is on the surface of the polygon.
 
         Returns True if the point is on the polygon's
         surface and false otherwise.
@@ -120,6 +131,7 @@ class Polygon():
         -------
         np.ndarray
             intersection point, if it hit, otherwise None
+
         """
         origin = np.asarray(origin, dtype=float)
         direction = np.asarray(direction, dtype=float)
@@ -156,6 +168,7 @@ class Polygon():
             _description_, by default None
         color : _type_, optional
             _description_, by default None
+
         """
         points = self.pts.T
         points = np.concatenate((points, points), axis=1)
@@ -207,6 +220,7 @@ class Environment():
             receiver in the scene
         speed_of_sound : float, optional
             speed of sound in m/s, by default 346.18
+
         """
         self.speed_of_sound = speed_of_sound
         self.polygons = polygons

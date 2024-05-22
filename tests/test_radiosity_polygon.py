@@ -1,3 +1,4 @@
+"""Test radiosity module."""
 import numpy as np
 import numpy.testing as npt
 import sparapy.geometry as geo
@@ -6,6 +7,7 @@ from sparapy.sound_object import SoundSource
 
 
 def test_patches():
+    """Test Patches class."""
     poly = geo.Polygon(
         [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]], [0, 1, 0], [0, 0, 1])
     patches = radiosity.Patches(poly, 0.1, [], 0)
@@ -20,6 +22,7 @@ def test_patches():
 
 
 def test_patches_dim2():
+    """Test Patches class with 2D polygon."""
     poly = geo.Polygon(
         [[0, 0, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1]], [0, 1, 0], [1, 0, 0])
     patches = radiosity.Patches(poly, 0.1, [], 0)
@@ -34,6 +37,7 @@ def test_patches_dim2():
 
 
 def test_form_factor():
+    """Test form_factor function."""
     poly1 = geo.Polygon(
         [[0, 0, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1]], [0, 1, 0], [1, 0, 0])
     patches1 = radiosity.Patches(poly1, 0.2, [1], 0)
@@ -44,6 +48,7 @@ def test_form_factor():
 
 
 def test_calculate_form_factors():
+    """Test calculate_form_factors function."""
     # set geometry
     X = 8
     Y = 4
@@ -68,6 +73,7 @@ def test_calculate_form_factors():
 
 
 def test_init_energy_matrix():
+    """Test init_energy_matrix function."""
     X = 8
     Y = 4
     patch_size = 2

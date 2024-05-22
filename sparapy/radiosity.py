@@ -1,3 +1,4 @@
+"""Module for the radiosity simulation."""
 import matplotlib as mpl
 import numpy as np
 import pyfar as pf
@@ -27,6 +28,30 @@ class Patches(Polygon):
             self, polygon, max_size, other_wall_ids, wall_id,
             scattering=1, absorption=0.1, sound_attenuation_factor=0,
             E_matrix=None):
+        """Init Directional Patches.
+
+        Parameters
+        ----------
+        polygon : Polygon
+            Wall that should be distributed into patches.
+        max_size : float
+            maximal patchsize in meters.
+        other_wall_ids : list[int]
+            Ids of the other walls.
+        wall_id : int
+            id of this Patch
+        scattering : np.ndarray, optional
+            Scattering coefficient of this wall for each freqeuncy
+            bin, by default 1
+        absorption : np.ndarray, optional
+            Absorption coefficient of this wall for each freqeuncy
+            bin, by default 0.1
+        sound_attenuation_factor : _type_, optional
+            Air attenuation factor for each frequncy bin, by default None
+        E_matrix : np.ndarray, optional
+            Energy exchange results, if already calcualted , by default None
+
+        """
         Polygon.__init__(self, polygon.pts, polygon.up_vector, polygon.normal)
         min = np.min(polygon.pts, axis=0)
         max = np.max(polygon.pts, axis=0)
@@ -122,13 +147,16 @@ class Patches(Polygon):
         Parameters
         ----------
         max_order_k : int
-            maximum order if k.
+            max order of energy exchange iterations.
         ir_length_s : float
             length of the impulse response in seconds.
         source : SoundSource
             sound source with ``sound_power`` and ``position``
         sampling_rate : int, optional
             Sampling rate of impulse response, by default 1000 Hz.
+        speed_of_sound : float, optional
+            speed of sound in m/s, by default 346.18 m/s.
+
         """
         self.E_sampling_rate = sampling_rate
         self.E_n_samples = int(ir_length_s*sampling_rate)
@@ -229,7 +257,10 @@ class Patches(Polygon):
         current_order_k : int
             Order k
         speed_of_sound : int, optional
-            speed of sound in m/s, by default 343 m/s.
+            speed of sound in m/s, by default 346.18 m/s.
+        E_sampling_rate : int, optional
+            Sampling rate of histogram, by default 1000 Hz -> 1ms.
+
         """
         k = current_order_k # real k 1 .. max_k
         for i_receiver, receiver_patch in enumerate(self.patches):
@@ -283,6 +314,7 @@ class Patches(Polygon):
             Air attenuation factor in Np/m, by default 0
         alpha : float, optional
             absorption coefficient of wall, by default 0.1
+
         """
         num_other_patches = np.sum([
             len(patches_list[i].patches) for i in self.other_wall_ids])
@@ -446,6 +478,7 @@ class Patches(Polygon):
         -------
         _type_
             _description_
+
         """
         i_receiver_offset = 0
         for idx, other_wall in enumerate(self.other_wall_ids):
@@ -485,6 +518,7 @@ class Patches(Polygon):
         -------
         _type_
             _description_
+
         """
         energy_response = np.zeros((self.n_bins, self.E_n_samples))
 
@@ -516,6 +550,8 @@ class Patches(Polygon):
 
 
 class PatchesDirectional(Patches):
+    """Class representing patches with directional scattering behaviour."""
+
     directivity_data: np.ndarray
     directivity_sources: pf.Coordinates
     directivity_receivers: pf.Coordinates
@@ -525,6 +561,35 @@ class PatchesDirectional(Patches):
             data, sources, receivers, absorption=None,
             sound_attenuation_factor=None, already_converted=False,
             E_matrix=None):
+        """Init Directional Patches.
+
+        Parameters
+        ----------
+        polygon : Polygon
+            Wall that should be distributed into patches.
+        max_size : float
+            maximal patchsize in meters.
+        other_wall_ids : list[int]
+            Ids of the other walls.
+        wall_id : int
+            id of this Patch
+        data : pf.FrequencyData
+            Directional Data
+        sources : pf.Coordinates
+            source positions of the directivity data
+        receivers : pf.Coordinates
+            receiver positions of the directivity data
+        absorption : np.ndarray, optional
+            Absorption coefficient of this wall for each freqeuncy
+            bin, by default None
+        sound_attenuation_factor : _type_, optional
+            Air attenuation factor for each frequncy bin, by default None
+        already_converted : bool, optional
+            is ``sources`` and ``receivers`` already converted, by default False
+        E_matrix : np.ndarray, optional
+            Energy exchange results, if already calcualted , by default None
+
+        """
         self.directivity_data = data
         if absorption is None:
             absorption = np.zeros_like(data.frequencies)+0.1
@@ -605,6 +670,20 @@ class PatchesDirectional(Patches):
     def init_energy_exchange(
             self, max_order_k, ir_length_s, source,
             sampling_rate=1000):
+        """Initialize the energy exchange Matrix with source energy.
+
+        Parameters
+        ----------
+        max_order_k : int
+            max order of energy exchange iterations.
+        ir_length_s : float
+            length of the impulse response in seconds.
+        source : SoundSource
+            Sound source with ``sound_power`` and ``position``
+        sampling_rate : int, optional
+            Sample rate of histogram, by default 1000 -> 1ms
+
+        """
         Patches.init_energy_exchange(
             self, max_order_k, ir_length_s, source, sampling_rate)
         test = self.E_matrix.copy()
@@ -643,7 +722,10 @@ class PatchesDirectional(Patches):
         current_order_k : int
             Order k
         speed_of_sound : int, optional
-            speed of sound in m/s, by default 343 m/s.
+            speed of sound in m/s, by default 346.18 m/s.
+        E_sampling_rate : int, optional
+            Sampling rate of histogram, by default 1000 Hz -> 1ms.
+
         """
         k = current_order_k # real k 1 .. max_k
         for i_receiver, receiver_patch in enumerate(self.patches):
@@ -709,23 +791,26 @@ class PatchesDirectional(Patches):
 
         Parameters
         ----------
-        max_order : _type_
-            _description_
-        sound_source : _type_
-            _description_
-        receiver : _type_
-            _description_
-        ir_length_s : _type_
-            _description_
+        max_order : int
+            max order of energy exchange iterations.
+        sound_source : SoundSource
+            sound source with ``sound_power`` and ``position``
+        receiver : Receiver
+            receiver object with position.
+        ir_length_s : float
+            useless
         speed_of_sound : float, optional
-            _description_, by default 346.18
+            Speed of sound in m/s, by default 346.18 m/s.
         sampling_rate : int, optional
             _description_, by default 1000
+        M : float, optional
+            Air attenuation factor in Np/m, by default 0.
 
         Returns
         -------
         _type_
             _description_
+
         """
         energy_response = np.zeros((self.n_bins, self.E_n_samples))
 
@@ -763,6 +848,23 @@ class PatchesDirectional(Patches):
         return energy_response
 
 def add_delay(ir, delay_samples, axis=-1):
+    """Add delay to impulse response.
+
+    Parameters
+    ----------
+    ir : np.ndarray
+        impulse response which should be shifted.
+    delay_samples : int
+        delay samples.
+    axis : int, optional
+        axis which should be rolled, by default -1
+
+    Returns
+    -------
+    ir : np.ndarray
+        shifted impulse response.
+
+    """
     ## add delay
     if delay_samples > ir.shape[axis]:
         raise ValueError(
@@ -784,13 +886,14 @@ def calc_incident_direction(position, normal, up_vector, target_position):
         Normal vector of the wall.
     up_vector : np.ndarray
         Up vector of the wall.
-    other_position : np.ndarray
+    target_position : np.ndarray
         Position of the source or other wall.
 
     Returns
     -------
     pf.Coordinates
         Incident direction of the sound wave.
+
     """
     direction = np.array(target_position) - np.array(position)
     # distance = np.linalg.norm(direction)
@@ -813,6 +916,8 @@ def calc_incident_direction(position, normal, up_vector, target_position):
 
 
 class Radiosity():
+    """Radiosity object simulation."""
+
     speed_of_sound: float
     max_order_k: int
     sampling_rate: int
@@ -823,7 +928,27 @@ class Radiosity():
 
     def __init__(
             self, walls, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=343, sampling_rate=1000, source=None):
+            speed_of_sound=346.18, sampling_rate=1000, source=None):
+        """Create Radiosity Object for simulation.
+
+        Parameters
+        ----------
+        walls : list[Polygon]
+            list of patches
+        patch_size : float
+            maximal patchsize in meters.
+        max_order_k : int
+            max order of energy exchange iterations.
+        ir_length_s : float
+            length of ir in seconds.
+        speed_of_sound : float, optional
+            Speed of sound in m/s, by default 346.18 m/s
+        sampling_rate : int, optional
+            samplingrate of the Energy histogram, by default 1000 -> 1ms
+        source : SoundSource, optional
+            Source object, by default None, can be added later.
+
+        """
         self.speed_of_sound = speed_of_sound
         self.max_order_k = max_order_k
         self.sampling_rate = sampling_rate
@@ -924,10 +1049,34 @@ class Radiosity():
 
 
 class DirectionalRadiosity():
+    """Radiosity object for directional scattering coefficients."""
 
     def __init__(
             self, polygon_list, patch_size, max_order_k, ir_length_s,
-            sofa_path, speed_of_sound=343, sampling_rate=1000, source=None):
+            sofa_path, speed_of_sound=346.18, sampling_rate=1000, source=None):
+        """Create a Radiosoty object for directional scattering coefficents.
+
+        Parameters
+        ----------
+        polygon_list : list[PatchesDirectional]
+            list of patches
+        patch_size : float
+            maximal patchsize in meters.
+        max_order_k : int
+            max order of energy exchange iterations.
+        ir_length_s : float
+            length of ir in seconds.
+        sofa_path : Path, string, list of Path, list of string
+            path of directional scattering coefficients or list of path
+            for each Patch.
+        speed_of_sound : float, optional
+            Speed of sound in m/s, by default 346.18 m/s
+        sampling_rate : int, optional
+            samplingrate of the Energy histogram, by default 1000 -> 1ms
+        source : SoundSource, optional
+            Source object, by default None, can be added later.
+
+        """
         self.speed_of_sound = speed_of_sound
         self.max_order_k = max_order_k
         self.sampling_rate = sampling_rate
