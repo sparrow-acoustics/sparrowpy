@@ -1,5 +1,3 @@
-import json
-
 import matplotlib as mpl
 import numpy as np
 import pyfar as pf
@@ -86,16 +84,16 @@ class Patches(Polygon):
     def to_dict(self) -> dict:
         """Convert this object to dictionary. Used for read write."""
         return {
-            'pts': self.pts.tolist(),
-            'up_vector': self.up_vector.tolist(),
-            'normal': self.normal.tolist(),
+            'pts': self.pts,
+            'up_vector': self.up_vector,
+            'normal': self.normal,
             'max_size': self.max_size,
-            'other_wall_ids': self.other_wall_ids.tolist(),
+            'other_wall_ids': self.other_wall_ids,
             'wall_id': self.wall_id,
-            'scattering': self.scattering.tolist(),
-            'absorption': self.absorption.tolist(),
-            'sound_attenuation_factor': self.sound_attenuation_factor.tolist(),
-            'E_matrix': self.E_matrix.tolist(),
+            'scattering': self.scattering,
+            'absorption': self.absorption,
+            'sound_attenuation_factor': self.sound_attenuation_factor,
+            'E_matrix': self.E_matrix,
         }
 
     @classmethod
@@ -571,10 +569,10 @@ class PatchesDirectional(Patches):
         """Convert this object to dictionary. Used for read write."""
         return {
             **Patches.to_dict(self),
-            'directivity_data': self.directivity_data.freq.tolist(),
-            'directivity_data_frequencies': self.directivity_data.frequencies.tolist(),
-            'directivity_sources': self.directivity_sources.cartesian.tolist(),
-            'directivity_receivers': self.directivity_receivers.cartesian.tolist(),
+            'directivity_data': self.directivity_data.freq,
+            'directivity_data_frequencies': self.directivity_data.frequencies,
+            'directivity_sources': self.directivity_sources.cartesian,
+            'directivity_receivers': self.directivity_receivers.cartesian,
         }
 
     @classmethod
@@ -856,9 +854,9 @@ class Radiosity():
             'speed_of_sound': self.speed_of_sound,
             'sampling_rate': self.sampling_rate,
             'patches': [patch.to_dict() for patch in self.patch_list],
-            'source_position': source.position.tolist() if is_source else None,
-            'source_view': source.view.tolist() if is_source else None,
-            'source_up': source.up.tolist() if is_source else None,
+            'source_position': source.position if is_source else None,
+            'source_view': source.view if is_source else None,
+            'source_up': source.up if is_source else None,
         }
 
     @classmethod
@@ -867,7 +865,7 @@ class Radiosity():
         patch_list = [
             Patches.from_dict(patch) for patch in dict['patches']]
         source = None
-        if dict['source_position']:
+        if dict is not None:
             source = SoundSource(
                 dict['source_position'],
                 dict['source_view'], dict['source_up'])
@@ -914,16 +912,15 @@ class Radiosity():
 
         return ir
 
-    def write(self, path):
-        """Write the object to a json file."""
-        with open(path, 'w') as f:
-            json.dump(self.to_dict(), f)
+    def write(self, filename, compress=True):
+        """Write the object to a far file."""
+        pf.io.write(filename, compress=compress, **self.to_dict())
 
     @classmethod
-    def from_read_json(cls, path):
-        """Read the object to a json file."""
-        with open(path, 'r') as f:
-            return cls.from_dict(json.load(f))
+    def from_read(cls, filename):
+        """Read the object to a far file."""
+        data = pf.io.read(filename)
+        return cls.from_dict(data)
 
 
 class DirectionalRadiosity():
@@ -958,16 +955,15 @@ class DirectionalRadiosity():
         if source is not None:
             self.source = source
 
-    def write(self, path):
-        """Write the object to a json file."""
-        with open(path, 'w') as f:
-            json.dump(self.to_dict(), f)
+    def write(self, filename, compress=True):
+        """Write the object to a far file."""
+        pf.io.write(filename, compress=compress, **self.to_dict())
 
     @classmethod
-    def from_read_json(cls, path):
-        """Read the object to a json file."""
-        with open(path, 'r') as f:
-            return cls.from_dict(json.load(f))
+    def from_read(cls, filename):
+        """Read the object to a far file."""
+        data = pf.io.read(filename)
+        return cls.from_dict(data)
 
     def to_dict(self) -> dict:
         """Convert this object to dictionary. Used for read write."""
@@ -980,9 +976,9 @@ class DirectionalRadiosity():
             'speed_of_sound': self.speed_of_sound,
             'sampling_rate': self.sampling_rate,
             'patches': [patch.to_dict() for patch in self.patch_list],
-            'source_position': source.position.tolist() if is_source else None,
-            'source_view': source.view.tolist() if is_source else None,
-            'source_up': source.up.tolist() if is_source else None,
+            'source_position': source.position if is_source else None,
+            'source_view': source.view if is_source else None,
+            'source_up': source.up if is_source else None,
         }
 
     @classmethod
@@ -991,7 +987,7 @@ class DirectionalRadiosity():
         patch_list = [
             PatchesDirectional.from_dict(patch) for patch in dict['patches']]
         source = None
-        if dict['source_position']:
+        if dict['source_position'] is not None:
             source = SoundSource(
                 dict['source_position'],
                 dict['source_view'], dict['source_up'])

@@ -110,7 +110,7 @@ def test_radiosity_reference_with_read_write(max_order_k, tmpdir):
     radi.run(source)
     path = os.path.join(tmpdir, 'radiosity.far')
     radi.write(path)
-    radi = radiosity.Radiosity.from_read_json(path)
+    radi = radiosity.Radiosity.from_read(path)
     receiver = Receiver([20, 2, 1], [0, 1, 0], [0, 0, 1])
     irs_new = radi.energy_at_receiver(receiver)
     signal = pf.Signal(irs_new, sampling_rate)
@@ -390,9 +390,9 @@ def test_radiosity_read_write(tmpdir):
 
     radi.run(source)
 
-    json_path = os.path.join(tmpdir, 'radi.json')
+    json_path = os.path.join(tmpdir, 'radi.far')
     radi.write(json_path)
-    radi_reconstructed = radiosity.Radiosity.from_read_json(json_path)
+    radi_reconstructed = radiosity.Radiosity.from_read(json_path)
 
     # test
     assert isinstance(radi_reconstructed, radiosity.Radiosity)
