@@ -152,7 +152,12 @@ for file in folders_in:
         shutil.copyfileobj(res, out_file)
 
 # replace pyfar hard link to internal link
+is_included = False
 with open("_static/header.rst", "rt") as fin:
     with open("header.rst", "wt") as fout:
         for line in fin:
+            if project in line:
+                is_included = True
             fout.write(line.replace(f'https://{project}.readthedocs.io', project))
+        if not is_included:
+            fout.write(f"\n   {project} <{project}>")
