@@ -1009,15 +1009,17 @@ class Radiosity():
                 sampling_rate=self.sampling_rate)
 
         # C. Form factors
-        for patches in self.patch_list:
-            patches.calculate_form_factor(self.patch_list)
+        if len(self.patch_list) > 1:
+            for patches in self.patch_list:
+                patches.calculate_form_factor(self.patch_list)
 
         # D. Energy exchange between patches
-        for k in tqdm(range(1, self.max_order_k+1)):
-            for patches in self.patch_list:
-                patches.calculate_energy_exchange(
-                    self.patch_list, k, speed_of_sound=self.speed_of_sound,
-                    E_sampling_rate=self.sampling_rate)
+        if len(self.patch_list) > 1:
+            for k in tqdm(range(1, self.max_order_k+1)):
+                for patches in self.patch_list:
+                    patches.calculate_energy_exchange(
+                        self.patch_list, k, speed_of_sound=self.speed_of_sound,
+                        E_sampling_rate=self.sampling_rate)
 
     def energy_at_receiver(self, receiver, max_order_k=None):
         """Return the energetic impulse response at the receiver."""
@@ -1160,15 +1162,17 @@ class DirectionalRadiosity():
                 sampling_rate=self.sampling_rate)
 
         # C. Form factors
-        for patches in self.patch_list:
-            patches.calculate_form_factor(self.patch_list)
+        if len(self.patch_list) > 1:
+            for patches in self.patch_list:
+                patches.calculate_form_factor(self.patch_list)
 
         # D. Energy exchange between patches
-        for k in tqdm(range(1, self.max_order_k+1)):
-            for patches in self.patch_list:
-                patches.calculate_energy_exchange(
-                    self.patch_list, k, speed_of_sound=self.speed_of_sound,
-                    E_sampling_rate=self.sampling_rate)
+        if len(self.patch_list) > 1:
+            for k in tqdm(range(1, self.max_order_k+1)):
+                for patches in self.patch_list:
+                    patches.calculate_energy_exchange(
+                        self.patch_list, k, speed_of_sound=self.speed_of_sound,
+                        E_sampling_rate=self.sampling_rate)
 
     def energy_at_receiver(self, receiver, order_k=None):
         """Return the energetic impulse response at the receiver."""
