@@ -6,11 +6,11 @@ ruff==0.4.1
 coverage
 Sphinx
 twine
-
+sofar
+tqdm
 pytest
 pytest-runner
 pytest-cov
-
 numpy
 scipy
 matplotlib

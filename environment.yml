@@ -9,4 +9,6 @@ dependencies:
   - matplotlib
   - scipy
   - pip:
+    - sofar
+    - tqdm
     - pyfar

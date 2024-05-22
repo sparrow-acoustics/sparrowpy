@@ -16,6 +16,8 @@ requirements = [
     'scipy',
     'matplotlib',
     'pyfar',
+    'sofar',
+    'tqdm',
 ]
 
 setup_requirements = [
@@ -43,12 +45,11 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
-        
+
     ],
     description="Sound Propagation using Acoustic Radiosity in Python",
     install_requires=requirements,
@@ -70,5 +71,5 @@ setup(
     },
     version='0.1.0',
     zip_safe=False,
-    python_requires='>=3.8',
+    python_requires='>=3.9',
 )
