@@ -143,8 +143,8 @@ def singularity_check(p0,p1):
 
 def stokes_integration(eli, elj, approx_order=2):
 
-    si, coni = sampling.sample_border(eli, n_div=approx_order)
-    sj, conj = sampling.sample_border(elj, n_div=approx_order)
+    si, coni = sampling.sample_border(eli, npoints=approx_order+1)
+    sj, conj = sampling.sample_border(elj, npoints=approx_order+1)
 
     if singularity_check(si,sj):
         return float('nan')

@@ -10,14 +10,14 @@ PI = np.pi
 
 def nusselt(Pi, Pj, nsamples=2, random=False, sphRadius=1):
     if random:
-        p0_array = sampling.sample_random(Pi,nsamples, random)
+        p0_array = sampling.sample_random(Pi,nsamples)
     else:
-        p0_array = sampling.sample_regular(Pi,nsamples, random)
+        p0_array = sampling.sample_regular(Pi,nsamples)
 
     out = 0
     n = 2
 
-    segs, conn = sampling.sample_border(Pj,n_div=n)
+    segs, conn = sampling.sample_border(Pj,npoints=n+1)
 
     sphPts = np.empty_like( segs )
     plnPts = np.empty( shape=(len(segs),2) )

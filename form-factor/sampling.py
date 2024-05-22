@@ -1,69 +1,132 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from elmt import elmt
 
-def sample_random(el=elmt([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]), npoints=10):
+def sample_random(el=elmt([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]), npoints=100):
+    """
+    Randomly sample points on the surface of a patch using a uniform distribution
+    
+    ! currently only supports triangular, rectangular, or parallelogram patches
+    ! may not return exact number of requested points -- depends on the divisibility of the patch
 
-    npoints = npoints**2
+    Parameters
+    ----------
+    el : elmt object
+        patch to sample
+            
+    npoints : int
+        number of sample points to generate
+    """
+
+    # TO DO: check that patch satisfies conditions for proper sampling
+    # TO DO: if patch has >4 sides, subdivide into triangular patches and process independently ?
 
     ptlist=np.zeros((npoints,3)) 
     
     u = el.pt[1]-el.pt[0]
     v = el.pt[-1]-el.pt[0]
 
-    if len(el.pt)==3 or np.inner(u,v)==0:
+    for i in range(npoints):
+        s = np.random.uniform()
+        t = np.random.uniform()
 
-        for i in range(npoints):
-            s = np.random.uniform()
-            t = np.random.uniform()
+        inside = s+t <= 1
 
-            inside = s+t <= 1
+        if len(el.pt)==3 and not inside: # if sample falls outside of triangular patch, it is "reflected" inside 
+            s = 1-s
+            t = 1-t
+        
+        ptlist[i] = s*u + t*v + el.pt[0]
 
-            if len(el.pt)==3 and not inside:
-                s = 1-s
-                t = 1-t
-            
-            ptlist[i] = s*u + t*v + el.pt[0]
-
-    return np.unique(ptlist, axis=0)
+    return ptlist
 
 def sample_regular(el=elmt([[-1.,-1.,1.],[1.,-1.,1.],[1.,1.,1.],[-1.,1.,1.]]), npoints=10):
+    """
+    Sample points on the surface of a patch using a regular distribution 
+    over the directions defined by the patches' sides
     
-    
-    u = el.pt[1]-el.pt[0]
-    v = el.pt[-1]-el.pt[0]
+    ! currently only supports triangular, rectangular, or parallelogram patches
+    ! may not return exact number of requested points -- depends on the divisibility of the patch
 
-    npointsz=int(np.linalg.norm(v)/np.linalg.norm(u)*npoints)
+    Parameters
+    ----------
+    el : elmt object
+        patch to sample
+            
+    npoints : int
+        number of sample points to generate
+    """
+    
+    # TO DO: check that patch satisfies conditions for proper sampling
+    # TO DO: if patch has >4 sides, subdivide into triangular patches and process independently ?
+
+    u = el.pt[1]-el.pt[0]
+    v = el.pt[-1]-el.pt[0] 
+
+    if len(el.pt)==3:
+        a = 2
+    else:
+        a = 1
+
+    npointsx = int(round(np.linalg.norm(u)/np.linalg.norm(v)*np.sqrt(a*npoints)))
+    npointsz = int(round(np.linalg.norm(v)/np.linalg.norm(u)*np.sqrt(a*npoints)))
+
     if npointsz==0:
         npointsz = 1
-    ptlist=np.empty((npoints,npointsz,3)) 
+    if npointsx==0:
+        npointsx = 1
 
-    tt = np.linspace(0,1,npoints, endpoint=False)
-    sstep =  1/(npoints*2)
+    ptlist=[]
+
+    tt = np.linspace(0,1,npointsx, endpoint=False)
+    sstep =  1/(npointsx*2)
     tt += sstep
 
     tz = np.linspace(0,1,npointsz, endpoint=False)
     sstepz =  1/(npointsz*2)
     tz += sstepz
 
-    if len(el.pt)==3 or np.inner(u,v)==0:
+    thres = np.sqrt(sstepz**2+sstep**2)/2
 
-        for i,s in enumerate(tt):
+    jj = 0
 
-            for j,t in enumerate(tz):
+    # TO DO: find way to sample triangles more evenly 
 
-                inside = s+t <= 1
+    for i,s in enumerate(tt):
+        if len(el.pt)==3:
+            jj = i
 
-                if not(len(el.pt)==3 and not inside):
-                    ptlist[i,j] = s*u + t*v + el.pt[0]
+        for t in tz[0:len(tz)-round(npointsz/npointsx*jj)]: 
 
-    return np.unique(ptlist.reshape(-1,3), axis=0)
+            inside = s+t <= 1-thres
+            if not(len(el.pt)==3 and not inside):
+                ptlist.append(s*u + t*v + el.pt[0])
+
+            
 
 
-def sample_border(el,n_div=2):
+    return np.array(ptlist)
 
-    seg = np.empty((len(el.pt)*n_div,len(el.pt[0])))
-    conn=[[[] for i in range(n_div+1)] for j in range(len(el.pt))]
+
+def sample_border(el,npoints=3):
+    """
+    Sample points on the boundary of a patch at fractional intervals of each side
+    
+    returns an array of points on the patch boundary (pts) 
+            and a connectivity array (conn) which stores a list of ordered indices of the points (in spts) found on the same boundary segment
+
+    Parameters
+    ----------
+    el : elmt object
+        patch to sample
+            
+    npoints : int
+        number of sample points per boundary segment (minimum 2)
+    """
+
+    n_div = npoints - 1 # this function was written with a different logic in mind -- needs refactoring
+
+    pts = np.empty((len(el.pt)*(npoints-1),len(el.pt[0])))
+    conn=[[[] for i in range(npoints)] for j in range(len(el.pt))]
 
     for i in range(len(el.pt)):
 
@@ -72,9 +135,9 @@ def sample_border(el,n_div=2):
 
         for ii in range(0,n_div):
 
-            seg[i*n_div+ii,:]= (el.pt[i] + ii*(el.pt[(i+1)%len(el.pt)]-el.pt[i])/n_div)
+            pts[i*n_div+ii,:]= (el.pt[i] + ii*(el.pt[(i+1)%len(el.pt)]-el.pt[i])/n_div)
 
             conn[i][ii]=(i*n_div+ii)%(n_div*len(el.pt))
 
 
-    return seg,conn
+    return pts,conn
