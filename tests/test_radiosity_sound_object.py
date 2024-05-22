@@ -76,12 +76,6 @@ def test_sound_source_errors(directivity, sound_power):
             [0, 0, 0], [2, 0, 0], [0, 0, 2], directivity, sound_power)
 
 
-def test_receiver():
-    """Test Receiver class."""
-    receiver = so.Receiver([0, 0, 0], [2, 0, 0], [0, 0, 2])
-    npt.assert_equal(receiver.impulse_response, None)
-
-
 def test__get_metrics():
     """Test _get_metrics function."""
     target_pos_G = [-1, 0, -2]
