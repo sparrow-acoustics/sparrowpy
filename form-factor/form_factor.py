@@ -13,76 +13,6 @@ from integrate_line import analytical_coincident_line_solution, analytical_coinc
 import exact_solutions as exact 
 
 
-
-def sample_points(el, stepabs):
-
-    P = []
-
-    step1=stepabs/np.linalg.norm(el.pt[1]-el.pt[0])
-
-    step2=stepabs/np.linalg.norm(el.pt[-1]-el.pt[0])
-
-    r1 = np.arange(0.,1.,step1)
-    if 1%step1 == 0:
-        r1 = np.append(r1,1.)
-
-    for rr1 in r1:
-
-        r2 = np.arange(0.,1.,step2)
-
-        if 1%step2 == 0:
-            r2 = np.append(r2,1.)
-
-        for rr2 in r2:
-            P.append(el.pt[0] + rr1 * (el.pt[1]-el.pt[0]) + rr2 * (el.pt[2]-el.pt[0]))
-
-    return np.unique(np.array(P), axis=0)
-
-# def sample_regular(el=elmt([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]), npoints=1, plot=False):
-#     ptlist=np.empty((npoints,npoints,3)) 
-    
-#     u = el.pt[1]-el.pt[0]
-#     v = el.pt[-1]-el.pt[0]
-
-#     tt = np.linspace(0,1,npoints, endpoint=False)
-#     sstep =  1/(npoints*2)
-#     tt += sstep
-
-#     if len(el.pt)==3 or np.inner(u,v)==0:
-
-#         for i in range(npoints):
-
-#             s = tt[i]
-
-#             for j in range(npoints):
-                
-#                 t = tt[j]
-
-#             inside = s+t <= 1
-
-#             if not(len(el.pt)==3 and not inside):
-#                 ptlist[i,j] = s*u + t*v + el.pt[0]
-
-#     if plot:
-#         fff,aaa=plt.subplots()
-#         px=[]
-#         py=[]
-#         for j in range(len(el.pt)+1):
-#             px.append(el.pt[j%len(el.pt),0])
-#             py.append(el.pt[j%len(el.pt),1])
-#         aaa.plot(px,py,'b-')
-
-#         for pt in ptlist:
-#             aaa.plot(pt[0],pt[1],'ro')
-
-#         plt.show()
-
-
-#     return ptlist
-
-
-
-
 def form_function(p0,p1,n0,n1):
     cos0=geom.vec_cos(p1-p0, n0)
     cos1=geom.vec_cos(p0-p1,n1)
@@ -102,16 +32,6 @@ def naive_integration(base_el,out_el,samplestep, random=False):
     else:
         samples0 = sampling.sample_regular(base_el,samplestep)
         samples1 = sampling.sample_regular(out_el,samplestep)
-
-    
-
-    # ff = plt.figure()
-    # ax = ff.add_subplot(projection='3d')
-
-    # ax.scatter(samples0.transpose()[0],samples0.transpose()[1],samples0.transpose()[2])
-    # ax.scatter(samples1.transpose()[0],samples1.transpose()[1],samples1.transpose()[2])
-    # ax.grid()
-    # plt.show()
 
     int_accum=0.
 
@@ -187,24 +107,11 @@ def stokes_integration(eli, elj, approx_order=2):
 
 
 def monte_carlo(eli, elj, raysppoint, npts):
-    import matplotlib.pylab as pllt
-    from mpl_toolkits.mplot3d.art3d import Poly3DCollection # New import
-
     eli0 = elmt(geom.universal_transform(eli.o, eli.n, pt_list = eli.pt))
     elj0 = elmt(geom.universal_transform(eli.o, eli.n, pt_list = elj.pt))
 
     counter=0
 
-    # f = pllt.figure()
-
-    # a = f.add_subplot(111,projection='3d')
-
-    # vertices = [(elj0.pt[i,0],elj0.pt[i,1],elj0.pt[i,2]) for i in range(len(elj0.pt))]
-
-    # a.add_collection3d(Poly3DCollection(verts=[vertices],color='orange', alpha=0.5))
-    # a.set_aspect('equalxy')
-
-    ff=0
 
     plist = sampling.sample_regular(eli0, npts) 
 
@@ -262,11 +169,11 @@ def plot_comparisons(el0, elements):
         if i == 3:
             tit = "Perpendicular patches -- disconnected"
         if i > 3:
-            tit = "Random patch"
+            tit = "Random patch -> " + str(len(el.pt)) + " sides"
 
         print("\n########################################\n"+tit + "\n")
        
-        samplingsteps = [3,6,10,15,20]
+        samplingsteps = [2**2,5**2,10**2,20**2]
 
         for step in samplingsteps:
 
@@ -276,7 +183,7 @@ def plot_comparisons(el0, elements):
             ff_cnuss.append(temp)
 
 
-        for order in [1,2,3,4,5,6]:
+        for order in [2,3,4,5]:
 
             t0 = time.time()
             ff_stokes = stokes_integration(el0, el, approx_order=order)
@@ -285,8 +192,7 @@ def plot_comparisons(el0, elements):
             tt_stokes.append(t_stokes)
             tf_stokes.append(ff_stokes)
 
-        samplingsteps = [3,6,10,15,20]
-        #ppp = 10
+
         for step in samplingsteps:
 
             print("# points: " + str(step))
@@ -361,7 +267,7 @@ def plot_comparisons(el0, elements):
         # a[0,i].grid()
         # a[1,i].grid()
 
-        plt.savefig("C:\\Users\\fatela\\Desktop\\temp\\patch"+str(i))
+        plt.savefig("C:\\Users\\fatela\\Desktop\\temp\\patch"+str(i+1))
 
         print("yo")
     
@@ -377,7 +283,7 @@ el4 = elmt([[0.,0.,-1.],[1.,0.,-1.],[1.,1.,-1.],[0.,1.,-1.]])
 
 el5 = elmt([[1.,0.,0.],[2.,0.,1.],[2.,1.,1.],[1.,1.,0.]])
 
-el6 = elmt([[1.,0.,0.],[2.,0.,1.],[2.,1.,1.],])
+el6 = elmt([[4.,0.,0.],[3.,2.,1.],[4.,0.,2.],])
 
 
 
