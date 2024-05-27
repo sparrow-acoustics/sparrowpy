@@ -174,7 +174,7 @@ def plot_comparisons(el0, elements):
 
         print("\n########################################\n"+tit + "\n")
        
-        samplingsteps = [2**2,5**2,10**2,20**2]
+        samplingsteps = [2**2,5**2,7**2,10**2,14**2,20**2]
 
         for step in samplingsteps:
 
@@ -232,8 +232,8 @@ def plot_comparisons(el0, elements):
             true_solution = exact.perpendicular_patch_coincidentline(1.,1.,1.)
         elif i == 2:
             true_solution = exact.perpendicular_patch_coincidentpoint(1.,1.,1.,1.)
-        elif i == 3:
-            true_solution = exact.perpendicular_patch_floating(1.,1.,0.,1.,1.)
+        #elif i == 3:
+        #    true_solution = exact.perpendicular_patch_floating(1.,1.,1.,0.,1.)
         else:
             true_solution = ff_naive
 
@@ -269,7 +269,7 @@ def plot_comparisons(el0, elements):
         # a[1,i].grid()
 
         plt.savefig("C:\\Users\\fatela\\Desktop\\temp\\patch"+str(i+1))
-
+        #plt.show()
         print("yo")
     
 el0 = polyg(points=np.array([[0.,0.,0.],[0.,1.,0.],[0.,1.,1.],[0.,0.,1.]]), up_vector=np.array([0.,0.,1.]), normal=np.array([1.,0.,0.]))
@@ -285,7 +285,7 @@ el4 = polyg(points=np.array([[0.,0.,-1.],[1.,0.,-1.],[1.,1.,-1.],[0.,1.,-1.]]), 
 
 ell5 = elmt([[1.,0.,0.],[2.,0.,1.],[2.,1.,1.],[1.,1.,0.]])
 
-ell6 = elmt([[4.,0.,0.],[3.,2.,1.],[4.,0.,2.],])
+ell6 = elmt([[4.,0.,0.],[4.,0.,2.],[3.,2.,1.]])
 
 el5 = polyg(points=ell5.pt, up_vector=ell5.pt[0]-ell5.pt[-1], normal=ell5.n)
 
@@ -306,7 +306,7 @@ el6 = polyg(points=ell6.pt, up_vector=ell6.pt[0]-ell6.pt[-1], normal=ell6.n)
 # plt.show()
 
 
-plot_comparisons(el0,[el5, el6])
+plot_comparisons(el0,[el1, el2, el3, el4, el5, el6])
 
 print("hehe")
 
