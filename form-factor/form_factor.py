@@ -63,23 +63,24 @@ def naive_integration(patch_i: polyg, patch_j: polyg, n_samples=4, random=False)
     """
 
     if random:
-        samples0 = sampling.sample_random(patch_i,n_samples)
-        samples1 = sampling.sample_random(patch_j,n_samples)
+        surfsampling = sampling.sample_random
     else:
-        samples0 = sampling.sample_regular(patch_i,n_samples)
-        samples1 = sampling.sample_regular(patch_j,n_samples)
+        surfsampling = sampling.sample_regular
 
-    int_accum=0.
+    int_accum = 0. # initialize integral accumulator variable
 
-    for basept in samples0:
-        for outpt in samples1:
-            int_accum+= ffunction(basept, outpt, patch_i.normal, patch_j.normal)*(patch_i.A/len(samples0))*(patch_j.A/len(samples1))
+    i_samples = surfsampling(patch_i, npoints=n_samples)
+    j_samples = surfsampling(patch_j, npoints=n_samples)
+
+    for i_pt in i_samples:
+        for j_pt in j_samples:
+            int_accum+= ffunction(i_pt, j_pt, patch_i.normal, patch_j.normal)*(patch_i.A/len(i_samples))*(patch_j.A/len(j_samples))
   
 
     return int_accum/patch_i.A
 
 
-def stokes_integration(patch_i, patch_j, approx_order=2):
+def stokes_integration(patch_i: polyg, patch_j: polyg, approx_order=2):
     """
     calculate an estimation of the form factor between two patches 
     by computationally integrating a modified form function over the two patch boundaries.
@@ -101,77 +102,52 @@ def stokes_integration(patch_i, patch_j, approx_order=2):
 
     """
 
-    si, coni = sampling.sample_border(patch_i, npoints=approx_order+1)
-    sj, conj = sampling.sample_border(patch_j, npoints=approx_order+1)
+    i_bpoints, i_conn = sampling.sample_border(patch_i, npoints=approx_order+1)
+    j_bpoints, j_conn = sampling.sample_border(patch_j, npoints=approx_order+1)
 
-    if singularity_check(si,sj):
+    if singularity_check(i_bpoints,j_bpoints): 
         return float('nan')
 
-    form_mat = [[[] for j in range(len(sj))] for i in range(len(si))]
 
-    for j,pj in enumerate(sj):
-        for i,pi in enumerate(si):
+    # first compute and store form function sample values
+    form_mat = [[[] for j in range(len(j_bpoints))] for i in range(len(i_bpoints))]
+
+    for j,pj in enumerate(j_bpoints):
+        for i,pi in enumerate(i_bpoints):
             form_mat[i][j] = stokes_ffunction(pi,pj)
 
-    # here, we essentially do a bi-quadratic integral per dimension (x,y,z)
-    outer_integral = 0
-    inner_integral = np.zeros(shape=[len(si),len(sj[0])])
 
-    for dim in range(len(sj[0])):  
-        for i in range(len(si)):              # for each point in patch i boundary
-            for segj in conj:                 # for each segment segj in patch j boundary
+    # double polynomial integration (per dimension (x,y,z))
+    outer_integral = 0
+    inner_integral = np.zeros(shape=[len(i_bpoints),len(j_bpoints[0])])
+
+    for dim in range(len(j_bpoints[0])):                                # for each dimension
+
+
+        # integrate form function over each point on patch i boundary
+
+        for i in range(len(i_bpoints)):                                 # for each point in patch i boundary
+            for segj in j_conn:                                         # for each segment segj in patch j boundary
                 
-                # dim values for each segment points
-                xj = sj[segj][:,dim]          
+                xj = j_bpoints[segj][:,dim]          
 
                 if xj[-1]-xj[0]!=0:
-                    # estimate quadratic coefficients (like for interpolation) of function which describes the stuff
-                    quadfactors = poly_estimation(xj,[form_mat[i][segj[k]] for k in range(len(segj))] ) 
-                    # integrate "by hand"
-                    inner_integral[i][dim] += poly_integration(quadfactors,xj) 
+                    quadfactors = poly_estimation(xj,[form_mat[i][segj[k]] for k in range(len(segj))] ) # compute polynomial coefficients of approx form function over boundary segment xj
+                    inner_integral[i][dim] += poly_integration(quadfactors,xj)                          # analytical integration of the approx polynomial
 
-        for segi in coni:                     # for each segment segi in patch i boundary
-            # dim values for each segment points
-            xi = si[segi][:,dim]
+
+        # integrate previously computed integral over each boundary segment of patch i
+
+        for segi in i_conn:                     # for each segment segi in patch i boundary
+
+            xi = i_bpoints[segi][:,dim]
 
             if xi[-1]-xi[0]!=0:
-                # estimate quadratic coefficients (like for interpolation) of function which describes the stuff
                 quadfactors = poly_estimation(xi,[inner_integral[segi[k]][dim] for k in range(len(segi))] ) 
-                # integrate quadrature "by hand"
                 outer_integral += poly_integration(quadfactors,xi)
 
 
     return outer_integral/(2*PI*patch_i.A)
-
-
-def monte_carlo(patch_i, patch_j, raysppoint, npts):
-    eli0 = elmt(geom.universal_transform(patch_i.o, patch_i.n, pt_list = patch_i.pt))
-    elj0 = elmt(geom.universal_transform(patch_i.o, patch_i.n, pt_list = patch_j.pt))
-
-    counter=0
-
-
-    plist = sampling.sample_regular(eli0, npts) 
-
-    for point in plist:
-        for i in range(raysppoint):
-
-            phi   = np.random.uniform()*2*PI
-            theta = np.random.uniform()*PI/2
-
-            r = point + np.array([np.sin(theta)*np.cos(phi), np.sin(theta)*np.sin(phi), np.cos(theta)])
-            intersection_point = geom.vec_plane_intersection(v0=r, p0=np.array([0,0,0]), n=elj0.n, pn=elj0.o)
-
-
-            if geom.point_in_polygon(pt=intersection_point, el=elj0):
-
-                counter+=1
-
-    if counter !=0:
-        return counter/(len(plist)*raysppoint)
-    else:
-        return 0
-
 
 #######################################################################################
 ### helper
