@@ -8,10 +8,11 @@ from nusselt import nusselt
 import geom
 import sampling
 
-from integrate_line import analytical_coincident_line_solution, analytical_coincident_point_solution, poly_estimation,poly_integration
+from integrate_line import poly_estimation,poly_integration
 
 import exact_solutions as exact 
 
+from geometry import Polygon as polyg
 
 def form_function(p0,p1,n0,n1):
     cos0=geom.vec_cos(p1-p0, n0)
@@ -24,7 +25,7 @@ def form_function(p0,p1,n0,n1):
         return 0
     
 
-def naive_integration(base_el,out_el,samplestep, random=False):
+def naive_integration(base_el: polyg, out_el: polyg, samplestep, random=False):
 
     if random:
         samples0 = sampling.sample_random(base_el,samplestep)
@@ -37,7 +38,7 @@ def naive_integration(base_el,out_el,samplestep, random=False):
 
     for basept in samples0:
         for outpt in samples1:
-            int_accum+= form_function(basept, outpt, base_el.n, out_el.n)*(base_el.A/len(samples0))*(out_el.A/len(samples1))
+            int_accum+= form_function(basept, outpt, base_el.normal, out_el.normal)*(base_el.A/len(samples0))*(out_el.A/len(samples1))
   
 
     return int_accum/base_el.A
@@ -169,7 +170,7 @@ def plot_comparisons(el0, elements):
         if i == 3:
             tit = "Perpendicular patches -- disconnected"
         if i > 3:
-            tit = "Random patch -> " + str(len(el.pt)) + " sides"
+            tit = "Random patch -> " + str(len(el.pts)) + " sides"
 
         print("\n########################################\n"+tit + "\n")
        
@@ -271,19 +272,24 @@ def plot_comparisons(el0, elements):
 
         print("yo")
     
-el0 = elmt([[0.,0.,0.],[0.,1.,0.],[0.,1.,1.],[0.,0.,1.]])
+el0 = polyg(points=np.array([[0.,0.,0.],[0.,1.,0.],[0.,1.,1.],[0.,0.,1.]]), up_vector=np.array([0.,0.,1.]), normal=np.array([1.,0.,0.]))
 
-el1 = elmt([[1.,0.,0.],[1.,0.,1.],[1.,1.,1.],[1.,1.,0.]])
+el1 = polyg(points=np.array([[1.,0.,0.],[1.,0.,1.],[1.,1.,1.],[1.,1.,0.]]), up_vector=np.array([0.,0.,1.]), normal=np.array([-1.,0.,0.]))
 
-el2 = elmt([[0.,0.,0.],[1.,0.,0.],[1.,1.,0.],[0.,1.,0.]])
+el2 = polyg(points=np.array([[0.,0.,0.],[1.,0.,0.],[1.,1.,0.],[0.,1.,0.]]), up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
 
-el3 = elmt([[0.,1.,0.],[1.,1.,0.],[1.,2.,0.],[0.,2.,0.]])
+el3 = polyg(points=np.array([[0.,1.,0.],[1.,1.,0.],[1.,2.,0.],[0.,2.,0.]]), up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
 
-el4 = elmt([[0.,0.,-1.],[1.,0.,-1.],[1.,1.,-1.],[0.,1.,-1.]])
+el4 = polyg(points=np.array([[0.,0.,-1.],[1.,0.,-1.],[1.,1.,-1.],[0.,1.,-1.]]), up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
 
-el5 = elmt([[1.,0.,0.],[2.,0.,1.],[2.,1.,1.],[1.,1.,0.]])
 
-el6 = elmt([[4.,0.,0.],[3.,2.,1.],[4.,0.,2.],])
+ell5 = elmt([[1.,0.,0.],[2.,0.,1.],[2.,1.,1.],[1.,1.,0.]])
+
+ell6 = elmt([[4.,0.,0.],[3.,2.,1.],[4.,0.,2.],])
+
+el5 = polyg(points=ell5.pt, up_vector=ell5.pt[0]-ell5.pt[-1], normal=ell5.n)
+
+el6 = polyg(points=ell6.pt, up_vector=ell6.pt[0]-ell6.pt[-1], normal=ell6.n)
 
 
 
@@ -300,7 +306,7 @@ el6 = elmt([[4.,0.,0.],[3.,2.,1.],[4.,0.,2.],])
 # plt.show()
 
 
-plot_comparisons(el0,[el1, el2, el3, el4, el5, el6])
+plot_comparisons(el0,[el5, el6])
 
 print("hehe")
 

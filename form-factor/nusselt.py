@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import sampling
 import geom
 
+from geometry import Polygon as polyg
+
 PI = np.pi
 
 
@@ -31,9 +33,9 @@ def nusselt(Pi, Pj, nsamples=2, random=False, sphRadius=1):
 
         # project shpere points onto patch i plane
         for ii in range(len(sphPts)):
-            plnPts[ii,:] = np.inner(geom.rotation_matrix(Pi.n),sphPts[ii])[:-1]
+            plnPts[ii,:] = np.inner(geom.rotation_matrix(Pi.normal),sphPts[ii])[:-1]
 
-        projPj = elmt(plnPts[0::n])
+        projPolyArea = polygon_area(plnPts[0::n])
             
         for seg in conn:
 
@@ -43,27 +45,35 @@ def nusselt(Pi, Pj, nsamples=2, random=False, sphRadius=1):
                 mpoint = sphPts[seg[0]] + (sphPts[seg[-1]] - sphPts[seg[0]]) / 2
                 marc = mpoint*sphRadius/np.linalg.norm(mpoint)
 
-                mpoint = np.inner(geom.rotation_matrix(Pi.n),mpoint)[:-1]
-                marc = np.inner(geom.rotation_matrix(Pi.n),marc)[:-1]
+                mpoint = np.inner(geom.rotation_matrix(Pi.normal),mpoint)[:-1]
+                marc = np.inner(geom.rotation_matrix(Pi.normal),marc)[:-1]
 
                 linArea = np.linalg.norm(plnPts[seg[-1]] - plnPts[seg[0]])*np.linalg.norm(mpoint-marc)/2
                 
                 a = sphPts[seg[0]] + (sphPts[seg[1]] - sphPts[seg[0]]) / 2
                 a = a*sphRadius/np.linalg.norm(a)
-                a = np.inner(geom.rotation_matrix(Pi.n),a)[:-1]
+                a = np.inner(geom.rotation_matrix(Pi.normal),a)[:-1]
 
                 b = sphPts[seg[1]] + (sphPts[seg[-1]] - sphPts[seg[1]]) / 2
                 b = b*sphRadius/np.linalg.norm(b)
-                b = np.inner(geom.rotation_matrix(Pi.n),b)[:-1]
+                b = np.inner(geom.rotation_matrix(Pi.normal),b)[:-1]
 
-                
                 left =  area_under_curve(np.array([plnPts[seg[0]],a,marc]),n=n)
                 right = area_under_curve(np.array([marc,b,plnPts[seg[-1]]]),n=n)
                 curved_area += linArea * np.sign(left) + left + right
 
-        out += (projPj.A + curved_area) / (sphRadius**2 * PI) * (Pi.A/len(p0_array))
+        out += (projPolyArea + curved_area) / (sphRadius**2 * PI) * (Pi.A/len(p0_array))
        
     return out
+
+def polygon_area(pts):
+    if len(pts) == 3:
+        return .5*np.linalg.norm(np.cross(pts[1]-pts[0], pts[2]-pts[0]))
+
+    if len(pts) == 4:
+        return .5*np.linalg.norm(np.cross(pts[3]-pts[2], pts[0]-pts[2])) + .5*np.linalg.norm(np.cross(pts[1]-pts[0], pts[2]-pts[0]))
+
+
 
 def area_under_curve(ps, n=2):
 
