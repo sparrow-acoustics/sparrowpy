@@ -79,10 +79,30 @@ def naive_integration(patch_i: polyg, patch_j: polyg, n_samples=4, random=False)
     return int_accum/patch_i.A
 
 
-def stokes_integration(eli, elj, approx_order=2):
+def stokes_integration(patch_i, patch_j, approx_order=2):
+    """
+    calculate an estimation of the form factor between two patches 
+    by computationally integrating a modified form function over the two patch boundaries.
+    The modified form function follows Stokes' theorem.
 
-    si, coni = sampling.sample_border(eli, npoints=approx_order+1)
-    sj, conj = sampling.sample_border(elj, npoints=approx_order+1)
+    The modified form function integral is calculated using a polynomial approximation based on sampled values.
+    
+    Parameters
+    ----------
+    patch_i : geometry.Polygon
+        radiance receiving patch
+
+    patch_j : geometry.Polygon
+        radiance emitting patch
+
+    approx_order: int
+        determines the order of the polynomial integration order. 
+        also determines the number of samples in each patch's boundary.
+
+    """
+
+    si, coni = sampling.sample_border(patch_i, npoints=approx_order+1)
+    sj, conj = sampling.sample_border(patch_j, npoints=approx_order+1)
 
     if singularity_check(si,sj):
         return float('nan')
@@ -121,12 +141,12 @@ def stokes_integration(eli, elj, approx_order=2):
                 outer_integral += poly_integration(quadfactors,xi)
 
 
-    return outer_integral/(2*PI*eli.A)
+    return outer_integral/(2*PI*patch_i.A)
 
 
-def monte_carlo(eli, elj, raysppoint, npts):
-    eli0 = elmt(geom.universal_transform(eli.o, eli.n, pt_list = eli.pt))
-    elj0 = elmt(geom.universal_transform(eli.o, eli.n, pt_list = elj.pt))
+def monte_carlo(patch_i, patch_j, raysppoint, npts):
+    eli0 = elmt(geom.universal_transform(patch_i.o, patch_i.n, pt_list = patch_i.pt))
+    elj0 = elmt(geom.universal_transform(patch_i.o, patch_i.n, pt_list = patch_j.pt))
 
     counter=0
 
@@ -158,6 +178,10 @@ def monte_carlo(eli, elj, raysppoint, npts):
 #######################################################################################
 
 def singularity_check(p0,p1):
+    """
+    returns true if two patches have any common points
+    """
+
     s0 = {tuple(row) for row in p0}
     s1 = {tuple(row) for row in p1}
 
