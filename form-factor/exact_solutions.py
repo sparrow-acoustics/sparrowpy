@@ -42,7 +42,7 @@ def perpendicular_patch_coincidentpoint(aa,bb,cc,dd):
     f = np.sqrt(d**2+e**2)
     x = aa/dd
     y = cc/dd
-    z = np.sqrt(x**+y**2)
+    z = np.sqrt(x**2+y**2)
     
     k = 1/(8*np.pi*bb*cc)
 
@@ -76,7 +76,7 @@ def perpendicular_patch_floating(aa,bb,cc,dd,ee):
     j = np.sqrt(d**2+y**2)
     z = np.sqrt(a**2 + y**2)
 
-    out = np.log(  ( (1+f**2)*(1*z**2) / ( (1+c**2)*(1+j**2) ) ) * (( z**2 + z**2 * c**2 )/(  c**2 + c**2 * z**2  ))**(a**2)  * (( f**2 + f**2 * c**2 )/(  c**2 + c**2 * f**2  ))**(b**2) * (( f**2 + f**2 * j**2 )/(  j**2 + j**2 * f**2  ))**(d**2) * (( z**2 + z**2 * j**2 )/(  j**2 + j**2 * z**2  ))**(y**2)  )
+    out = np.log(  ( (1+f**2)*(1+z**2) / ( (1+c**2)*(1+j**2) ) ) * (( z**2 + z**2 * c**2 )/(  c**2 + c**2 * z**2  ))**(a**2)  * (( f**2 + f**2 * c**2 )/(  c**2 + c**2 * f**2  ))**(b**2) * (( f**2 + f**2 * j**2 )/(  j**2 + j**2 * f**2  ))**(d**2) * (( z**2 + z**2 * j**2 )/(  j**2 + j**2 * z**2  ))**(y**2)  )
     out += 4 * ( f*np.arctan(1/f) + z*np.arctan(1/z) - c*np.arctan(1/c) - j*np.arctan(1/j))
 
     return out*bb/(4*aa*np.pi)
