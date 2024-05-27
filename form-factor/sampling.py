@@ -11,7 +11,7 @@ def sample_random(el=elmt([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]), npoints=100):
 
     Parameters
     ----------
-    el : elmt object
+    el : geometry.Polygon object
         patch to sample
             
     npoints : int
@@ -50,7 +50,7 @@ def sample_regular(el: polyg, npoints=10):
 
     Parameters
     ----------
-    el : elmt object
+    el : geometry.Polygon object
         patch to sample
             
     npoints : int
@@ -117,7 +117,7 @@ def sample_border(el: polyg,npoints=3):
 
     Parameters
     ----------
-    el : elmt object
+    el : geometry.Polygon object
         patch to sample
             
     npoints : int
