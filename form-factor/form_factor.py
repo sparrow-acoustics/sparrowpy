@@ -2,19 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import pi as PI
 from elmt import elmt
-from hemicube import hemicube_estimation as hc
 import time
 from nusselt import nusselt
 import geom
 import sampling
-
 from integrate_line import poly_estimation,poly_integration
-
 import exact_solutions as exact 
-
 from geometry import Polygon as polyg
 
-def form_function(p0,p1,n0,n1):
+#######################################################################################
+### form functions
+#######################################################################################
+
+def ffunction(p0,p1,n0,n1):
     cos0=geom.vec_cos(p1-p0, n0)
     cos1=geom.vec_cos(p0-p1,n1)
     rsq = np.square(np.linalg.norm(p0-p1))
@@ -24,43 +24,60 @@ def form_function(p0,p1,n0,n1):
     else:
         return 0
     
-
-def naive_integration(base_el: polyg, out_el: polyg, samplestep, random=False):
-
-    if random:
-        samples0 = sampling.sample_random(base_el,samplestep)
-        samples1 = sampling.sample_random(out_el,samplestep)
-    else:
-        samples0 = sampling.sample_regular(base_el,samplestep)
-        samples1 = sampling.sample_regular(out_el,samplestep)
-
-    int_accum=0.
-
-    for basept in samples0:
-        for outpt in samples1:
-            int_accum+= form_function(basept, outpt, base_el.normal, out_el.normal)*(base_el.A/len(samples0))*(out_el.A/len(samples1))
-  
-
-    return int_accum/base_el.A
-
 def stokes_ffunction(p0,p1):
     n = np.linalg.norm(p1-p0)
 
     if n>0:
         return np.log(n)
-    else:
+    else: # handle singularity (likely unused)
         return None
 
+#######################################################################################
+### integration
+#######################################################################################
 
-def singularity_check(p0,p1):
-    s0 = {tuple(row) for row in p0}
-    s1 = {tuple(row) for row in p1}
+def naive_integration(patch_i: polyg, patch_j: polyg, n_samples=4, random=False):
+    """
+    calculate an estimation of the form factor between two patches 
+    by computationally integrating the form function over the two patch surfaces
 
-    for el in s1:
-        if el in s0:
-            return True
+    The method is called naïve because it consists on the simplest approximation:
+    the form function value is merely multiplied by the area of finite sub-elements of each patch's surface.
 
-    return False
+    Parameters
+    ----------
+    patch_i : geometry.Polygon
+        radiance receiving patch
+
+    patch_j : geometry.Polygon
+        radiance emitting patch
+
+    n_samples : int
+        number of surface function samples on each patch 
+        TO DO: convert to sample density factor (large and small patches have approx. same resolution)
+
+    random: bool
+        determines whether the form function is sampled at regular intervals (False) or randomly (uniform distribution)
+        over the patches' surfaces.
+
+    """
+
+    if random:
+        samples0 = sampling.sample_random(patch_i,n_samples)
+        samples1 = sampling.sample_random(patch_j,n_samples)
+    else:
+        samples0 = sampling.sample_regular(patch_i,n_samples)
+        samples1 = sampling.sample_regular(patch_j,n_samples)
+
+    int_accum=0.
+
+    for basept in samples0:
+        for outpt in samples1:
+            int_accum+= ffunction(basept, outpt, patch_i.normal, patch_j.normal)*(patch_i.A/len(samples0))*(patch_j.A/len(samples1))
+  
+
+    return int_accum/patch_i.A
+
 
 def stokes_integration(eli, elj, approx_order=2):
 
@@ -125,24 +142,47 @@ def monte_carlo(eli, elj, raysppoint, npts):
             r = point + np.array([np.sin(theta)*np.cos(phi), np.sin(theta)*np.sin(phi), np.cos(theta)])
             intersection_point = geom.vec_plane_intersection(v0=r, p0=np.array([0,0,0]), n=elj0.n, pn=elj0.o)
 
-            #pllt.plot([0.0,r[0]],[0.0,r[1]],[0.0,r[2]], 'red')
-            #pllt.plot([r[0], intersection_point[0]],[r[1], intersection_point[1]], [r[2], intersection_point[2]], 'blue')
-            #pllt.plot([intersection_point[0]],[intersection_point[1]], [intersection_point[2]], 'gx')
-            
 
             if geom.point_in_polygon(pt=intersection_point, el=elj0):
-                #pllt.plot([intersection_point[0]],[intersection_point[1]], [intersection_point[2]], 'ro')
-                #ff += form_function(p0=np.array([0,0,0]),p1=elj0.o, n0=np.array([0,0,1]), n1=elj0.n)
+
                 counter+=1
 
-    #pllt.show()
     if counter !=0:
         return counter/(len(plist)*raysppoint)
     else:
         return 0
 
 
-    
+#######################################################################################
+### helper
+#######################################################################################
+
+def singularity_check(p0,p1):
+    s0 = {tuple(row) for row in p0}
+    s1 = {tuple(row) for row in p1}
+
+    for el in s1:
+        if el in s0:
+            return True
+
+    return False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         
 
 def plot_comparisons(el0, elements):
