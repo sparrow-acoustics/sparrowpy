@@ -1,14 +1,22 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from math import pi as PI
-from elmt import elmt
-import time
-from nusselt import nusselt
 import geom
 import sampling
 from integrate_line import poly_estimation,poly_integration
-import exact_solutions as exact 
 from geometry import Polygon as polyg
+
+#######################################################################################
+### main
+#######################################################################################
+def form_factor(receiving_patch: polyg, emitting_patch:polyg, mode='adaptive'):
+
+    match mode:
+        case 'adaptive':
+            if singularity_check(receiving_patch.pts, emitting_patch.pts):
+                return nusselt_integration(patch_i=receiving_patch, patch_j=emitting_patch, nsamples=25)
+            else:
+                return stokes_integration(patch_i=receiving_patch, patch_j=emitting_patch, approx_order=4)
+
 
 #######################################################################################
 ### form functions
@@ -76,9 +84,7 @@ def naive_integration(patch_i: polyg, patch_j: polyg, n_samples=4, random=False)
         for j_pt in j_samples:
             int_accum+= ffunction(i_pt, j_pt, patch_i.normal, patch_j.normal)*(patch_i.A/len(i_samples))*(patch_j.A/len(j_samples))
   
-
     return int_accum/patch_i.A
-
 
 def stokes_integration(patch_i: polyg, patch_j: polyg, approx_order=2):
     """
@@ -149,8 +155,91 @@ def stokes_integration(patch_i: polyg, patch_j: polyg, approx_order=2):
 
     return outer_integral/(2*PI*patch_i.A)
 
+def nusselt_integration(patch_i: polyg, patch_j: polyg, nsamples=2, random=False):
+    """
+    Estimates the form factor by integrating the Nusselt analogue values (emitting patch) 
+    over the surface of the receiving patch
+
+    Parameters
+    ----------
+    patch_i: geometry.Polygon
+            receiving patch
+
+    patch_j: geometry.Polygon
+            emitting patch
+
+    nsamples: int
+            number of surface samples for integration
+
+    random: bool
+            determines the distribution of the samples on patch_i surface 
+            if True, the samples are randomly distributed in a uniform way
+            if False, a regular sampling of the surface is performed
+
+    sphRadius: float
+            radius of the hemisphere used for the Nusselt analog estimation
+            (likely irrelevant)
+
+    """
+
+    if random:
+        p0_array = sampling.sample_random(patch_i,nsamples)
+    else:
+        p0_array = sampling.sample_regular(patch_i,nsamples)
+
+    out = 0
+
+    b_points, connectivity = sampling.sample_border(patch_j, npoints=3) # 3 points per boundary segment (for quadratic approximation)
+
+    sphPts = np.empty_like( b_points )
+    plnPts = np.empty( shape=(len(b_points),2) )
+
+    for p0 in p0_array:
+
+        curved_area = 0
+ 
+        
+        for ii in range(len(b_points)):
+            sphPts[ii] = ((b_points[ii]-p0)/np.linalg.norm(b_points[ii]-p0)) # patch j points projected on the hemisphere
+
+        
+        for ii in range(len(sphPts)):
+            plnPts[ii,:] = np.inner(geom.rotation_matrix(patch_i.normal),sphPts[ii])[:-1] # points on the hemisphere projected onto 
+
+        projPolyArea = polygon_area(plnPts[0::2])
+            
+        for segmt in connectivity:
+
+            if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
+                curved_area += area_under_curve(plnPts[segmt],order=2)
+
+            else:                                                                       # if points span over 90º, additional sampling is required
+                mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
+                marc = mpoint/np.linalg.norm(mpoint) # midpoint on the arc projected on the hemisphere
+
+                mpoint = np.inner(geom.rotation_matrix(patch_i.normal),mpoint)[:-1]
+                marc = np.inner(geom.rotation_matrix(patch_i.normal),marc)[:-1]
+
+                linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
+                
+                a = sphPts[segmt[0]] + (sphPts[segmt[1]] - sphPts[segmt[0]]) / 2
+                a = a/np.linalg.norm(a)
+                a = np.inner(geom.rotation_matrix(patch_i.normal),a)[:-1]
+
+                b = sphPts[segmt[1]] + (sphPts[segmt[-1]] - sphPts[segmt[1]]) / 2
+                b = b/np.linalg.norm(b)
+                b = np.inner(geom.rotation_matrix(patch_i.normal),b)[:-1]
+
+                left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]),order=2)
+                right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]),order=2)
+                curved_area += linArea * np.sign(left) + left + right
+
+        out += (projPolyArea + curved_area) / PI * (patch_i.A/len(p0_array)) / patch_i.A
+       
+    return out
+
 #######################################################################################
-### helper
+### helpers
 #######################################################################################
 
 def singularity_check(p0,p1):
@@ -158,200 +247,60 @@ def singularity_check(p0,p1):
     returns true if two patches have any common points
     """
 
-    s0 = {tuple(row) for row in p0}
-    s1 = {tuple(row) for row in p1}
-
-    for el in s1:
-        if el in s0:
+    for point in p1:
+        if (p0==point).all(axis=1).any():
             return True
 
     return False
 
+def polygon_area(pts: np.ndarray):
+    """
+    calculates the area of a convex 3- or 4-sided polygon
 
+    Parameters
+    ----------
+    pts: np.ndarray
+        list of 3D points which define the vertices of the polygon
+    """
 
+    if len(pts) == 3:
+        return .5 * np.linalg.norm( np.cross( pts[1]-pts[0] , pts[2]-pts[0] ) )
 
+    if len(pts) == 4:
+        return .5 * ( np.linalg.norm( np.cross( pts[3]-pts[2] , pts[0]-pts[2] ) ) + np.linalg.norm( np.cross( pts[1]-pts[0] , pts[2]-pts[0] ) ) )
 
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-def plot_comparisons(el0, elements):
-
-    for i,el in enumerate(elements):
-
-        f,a = plt.subplots()
-
-        ff_n_array=[]
-        t_array=[]
-
-        tt_stokes = []
-        tf_stokes = []
-
-        ff_cnuss = []
-        t_cnuss = []
-
-
-        if i == 0:
-            tit = "Parallel patches"
-        if i == 1:
-            tit = "Perpendicular patches -- connected edge"
-        if i == 2:
-            tit = "Perpendicular patches -- connected vertex"
-        if i == 3:
-            tit = "Perpendicular patches -- disconnected"
-        if i > 3:
-            tit = "Random patch -> " + str(len(el.pts)) + " sides"
-
-        print("\n########################################\n"+tit + "\n")
-       
-        samplingsteps = [2**2,5**2,7**2,10**2,14**2,20**2]
-
-        for step in samplingsteps:
-
-            t0 = time.time()
-            temp= nusselt(el0,el, nsamples=step)
-            t_cnuss.append(time.time()-t0)
-            ff_cnuss.append(temp)
-
-
-        for order in [2,3,4,5]:
-
-            t0 = time.time()
-            ff_stokes = stokes_integration(el0, el, approx_order=order)
-            t_stokes = time.time()-t0
-
-            tt_stokes.append(t_stokes)
-            tf_stokes.append(ff_stokes)
-
-
-        for step in samplingsteps:
-
-            print("# points: " + str(step))
-
-            t0 = time.time()
-
-            ff_naive = naive_integration(el0,el,step)
-
-            t1 = time.time()-t0
-
-            ff_n_array.append(ff_naive)
-            t_array.append(t1)
-
-        # for step in samplingsteps:
-
-        #     print("# points: " + str(step))
-            
-        #     t0 = time.time()
-
-        #     ff_naive = naive_integration(el0,el,step, random=True)
-
-        #     t1 = time.time()-t0
-
-        #     ff_nr_array.append(ff_naive)
-        #     t_rand_array.append(t1)
-
-
-            # print("hemicube : "+str(ppp) +" points")
-            # t0 = time.time()
-            # ff_hc.append(hc(el0, el, resolution=ppp , nsamples=step,plot=False))
-            # t_hc.append(time.time()-t0)
-
-        if i == 0:
-            true_solution = exact.parallel_patches(1.,1.,1.)
-        elif i == 1:
-            true_solution = exact.perpendicular_patch_coincidentline(1.,1.,1.)
-        elif i == 2:
-            true_solution = exact.perpendicular_patch_coincidentpoint(1.,1.,1.,1.)
-        #elif i == 3:
-        #    true_solution = exact.perpendicular_patch_floating(1.,1.,1.,0.,1.)
-        else:
-            true_solution = ff_naive
-
-        print("True solution: "+ str(true_solution))
-
-
-        a.plot(t_array, ( ( ff_n_array - true_solution)**2)**.5 / abs(true_solution), 'b-', label='double even quadrature integration')
-        #a[i].plot(t_rand_array, ( ( ff_nr_array - true_solution)**2)**.5 / true_solution, 'b--', label='monte carlo integration')
-        a.plot(t_cnuss, ( ( ff_cnuss - true_solution)**2)**.5 / abs(true_solution), 'r-', label='nusselt + even quadrature integration' )
-        a.plot(tt_stokes, ( (tf_stokes - true_solution)**2)**.5 / abs(true_solution), 'g*-', label='stokes integration' )
-        #a[i].plot(t_hc*np.ones_like(ff_hc), ( ( ff_hc - true_solution)**2)**.5 / true_solution, 'g-', label='hemicube' )
-        a.legend()
-        a.set_yscale('log')
-        a.set_xscale('log')
-        a.set_xlabel("computation runtime [s]")
-        a.set_ylabel("relative Form Factor error (L2)")
-        a.set_title(tit)
-        a.grid()
-
-        # a[1,i].plot(np.array(samplingsteps)**2 * 2, t_array, label='naive integration')
-        # a[1,i].plot(np.array(samplingsteps)**2, t_cnuss, 'k--', label='nusselt curved' )
-        # #a[1,i].plot([1,2000], np.array([1,1])*t_stokes, 'b--', label='quad approximation stokes' )
-        # a[1,i].plot(npnp, t_mc, 'orange', label='monte carlo' )
-        # a[1,i].plot(pointnr, t_hc, 'magenta', label='hemicube' )
-        # a[1,i].legend()
-        # a[1,i].set_yscale('log')
-        # a[1,i].set_xscale('log')
-        # a[1,i].set_xlabel("# patch sampling points")
-        # a[1,i].set_ylabel("runtime [s]")
-        # a[1,i].set_title(tit)
-
-        # a[0,i].grid()
-        # a[1,i].grid()
-
-        plt.savefig("C:\\Users\\fatela\\Desktop\\temp\\patch"+str(i+1))
-        #plt.show()
-        print("yo")
+def area_under_curve(ps, order=2):
+    """
+    calculates the area under a polynomial curve sampled by a finite number of points (on a shared plane)
     
-el0 = polyg(points=np.array([[0.,0.,0.],[0.,1.,0.],[0.,1.,1.],[0.,0.,1.]]), up_vector=np.array([0.,0.,1.]), normal=np.array([1.,0.,0.]))
+    Parameters
+    ----------
+    ps : np.ndarray
+        sample points
 
-el1 = polyg(points=np.array([[1.,0.,0.],[1.,0.,1.],[1.,1.,1.],[1.,1.,0.]]), up_vector=np.array([0.,0.,1.]), normal=np.array([-1.,0.,0.]))
+    order : int
+        polynomial order of the curve
+    """
 
-el2 = polyg(points=np.array([[0.,0.,0.],[1.,0.,0.],[1.,1.,0.],[0.,1.,0.]]), up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
+    order = min(order,len(ps)-1) # the order of the curve may be overwritten depending on the sample size
 
-el3 = polyg(points=np.array([[0.,1.,0.],[1.,1.,0.],[1.,2.,0.],[0.,2.,0.]]), up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
+    f  = ps[-1] - ps[0] # the vector between first and last sample (y==0) (new space's x axis)
 
-el4 = polyg(points=np.array([[0.,0.,-1.],[1.,0.,-1.],[1.,1.,-1.],[0.,1.,-1.]]), up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
+    rotation_matrix = np.array([[f[0],f[1]],[-f[1],f[0]]])/np.linalg.norm(f) 
 
+    x = np.array([0]) # origin of new linear space
+    y = np.array([0])
 
-ell5 = elmt([[1.,0.,0.],[2.,0.,1.],[2.,1.,1.],[1.,1.,0.]])
+    for k in range(1,order+1):
 
-ell6 = elmt([[4.,0.,0.],[4.,0.,2.],[3.,2.,1.]])
-
-el5 = polyg(points=ell5.pt, up_vector=ell5.pt[0]-ell5.pt[-1], normal=ell5.n)
-
-el6 = polyg(points=ell6.pt, up_vector=ell6.pt[0]-ell6.pt[-1], normal=ell6.n)
-
-
-
-# f = plt.figure()
-# a = f.add_subplot(projection='3d')
-
-# a.plot(el0.pt[:,0],el0.pt[:,1], el0.pt[:,2], 'r-')
-
-# a.plot(el4.pt[:,0],el4.pt[:,1], el4.pt[:,2], 'b-')
-# a.grid()
-
-# a.set_aspect('equal')
-
-# plt.show()
+        c = ps[k] - ps[0]                   # translate point towards new origin
+        cc = np.inner(rotation_matrix,c)    # rotate point around origin to align with new axis
+        
+        x = np.append(x,cc[0])
+        y = np.append(y,cc[1])
 
 
-plot_comparisons(el0,[el1, el2, el3, el4, el5, el6])
+    coefs = poly_estimation(x,y)
+    area = poly_integration(coefs,x)        # area between curve and ps[-1] - ps[0]
 
-print("hehe")
-
-# print(stokes_integration(el0, el1)-stokes_integration(el1, el0))
-
-
-#print(naive_stokes_integration(el0, el1))
-#print(naive_nusselt(el0, el1))
+    return area
