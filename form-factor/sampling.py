@@ -2,12 +2,11 @@ import numpy as np
 from elmt import elmt
 from geometry import Polygon as polyg
 
-def sample_random(el=elmt([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]), npoints=100):
+def sample_random(el: polyg, npoints=100):
     """
     Randomly sample points on the surface of a patch using a uniform distribution
     
     ! currently only supports triangular, rectangular, or parallelogram patches
-    ! may not return exact number of requested points -- depends on the divisibility of the patch
 
     Parameters
     ----------
@@ -23,8 +22,8 @@ def sample_random(el=elmt([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]), npoints=100):
 
     ptlist=np.zeros((npoints,3)) 
     
-    u = el.pt[1]-el.pt[0]
-    v = el.pt[-1]-el.pt[0]
+    u = el.pts[1]-el.pts[0]
+    v = el.pts[-1]-el.pts[0]
 
     for i in range(npoints):
         s = np.random.uniform()
@@ -32,11 +31,11 @@ def sample_random(el=elmt([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]), npoints=100):
 
         inside = s+t <= 1
 
-        if len(el.pt)==3 and not inside: # if sample falls outside of triangular patch, it is "reflected" inside 
+        if len(el.pts)==3 and not inside: # if sample falls outside of triangular patch, it is "reflected" inside 
             s = 1-s
             t = 1-t
         
-        ptlist[i] = s*u + t*v + el.pt[0]
+        ptlist[i] = s*u + t*v + el.pts[0]
 
     return ptlist
 
@@ -101,9 +100,6 @@ def sample_regular(el: polyg, npoints=10):
             inside = s+t <= 1-thres
             if not(len(el.pts)==3 and not inside):
                 ptlist.append(s*u + t*v + el.pts[0])
-
-            
-
 
     return np.array(ptlist)
 
