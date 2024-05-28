@@ -35,7 +35,7 @@ def plot_comparisons(el0, elements):
 
         print("\n########################################\n"+tit + "\n")
        
-        samplingsteps = [2**2,5**2,7**2,10**2,14**2]
+        samplingsteps = [2**2,5**2,7**2,10**2,13**2]
 
         for step in samplingsteps:
 
@@ -73,16 +73,18 @@ def plot_comparisons(el0, elements):
         opt= form_factor(el0,el)
         t_opt=time.time()-t0
 
-        if i == 0:
-            true_solution = exact.parallel_patches(1.,1.,1.)
-        elif i == 1:
-            true_solution = exact.perpendicular_patch_coincidentline(1.,1.,1.)
-        elif i == 2:
-            true_solution = exact.perpendicular_patch_coincidentpoint(1.,1.,1.,1.)
-        #elif i == 3:
-        #    true_solution = exact.perpendicular_patch_floating(1.,1.,1.,0.,1.)
-        else:
-            true_solution = ff_naive
+        # if i == 0:
+        #     true_solution = exact.parallel_patches(1.,1.,1.)
+        # elif i == 1:
+        #     true_solution = exact.perpendicular_patch_coincidentline(1.,1.,1.)
+        # elif i == 2:
+        #     true_solution = exact.perpendicular_patch_coincidentpoint(1.,1.,1.,1.)
+        # #elif i == 3:
+        # #    true_solution = exact.perpendicular_patch_floating(1.,1.,1.,0.,1.)
+        # else:
+        #     true_solution = ff_naive
+
+        true_solution = ff_naive
 
         print("True solution: "+ str(true_solution))
 
@@ -99,12 +101,12 @@ def plot_comparisons(el0, elements):
         a.set_title(tit)
         a.grid()
 
-        plt.savefig("C:\\Users\\fatela\\Desktop\\temp\\smallestpatch"+str(i+1))
+        plt.savefig("C:\\Users\\fatela\\Desktop\\temp\\i60patch"+str(i+1))
 
         print("yo")
 
 
-scale = 1.
+scale = 60
     
 el0 = polyg(points=np.array([[0.,0.,0.],[0.,1.,0.],[0.,1.,1.],[0.,0.,1.]])*scale, up_vector=np.array([0.,0.,1.]), normal=np.array([1.,0.,0.]))
 
@@ -117,7 +119,7 @@ el3 = polyg(points=np.array([[0.,1.,0.],[1.,1.,0.],[1.,2.,0.],[0.,2.,0.]])*scale
 el4 = polyg(points=np.array([[0.,0.,-1.],[1.,0.,-1.],[1.,1.,-1.],[0.,1.,-1.]])*scale, up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
 
 
-ell5 = elmt([[1.,0.,0.],[2.,0.,1.],[2.,1.,1.],[1.,1.,0.]])
+ell5 = elmt([[1.,0.,0.],[2.,1.,1.],[2.,0.,1.],[1.,1.,0.]])
 
 ell6 = elmt([[4.,0.,0.],[4.,0.,2.],[3.,2.,1.]])
 

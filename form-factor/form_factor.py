@@ -13,9 +13,9 @@ def form_factor(receiving_patch: polyg, emitting_patch:polyg, mode='adaptive'):
     match mode:
         case 'adaptive':
             if singularity_check(receiving_patch.pts, emitting_patch.pts):
-                return nusselt_integration(patch_i=receiving_patch, patch_j=emitting_patch, nsamples=25)
+                return nusselt_integration(patch_i=emitting_patch, patch_j=receiving_patch, nsamples=25)
             else:
-                return stokes_integration(patch_i=receiving_patch, patch_j=emitting_patch, approx_order=4)
+                return stokes_integration(patch_i=emitting_patch, patch_j=receiving_patch, approx_order=4)
 
 
 #######################################################################################
@@ -55,10 +55,10 @@ def naive_integration(patch_i: polyg, patch_j: polyg, n_samples=4, random=False)
     Parameters
     ----------
     patch_i : geometry.Polygon
-        radiance receiving patch
+        radiance emitting patch
 
     patch_j : geometry.Polygon
-        radiance emitting patch
+        radiance receiving patch
 
     n_samples : int
         number of surface function samples on each patch 
@@ -97,10 +97,10 @@ def stokes_integration(patch_i: polyg, patch_j: polyg, approx_order=2):
     Parameters
     ----------
     patch_i : geometry.Polygon
-        radiance receiving patch
+        radiance emitting patch
 
     patch_j : geometry.Polygon
-        radiance emitting patch
+        radiance receiving patch
 
     approx_order: int
         determines the order of the polynomial integration order. 
@@ -163,10 +163,10 @@ def nusselt_integration(patch_i: polyg, patch_j: polyg, nsamples=2, random=False
     Parameters
     ----------
     patch_i: geometry.Polygon
-            receiving patch
+            emitting patch
 
     patch_j: geometry.Polygon
-            emitting patch
+            receiving patch
 
     nsamples: int
             number of surface samples for integration
@@ -175,21 +175,16 @@ def nusselt_integration(patch_i: polyg, patch_j: polyg, nsamples=2, random=False
             determines the distribution of the samples on patch_i surface 
             if True, the samples are randomly distributed in a uniform way
             if False, a regular sampling of the surface is performed
-
-    sphRadius: float
-            radius of the hemisphere used for the Nusselt analog estimation
-            (likely irrelevant)
-
     """
 
     if random:
-        p0_array = sampling.sample_random(patch_i,nsamples)
+        p0_array = sampling.sample_random(patch_j,nsamples)
     else:
-        p0_array = sampling.sample_regular(patch_i,nsamples)
+        p0_array = sampling.sample_regular(patch_j,nsamples)
 
     out = 0
 
-    b_points, connectivity = sampling.sample_border(patch_j, npoints=3) # 3 points per boundary segment (for quadratic approximation)
+    b_points, connectivity = sampling.sample_border(patch_i, npoints=3) # 3 points per boundary segment (for quadratic approximation)
 
     sphPts = np.empty_like( b_points )
     plnPts = np.empty( shape=(len(b_points),2) )
@@ -204,7 +199,7 @@ def nusselt_integration(patch_i: polyg, patch_j: polyg, nsamples=2, random=False
 
         
         for ii in range(len(sphPts)):
-            plnPts[ii,:] = np.inner(geom.rotation_matrix(patch_i.normal),sphPts[ii])[:-1] # points on the hemisphere projected onto 
+            plnPts[ii,:] = np.inner(geom.rotation_matrix(patch_j.normal),sphPts[ii])[:-1] # points on the hemisphere projected onto 
 
         projPolyArea = polygon_area(plnPts[0::2])
             
@@ -217,24 +212,24 @@ def nusselt_integration(patch_i: polyg, patch_j: polyg, nsamples=2, random=False
                 mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
                 marc = mpoint/np.linalg.norm(mpoint) # midpoint on the arc projected on the hemisphere
 
-                mpoint = np.inner(geom.rotation_matrix(patch_i.normal),mpoint)[:-1]
-                marc = np.inner(geom.rotation_matrix(patch_i.normal),marc)[:-1]
+                mpoint = np.inner(geom.rotation_matrix(patch_j.normal),mpoint)[:-1]
+                marc = np.inner(geom.rotation_matrix(patch_j.normal),marc)[:-1]
 
                 linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
                 
                 a = sphPts[segmt[0]] + (sphPts[segmt[1]] - sphPts[segmt[0]]) / 2
                 a = a/np.linalg.norm(a)
-                a = np.inner(geom.rotation_matrix(patch_i.normal),a)[:-1]
+                a = np.inner(geom.rotation_matrix(patch_j.normal),a)[:-1]
 
                 b = sphPts[segmt[1]] + (sphPts[segmt[-1]] - sphPts[segmt[1]]) / 2
                 b = b/np.linalg.norm(b)
-                b = np.inner(geom.rotation_matrix(patch_i.normal),b)[:-1]
+                b = np.inner(geom.rotation_matrix(patch_j.normal),b)[:-1]
 
                 left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]),order=2)
                 right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]),order=2)
                 curved_area += linArea * np.sign(left) + left + right
 
-        out += (projPolyArea + curved_area) / PI * (patch_i.A/len(p0_array)) / patch_i.A
+        out += (projPolyArea + curved_area) / PI * (patch_i.A/len(p0_array))/ patch_j.A
        
     return out
 

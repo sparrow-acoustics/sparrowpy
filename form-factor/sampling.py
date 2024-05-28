@@ -103,7 +103,6 @@ def sample_regular(el: polyg, npoints=10):
 
     return np.array(ptlist)
 
-
 def sample_border(el: polyg,npoints=3):
     """
     Sample points on the boundary of a patch at fractional intervals of each side
