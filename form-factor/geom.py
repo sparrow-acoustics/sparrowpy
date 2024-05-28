@@ -18,8 +18,6 @@ def vec_cos(v0,v1):
         return np.inner(v0,v1)/(np.linalg.norm(v0)*np.linalg.norm(v1))
     
 
-
-
 def universal_transform(o, u, pts):
     """
     Universal linear transformation. 
@@ -50,7 +48,6 @@ def universal_transform(o, u, pts):
     return pts_out
 
 
-
 def translation(origin, pt_list):
     """
     Translates points towards an origin (N-dimensional)
@@ -66,9 +63,11 @@ def translation(origin, pt_list):
     return np.array(pt_list) - np.array([origin for i in range(len(pt_list))])
 
 
-def rotation_matrix(n_in, n_out = np.array([0.,0.,1.])):
+def rotation_matrix(n_in: np.ndarray, n_out=None):
     """
     Computes a rotation matrix from a given input vector and desired output direction
+
+    TO DO: expand to N-D arrays
 
     Parameters
     ----------
@@ -79,10 +78,14 @@ def rotation_matrix(n_in, n_out = np.array([0.,0.,1.])):
         direction to which n_in is to be rotated
     """
 
-    if (n_in == n_out).all():               # if input vector is the same as output return identity matrix
-        return [[1,0,0],[0,1,0],[0,0,1]]
+    if n_out is None:
+        n_out = np.zeros_like(n_in)
+        n_out[-1] = 1.
 
-    a, b = (n_in / np.linalg.norm(n_in)).reshape(3), (n_out / np.linalg.norm(n_out)).reshape(3)
+    if (n_in == n_out).all():               # if input vector is the same as output return identity matrix
+        return np.eye( len(n_in) )
+
+    a, b = (n_in / np.linalg.norm(n_in)).reshape( len(n_in) ), (n_out / np.linalg.norm(n_out)).reshape( len(n_in) )
 
     c = np.dot(a,b)
     
@@ -90,9 +93,10 @@ def rotation_matrix(n_in, n_out = np.array([0.,0.,1.])):
         v = np.cross(a,b)
         s = np.linalg.norm(v)
         kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-        matrix =  np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+        matrix =  np.eye( len(n_in) ) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+
     else: # in case the in and out vectors have symmetrical directions
-        matrix = [[-1,0,0],[0,1,0],[0,0,-1]]
+        matrix = np.array([[-1,0,0],[0,1,0],[0,0,-1]])
 
     return matrix
 
