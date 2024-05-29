@@ -62,7 +62,7 @@ class Patches(Polygon):
 
         self.patches = [
             Polygon(points, polygon.up_vector, polygon.normal)
-                for points in create_patches(polygon, max_size)]
+                for points in create_patches(polygon.pts, max_size)]
         self.other_wall_ids = np.atleast_1d(np.array(
             other_wall_ids, dtype=int))
 

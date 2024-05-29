@@ -94,24 +94,26 @@ class DRadiosityFast():
         walls_normal = np.array([p.normal for p in polygon_list])
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
 
-        # create patches
-        patches_points = []
-        patch_to_wall_ids = []
-        for i, polygon in enumerate(polygon_list):
-            patches_points_wall = geo.create_patches(polygon, patch_size)
-            patch_to_wall_ids.extend([i for _ in range(len(patches_points_wall))])
-            patches_points.extend(patches_points_wall)
-        patches_points = np.array(patches_points)
-        patch_to_wall_ids = np.array(patch_to_wall_ids)
+        # # create patches
+        # patches_points = []
+        # patch_to_wall_ids = []
+        # for i, polygon in enumerate(polygon_list):
+        #     patches_points_wall = geo.create_patches(
+        #         np.array(polygon.pts), patch_size)
+        #     patch_to_wall_ids.extend([i for _ in range(len(patches_points_wall))])
+        #     patches_points.extend(patches_points_wall)
+        # patches_points = np.array(patches_points)
+        # patch_to_wall_ids = np.array(patch_to_wall_ids)
 
-        # calculate patch information
-        patches_size = geo.calculate_size(patches_points)
-        patches_area = geo.calculate_area(patches_points)
-        patches_center = geo.calculate_center(patches_points)
-        patches_normal = np.array([
-            walls_normal[i] for i in patch_to_wall_ids])
-        n_patches = patches_area.size
-
+        # # calculate patch information
+        # patches_size = geo.calculate_size(patches_points)
+        # patches_area = geo.calculate_area_loop(patches_points)
+        # patches_center = geo.calculate_center(patches_points)
+        # patches_normal = walls_normal[patch_to_wall_ids]
+        # n_patches = patches_area.size
+        (patches_area, patches_center, patches_size, patches_points,
+         patches_normal, n_patches) = process_patches(
+            walls_points, walls_normal, patch_size, walls_area.shape[0])
         # create radiosity object
         return cls(
             walls_area, walls_points, walls_normal, walls_center,
@@ -218,7 +220,55 @@ class DRadiosityFast():
         return self._speed_of_sound
 
 
-@numba.njit(parallel=True)
+@numba.jit(nopython=True)
+def process_patches(polygon_points_array, walls_normal, patch_size, n_walls):
+
+        n_patches = 0
+        n_walls = polygon_points_array.shape[0]
+        for i in range(n_walls):
+            n_patches += total_number_of_patches(
+                polygon_points_array[i, :, :], patch_size)
+        patches_points = np.empty((n_patches, 4, 3))
+        patch_to_wall_ids = np.empty((n_patches), dtype=np.int64)
+        patches_per_wall = np.empty((n_walls), dtype=np.int64)
+
+        for i in range(n_walls):
+            polygon_points = polygon_points_array[i, :]
+            patches_points_wall = geo.create_patches(
+                polygon_points, patch_size)
+            patches_per_wall[i] = patches_points_wall.shape[0]
+            j_start = (np.sum(patches_per_wall[:i])) if i > 0 else 0
+            j_end = np.sum(patches_per_wall[:i+1])
+            patch_to_wall_ids[j_start:j_end] = i
+            patches_points[j_start:j_end, :, :] = patches_points_wall
+        n_patches = patches_points.shape[0]
+
+        # calculate patch information
+        patches_size = geo.calculate_size(patches_points)
+        patches_area = geo.calculate_area(patches_points)
+        patches_center = geo.calculate_center(patches_points)
+        patches_normal = walls_normal[patch_to_wall_ids, :]
+        return patches_area, patches_center, patches_size, patches_points, patches_normal, n_patches
+
+@numba.jit(nopython=True)
+def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
+    size = np.empty(polygon_points.shape[1])
+    for i in range(polygon_points.shape[1]):
+        size[i] = polygon_points[:, i].max() - polygon_points[:, i].min()
+    patch_nums = np.array([int(n) for n in size/max_size])
+    if patch_nums[2] == 0:
+        x_idx = 0
+        y_idx = 1
+    if patch_nums[1] == 0:
+        x_idx = 0
+        y_idx = 2
+    if patch_nums[0] == 0:
+        x_idx = 1
+        y_idx = 2
+
+    return patch_nums[x_idx]*patch_nums[y_idx]
+
+# @numba.jit(parallel=True)
 def calculate_init_energy(
         source_position, patches_center, patches_normal,
         patches_size):

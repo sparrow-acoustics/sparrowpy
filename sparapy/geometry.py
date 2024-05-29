@@ -2,15 +2,17 @@
 import matplotlib.axes
 import numpy as np
 import matplotlib.pyplot as plt
+import numba
 
 from sparapy.sound_object import Receiver, SoundSource
 
 
-def create_patches(polygon, max_size):
-    min = np.min(polygon.pts, axis=0)
-    max = np.max(polygon.pts, axis=0)
-    size = max - min
-    patch_nums = [int(n) for n in size/max_size]
+@numba.jit(nopython=True)
+def create_patches(polygon_points:np.ndarray, max_size):
+    size = np.empty(polygon_points.shape[1])
+    for i in range(polygon_points.shape[1]):
+        size[i] = polygon_points[:, i].max() - polygon_points[:, i].min()
+    patch_nums = np.array([int(n) for n in size/max_size])
     real_size = size/patch_nums
     if patch_nums[2] == 0:
         x_idx = 0
@@ -22,13 +24,15 @@ def create_patches(polygon, max_size):
         x_idx = 1
         y_idx = 2
 
-    x_min = np.min(polygon.pts.T[x_idx])
-    y_min = np.min(polygon.pts.T[y_idx])
+    x_min = np.min(polygon_points.T[x_idx])
+    y_min = np.min(polygon_points.T[y_idx])
 
-    patches_points = []
+    n_patches = patch_nums[x_idx]*patch_nums[y_idx]
+    patches_points = np.empty((n_patches, 4, 3))
+    i = 0
     for i_x in range(patch_nums[x_idx]):
         for i_y in range(patch_nums[y_idx]):
-            points = polygon.pts.copy()
+            points = polygon_points.copy()
             points[0, x_idx] = x_min + i_x * real_size[x_idx]
             points[0, y_idx] = y_min + i_y * real_size[y_idx]
             points[1, x_idx] = x_min + (i_x+1) * real_size[x_idx]
@@ -37,26 +41,39 @@ def create_patches(polygon, max_size):
             points[3, y_idx] = y_min + (i_y+1) * real_size[y_idx]
             points[2, x_idx] = x_min + (i_x+1) * real_size[x_idx]
             points[2, y_idx] = y_min + (i_y+1) * real_size[y_idx]
-            patches_points.append(points)
+            patches_points[i] = points
+            i += 1
 
     return patches_points
 
 
+@numba.jit(nopython=True)
 def calculate_center(points):
-    points = np.array(points)
     return np.sum(points, axis=-2) / points.shape[-2]
 
-
+@numba.jit(nopython=True)
 def calculate_size(points):
-    points = np.array(points)
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
     return np.abs(vec1-vec2)
 
-
+@numba.jit(nopython=True)
 def calculate_area(points):
-    size = calculate_size(points)
-    return size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] + size[..., 0]*size[..., 2]
+    vec1 = points[..., 0, :]-points[..., 1, :]
+    vec2 = points[..., 1, :]-points[..., 2, :]
+    size = vec1-vec2
+    return np.abs(size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] + size[..., 0]*size[..., 2])
+
+
+@numba.jit(nopython=True, parallel=True)
+def calculate_area_loop(points):
+    areas = np.empty(points.shape[0])
+    for i in numba.prange(points.shape[0]):
+        vec1 = points[i, 0, :]-points[i, 1, :]
+        vec2 = points[i, 1, :]-points[i, 2, :]
+        size = vec1-vec2
+        areas[i] = np.abs(size[0]*size[1] + size[1]*size[2] + size[0]*size[2])
+    return areas
 
 
 class Polygon():
