@@ -1,4 +1,5 @@
 """Module for the radiosity simulation."""
+import numba
 import matplotlib as mpl
 import numpy as np
 import pyfar as pf
@@ -23,6 +24,7 @@ class DRadiosityFast():
     _patches_normal: np.ndarray
     _patch_size: float
     _max_order_k: int
+    _n_patches: int
 
     absorption: np.ndarray
     scattering: np.ndarray
@@ -38,7 +40,8 @@ class DRadiosityFast():
     def __init__(
             self, walls_area, walls_points, walls_normal, walls_center,
             walls_up_vector, patches_area, patches_center, patches_size,
-            patches_points, patches_normal, patch_size, speed_of_sound,
+            patches_points, patches_normal, patch_size, n_patches,
+            speed_of_sound,
             max_order_k=None, visibility_matrix=None,):
         """Create a Radiosity object for directional scattering coefficients."""
         self._walls_area = walls_area
@@ -52,6 +55,7 @@ class DRadiosityFast():
         self._patches_points = patches_points
         self._patches_normal = patches_normal
         self._patch_size = patch_size
+        self._n_patches = n_patches
         self._speed_of_sound = speed_of_sound
         if max_order_k is not None:
             self._max_order_k = max_order_k
@@ -106,19 +110,31 @@ class DRadiosityFast():
         patches_center = geo.calculate_center(patches_points)
         patches_normal = np.array([
             walls_normal[i] for i in patch_to_wall_ids])
+        n_patches = patches_area.size
 
         # create radiosity object
         return cls(
             walls_area, walls_points, walls_normal, walls_center,
             walls_up_vector, patches_area, patches_center, patches_size,
-            patches_points, patches_normal, patch_size, speed_of_sound)
+            patches_points, patches_normal, patch_size, n_patches, speed_of_sound)
+
+    def init_energy(self, source_position):
+        """Calculate the initial energy."""
+        energy, distance = calculate_init_energy(
+            source_position, self.patches_center, self.patches_normal,
+            self.patches_size)
+        return energy, distance
 
     def calculate_form_factors(self):
         """Calculate the form factors."""
         self._form_factors = form_factor_kang(
             self.patches_center, self.patches_normal,
-            self.patches_size)
+            self.patches_size, self.visibility_matrix)
 
+    @property
+    def n_patches(self):
+        """Return the total number of patches."""
+        return self._n_patches
     @property
     def form_factors(self):
         """Return the form factor."""
@@ -184,57 +200,71 @@ class DRadiosityFast():
         """Return the max order of energy exchange iterations."""
         return self._max_order_k
 
-
+@numba.njit(parallel=True)
 def calculate_init_energy(
         source_position, patches_center, patches_normal,
         patches_size):
 
     n_patches = patches_center.shape[0]
-    idx_l = np.zeros(n_patches)
-    idx_l[:] = np.nan
-    idx_l[np.abs(patches_normal[:, 2]) > 0.99] = 0
-    idx_l[np.abs(patches_normal[:, 1]) > 0.99] = 0
-    idx_l[np.abs(patches_normal[:, 0]) > 0.99] = 1
-    idx_m = np.zeros(n_patches)
-    idx_m[:] = np.nan
-    idx_m[np.abs(patches_normal[:, 2]) > 0.99] = 1
-    idx_m[np.abs(patches_normal[:, 1]) > 0.99] = 2
-    idx_m[np.abs(patches_normal[:, 0]) > 0.99] = 2
-    idx_n = np.zeros(n_patches)
-    idx_n[:] = np.nan
-    idx_n[np.abs(patches_normal[:, 2]) > 0.99] = 2
-    idx_n[np.abs(patches_normal[:, 1]) > 0.99] = 1
-    idx_n[np.abs(patches_normal[:, 0]) > 0.99] = 0
+    # idx_l = np.empty((n_patches, ))
+    # idx_l[np.abs(patches_normal[:, 2]) > 0.99] = 0
+    # idx_l[np.abs(patches_normal[:, 1]) > 0.99] = 0
+    # idx_l[np.abs(patches_normal[:, 0]) > 0.99] = 1
+    # idx_m = np.empty((n_patches, ))
+    # idx_m[np.abs(patches_normal[:, 2]) > 0.99] = 1
+    # idx_m[np.abs(patches_normal[:, 1]) > 0.99] = 2
+    # idx_m[np.abs(patches_normal[:, 0]) > 0.99] = 2
+    # idx_n = np.empty((n_patches, ))
+    # idx_n[np.abs(patches_normal[:, 2]) > 0.99] = 2
+    # idx_n[np.abs(patches_normal[:, 1]) > 0.99] = 1
+    # idx_n[np.abs(patches_normal[:, 0]) > 0.99] = 0
+    energy = np.empty((n_patches, ))
+    distance = np.empty((n_patches, ))
+    source_position = np.array(source_position)
+    for i in  numba.prange(n_patches):
+        idx_l = 1 if np.abs(patches_normal[i, 0]) > 0.99 else 0
+        idx_m = 1 if np.abs(patches_normal[i, 2]) > 0.99 else 2
+        idx_n = 0 if np.abs(
+            patches_normal[i, 0]) > 0.99 else 1 if np.abs(
+                patches_normal[i, 1]) > 0.99 else 2
+        dl = patches_center[i, idx_l]
+        dm = patches_center[i, idx_m]
+        dn = patches_center[i, idx_n]
+        dd_l = patches_size[i, idx_l]
+        dd_m = patches_size[i, idx_m]
+        dd_n = patches_size[i, idx_n]
+        S_x = source_position[idx_l]
+        S_y = source_position[idx_m]
+        S_z = source_position[idx_n]
 
-    dl = patches_center[:, idx_l]
-    dm = patches_center[:, idx_m]
-    dn = patches_center[:, idx_n]
-    dd_l = patches_size[:, idx_l]
-    dd_m = patches_size[:, idx_m]
-    dd_n = patches_size[:, idx_n]
-    S_x = source_position[idx_l]
-    S_y = source_position[idx_m]
-    S_z = source_position[idx_n]
+        half_l = dd_l/2
+        half_n = dd_n/2
+        half_m = dd_m/2
 
-    half_l = dd_l/2
-    half_n = dd_n/2
-    half_m = dd_m/2
+        sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
+            dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-    sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
-        dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        # k_phi = np.zeros((n_patches), dtype=int)
+        # mask = np.abs(dl - half_l - S_x) <= 1e-12
+        # k_phi[mask] = -1
+        # k_phi[~mask] = 1
+        k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
+        sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
+            dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-    k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
-    sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
-        dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
+        minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
 
-    plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
-    minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
+        # k_beta = np.zeros((n_patches), dtype=int)
+        # mask = ((dn - half_n) <= S_z) & (S_z <= (dn + half_n))
+        # k_beta[mask] = -1
+        # k_beta[~mask] = 1
+        k_beta = -1 if ((dn - half_n) <= S_z) & (S_z <= (dn + half_n)) else 1
 
-    k_beta = -1 if (dn - half_n) <= S_z <= (dn + half_n) else 1
-    beta = np.abs(plus-(k_beta*minus))
+        beta = np.abs(plus-(k_beta*minus))
 
-    energy = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
-    distance = np.sqrt(np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
+        energy[i] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
+        distance[i] = np.sqrt(np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
     return (energy, distance)
 
 

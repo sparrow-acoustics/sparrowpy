@@ -41,3 +41,10 @@ def test_compute_form_factors():
     radiosity = DRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.calculate_form_factors()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
+
+
+def test_init_energy():
+    radiosity = DRadiosityFast.from_polygon(sample_walls, 0.2)
+    (energy, distance) = radiosity.init_energy([0.5, 0.5, 0.5])
+    npt.assert_array_equal(energy.shape, (150))
+    npt.assert_array_equal(distance.shape, (distance))
