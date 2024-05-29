@@ -8,6 +8,27 @@ import sparapy.geometry as geo
 from sparapy.sound_object import Receiver, SoundSource
 
 
+def test_center():
+    points = [
+        [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]
+    center = geo.calculate_center(points)
+    npt.assert_allclose(center, np.array([0.5, .5, 0]))
+
+
+def test_center_2d():
+    points = [
+        [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]
+    points = np.stack((points, points))
+    center = geo.calculate_center(points)
+    npt.assert_allclose(center[0, :], np.array([0.5, .5, 0]))
+    npt.assert_allclose(center[1, :], np.array([0.5, .5, 0]))
+
+def test_area():
+    points = [
+        [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]
+    area = geo.calculate_area(points)
+    npt.assert_allclose(area, 1)
+
 def test_polygon_defaults():
     """Test Polygon class."""
     poly = geo.Polygon(

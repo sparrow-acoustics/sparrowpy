@@ -5,7 +5,7 @@ import pyfar as pf
 import sofar as sf
 from tqdm import tqdm
 
-from sparapy.geometry import Polygon, SoundSource
+from sparapy.geometry import Polygon, SoundSource, create_patches
 
 
 class Patches(Polygon):
@@ -35,29 +35,24 @@ class Patches(Polygon):
         polygon : Polygon
             Wall that should be distributed into patches.
         max_size : float
-            maximal patchsize in meters.
+            maximal patch size in meters.
         other_wall_ids : list[int]
             Ids of the other walls.
         wall_id : int
             id of this Patch
         scattering : np.ndarray, optional
-            Scattering coefficient of this wall for each freqeuncy
+            Scattering coefficient of this wall for each frequency
             bin, by default 1
         absorption : np.ndarray, optional
-            Absorption coefficient of this wall for each freqeuncy
+            Absorption coefficient of this wall for each frequency
             bin, by default 0.1
         sound_attenuation_factor : _type_, optional
-            Air attenuation factor for each frequncy bin, by default None
+            Air attenuation factor for each frequency bin, by default None
         E_matrix : np.ndarray, optional
-            Energy exchange results, if already calcualted , by default None
+            Energy exchange results, if already calculated, by default None.
 
         """
         Polygon.__init__(self, polygon.pts, polygon.up_vector, polygon.normal)
-        min = np.min(polygon.pts, axis=0)
-        max = np.max(polygon.pts, axis=0)
-        size = max - min
-        patch_nums = [int(n) for n in size/max_size]
-        real_size = size/patch_nums
         self.scattering = np.atleast_1d(scattering)
         self.absorption = np.atleast_1d(absorption)
         self.sound_attenuation_factor = np.atleast_1d(sound_attenuation_factor)
@@ -65,36 +60,9 @@ class Patches(Polygon):
         assert self.scattering.size == self.sound_attenuation_factor.size
         self.n_bins = self.absorption.size
 
-        if patch_nums[2] == 0:
-            x_idx = 0
-            y_idx = 1
-        if patch_nums[1] == 0:
-            x_idx = 0
-            y_idx = 2
-        if patch_nums[0] == 0:
-            x_idx = 1
-            y_idx = 2
-
-        x_min = np.min(polygon.pts.T[x_idx])
-        y_min = np.min(polygon.pts.T[y_idx])
-
-        patches = []
-        for i_x in range(patch_nums[x_idx]):
-            for i_y in range(patch_nums[y_idx]):
-                points = polygon.pts.copy()
-                points[0, x_idx] = x_min + i_x * real_size[x_idx]
-                points[0, y_idx] = y_min + i_y * real_size[y_idx]
-                points[1, x_idx] = x_min + (i_x+1) * real_size[x_idx]
-                points[1, y_idx] = y_min + i_y * real_size[y_idx]
-                points[3, x_idx] = x_min + i_x * real_size[x_idx]
-                points[3, y_idx] = y_min + (i_y+1) * real_size[y_idx]
-                points[2, x_idx] = x_min + (i_x+1) * real_size[x_idx]
-                points[2, y_idx] = y_min + (i_y+1) * real_size[y_idx]
-
-                patch = Polygon(points, polygon.up_vector, polygon.normal)
-                patches.append(patch)
-
-        self.patches = patches
+        self.patches = [
+            Polygon(points, polygon.up_vector, polygon.normal)
+                for points in create_patches(polygon, max_size)]
         self.other_wall_ids = np.atleast_1d(np.array(
             other_wall_ids, dtype=int))
 
@@ -168,10 +136,6 @@ class Patches(Polygon):
             self.E_n_samples,  # impulse response G_k(t)_receiverpatch
             ))
 
-        S_x = source.position[0]
-        S_y = source.position[1]
-        S_z = source.position[2]
-
         source_pos = source.position
 
         for i_receiver, receiver_patch in enumerate(self.patches):
@@ -188,9 +152,9 @@ class Patches(Polygon):
                 dd_l = receiver_patch.size[0]
                 dd_m = receiver_patch.size[1]
                 dd_n = receiver_patch.size[2]
-                S_x = source.position[0]
-                S_y = source.position[1]
-                S_z = source.position[2]
+                S_x = source_pos[0]
+                S_y = source_pos[1]
+                S_z = source_pos[2]
             elif np.abs(receiver_patch.normal[1]) > 0.99:
                 dl = receiver_patch.center[0]
                 dm = receiver_patch.center[2]
@@ -198,9 +162,9 @@ class Patches(Polygon):
                 dd_l = receiver_patch.size[0]
                 dd_m = receiver_patch.size[2]
                 dd_n = receiver_patch.size[1]
-                S_x = source.position[0]
-                S_y = source.position[2]
-                S_z = source.position[1]
+                S_x = source_pos[0]
+                S_y = source_pos[2]
+                S_z = source_pos[1]
             elif np.abs(receiver_patch.normal[0]) > 0.99:
                 dl = receiver_patch.center[1]
                 dm = receiver_patch.center[2]
@@ -208,9 +172,9 @@ class Patches(Polygon):
                 dd_l = receiver_patch.size[1]
                 dd_m = receiver_patch.size[2]
                 dd_n = receiver_patch.size[0]
-                S_x = source.position[1]
-                S_y = source.position[2]
-                S_z = source.position[0]
+                S_x = source_pos[1]
+                S_y = source_pos[2]
+                S_z = source_pos[0]
             else:
                 raise AssertionError()
 
@@ -1074,7 +1038,7 @@ class DirectionalRadiosity():
         speed_of_sound : float, optional
             Speed of sound in m/s, by default 346.18 m/s
         sampling_rate : int, optional
-            samplingrate of the Energy histogram, by default 1000 -> 1ms
+            sampling rate of the Energy histogram, by default 1000 -> 1ms
         source : SoundSource, optional
             Source object, by default None, can be added later.
 

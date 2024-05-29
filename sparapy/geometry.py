@@ -6,6 +6,57 @@ import matplotlib.pyplot as plt
 from sparapy.sound_object import Receiver, SoundSource
 
 
+def create_patches(polygon, max_size):
+    min = np.min(polygon.pts, axis=0)
+    max = np.max(polygon.pts, axis=0)
+    size = max - min
+    patch_nums = [int(n) for n in size/max_size]
+    real_size = size/patch_nums
+    if patch_nums[2] == 0:
+        x_idx = 0
+        y_idx = 1
+    if patch_nums[1] == 0:
+        x_idx = 0
+        y_idx = 2
+    if patch_nums[0] == 0:
+        x_idx = 1
+        y_idx = 2
+
+    x_min = np.min(polygon.pts.T[x_idx])
+    y_min = np.min(polygon.pts.T[y_idx])
+
+    patches_points = []
+    for i_x in range(patch_nums[x_idx]):
+        for i_y in range(patch_nums[y_idx]):
+            points = polygon.pts.copy()
+            points[0, x_idx] = x_min + i_x * real_size[x_idx]
+            points[0, y_idx] = y_min + i_y * real_size[y_idx]
+            points[1, x_idx] = x_min + (i_x+1) * real_size[x_idx]
+            points[1, y_idx] = y_min + i_y * real_size[y_idx]
+            points[3, x_idx] = x_min + i_x * real_size[x_idx]
+            points[3, y_idx] = y_min + (i_y+1) * real_size[y_idx]
+            points[2, x_idx] = x_min + (i_x+1) * real_size[x_idx]
+            points[2, y_idx] = y_min + (i_y+1) * real_size[y_idx]
+            patches_points.append(points)
+
+    return patches_points
+
+
+def calculate_center(points):
+    return np.sum(points, axis=-2) / np.array(points).shape[-2]
+
+
+def calculate_size(points):
+    vec1 = np.array(points[..., 0, :])-np.array(points[..., 1, :])
+    vec2 = np.array(points[..., 1, :])-np.array(points[..., 2, :])
+    return np.abs(vec1-vec2)
+
+
+def calculate_area(points):
+    size = calculate_size(points)
+    return size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] + size[..., 0]*size[..., 2]
+
+
 class Polygon():
     """Polygon constructed from greater than two points.
 
@@ -76,15 +127,17 @@ class Polygon():
     @property
     def size(self) -> np.ndarray:
         """Return the size in m^2 of the polygon."""
-        vec1 = np.array(self.pts[0])-np.array(self.pts[1])
-        vec2 = np.array(self.pts[1])-np.array(self.pts[2])
-        size = np.abs(vec1-vec2)
-        return size
+        return calculate_size(self.pts)
+
+    @property
+    def area(self) -> np.ndarray:
+        """Return the size in m^2 of the polygon."""
+        return calculate_area(self.pts)
 
     @property
     def center(self) -> np.ndarray:
         """Return the center coordinates of the polygon."""
-        return np.sum(self.pts, axis=0) / self.n_points
+        return calculate_center(self.pts)
 
     @property
     def n_points(self) -> int:
