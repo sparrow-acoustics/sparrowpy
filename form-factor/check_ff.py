@@ -6,6 +6,8 @@ import numpy as np
 from geometry import Polygon as polyg
 from elmt import elmt
 
+SCALE = 2.
+
 def plot_comparisons(el0, elements):
 
     for i,el in enumerate(elements):
@@ -35,7 +37,7 @@ def plot_comparisons(el0, elements):
 
         print("\n########################################\n"+tit + "\n")
        
-        samplingsteps = [2**2,5**2,7**2,10**2,13**2]
+        samplingsteps = [2**2,5**2,10**2,15**2]
 
         for step in samplingsteps:
 
@@ -70,21 +72,23 @@ def plot_comparisons(el0, elements):
 
 
         t0 = time.time()
-        opt= form_factor(el0,el)
+        opt= form_factor(el,el0)
         t_opt=time.time()-t0
 
-        # if i == 0:
-        #     true_solution = exact.parallel_patches(1.,1.,1.)
-        # elif i == 1:
-        #     true_solution = exact.perpendicular_patch_coincidentline(1.,1.,1.)
-        # elif i == 2:
-        #     true_solution = exact.perpendicular_patch_coincidentpoint(1.,1.,1.,1.)
-        # #elif i == 3:
-        # #    true_solution = exact.perpendicular_patch_floating(1.,1.,1.,0.,1.)
-        # else:
-        #     true_solution = ff_naive
-
         true_solution = ff_naive
+
+        if i == 0:
+            true_solution = exact.parallel_patches(SCALE*1.,SCALE*1.,SCALE*1.)
+        elif i == 1:
+            true_solution = exact.perpendicular_patch_coincidentline(SCALE*1.,SCALE*1.,SCALE*1.)
+        elif i == 2:
+            true_solution = exact.perpendicular_patch_coincidentpoint(SCALE*1.,SCALE*1.,SCALE*1.,SCALE*1.)
+        #elif i == 3:
+        #    true_solution = exact.perpendicular_patch_floating(1.,1.,1.,0.,1.)
+        else:
+            true_solution = ff_naive
+
+        
 
         print("True solution: "+ str(true_solution))
 
@@ -101,31 +105,29 @@ def plot_comparisons(el0, elements):
         a.set_title(tit)
         a.grid()
 
-        plt.savefig("C:\\Users\\fatela\\Desktop\\temp\\i60patch"+str(i+1))
-
-        print("yo")
+        plt.savefig("C:\\Users\\Work profile\\Desktop\\temp\\patch"+str(i+1)+"_"+str(SCALE)+".png")
 
 
-scale = 60
+
     
-el0 = polyg(points=np.array([[0.,0.,0.],[0.,1.,0.],[0.,1.,1.],[0.,0.,1.]])*scale, up_vector=np.array([0.,0.,1.]), normal=np.array([1.,0.,0.]))
+el0 = polyg(points=np.array([[0.,0.,0.],[0.,1.,0.],[0.,1.,1.],[0.,0.,1.]])*SCALE, up_vector=np.array([0.,0.,1.]), normal=np.array([1.,0.,0.]))
 
-el1 = polyg(points=np.array([[1.,0.,0.],[1.,0.,1.],[1.,1.,1.],[1.,1.,0.]])*scale, up_vector=np.array([0.,0.,1.]), normal=np.array([-1.,0.,0.]))
+el1 = polyg(points=np.array([[1.,0.,0.],[1.,0.,1.],[1.,1.,1.],[1.,1.,0.]])*SCALE, up_vector=np.array([0.,0.,1.]), normal=np.array([-1.,0.,0.]))
 
-el2 = polyg(points=np.array([[0.,0.,0.],[1.,0.,0.],[1.,1.,0.],[0.,1.,0.]])*scale, up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
+el2 = polyg(points=np.array([[0.,0.,0.],[1.,0.,0.],[1.,1.,0.],[0.,1.,0.]])*SCALE, up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
 
-el3 = polyg(points=np.array([[0.,1.,0.],[1.,1.,0.],[1.,2.,0.],[0.,2.,0.]])*scale, up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
+el3 = polyg(points=np.array([[0.,1.,0.],[1.,1.,0.],[1.,2.,0.],[0.,2.,0.]])*SCALE, up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
 
-el4 = polyg(points=np.array([[0.,0.,-1.],[1.,0.,-1.],[1.,1.,-1.],[0.,1.,-1.]])*scale, up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
+el4 = polyg(points=np.array([[0.,0.,-1.],[1.,0.,-1.],[1.,1.,-1.],[0.,1.,-1.]])*SCALE, up_vector=np.array([-1.,0.,0.]), normal=np.array([0.,0.,1.]))
 
 
-ell5 = elmt([[1.,0.,0.],[2.,1.,1.],[2.,0.,1.],[1.,1.,0.]])
+ell5 = elmt([[1.,0.,0.],[4.,0.,1.],[4.,1.,1.],[1.,1.,0.]])
 
-ell6 = elmt([[4.,0.,0.],[4.,0.,2.],[3.,2.,1.]])
+ell6 = elmt([[2.,0.,0.],[2.,0.,2.],[3.,2.,2.]])
 
-el5 = polyg(points=ell5.pt*scale, up_vector=ell5.pt[0]-ell5.pt[-1], normal=ell5.n)
+el5 = polyg(points=ell5.pt*SCALE, up_vector=ell5.pt[0]-ell5.pt[-1], normal=ell5.n)
 
-el6 = polyg(points=ell6.pt*scale, up_vector=ell6.pt[0]-ell6.pt[-1], normal=ell6.n)
+el6 = polyg(points=ell6.pt*SCALE, up_vector=ell6.pt[0]-ell6.pt[-1], normal=ell6.n)
 
 
 

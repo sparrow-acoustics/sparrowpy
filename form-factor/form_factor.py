@@ -229,9 +229,9 @@ def nusselt_integration(patch_i: polyg, patch_j: polyg, nsamples=2, random=False
                 right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]),order=2)
                 curved_area += linArea * np.sign(left) + left + right
 
-        out += (projPolyArea + curved_area) / PI * (patch_i.A/len(p0_array))/ patch_j.A
+        out += (projPolyArea + curved_area) 
        
-    return out
+    return out * (patch_j.A/len(p0_array)) / (PI * patch_i.A)
 
 #######################################################################################
 ### helpers
