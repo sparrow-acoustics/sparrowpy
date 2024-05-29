@@ -116,7 +116,8 @@ class DRadiosityFast():
         return cls(
             walls_area, walls_points, walls_normal, walls_center,
             walls_up_vector, patches_area, patches_center, patches_size,
-            patches_points, patches_normal, patch_size, n_patches, speed_of_sound)
+            patches_points, patches_normal, patch_size, n_patches,
+            speed_of_sound)
 
     def init_energy(self, source_position):
         """Calculate the initial energy."""
@@ -124,6 +125,11 @@ class DRadiosityFast():
             source_position, self.patches_center, self.patches_normal,
             self.patches_size)
         return energy, distance
+
+    def check_visibility(self):
+        """Check the visibility between patches."""
+        self._visibility_matrix = check_visibility(
+            self.patches_center, self.patches_normal)
 
     def calculate_form_factors(self):
         """Calculate the form factors."""
@@ -135,10 +141,16 @@ class DRadiosityFast():
     def n_patches(self):
         """Return the total number of patches."""
         return self._n_patches
+
     @property
     def form_factors(self):
         """Return the form factor."""
         return self._form_factors
+
+    @property
+    def visibility_matrix(self):
+        """Return the visibility matrix."""
+        return self._visibility_matrix
 
     @property
     def walls_area(self):
@@ -200,24 +212,18 @@ class DRadiosityFast():
         """Return the max order of energy exchange iterations."""
         return self._max_order_k
 
+    @property
+    def speed_of_sound(self):
+        """Return the speed of sound in m/s."""
+        return self._speed_of_sound
+
+
 @numba.njit(parallel=True)
 def calculate_init_energy(
         source_position, patches_center, patches_normal,
         patches_size):
 
     n_patches = patches_center.shape[0]
-    # idx_l = np.empty((n_patches, ))
-    # idx_l[np.abs(patches_normal[:, 2]) > 0.99] = 0
-    # idx_l[np.abs(patches_normal[:, 1]) > 0.99] = 0
-    # idx_l[np.abs(patches_normal[:, 0]) > 0.99] = 1
-    # idx_m = np.empty((n_patches, ))
-    # idx_m[np.abs(patches_normal[:, 2]) > 0.99] = 1
-    # idx_m[np.abs(patches_normal[:, 1]) > 0.99] = 2
-    # idx_m[np.abs(patches_normal[:, 0]) > 0.99] = 2
-    # idx_n = np.empty((n_patches, ))
-    # idx_n[np.abs(patches_normal[:, 2]) > 0.99] = 2
-    # idx_n[np.abs(patches_normal[:, 1]) > 0.99] = 1
-    # idx_n[np.abs(patches_normal[:, 0]) > 0.99] = 0
     energy = np.empty((n_patches, ))
     distance = np.empty((n_patches, ))
     source_position = np.array(source_position)
@@ -244,10 +250,6 @@ def calculate_init_energy(
         sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
             dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-        # k_phi = np.zeros((n_patches), dtype=int)
-        # mask = np.abs(dl - half_l - S_x) <= 1e-12
-        # k_phi[mask] = -1
-        # k_phi[~mask] = 1
         k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
         sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
             dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
@@ -255,10 +257,6 @@ def calculate_init_energy(
         plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
         minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
 
-        # k_beta = np.zeros((n_patches), dtype=int)
-        # mask = ((dn - half_n) <= S_z) & (S_z <= (dn + half_n))
-        # k_beta[mask] = -1
-        # k_beta[~mask] = 1
         k_beta = -1 if ((dn - half_n) <= S_z) & (S_z <= (dn + half_n)) else 1
 
         beta = np.abs(plus-(k_beta*minus))
@@ -286,8 +284,10 @@ def check_visibility(
                 visibility_matrix[i_source, i_receiver] = False
             else:
                 visibility_matrix[i_source, i_receiver] = True
+    return visibility_matrix
 
 
+@numba.jit(nopython=True, parallel=True)
 def form_factor_kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
         patches_size:np.ndarray, visibility_matrix:np.ndarray) -> np.ndarray:
@@ -310,119 +310,140 @@ def form_factor_kang(
     """
     n_patches = patches_center.shape[0]
     form_factors = np.zeros((n_patches, n_patches))
+    n_combinations = np.sum(visibility_matrix)
+    pairs = np.empty((n_combinations, 2), dtype=np.int32)
+    i_counter = 0
     for i_source in range(n_patches):
+        for i_receiver in range(n_patches):
+            if not visibility_matrix[i_source, i_receiver]:
+                continue
+            pairs[i_counter, 0] = i_source
+            pairs[i_counter, 1] = i_receiver
+            i_counter += 1
+    for i in numba.prange(n_combinations):
+        i_source = int(pairs[i, 0])
+        i_receiver = int(pairs[i, 1])
         source_center = patches_center[i_source]
         source_normal = patches_normal[i_source]
-        dd_l = patches_size[i_source, 0]
-        dd_m = patches_size[i_source, 1]
-        dd_n = patches_size[i_source, 2]
-        for i_receiver in range(n_patches):
-            receiver_center = patches_center[i_receiver]
-            difference = np.abs(receiver_center-source_center)
-            # calculation of form factors
-            receiver_normal = patches_normal[i_receiver]
-            dot_product = np.dot(receiver_normal, source_normal)
+        receiver_center = patches_center[i_receiver]
+        # calculation of form factors
+        receiver_normal = patches_normal[i_receiver]
+        dot_product = np.dot(receiver_normal, source_normal)
 
-            if dot_product == 0:  # orthogonal
+        if dot_product == 0:  # orthogonal
 
-                if np.abs(source_normal[0]) > 1e-5:
-                    idx_source = set([2, 1])
-                    dl = source_center[2]
-                    dm = source_center[1]
-                elif np.abs(source_normal[1]) > 1e-5:
-                    idx_source = set([2, 0])
-                    dl = source_center[2]
-                    dm = source_center[0]
-                elif np.abs(source_normal[2]) > 1e-5:
-                    idx_source = set([0, 1])
-                    dl = source_center[1]
-                    dm = source_center[0]
+            if np.abs(source_normal[0]) > 1e-5:
+                idx_source = set([2, 1])
+                dl = source_center[2]
+                dm = source_center[1]
+                dd_l = patches_size[i_source, 2]
+                dd_m = patches_size[i_source, 1]
+            elif np.abs(source_normal[1]) > 1e-5:
+                idx_source = set([2, 0])
+                dl = source_center[2]
+                dm = source_center[0]
+                dd_l = patches_size[i_source, 2]
+                dd_m = patches_size[i_source, 0]
+            elif np.abs(source_normal[2]) > 1e-5:
+                idx_source = set([0, 1])
+                dl = source_center[1]
+                dm = source_center[0]
+                dd_l = patches_size[i_source, 1]
+                dd_m = patches_size[i_source, 0]
 
-                if np.abs(receiver_normal[0]) > 1e-5:
-                    idx_receiver = set([2, 1])
-                    dl_prime = receiver_center[1]
-                    dn_prime = receiver_center[2]
-                elif np.abs(receiver_normal[1]) > 1e-5:
-                    idx_receiver = set([0, 2])
-                    dl_prime = receiver_center[0]
-                    dn_prime = receiver_center[2]
-                elif np.abs(receiver_normal[2]) > 1e-5:
-                    idx_receiver = set([0, 1])
-                    dl_prime = receiver_center[1]
-                    dn_prime = receiver_center[0]
-                idx_l = list(idx_receiver.intersection(idx_source))[0]
-                idx_s = list(idx_source.difference(set([idx_l])))[0]
-                idx_r = list(idx_receiver.difference(set([idx_l])))[0]
-                dm = np.abs(
-                    source_center[idx_s]-receiver_center[idx_s])
-                dl = source_center[idx_l]
-                dl_prime = receiver_center[idx_l]
-                dn_prime = np.abs(
-                    source_center[idx_r]-receiver_center[idx_r])
+            if np.abs(receiver_normal[0]) > 1e-5:
+                idx_l = 1 if 1 in idx_source else 2
+                idx_s = 0
+                idx_r = 2 if 1 in idx_source else 1
+                dl_prime = receiver_center[1]
+                dn_prime = receiver_center[2]
+            elif np.abs(receiver_normal[1]) > 1e-5:
+                idx_l = 0 if 0 in idx_source else 2
+                idx_s = 1
+                idx_r = 2 if 0 in idx_source else 0
+                dl_prime = receiver_center[0]
+                dn_prime = receiver_center[2]
+            elif np.abs(receiver_normal[2]) > 1e-5:
+                idx_l = 0 if 0 in idx_source else 1
+                idx_s = 2
+                idx_r = 1 if 0 in idx_source else 0
+                dl_prime = receiver_center[1]
+                dn_prime = receiver_center[0]
 
-                d = np.sqrt( ( (dl - dl_prime) ** 2 ) + ( dm ** 2 ) + (
-                    dn_prime ** 2) )
+            dm = np.abs(
+                source_center[idx_s]-receiver_center[idx_s])
+            dl = source_center[idx_l]
+            dl_prime = receiver_center[idx_l]
+            dn_prime = np.abs(
+                source_center[idx_r]-receiver_center[idx_r])
 
-                # Equation 13
-                A = ( dm - ( 0.5 * dd_m ) ) / ( np.sqrt( ( (
-                    dl - dl_prime) ** 2 ) + ( ( dm - (
-                        0.5 * dd_m ) ) ** 2 ) + ( dn_prime ** 2) ) )
+            d = np.sqrt( ( (dl - dl_prime) ** 2 ) + ( dm ** 2 ) + (
+                dn_prime ** 2) )
 
-                # Equation 14
-                B_num = dm + (0.5 * dd_m)
-                B_denum =  np.sqrt(( np.square(dl - dl_prime) ) + (
-                    np.square(dm + (0.5*dd_m)) ) + (
-                        np.square(dn_prime)) )
-                B = B_num/B_denum
+            # Equation 13
+            A = ( dm - ( 0.5 * dd_m ) ) / ( np.sqrt( ( (
+                dl - dl_prime) ** 2 ) + ( ( dm - (
+                    0.5 * dd_m ) ) ** 2 ) + ( dn_prime ** 2) ) )
 
-                # Equation 15
-                one = np.arctan( np.abs( ( dl - (
-                    0.5*dd_l) - dl_prime ) / (dn_prime) ) )
-                two = np.arctan( np.abs( ( dl + (
-                    0.5*dd_l) - dl_prime ) / (dn_prime) ) )
+            # Equation 14
+            B_num = dm + (0.5 * dd_m)
+            B_denum =  np.sqrt(( np.square(dl - dl_prime) ) + (
+                np.square(dm + (0.5*dd_m)) ) + (
+                    np.square(dn_prime)) )
+            B = B_num/B_denum
 
-                k = -1 if np.abs(dl - dl_prime) < 1e-12 else 1
+            # Equation 15
+            one = np.arctan( np.abs( ( dl - (
+                0.5*dd_l) - dl_prime ) / (dn_prime) ) )
+            two = np.arctan( np.abs( ( dl + (
+                0.5*dd_l) - dl_prime ) / (dn_prime) ) )
 
-                theta = np.abs( one - (k*two) )
+            k = -1 if np.abs(dl - dl_prime) < 1e-12 else 1
 
-                # Equation 11
-                ff =  (
-                    1 / (2 * np.pi) ) * (np.abs(
-                        (A ** 2) - (B ** 2) )) * theta
+            theta = np.abs( one - (k*two) )
 
-            else:
-                # parallel
-                if difference[0] > 1e-5:
-                    dl = receiver_center[1]
-                    dm = receiver_center[0]
-                    dn = receiver_center[2]
-                    dl_prime = source_center[1]
-                    dm_prime = source_center[0]
-                    dn_prime = source_center[2]
-                elif difference[1] > 1e-5:
-                    dl = receiver_center[0]
-                    dm = receiver_center[1]
-                    dn = receiver_center[2]
-                    dl_prime = source_center[0]
-                    dm_prime = source_center[1]
-                    dn_prime = source_center[2]
-                elif difference[2] > 1e-5:
-                    dl = receiver_center[1]
-                    dm = receiver_center[2]
-                    dn = receiver_center[0]
-                    dl_prime = source_center[1]
-                    dm_prime = source_center[2]
-                    dn_prime = source_center[0]
-                else:
-                    raise AssertionError()
+            # Equation 11
+            ff =  (
+                1 / (2 * np.pi) ) * (np.abs(
+                    (A ** 2) - (B ** 2) )) * theta
 
-                d = np.sqrt(
-                    ( (dl - dl_prime) ** 2 ) +
-                    ( (dn - dn_prime) ** 2 ) +
-                    ( (dm - dm_prime) ** 2 ) )
-                # Equation 16
-                ff =  ( dd_l * dd_n * ( (
-                    dm-dm_prime) ** 2 ) ) / ( np.pi * ( d**4 ) )
+        else:
+            # parallel
+            if np.abs(receiver_normal[0]) > 1e-5:
+                dl = receiver_center[1]
+                dm = receiver_center[0]
+                dn = receiver_center[2]
+                dl_prime = source_center[1]
+                dm_prime = source_center[0]
+                dn_prime = source_center[2]
+                dd_l = patches_size[i_source, 1]
+                dd_n = patches_size[i_source, 2]
+            elif np.abs(receiver_normal[1]) > 1e-5:
+                dl = receiver_center[0]
+                dm = receiver_center[1]
+                dn = receiver_center[2]
+                dl_prime = source_center[0]
+                dm_prime = source_center[1]
+                dn_prime = source_center[2]
+                dd_l = patches_size[i_source, 0]
+                dd_n = patches_size[i_source, 2]
+            elif np.abs(receiver_normal[2]) > 1e-5:
+                dl = receiver_center[1]
+                dm = receiver_center[2]
+                dn = receiver_center[0]
+                dl_prime = source_center[1]
+                dm_prime = source_center[2]
+                dn_prime = source_center[0]
+                dd_l = patches_size[i_source, 1]
+                dd_n = patches_size[i_source, 0]
 
-            form_factors[i_source, i_receiver] = ff
+            d = np.sqrt(
+                ( (dl - dl_prime) ** 2 ) +
+                ( (dn - dn_prime) ** 2 ) +
+                ( (dm - dm_prime) ** 2 ) )
+            # Equation 16
+            ff =  ( dd_l * dd_n * ( (
+                dm-dm_prime) ** 2 ) ) / ( np.pi * ( d**4 ) )
+
+        form_factors[i_source, i_receiver] = ff
     return form_factors

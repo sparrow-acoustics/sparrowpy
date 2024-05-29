@@ -43,12 +43,14 @@ def create_patches(polygon, max_size):
 
 
 def calculate_center(points):
-    return np.sum(points, axis=-2) / np.array(points).shape[-2]
+    points = np.array(points)
+    return np.sum(points, axis=-2) / points.shape[-2]
 
 
 def calculate_size(points):
-    vec1 = np.array(points[..., 0, :])-np.array(points[..., 1, :])
-    vec2 = np.array(points[..., 1, :])-np.array(points[..., 2, :])
+    points = np.array(points)
+    vec1 = points[..., 0, :]-points[..., 1, :]
+    vec2 = points[..., 1, :]-points[..., 2, :]
     return np.abs(vec1-vec2)
 
 
