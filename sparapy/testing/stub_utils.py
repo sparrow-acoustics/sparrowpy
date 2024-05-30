@@ -1,3 +1,4 @@
+"""Stub utilities for testing."""
 import sparapy as sp
 
 
