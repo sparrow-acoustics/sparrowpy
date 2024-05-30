@@ -1,7 +1,8 @@
 """Test radiosity module."""
 import numpy as np
-import pytest
 import numpy.testing as npt
+import pytest
+
 import sparapy as sp
 
 
@@ -97,7 +98,6 @@ def test_calc_form_factor_perpendicular_distance(
         npt.assert_almost_equal(radiosity.form_factors[4:, :4], patch_2.form_factors)
     else:
         npt.assert_almost_equal(radiosity.form_factors[4:, :4], patch_2.form_factors.T)
-
 
 
 def test_init_energy():
