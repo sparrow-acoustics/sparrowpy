@@ -56,7 +56,7 @@ class Patches(Polygon):
         min = np.min(polygon.pts, axis=0)
         max = np.max(polygon.pts, axis=0)
         size = max - min
-        patch_nums = [int(n) for n in size/max_size]
+        patch_nums = np.array([int(n) for n in size/max_size])
         real_size = size/patch_nums
         self.scattering = np.atleast_1d(scattering)
         self.absorption = np.atleast_1d(absorption)
