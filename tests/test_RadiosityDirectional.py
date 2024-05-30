@@ -10,26 +10,6 @@ import sparapy.geometry as geo
 import sparapy.radiosity as radiosity
 from sparapy.sound_object import Receiver, SoundSource
 
-sample_walls = [
-    geo.Polygon(
-        [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]],
-        [1, 0, 0], [0, 1, 0]),
-    geo.Polygon(
-        [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]],
-        [1, 0, 0], [0, -1, 0]),
-    geo.Polygon(
-        [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
-        [1, 0, 0], [0, 0, 1]),
-    geo.Polygon(
-        [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
-        [1, 0, 0], [0, 0, -1]),
-    geo.Polygon(
-        [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]],
-        [0, 0, 1], [1, 0, 0]),
-    geo.Polygon(
-        [[1, 0, 0], [1, 0, 1], [1, 1, 1], [1, 1, 0]],
-        [0, 0, 1], [-1, 0, 0]),
-]
 
 create_reference_files = False
 
@@ -141,12 +121,13 @@ def test_radiosity_directional_reference_read_write(max_order_k, tmpdir):
     npt.assert_almost_equal(result['signal'].times, signal.times)
 
 
-@pytest.mark.parametrize('wall', sample_walls)
-def test_init_energy_exchange(wall):
-    """Test vs refernces for energy_exchange."""
+@pytest.mark.parametrize('i_wall', [0, 1, 2, 3, 4, 5])
+def test_init_energy_exchange(sample_walls, i_wall):
+    """Test vs references for energy_exchange."""
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ihta.E_sec_2.sofa')
-    patches = radiosity.PatchesDirectional.from_sofa(wall, 0.2, [], 0, path_sofa)
+    patches = radiosity.PatchesDirectional.from_sofa(
+        sample_walls[i_wall], 0.2, [], 0, path_sofa)
     max_order_k = 3
     ir_length_s = 5
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
@@ -171,20 +152,23 @@ def test_init_energy_exchange(wall):
     #     0, 0, idx, :]
 
 
-@pytest.mark.parametrize('wall', sample_walls)
 @pytest.mark.parametrize('patch_size', [
     0.5,
     1,
     ])
-def test_init_energy_exchange_directional_omni(wall, patch_size):
+@pytest.mark.parametrize('i_wall', [0, 1, 2, 3, 4, 5])
+def test_init_energy_exchange_directional_omni(
+        sample_walls, patch_size, i_wall):
     """Test vs refernces for energy_exchange."""
     reference_path = os.path.join(
         os.path.dirname(__file__), 'test_data',
         f'reference_matrix_directional_patch_size{patch_size}.far')
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ihta.E_sec_2.sofa')
-    patches = radiosity.PatchesDirectional.from_sofa(wall, patch_size, [], 0, path_sofa)
-    patches.directivity_data.freq = np.ones_like(patches.directivity_data.freq)
+    patches = radiosity.PatchesDirectional.from_sofa(
+        sample_walls[i_wall], patch_size, [], 0, path_sofa)
+    patches.directivity_data.freq = np.ones_like(
+        patches.directivity_data.freq)
     max_order_k = 3
     ir_length_s = 5
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
@@ -204,7 +188,7 @@ def test_init_energy_exchange_directional_omni(wall, patch_size):
     1
     ])
 def test_directional_energy_exchange(
-        perpendicular_walls, patch_size):
+        sample_walls, perpendicular_walls, patch_size):
     """Test vs refernces for energy_exchange."""
     max_order_k=3
     ir_length_s=5
@@ -255,7 +239,7 @@ def test_directional_energy_exchange(
     1
     ])
 def test_directional_specular_reflections(
-        perpendicular_walls, patch_size):
+        sample_walls, perpendicular_walls, patch_size):
     """Test vs refernces for specular_reflections."""
     max_order_k=3
     ir_length_s=5
@@ -300,7 +284,7 @@ def test_directional_specular_reflections(
     npt.assert_almost_equal(data['ir'], ir, decimal=4)
 
 
-def test_PatchDirectional_to_from_dict():
+def test_PatchDirectional_to_from_dict(sample_walls):
     """Test if the results are correct with from_dict."""
     perpendicular_walls = [0, 2]
     patch_size = 0.2
