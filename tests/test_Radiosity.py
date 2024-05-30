@@ -9,26 +9,6 @@ import sparapy.geometry as geo
 import sparapy.radiosity as radiosity
 from sparapy.sound_object import Receiver, SoundSource
 
-sample_walls = [
-    geo.Polygon(
-        [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]],
-        [1, 0, 0], [0, 1, 0]),
-    geo.Polygon(
-        [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]],
-        [1, 0, 0], [0, -1, 0]),
-    geo.Polygon(
-        [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
-        [1, 0, 0], [0, 0, 1]),
-    geo.Polygon(
-        [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
-        [1, 0, 0], [0, 0, -1]),
-    geo.Polygon(
-        [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]],
-        [0, 0, 1], [1, 0, 0]),
-    geo.Polygon(
-        [[1, 0, 0], [1, 0, 1], [1, 1, 1], [1, 1, 0]],
-        [0, 0, 1], [-1, 0, 0]),
-]
 
 create_reference_files = False
 
@@ -139,22 +119,22 @@ def test_radiosity_reference_with_read_write(max_order_k, tmpdir):
     npt.assert_almost_equal(result['signal'].times, signal.times)
 
 
-@pytest.mark.parametrize('wall', sample_walls)
 @pytest.mark.parametrize('patch_size', [
     0.5,
     1,
     ])
-def test_init_energy_exchange_normal(wall, patch_size):
+@pytest.mark.parametrize('i_wall', [0, 1, 2, 3, 4, 5])
+def test_init_energy_exchange_normal(sample_walls, patch_size, i_wall):
     """Test init energy exchange."""
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data',
         f'reference_matrix_directional_patch_size{patch_size}.far')
-    patches = radiosity.Patches(wall, patch_size, [], 0)
+    patches = radiosity.Patches(sample_walls[i_wall], patch_size, [], 0)
     max_order_k = 3
     ir_length_s = 5
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
     patches.init_energy_exchange(max_order_k, ir_length_s, source, 1000)
-    if create_reference_files and wall == sample_walls[0]:
+    if create_reference_files and sample_walls == sample_walls[0]:
         pf.io.write(path_sofa, E_matrix=patches.E_matrix)
     data = pf.io.read(path_sofa)
     npt.assert_almost_equal(
@@ -168,7 +148,7 @@ def test_init_energy_exchange_normal(wall, patch_size):
     0.5,
     1,
     ])
-def test_calc_form_factor_parallel(parallel_walls, patch_size):
+def test_calc_form_factor_parallel(sample_walls, parallel_walls, patch_size):
     """Test form factor calculation for parallel walls."""
     wall_source = sample_walls[parallel_walls[0]]
     wall_receiver = sample_walls[parallel_walls[1]]
@@ -197,7 +177,8 @@ def test_calc_form_factor_parallel(parallel_walls, patch_size):
     0.5,
     1,
     ])
-def test_calc_form_factor_perpendicular(perpendicular_walls, patch_size):
+def test_calc_form_factor_perpendicular(
+        sample_walls, perpendicular_walls, patch_size):
     """Test form factor calculation for perpendicular walls."""
     wall_source = sample_walls[perpendicular_walls[0]]
     wall_receiver = sample_walls[perpendicular_walls[1]]
@@ -227,7 +208,7 @@ def test_calc_form_factor_perpendicular(perpendicular_walls, patch_size):
     0.5,
     ])
 def test_calc_form_factor_perpendicular_distance(
-        perpendicular_walls, patch_size):
+        sample_walls, perpendicular_walls, patch_size):
     """Test form factor calculation for perpendicular walls."""
     wall_source = sample_walls[perpendicular_walls[0]]
     wall_receiver = sample_walls[perpendicular_walls[1]]
@@ -255,7 +236,7 @@ def test_calc_form_factor_perpendicular_distance(
     1
     ])
 def test_energy_exchange(
-        perpendicular_walls, patch_size):
+        sample_walls, perpendicular_walls, patch_size):
     """Test energy exchange."""
     max_order_k=3
     ir_length_s=5
@@ -289,7 +270,7 @@ def test_energy_exchange(
         data['E_matrix'], patch_1.E_matrix, decimal=4)
 
 
-def test_Patch_to_from_dict():
+def test_Patch_to_from_dict(sample_walls):
     """Test Patches from dict."""
     perpendicular_walls = [0, 2]
     patch_size = 0.5
