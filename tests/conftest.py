@@ -1,3 +1,4 @@
+"""Fixtures for the tests in the tests/ directory."""
 import sparapy as sp
 import pytest
 
