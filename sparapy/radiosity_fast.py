@@ -199,34 +199,67 @@ class DRadiosityFast():
 
 
 @numba.jit(nopython=True)
-def process_patches(polygon_points_array, walls_normal, patch_size, n_walls):
+def process_patches(
+        polygon_points_array: np.ndarray,
+        walls_normal: np.ndarray,
+        patch_size:float, n_walls:int):
+    """Process the patches.
 
-        n_patches = 0
-        n_walls = polygon_points_array.shape[0]
-        for i in range(n_walls):
-            n_patches += total_number_of_patches(
-                polygon_points_array[i, :, :], patch_size)
-        patches_points = np.empty((n_patches, 4, 3))
-        patch_to_wall_ids = np.empty((n_patches), dtype=np.int64)
-        patches_per_wall = np.empty((n_walls), dtype=np.int64)
+    Parameters
+    ----------
+    polygon_points_array : np.ndarray
+        points of the polygon of shape (n_walls, 4, 3)
+    walls_normal : np.ndarray
+        wall normal of shape (n_walls, 3)
+    patch_size : float
+        maximal patch size in meters of shape (n_walls, 3).
+    n_walls : int
+        number of walls
 
-        for i in range(n_walls):
-            polygon_points = polygon_points_array[i, :]
-            patches_points_wall = create_patches(
-                polygon_points, patch_size)
-            patches_per_wall[i] = patches_points_wall.shape[0]
-            j_start = (np.sum(patches_per_wall[:i])) if i > 0 else 0
-            j_end = np.sum(patches_per_wall[:i+1])
-            patch_to_wall_ids[j_start:j_end] = i
-            patches_points[j_start:j_end, :, :] = patches_points_wall
-        n_patches = patches_points.shape[0]
+    Returns
+    -------
+    patches_area : np.ndarray
+        area of all patches of shape (n_patches)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_size : np.ndarray
+        size of all patches of shape (n_patches, 3)
+    patches_points : np.ndarray
+        points of all patches of shape (n_patches, 4, 3)
+    patches_normal : np.ndarray
+        normal of all patches of shape (n_patches, 3)
+    n_patches : int
+        number of patches
 
-        # calculate patch information
-        patches_size = calculate_size(patches_points)
-        patches_area = calculate_area(patches_points)
-        patches_center = calculate_center(patches_points)
-        patches_normal = walls_normal[patch_to_wall_ids, :]
-        return patches_area, patches_center, patches_size, patches_points, patches_normal, n_patches
+    """
+    n_patches = 0
+    n_walls = polygon_points_array.shape[0]
+    for i in range(n_walls):
+        n_patches += total_number_of_patches(
+            polygon_points_array[i, :, :], patch_size)
+    patches_points = np.empty((n_patches, 4, 3))
+    patch_to_wall_ids = np.empty((n_patches), dtype=np.int64)
+    patches_per_wall = np.empty((n_walls), dtype=np.int64)
+
+    for i in range(n_walls):
+        polygon_points = polygon_points_array[i, :]
+        patches_points_wall = create_patches(
+            polygon_points, patch_size)
+        patches_per_wall[i] = patches_points_wall.shape[0]
+        j_start = (np.sum(patches_per_wall[:i])) if i > 0 else 0
+        j_end = np.sum(patches_per_wall[:i+1])
+        patch_to_wall_ids[j_start:j_end] = i
+        patches_points[j_start:j_end, :, :] = patches_points_wall
+    n_patches = patches_points.shape[0]
+
+    # calculate patch information
+    patches_size = calculate_size(patches_points)
+    patches_area = calculate_area(patches_points)
+    patches_center = calculate_center(patches_points)
+    patches_normal = walls_normal[patch_to_wall_ids, :]
+    return (
+        patches_area, patches_center, patches_size,
+        patches_points, patches_normal, n_patches)
 
 @numba.jit(nopython=True)
 def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
@@ -246,7 +279,7 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
     return patch_nums[x_idx]*patch_nums[y_idx]
 
-# @numba.jit(parallel=True)
+@numba.jit(parallel=True)
 def calculate_init_energy(
         source_position, patches_center, patches_normal,
         patches_size):
@@ -296,7 +329,22 @@ def calculate_init_energy(
 
 def check_visibility(
         patches_center:np.ndarray, patches_normal:np.ndarray) -> np.ndarray:
-    """Check the visibility between patches."""
+    """Check the visibility between patches.
+
+    Parameters
+    ----------
+    patches_center : np.ndarray
+        center points of all patches of shape (n_patches, 3)
+    patches_normal : np.ndarray
+        normal vectors of all patches of shape (n_patches, 3)
+
+    Returns
+    -------
+    visibility_matrix : np.ndarray
+        boolean matrix of shape (n_patches, n_patches) with True if patches
+        can see each other, otherwise false
+
+    """
     n_patches = patches_center.shape[0]
     visibility_matrix = np.zeros((n_patches, n_patches), dtype=bool)
     for i_source in range(n_patches):
