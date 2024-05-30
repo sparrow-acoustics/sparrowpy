@@ -1,12 +1,6 @@
 """Module for the radiosity simulation."""
 import numba
-import matplotlib as mpl
 import numpy as np
-import pyfar as pf
-import sofar as sf
-from tqdm import tqdm
-
-import sparapy.geometry as geo
 
 
 class DRadiosityFast():
@@ -94,23 +88,7 @@ class DRadiosityFast():
         walls_normal = np.array([p.normal for p in polygon_list])
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
 
-        # # create patches
-        # patches_points = []
-        # patch_to_wall_ids = []
-        # for i, polygon in enumerate(polygon_list):
-        #     patches_points_wall = geo.create_patches(
-        #         np.array(polygon.pts), patch_size)
-        #     patch_to_wall_ids.extend([i for _ in range(len(patches_points_wall))])
-        #     patches_points.extend(patches_points_wall)
-        # patches_points = np.array(patches_points)
-        # patch_to_wall_ids = np.array(patch_to_wall_ids)
-
-        # # calculate patch information
-        # patches_size = geo.calculate_size(patches_points)
-        # patches_area = geo.calculate_area_loop(patches_points)
-        # patches_center = geo.calculate_center(patches_points)
-        # patches_normal = walls_normal[patch_to_wall_ids]
-        # n_patches = patches_area.size
+        # create patches
         (patches_area, patches_center, patches_size, patches_points,
          patches_normal, n_patches) = process_patches(
             walls_points, walls_normal, patch_size, walls_area.shape[0])
@@ -234,7 +212,7 @@ def process_patches(polygon_points_array, walls_normal, patch_size, n_walls):
 
         for i in range(n_walls):
             polygon_points = polygon_points_array[i, :]
-            patches_points_wall = geo.create_patches(
+            patches_points_wall = create_patches(
                 polygon_points, patch_size)
             patches_per_wall[i] = patches_points_wall.shape[0]
             j_start = (np.sum(patches_per_wall[:i])) if i > 0 else 0
@@ -244,9 +222,9 @@ def process_patches(polygon_points_array, walls_normal, patch_size, n_walls):
         n_patches = patches_points.shape[0]
 
         # calculate patch information
-        patches_size = geo.calculate_size(patches_points)
-        patches_area = geo.calculate_area(patches_points)
-        patches_center = geo.calculate_center(patches_points)
+        patches_size = calculate_size(patches_points)
+        patches_area = calculate_area(patches_points)
+        patches_center = calculate_center(patches_points)
         patches_normal = walls_normal[patch_to_wall_ids, :]
         return patches_area, patches_center, patches_size, patches_points, patches_normal, n_patches
 
@@ -351,6 +329,9 @@ def form_factor_kang(
         normal vectors of all patches of shape (n_patches, 3)
     patches_size : np.ndarray
         size of all patches of shape (n_patches, 3)
+    visibility_matrix : np.ndarray
+        boolean matrix of shape (n_patches, n_patches) with True if patches
+        can see each other, otherwise false
 
     Returns
     -------
@@ -497,3 +478,74 @@ def form_factor_kang(
 
         form_factors[i_source, i_receiver] = ff
     return form_factors
+
+
+@numba.jit(nopython=True)
+def create_patches(polygon_points:np.ndarray, max_size):
+    size = np.empty(polygon_points.shape[1])
+    for i in range(polygon_points.shape[1]):
+        size[i] = polygon_points[:, i].max() - polygon_points[:, i].min()
+    patch_nums = np.array([int(n) for n in size/max_size])
+    real_size = size/patch_nums
+    if patch_nums[2] == 0:
+        x_idx = 0
+        y_idx = 1
+    if patch_nums[1] == 0:
+        x_idx = 0
+        y_idx = 2
+    if patch_nums[0] == 0:
+        x_idx = 1
+        y_idx = 2
+
+    x_min = np.min(polygon_points.T[x_idx])
+    y_min = np.min(polygon_points.T[y_idx])
+
+    n_patches = patch_nums[x_idx]*patch_nums[y_idx]
+    patches_points = np.empty((n_patches, 4, 3))
+    i = 0
+    for i_x in range(patch_nums[x_idx]):
+        for i_y in range(patch_nums[y_idx]):
+            points = polygon_points.copy()
+            points[0, x_idx] = x_min + i_x * real_size[x_idx]
+            points[0, y_idx] = y_min + i_y * real_size[y_idx]
+            points[1, x_idx] = x_min + (i_x+1) * real_size[x_idx]
+            points[1, y_idx] = y_min + i_y * real_size[y_idx]
+            points[3, x_idx] = x_min + i_x * real_size[x_idx]
+            points[3, y_idx] = y_min + (i_y+1) * real_size[y_idx]
+            points[2, x_idx] = x_min + (i_x+1) * real_size[x_idx]
+            points[2, y_idx] = y_min + (i_y+1) * real_size[y_idx]
+            patches_points[i] = points
+            i += 1
+
+    return patches_points
+
+
+@numba.jit(nopython=True)
+def calculate_center(points):
+    return np.sum(points, axis=-2) / points.shape[-2]
+
+@numba.jit(nopython=True)
+def calculate_size(points):
+    vec1 = points[..., 0, :]-points[..., 1, :]
+    vec2 = points[..., 1, :]-points[..., 2, :]
+    return np.abs(vec1-vec2)
+
+@numba.jit(nopython=True)
+def calculate_area(points):
+    vec1 = points[..., 0, :]-points[..., 1, :]
+    vec2 = points[..., 1, :]-points[..., 2, :]
+    size = vec1-vec2
+    return np.abs(
+        size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
+            + size[..., 0]*size[..., 2])
+
+
+@numba.jit(nopython=True, parallel=True)
+def calculate_area_loop(points):
+    areas = np.empty(points.shape[0])
+    for i in numba.prange(points.shape[0]):
+        vec1 = points[i, 0, :]-points[i, 1, :]
+        vec2 = points[i, 1, :]-points[i, 2, :]
+        size = vec1-vec2
+        areas[i] = np.abs(size[0]*size[1] + size[1]*size[2] + size[0]*size[2])
+    return areas
