@@ -243,7 +243,7 @@ def process_patches(
 
     for i in range(n_walls):
         polygon_points = polygon_points_array[i, :]
-        patches_points_wall = create_patches(
+        patches_points_wall = _create_patches(
             polygon_points, patch_size)
         patches_per_wall[i] = patches_points_wall.shape[0]
         j_start = (np.sum(patches_per_wall[:i])) if i > 0 else 0
@@ -253,16 +253,32 @@ def process_patches(
     n_patches = patches_points.shape[0]
 
     # calculate patch information
-    patches_size = calculate_size(patches_points)
-    patches_area = calculate_area(patches_points)
-    patches_center = calculate_center(patches_points)
+    patches_size = _calculate_size(patches_points)
+    patches_area = _calculate_area(patches_points)
+    patches_center = _calculate_center(patches_points)
     patches_normal = walls_normal[patch_to_wall_ids, :]
     return (
         patches_area, patches_center, patches_size,
         patches_points, patches_normal, n_patches)
 
+
 @numba.jit(nopython=True)
 def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
+    """Calculate the total number of patches.
+
+    Parameters
+    ----------
+    polygon_points : np.ndarray
+        points of the polygon of shape (4, 3)
+    max_size : float
+        maximal patch size in meters
+
+    Returns
+    -------
+    n_patches : int
+        number of patches
+
+    """
     size = np.empty(polygon_points.shape[1])
     for i in range(polygon_points.shape[1]):
         size[i] = polygon_points[:, i].max() - polygon_points[:, i].min()
@@ -281,9 +297,29 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
 @numba.jit(parallel=True)
 def calculate_init_energy(
-        source_position, patches_center, patches_normal,
-        patches_size):
+        source_position: np.ndarray, patches_center: np.ndarray,
+        patches_normal: np.ndarray, patches_size: float):
+    """Calculate the initial energy from the source.
 
+    Parameters
+    ----------
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_normal : np.ndarray
+        normal of all patches of shape (n_patches, 3)
+    patches_size : float
+        size of all patches of shape (n_patches, 3)
+
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
+
+    """
     n_patches = patches_center.shape[0]
     energy = np.empty((n_patches, ))
     distance = np.empty((n_patches, ))
@@ -529,7 +565,8 @@ def form_factor_kang(
 
 
 @numba.jit(nopython=True)
-def create_patches(polygon_points:np.ndarray, max_size):
+def _create_patches(polygon_points:np.ndarray, max_size):
+    """Create patches from a polygon."""
     size = np.empty(polygon_points.shape[1])
     for i in range(polygon_points.shape[1]):
         size[i] = polygon_points[:, i].max() - polygon_points[:, i].min()
@@ -569,31 +606,20 @@ def create_patches(polygon_points:np.ndarray, max_size):
 
 
 @numba.jit(nopython=True)
-def calculate_center(points):
+def _calculate_center(points):
     return np.sum(points, axis=-2) / points.shape[-2]
 
 @numba.jit(nopython=True)
-def calculate_size(points):
+def _calculate_size(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
     return np.abs(vec1-vec2)
 
 @numba.jit(nopython=True)
-def calculate_area(points):
+def _calculate_area(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
     size = vec1-vec2
     return np.abs(
         size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
             + size[..., 0]*size[..., 2])
-
-
-@numba.jit(nopython=True, parallel=True)
-def calculate_area_loop(points):
-    areas = np.empty(points.shape[0])
-    for i in numba.prange(points.shape[0]):
-        vec1 = points[i, 0, :]-points[i, 1, :]
-        vec2 = points[i, 1, :]-points[i, 2, :]
-        size = vec1-vec2
-        areas[i] = np.abs(size[0]*size[1] + size[1]*size[2] + size[0]*size[2])
-    return areas
