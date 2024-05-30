@@ -5,29 +5,7 @@ import pytest
 
 import sparapy as sp
 
-
-sample_walls = [
-    sp.geometry.Polygon(
-        [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]],
-        [1, 0, 0], [0, 1, 0]),
-    sp.geometry.Polygon(
-        [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]],
-        [1, 0, 0], [0, -1, 0]),
-    sp.geometry.Polygon(
-        [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
-        [1, 0, 0], [0, 0, 1]),
-    sp.geometry.Polygon(
-        [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
-        [1, 0, 0], [0, 0, -1]),
-    sp.geometry.Polygon(
-        [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]],
-        [0, 0, 1], [1, 0, 0]),
-    sp.geometry.Polygon(
-        [[1, 0, 0], [1, 0, 1], [1, 1, 1], [1, 1, 0]],
-        [0, 0, 1], [-1, 0, 0]),
-]
-
-def test_init():
+def test_init(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
     assert radiosity.speed_of_sound == 346.18
     npt.assert_almost_equal(radiosity.patches_points.shape, (150, 4, 3))
@@ -37,7 +15,7 @@ def test_init():
     npt.assert_almost_equal(radiosity.patches_normal.shape, (150, 3))
 
 
-def test_check_visibility():
+def test_check_visibility(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.check_visibility()
     npt.assert_almost_equal(radiosity._visibility_matrix.shape, (150, 150))
@@ -49,7 +27,7 @@ def test_check_visibility():
     assert np.sum(radiosity._visibility_matrix) == 25*5*25*6
 
 
-def test_compute_form_factors():
+def test_compute_form_factors(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.check_visibility()
     radiosity.calculate_form_factors()
@@ -72,7 +50,7 @@ def test_compute_form_factors():
     0.5,
     ])
 def test_calc_form_factor_perpendicular_distance(
-        walls, patch_size):
+        sample_walls, walls, patch_size):
     """Test form factor calculation for perpendicular walls."""
     wall_source = sample_walls[walls[0]]
     wall_receiver = sample_walls[walls[1]]
@@ -100,7 +78,7 @@ def test_calc_form_factor_perpendicular_distance(
         npt.assert_almost_equal(radiosity.form_factors[4:, :4], patch_2.form_factors.T)
 
 
-def test_init_energy():
+def test_init_energy(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
     (energy, distance) = radiosity.init_energy([0.5, 0.5, 0.5])
     npt.assert_array_equal(energy.shape, (150))
