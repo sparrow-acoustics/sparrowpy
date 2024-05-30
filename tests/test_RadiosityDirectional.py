@@ -196,7 +196,6 @@ def test_init_energy_exchange_directional_omni(wall, patch_size):
                 data['E_matrix'][0, ...],
                 patches.E_matrix[i_frequency, ..., i_rec])
 
-
 @pytest.mark.parametrize('perpendicular_walls', [
     [0, 2], [2, 0]
     ])
