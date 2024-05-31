@@ -5,12 +5,157 @@ import numpy as np
 import numpy.testing as npt
 import pyfar as pf
 import pytest
+import sparapy as sp
 import sparapy.geometry as geo
 import sparapy.radiosity as radiosity
 from sparapy.sound_object import Receiver, SoundSource
 
 
 create_reference_files = False
+
+
+def test_small_room_and_rotate():
+    X = 5
+    Y = 6
+    Z = 4
+    r_x = 3
+    r_y = 2
+    r_z = 3
+    patch_size = 1
+    ir_length_s = 1
+    sampling_rate = 1
+    max_order_k = 10
+    speed_of_sound = 343
+    irs_new = []
+    E_matrix = []
+    for i in range(6):
+        if i == 0:
+            walls = sp.testing.shoebox_room_stub(X, Y, Z)
+            receiver_pos = [r_x, r_y, r_z]
+        elif i == 1:
+            walls = sp.testing.shoebox_room_stub(X, Z, Y)
+            receiver_pos = [r_x, r_z, r_y]
+        elif i == 2:
+            walls = sp.testing.shoebox_room_stub(Y, Z, X)
+            receiver_pos = [r_y, r_z, r_x]
+        elif i == 3:
+            walls = sp.testing.shoebox_room_stub(Y, X, Z)
+            receiver_pos = [r_y, r_x, r_z]
+        elif i == 4:
+            walls = sp.testing.shoebox_room_stub(Z, X, Y)
+            receiver_pos = [r_z, r_x, r_y]
+        else:
+            walls = sp.testing.shoebox_room_stub(Z, Y, X)
+            receiver_pos = [r_z, r_y, r_x]
+
+        # create geometry
+        source = sp.geometry.SoundSource([2, 2, 2], [0, 1, 0], [0, 0, 1])
+
+        ## new approach
+        radi = sp.radiosity.Radiosity(
+            walls, patch_size, max_order_k, ir_length_s,
+            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate)
+
+        # run simulation
+        radi.run(source)
+
+        E_matrix.append(np.concatenate([radi.patch_list[i].E_matrix for i in range(6)], axis=-2))
+        # test energy at receiver
+        receiver = sp.geometry.Receiver(receiver_pos, [0, 1, 0], [0, 0, 1])
+        irs_new.append(radi.energy_at_receiver(receiver, ignore_direct=True))
+
+    # rotate all walls
+    irs_new = np.array(irs_new).squeeze()
+    npt.assert_array_almost_equal(irs_new, irs_new[0], decimal=4)
+
+
+def test_small_room_and_rotate_init_energy():
+    X = 5
+    Y = 6
+    Z = 4
+    patch_size = 1
+    ir_length_s = 1
+    sampling_rate = 1
+    max_order_k = 0
+    speed_of_sound = 343
+    E_matrix = []
+    E_matrix_sum = []
+    for i in range(6):
+        if i == 0:
+            walls = sp.testing.shoebox_room_stub(X, Y, Z)
+        elif i == 1:
+            walls = sp.testing.shoebox_room_stub(X, Z, Y)
+        elif i == 2:
+            walls = sp.testing.shoebox_room_stub(Y, Z, X)
+        elif i == 3:
+            walls = sp.testing.shoebox_room_stub(Y, X, Z)
+        elif i == 4:
+            walls = sp.testing.shoebox_room_stub(Z, X, Y)
+        else:
+            walls = sp.testing.shoebox_room_stub(Z, Y, X)
+
+        # create geometry
+        source = sp.geometry.SoundSource([2, 2, 2], [0, 1, 0], [0, 0, 1])
+
+        ## new approach
+        radi = sp.radiosity.Radiosity(
+            walls, patch_size, max_order_k, ir_length_s,
+            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate)
+
+        # run init energy
+        # B. First-order patch
+        for patches in radi.patch_list:
+            # print(patches.normal)
+            patches.init_energy_exchange(
+                radi.max_order_k, radi.ir_length_s, source,
+                sampling_rate=radi.sampling_rate)
+
+        E_matrix.append(np.concatenate([radi.patch_list[i].E_matrix for i in range(6)], axis=-2))
+        E_matrix_sum.append([radi.patch_list[i].E_matrix.sum() for i in range(6)])
+
+    # rotate all walls
+    E_matrix_sum = np.array(E_matrix_sum)
+    matrix = np.zeros(E_matrix_sum.shape, dtype=int)
+    reference_energy = E_matrix_sum[:, 2] # formula was given for the ground
+    for i, ref in enumerate(reference_energy):
+        matrix[np.abs(E_matrix_sum-ref)<1e-10] = i+1
+    # print(matrix)
+    # for i in range(6):
+    #     print(i)
+    #     npt.assert_array_equal(np.sort(E_matrix_sum[i,:]), np.sort(reference_energy))
+    E_matrix = np.array(E_matrix)
+    E_matrix = np.sum(E_matrix[:, 0, 0, :, 0], axis=-1)
+    npt.assert_array_almost_equal(E_matrix, E_matrix[0], decimal=4)
+
+
+def test_cube_and_rotate_init_energy():
+    patch_size = 0.5
+    ir_length_s = 1
+    sampling_rate = 1
+    max_order_k = 0
+    speed_of_sound = 343
+    walls = sp.testing.shoebox_room_stub(1, 1, 1)
+    # create geometry
+    source = sp.geometry.SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
+
+    ## new approach
+    radi = sp.radiosity.Radiosity(
+        walls, patch_size, max_order_k, ir_length_s,
+        speed_of_sound=speed_of_sound, sampling_rate=sampling_rate)
+
+    # run init energy
+    # B. First-order patch sources
+    for patches in radi.patch_list:
+        print(patches.normal)
+        patches.init_energy_exchange(
+            radi.max_order_k, radi.ir_length_s, source,
+            sampling_rate=radi.sampling_rate)
+
+    E_matrix= np.concatenate([radi.patch_list[i].E_matrix for i in range(6)], axis=-2)
+
+    # rotate all walls
+    assert E_matrix.flatten()[0] > 0
+    npt.assert_array_equal(E_matrix, E_matrix.flatten()[0])
 
 
 @pytest.mark.parametrize('max_order_k', [2, 3])
