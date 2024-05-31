@@ -53,9 +53,9 @@ class Patches(Polygon):
 
         """
         Polygon.__init__(self, polygon.pts, polygon.up_vector, polygon.normal)
-        min = np.min(polygon.pts, axis=0)
-        max = np.max(polygon.pts, axis=0)
-        size = max - min
+        min_point = np.min(polygon.pts, axis=0)
+        max_point = np.max(polygon.pts, axis=0)
+        size = max_point - min_point
         patch_nums = np.array([int(n) for n in size/max_size])
         real_size = size/patch_nums
         self.scattering = np.atleast_1d(scattering)
@@ -168,80 +168,46 @@ class Patches(Polygon):
             self.E_n_samples,  # impulse response G_k(t)_receiverpatch
             ))
 
-        S_x = source.position[0]
-        S_y = source.position[1]
-        S_z = source.position[2]
-
-        source_pos = source.position
-
         for i_receiver, receiver_patch in enumerate(self.patches):
-            receiver_pos = receiver_patch.center
+            source_pos = source.position.copy()
+            receiver_pos = receiver_patch.center.copy()
 
             distance = np.linalg.norm(receiver_pos-source_pos)
             delay_seconds = distance/speed_of_sound
             delay_samples = int(delay_seconds*self.E_sampling_rate)
 
+            # array([0., 1., 0.]), array([ 0., -1.,  0.]),
+            # array([0., 0., 1.]), array([ 0.,  0., -1.]),
+            # array([1., 0., 0.]), array([-1.,  0.,  0.])]
             if np.abs(receiver_patch.normal[2]) > 0.99:
-                dl = receiver_patch.center[0]
-                dm = receiver_patch.center[1]
-                dn = receiver_patch.center[2]
-                dd_l = receiver_patch.size[0]
-                dd_m = receiver_patch.size[1]
-                dd_n = receiver_patch.size[2]
-                S_x = source.position[0]
-                S_y = source.position[1]
-                S_z = source.position[2]
+                i = 2
+                indexes = [0, 1, 2]
             elif np.abs(receiver_patch.normal[1]) > 0.99:
-                dl = receiver_patch.center[0]
-                dm = receiver_patch.center[2]
-                dn = receiver_patch.center[1]
-                dd_l = receiver_patch.size[0]
-                dd_m = receiver_patch.size[2]
-                dd_n = receiver_patch.size[1]
-                S_x = source.position[0]
-                S_y = source.position[2]
-                S_z = source.position[1]
+                indexes = [2, 0, 1]
+                i = 1
             elif np.abs(receiver_patch.normal[0]) > 0.99:
-                dl = receiver_patch.center[1]
-                dm = receiver_patch.center[2]
-                dn = receiver_patch.center[0]
-                dd_l = receiver_patch.size[1]
-                dd_m = receiver_patch.size[2]
-                dd_n = receiver_patch.size[0]
-                S_x = source.position[1]
-                S_y = source.position[2]
-                S_z = source.position[0]
+                i = 0
+                indexes = [1, 2, 0]
             else:
                 raise AssertionError()
+            offset = receiver_pos[i]
+            source_pos[i] = np.abs(source_pos[i] - offset)
+            receiver_pos[i] = np.abs(receiver_pos[i] - offset)
+            dl = receiver_pos[indexes[0]]
+            dm = receiver_pos[indexes[1]]
+            dn = receiver_pos[indexes[2]]
+            dd_l = receiver_patch.size[indexes[0]]
+            dd_m = receiver_patch.size[indexes[1]]
+            dd_n = receiver_patch.size[indexes[2]]
+            S_x = source_pos[indexes[0]]
+            S_y = source_pos[indexes[1]]
+            S_z = source_pos[indexes[2]]
+            energy = _init_energy_exchange(
+                dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
+                source.sound_power, self.absorption, distance,
+                self.sound_attenuation_factor, self.n_bins)
+            self.E_matrix[:, 0, i_receiver, delay_samples] += energy
 
-            half_l = dd_l/2
-            half_n = dd_n/2
-            half_m = dd_m/2
-
-            sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
-                dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
-
-            k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
-            sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
-                dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
-
-            plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
-            minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
-
-            k_beta = -1 if (dn - half_n) <= S_z <= (dn + half_n) else 1
-            beta = np.abs(plus-(k_beta*minus))
-
-            # don't forget to add constants
-            # constants are
-            for i_frequency in range(self.n_bins):
-                alpha = self.absorption[i_frequency]
-                constant = source.sound_power * (1-alpha) * (
-                    np.exp(-self.sound_attenuation_factor[i_frequency]*distance))
-                #constant = 1
-                energy = constant * (
-                    np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
-                # energy = round(energy,4)
-                self.E_matrix[i_frequency, 0, i_receiver, delay_samples] += energy
 
     def calculate_energy_exchange(
             self, patches_list, current_order_k, speed_of_sound=346.18,
@@ -526,11 +492,12 @@ class Patches(Polygon):
             source_pos = source_patch.center
             receiver_pos = receiver.position
 
+            difference = np.abs(receiver_pos-source_pos)
             R = np.linalg.norm(source_pos-receiver_pos)
             delay = int(R/speed_of_sound * sampling_rate)
 
-            cos_xi = np.abs(np.sum(source_patch.normal*receiver_pos)) / \
-                np.linalg.norm(source_patch.center-receiver_pos)
+            cos_xi = np.abs(np.sum(source_patch.normal*difference)) / \
+                np.linalg.norm(source_pos-receiver_pos)
 
             for k in range(max_order+1):
                 for i_frequency in range(self.n_bins):
@@ -815,8 +782,13 @@ class PatchesDirectional(Patches):
         energy_response = np.zeros((self.n_bins, self.E_n_samples))
 
         for i_source, source_patch in enumerate(self.patches):
+
             source_pos = source_patch.center
             receiver_pos = receiver.position
+
+            cos_xi = np.abs(np.sum(
+                source_patch.normal*np.abs(receiver_pos-source_pos))) / \
+                np.linalg.norm(source_pos-receiver_pos)
 
             difference = receiver_pos-source_pos
             difference = pf.Coordinates(
@@ -824,9 +796,6 @@ class PatchesDirectional(Patches):
             difference.radius = 1
             R = np.linalg.norm(receiver_pos-source_pos)
             delay = int(R/speed_of_sound * sampling_rate)
-
-            cos_xi = np.abs(np.sum(source_patch.normal*receiver_pos)) / \
-                np.linalg.norm(source_pos-receiver_pos)
 
             i_patch = self.directivity_receivers.find_nearest(
                 difference)[0][0]
@@ -846,6 +815,40 @@ class PatchesDirectional(Patches):
                     energy_response[i_frequency, ...] += receiver_energy
 
         return energy_response
+
+
+def _init_energy_exchange(
+            dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
+            sound_power, absorption, distance, attenuation, n_bins):
+    half_l = dd_l/2
+    half_n = dd_n/2
+    half_m = dd_m/2
+
+    sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
+        dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+
+    k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
+    sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
+        dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+
+    plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
+    minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
+
+    k_beta = -1 if (dn - half_n) <= np.abs(S_z) <= (dn + half_n) else 1
+    beta = np.abs(plus-(k_beta*minus))
+
+    # don't forget to add constants
+    # constants are
+    energies = np.zeros(n_bins)
+    for i_frequency in range(n_bins):
+        alpha = absorption[i_frequency]
+        constant = sound_power * (1-alpha) * (
+            np.exp(-attenuation[i_frequency]*distance))
+        #constant = 1
+        energy = constant * (
+            np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
+        energies[i_frequency] = energy
+    return energies
 
 def add_delay(ir, delay_samples, axis=-1):
     """Add delay to impulse response.
@@ -1021,7 +1024,7 @@ class Radiosity():
                         self.patch_list, k, speed_of_sound=self.speed_of_sound,
                         E_sampling_rate=self.sampling_rate)
 
-    def energy_at_receiver(self, receiver, max_order_k=None):
+    def energy_at_receiver(self, receiver, max_order_k=None, ignore_direct=False):
         """Return the energetic impulse response at the receiver."""
         ir = 0
         if max_order_k is None:
@@ -1032,10 +1035,11 @@ class Radiosity():
                 max_order_k, receiver, self.ir_length_s,
                 speed_of_sound=self.speed_of_sound,
                 sampling_rate=self.sampling_rate)
-        r = np.sqrt(np.sum((receiver.position-self.source.position)**2))
-        direct_sound = (1/(4 * np.pi * np.square(r))) * np.exp(-M_value*r)
-        delay_dir = int(r/self.speed_of_sound*self.sampling_rate)
-        ir[:, delay_dir] += direct_sound
+        if not ignore_direct:
+            r = np.sqrt(np.sum((receiver.position-self.source.position)**2))
+            direct_sound = (1/(4 * np.pi * np.square(r))) * np.exp(-M_value*r)
+            delay_dir = int(r/self.speed_of_sound*self.sampling_rate)
+            ir[:, delay_dir] += direct_sound
 
         return ir
 
