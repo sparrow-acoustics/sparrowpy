@@ -202,14 +202,10 @@ class Patches(Polygon):
             S_x = source_pos[indexes[0]]
             S_y = source_pos[indexes[1]]
             S_z = source_pos[indexes[2]]
-            energy = init_energy_exchange(
+            energy = _init_energy_exchange(
                 dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
                 source.sound_power, self.absorption, distance,
                 self.sound_attenuation_factor, self.n_bins)
-            # size = np.sort(self.size.copy())
-            # if (size[2]==6) and (size[1]==5):
-            #     if (dl == 0.5) & (dm == 0.5):
-            #         print(f'i{i} dl{dl} dm{dm} dn{dn} dd_l{dd_l-1} dd_m{dd_m-1} dd_n{dd_n} Sx{S_x} Sy{S_y} Sz{S_z} E{energy}')
             self.E_matrix[:, 0, i_receiver, delay_samples] += energy
 
 
@@ -818,44 +814,38 @@ class PatchesDirectional(Patches):
         return energy_response
 
 
-def init_energy_exchange(
+def _init_energy_exchange(
             dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
             sound_power, absorption, distance, attenuation, n_bins):
+    half_l = dd_l/2
+    half_n = dd_n/2
+    half_m = dd_m/2
 
-        half_l = dd_l/2
-        half_n = dd_n/2
-        half_m = dd_m/2
+    sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
+        dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-        sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
-            dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+    k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
+    sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
+        dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-        k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
-        sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
-            dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+    plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
+    minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
 
-        plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
-        minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
+    k_beta = -1 if (dn - half_n) <= np.abs(S_z) <= (dn + half_n) else 1
+    beta = np.abs(plus-(k_beta*minus))
 
-        k_beta = -1 if (dn - half_n) <= np.abs(S_z) <= (dn + half_n) else 1
-        beta = np.abs(plus-(k_beta*minus))
-
-        # don't forget to add constants
-        # constants are
-        energies = np.zeros(n_bins)
-        for i_frequency in range(n_bins):
-            alpha = absorption[i_frequency]
-            constant = sound_power * (1-alpha) * (
-                np.exp(-attenuation[i_frequency]*distance))
-            #constant = 1
-            energy = constant * (
-                np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
-            # if np.sum(receiver_patch.normal) < 0:
-            #     energy = -energy
-            # energy = round(energy,4)
-            # if np.abs(receiver_patch.normal[2]) > 0:
-            #     print(f'norm: {receiver_patch.normal}; pos: {receiver_pos}; energy: {energy}')
-            energies[i_frequency] = energy
-        return energies
+    # don't forget to add constants
+    # constants are
+    energies = np.zeros(n_bins)
+    for i_frequency in range(n_bins):
+        alpha = absorption[i_frequency]
+        constant = sound_power * (1-alpha) * (
+            np.exp(-attenuation[i_frequency]*distance))
+        #constant = 1
+        energy = constant * (
+            np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
+        energies[i_frequency] = energy
+    return energies
 
 def add_delay(ir, delay_samples, axis=-1):
     """Add delay to impulse response.
