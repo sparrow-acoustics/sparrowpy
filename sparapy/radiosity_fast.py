@@ -363,6 +363,7 @@ def calculate_init_energy(
     return (energy, distance)
 
 
+@numba.jit(nopython=True, parallel=True)
 def check_visibility(
         patches_center:np.ndarray, patches_normal:np.ndarray) -> np.ndarray:
     """Check the visibility between patches.
@@ -382,20 +383,22 @@ def check_visibility(
 
     """
     n_patches = patches_center.shape[0]
-    visibility_matrix = np.zeros((n_patches, n_patches), dtype=bool)
-    for i_source in range(n_patches):
-        for i_receiver in range(n_patches):
-            patches_parallel = np.abs(np.dot(
-                patches_normal[i_source], patches_normal[i_receiver]) -1) < 1e-5
-            same_dim = np.sum(
-                patches_normal[i_source] * patches_center[i_source]) == np.sum(
-                    patches_normal[i_receiver] * patches_center[i_receiver])
-            if i_source == i_receiver:
-                visibility_matrix[i_source, i_receiver] = False
-            elif patches_parallel and same_dim:
-                visibility_matrix[i_source, i_receiver] = False
-            else:
-                visibility_matrix[i_source, i_receiver] = True
+    visibility_matrix = np.empty((n_patches, n_patches), dtype=np.bool_)
+    indexes = np.array([(i_source, i_receiver) for i_source in range(n_patches) for i_receiver in range(n_patches)])
+    for i in numba.prange(indexes.shape[0]):
+        i_source = indexes[i, 0]
+        i_receiver = indexes[i, 1]
+        patches_parallel = np.abs(np.dot(
+            patches_normal[i_source], patches_normal[i_receiver]) -1) < 1e-5
+        same_dim = np.sum(
+            patches_normal[i_source] * patches_center[i_source]) == np.sum(
+                patches_normal[i_receiver] * patches_center[i_receiver])
+        if i_source == i_receiver:
+            visibility_matrix[i_source, i_receiver] = False
+        elif patches_parallel and same_dim:
+            visibility_matrix[i_source, i_receiver] = False
+        else:
+            visibility_matrix[i_source, i_receiver] = True
     return visibility_matrix
 
 
