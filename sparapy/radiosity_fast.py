@@ -384,7 +384,10 @@ def check_visibility(
     """
     n_patches = patches_center.shape[0]
     visibility_matrix = np.empty((n_patches, n_patches), dtype=np.bool_)
-    indexes = np.array([(i_source, i_receiver) for i_source in range(n_patches) for i_receiver in range(n_patches)])
+    indexes = np.array(
+        [(i_source, i_receiver) \
+            for i_source in range(n_patches) \
+                for i_receiver in range(n_patches)])
     for i in numba.prange(indexes.shape[0]):
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
