@@ -498,8 +498,6 @@ class Patches(Polygon):
 
             cos_xi = np.abs(np.sum(source_patch.normal*difference)) / \
                 np.linalg.norm(source_pos-receiver_pos)
-            if i_source == 0:
-                print(cos_xi)
 
             for k in range(max_order+1):
                 for i_frequency in range(self.n_bins):
@@ -784,8 +782,13 @@ class PatchesDirectional(Patches):
         energy_response = np.zeros((self.n_bins, self.E_n_samples))
 
         for i_source, source_patch in enumerate(self.patches):
+
             source_pos = source_patch.center
             receiver_pos = receiver.position
+
+            cos_xi = np.abs(np.sum(
+                source_patch.normal*np.abs(receiver_pos-source_pos))) / \
+                np.linalg.norm(source_pos-receiver_pos)
 
             difference = receiver_pos-source_pos
             difference = pf.Coordinates(
@@ -793,9 +796,6 @@ class PatchesDirectional(Patches):
             difference.radius = 1
             R = np.linalg.norm(receiver_pos-source_pos)
             delay = int(R/speed_of_sound * sampling_rate)
-
-            cos_xi = np.abs(np.sum(source_patch.normal*receiver_pos)) / \
-                np.linalg.norm(source_pos-receiver_pos)
 
             i_patch = self.directivity_receivers.find_nearest(
                 difference)[0][0]
