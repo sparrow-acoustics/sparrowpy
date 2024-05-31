@@ -53,9 +53,9 @@ class Patches(Polygon):
 
         """
         Polygon.__init__(self, polygon.pts, polygon.up_vector, polygon.normal)
-        min = np.min(polygon.pts, axis=0)
-        max = np.max(polygon.pts, axis=0)
-        size = max - min
+        min_point = np.min(polygon.pts, axis=0)
+        max_point = np.max(polygon.pts, axis=0)
+        size = max_point - min_point
         patch_nums = np.array([int(n) for n in size/max_size])
         real_size = size/patch_nums
         self.scattering = np.atleast_1d(scattering)

@@ -279,7 +279,7 @@ def test_init_energy_exchange_normal(sample_walls, patch_size, i_wall):
     ir_length_s = 5
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
     patches.init_energy_exchange(max_order_k, ir_length_s, source, 1000)
-    if create_reference_files and sample_walls == sample_walls[0]:
+    if create_reference_files and sample_walls[i_wall] == sample_walls[0]:
         pf.io.write(path_sofa, E_matrix=patches.E_matrix)
     data = pf.io.read(path_sofa)
     npt.assert_almost_equal(
