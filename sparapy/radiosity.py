@@ -492,11 +492,14 @@ class Patches(Polygon):
             source_pos = source_patch.center
             receiver_pos = receiver.position
 
+            difference = np.abs(receiver_pos-source_pos)
             R = np.linalg.norm(source_pos-receiver_pos)
             delay = int(R/speed_of_sound * sampling_rate)
 
-            cos_xi = np.abs(np.sum(source_patch.normal*receiver_pos)) / \
-                np.linalg.norm(source_patch.center-receiver_pos)
+            cos_xi = np.abs(np.sum(source_patch.normal*difference)) / \
+                np.linalg.norm(source_pos-receiver_pos)
+            if i_source == 0:
+                print(cos_xi)
 
             for k in range(max_order+1):
                 for i_frequency in range(self.n_bins):

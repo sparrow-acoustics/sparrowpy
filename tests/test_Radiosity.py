@@ -29,21 +29,25 @@ def test_small_room_and_shift():
     speed_of_sound = 343
     irs_new = []
     E_matrix = []
+    form_factors = []
     for i in range(2):
+        walls = sp.testing.shoebox_room_stub(X, Y, Z)
         if i == 0:
-            walls = sp.testing.shoebox_room_stub(X, Y, Z)
-            receiver_pos = [r_x, r_y, r_z]
+            delta_x = 0.
+            delta_y = 0.
+            delta_z = 0.
         elif i == 1:
-            walls = sp.testing.shoebox_room_stub(X, Y, Z)
             delta_x = 2.
             delta_y = 4.
             delta_z = 5.
-            for wall in walls:
-                wall.pts += np.array([delta_x, delta_y, delta_z])
-            receiver_pos = [r_x, r_y, r_z]
+
+        receiver_pos = [r_x+delta_x, r_y+delta_y, r_z+delta_z]
+        for wall in walls:
+            wall.pts += np.array([delta_x, delta_y, delta_z])
 
         # create geometry
-        source = sp.geometry.SoundSource([2, 2, 2], [0, 1, 0], [0, 0, 1])
+        source = sp.geometry.SoundSource(
+            [2+delta_x, 2+delta_y, 2+delta_z], [0, 1, 0], [0, 0, 1])
 
         ## new approach
         radi = sp.radiosity.Radiosity(
@@ -55,13 +59,24 @@ def test_small_room_and_shift():
 
         E_matrix.append(np.concatenate([
             radi.patch_list[i].E_matrix for i in range(6)], axis=-2))
+        form_factors.append([
+            radi.patch_list[i].form_factors for i in range(6)])
+
         # test energy at receiver
         receiver = sp.geometry.Receiver(receiver_pos, [0, 1, 0], [0, 0, 1])
         irs_new.append(radi.energy_at_receiver(receiver, ignore_direct=True))
 
+    # compare E_matrix
+    E_matrix = np.array(E_matrix)
+    npt.assert_array_equal(E_matrix[0], E_matrix[1])
+
+    # compare form factors
+    for i in range(6):
+        npt.assert_array_equal(form_factors[0][i], form_factors[1][i])
+
     # rotate all walls
     irs_new = np.array(irs_new).squeeze()
-    npt.assert_array_almost_equal(irs_new, irs_new[0], decimal=4)
+    npt.assert_array_equal(irs_new, irs_new[0])
 
 
 def test_small_room_and_rotate():
@@ -79,6 +94,7 @@ def test_small_room_and_rotate():
     speed_of_sound = 343
     irs_new = []
     E_matrix = []
+    E_matrix_sum = []
     for i in range(6):
         if i == 0:
             walls = sp.testing.shoebox_room_stub(X, Y, Z)
@@ -112,6 +128,7 @@ def test_small_room_and_rotate():
 
         E_matrix.append(np.concatenate([
             radi.patch_list[i].E_matrix for i in range(6)], axis=-2))
+        E_matrix_sum.append([radi.patch_list[i].E_matrix.sum() for i in range(6)])
         # test energy at receiver
         receiver = sp.geometry.Receiver(receiver_pos, [0, 1, 0], [0, 0, 1])
         irs_new.append(radi.energy_at_receiver(receiver, ignore_direct=True))
