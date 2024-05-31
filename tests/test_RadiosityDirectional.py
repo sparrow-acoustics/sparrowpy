@@ -240,7 +240,7 @@ def test_directional_energy_exchange(
     ])
 def test_directional_specular_reflections(
         sample_walls, perpendicular_walls, patch_size):
-    """Test vs refernces for specular_reflections."""
+    """Test vs references for specular_reflections."""
     max_order_k=3
     ir_length_s=5
     wall_source = sample_walls[perpendicular_walls[0]]
