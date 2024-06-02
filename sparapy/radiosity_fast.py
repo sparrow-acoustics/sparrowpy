@@ -20,9 +20,14 @@ class DRadiosityFast():
     _visibility_matrix: np.ndarray
     _form_factors: np.ndarray
 
-    _n_bins: int
     _absorption: np.ndarray
-    scattering: np.ndarray
+    _absorption_index: np.ndarray
+    _n_bins: int
+    _frequencies = np.ndarray
+    _scattering: np.ndarray
+    _scattering_index: np.ndarray
+    _sources: list[pf.Coordinates]
+    _receivers: list[pf.Coordinates]
 
 
     def __init__(
@@ -49,6 +54,7 @@ class DRadiosityFast():
         self._frequencies = None
         self._sources = None
         self._receivers = None
+        self._absorption = None
 
     @classmethod
     def from_polygon(
@@ -128,10 +134,25 @@ class DRadiosityFast():
             assert (self._frequencies == frequencies).all(), \
                 "Frequencies do not match"
 
-    def set_wall_absorption(self, absorption:pf.FrequencyData):
-        """Set the wall absorption."""
+    def set_wall_absorption(self, wall_indexes, absorption:pf.FrequencyData):
+        """Set the wall absorption.
+
+        Parameters
+        ----------
+        wall_indexes : list[int]
+            list of walls for the scattering data
+        absorption : pf.FrequencyData
+            scattering data of cshape (1, )
+
+        """
         self._check_frequency(absorption.frequencies)
-        self._absorption = absorption.freq
+        if self._absorption is None:
+            self._absorption_index = np.empty((self.n_walls), dtype=np.int64)
+            self._absorption_index.fill(-1)
+            self._absorption = []
+
+        self._absorption.append(absorption.freq.squeeze())
+        self._absorption_index[wall_indexes] = len(self._absorption)-1
 
     def set_wall_scattering(
             self, wall_indexes:list[int],
