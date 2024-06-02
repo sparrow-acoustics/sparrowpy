@@ -1,6 +1,7 @@
 """Module for the radiosity simulation."""
 import numba
 import numpy as np
+import pyfar as pf
 
 
 class DRadiosityFast():
@@ -14,16 +15,14 @@ class DRadiosityFast():
     _patch_size: float
     _max_order_k: int
     _n_patches: int
-
-    absorption: np.ndarray
-    scattering: np.ndarray
+    _speed_of_sound: float
 
     _visibility_matrix: np.ndarray
     _form_factors: np.ndarray
-    n_bins: int
-    sound_attenuation_factor: np.ndarray
-    patch_to_wall_ids: np.ndarray
-    _speed_of_sound: float
+
+    _n_bins: int
+    _absorption: np.ndarray
+    scattering: np.ndarray
 
 
     def __init__(
@@ -46,6 +45,10 @@ class DRadiosityFast():
             self._visibility_matrix = visibility_matrix
         if form_factors is not None:
             self._form_factors = form_factors
+        self._n_bins = None
+        self._frequencies = None
+        self._sources = None
+        self._receivers = None
 
     @classmethod
     def from_polygon(
@@ -111,6 +114,91 @@ class DRadiosityFast():
             self._form_factors = form_factor_kang(
                 self.patches_center, self.patches_normal,
                 self.patches_size, self.visibility_matrix)
+
+    def _check_frequency(self, frequencies:np.ndarray):
+        """Check if the frequency data matches the radiosity object."""
+        if self._n_bins is None:
+            self._n_bins = frequencies.size
+        else:
+            assert self._n_bins == frequencies.size, \
+                "Number of bins do not match"
+        if self._frequencies is None:
+            self._frequencies = frequencies
+        else:
+            assert (self._frequencies == frequencies).all(), \
+                "Frequencies do not match"
+
+    def set_wall_absorption(self, absorption:pf.FrequencyData):
+        """Set the wall absorption."""
+        self._check_frequency(absorption.frequencies)
+        self._absorption = absorption.freq
+
+    def set_wall_scattering(
+            self, wall_indexes:list[int],
+            scattering:pf.FrequencyData, sources:pf.Coordinates,
+            receivers:pf.Coordinates):
+        """Set the wall scattering.
+
+        Parameters
+        ----------
+        wall_indexes : list[int]
+            list of walls for the scattering data
+        scattering : pf.FrequencyData
+            scattering data of cshape (n_sources, n_receivers)
+        sources : pf.Coordinates
+            source coordinates
+        receivers : pf.Coordinates
+            receiver coordinates
+
+        """
+        assert (sources.z >= 0).all(), \
+            "Sources must be in the positive half space"
+        assert (receivers.z >= 0).all(), \
+            "Receivers must be in the positive half space"
+        self._check_frequency(scattering.frequencies)
+        if self._sources is None:
+            self._sources = np.empty((self.n_walls), dtype=pf.Coordinates)
+            self._receivers = np.empty((self.n_walls), dtype=pf.Coordinates)
+            self._scattering_index = np.empty((self.n_walls), dtype=np.int64)
+            self._scattering_index.fill(-1)
+            self._scattering = []
+
+        for i in wall_indexes:
+            sources_rot, receivers_rot = self._rotate_coords_to_normal(
+                self.walls_normal[i], self.walls_up_vector[i],
+                sources, receivers)
+            self._sources[i] = sources_rot
+            self._receivers[i] = receivers_rot
+
+        self._scattering.append(scattering.freq)
+        self._scattering_index[wall_indexes] = len(self._scattering)-1
+
+    def _rotate_coords_to_normal(
+            self, wall_normal:np.ndarray, wall_up_vector:np.ndarray,
+            sources:pf.Coordinates, receivers:pf.Coordinates):
+        """Rotate the coordinates to the normal vector."""
+        o1 = pf.Orientations.from_view_up(
+            wall_normal, wall_up_vector)
+        o2 = pf.Orientations.from_view_up([0, 0, 1], [1, 0, 0])
+        o_diff = o1.inv()*o2
+        euler = o_diff.as_euler('xyz', True).flatten()
+        receivers_cp = receivers.copy()
+        receivers_cp.rotate('xyz', euler)
+        receivers_cp.radius = 1
+        sources_cp = sources.copy()
+        sources_cp.rotate('xyz', euler)
+        sources_cp.radius = 1
+        return sources_cp, receivers_cp
+
+    @property
+    def n_bins(self):
+        """Return the number of frequency bins."""
+        return self._n_bins
+
+    @property
+    def n_walls(self):
+        """Return the number of walls."""
+        return self._walls_points.shape[0]
 
     @property
     def n_patches(self):
@@ -243,8 +331,7 @@ def process_patches(
 
     # calculate patch information
     patches_normal = walls_normal[patch_to_wall_ids, :]
-    return (
-        patches_points, patches_normal, n_patches)
+    return (patches_points, patches_normal, n_patches)
 
 
 @numba.jit(nopython=True)
@@ -308,7 +395,6 @@ def calculate_init_energy(
     n_patches = patches_center.shape[0]
     energy = np.empty((n_patches, ))
     distance = np.empty((n_patches, ))
-    source_position = np.array(source_position)
     for i in  numba.prange(n_patches):
         idx_l = 1 if np.abs(patches_normal[i, 0]) > 0.99 else 0
         idx_m = 1 if np.abs(patches_normal[i, 2]) > 0.99 else 2

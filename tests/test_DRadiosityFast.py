@@ -2,6 +2,7 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
+import pyfar as pf
 
 import sparapy as sp
 
@@ -27,11 +28,29 @@ def test_check_visibility(sample_walls):
     assert np.sum(radiosity._visibility_matrix) == 25*5*25*6/2
 
 
+def test_check_visibility_wrapper(sample_walls):
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity.check_visibility()
+    visibility_matrix = sp.radiosity_fast.check_visibility(
+        radiosity.patches_center, radiosity.patches_normal)
+    npt.assert_almost_equal(radiosity._visibility_matrix, visibility_matrix)
+
+
 def test_compute_form_factors(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.check_visibility()
     radiosity.calculate_form_factors()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
+
+
+def test_compute_form_factors_wrapper(sample_walls):
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    form_factors = sp.radiosity_fast.form_factor_kang(
+        radiosity.patches_center, radiosity.patches_normal,
+        radiosity.patches_size, radiosity.visibility_matrix)
+    npt.assert_almost_equal(radiosity.form_factors, form_factors)
 
 
 @pytest.mark.parametrize('walls', [
@@ -67,9 +86,11 @@ def test_calc_form_factor_perpendicular_distance(
 
     patch_pos = np.array([patch.center for patch in patch_1.patches])
     if (np.abs(patch_pos- radiosity.patches_center[:4, :])<1e-5).all():
-        npt.assert_almost_equal(radiosity.form_factors[:4, 4:], patch_1.form_factors)
+        npt.assert_almost_equal(
+            radiosity.form_factors[:4, 4:], patch_1.form_factors)
     else:
-        npt.assert_almost_equal(radiosity.form_factors[:4, 4:], patch_1.form_factors.T)
+        npt.assert_almost_equal(
+            radiosity.form_factors[:4, 4:], patch_1.form_factors.T)
 
     patch_pos = np.array([patch.center for patch in patch_2.patches])
     if (np.abs(patch_pos- radiosity.patches_center[4:, :])<1e-5).all():
@@ -79,7 +100,76 @@ def test_calc_form_factor_perpendicular_distance(
 
 
 def test_init_energy(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
-    (energy, distance) = radiosity.init_energy([0.5, 0.5, 0.5])
+    source_pos = np.array([0.5, 0.5, 0.5])
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+    (energy, distance) = radiosity.init_energy(source_pos)
     npt.assert_array_equal(energy.shape, (150))
     npt.assert_array_equal(distance.shape, (150))
+
+
+def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+    (data, sources, receivers) = sofa_data_diffuse
+    radiosity.set_wall_scattering(np.arange(6), data, sources, receivers)
+    # check shape of scattering matrix
+    assert len(radiosity._scattering) == 1
+    npt.assert_almost_equal(radiosity._scattering[0].shape, (4, 4, 4))
+    npt.assert_array_equal(radiosity._scattering[0], 1)
+    npt.assert_array_equal(radiosity._scattering_index, 0)
+    # check source and receiver direction
+    for i in range(6):
+        assert (np.sum(
+            radiosity._sources[i].cartesian*radiosity.walls_normal[i,:],
+            axis=-1)>0).all()
+        assert (np.sum(
+            radiosity._receivers[i].cartesian*radiosity.walls_normal[i,:],
+            axis=-1)>0).all()
+
+
+def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+    (data, sources, receivers) = sofa_data_diffuse
+    radiosity.set_wall_scattering([0, 1, 2], data, sources, receivers)
+    radiosity.set_wall_scattering([3, 4, 5], data, sources, receivers)
+    # check shape of scattering matrix
+    assert len(radiosity._scattering) == 2
+    for i in range(2):
+        npt.assert_almost_equal(radiosity._scattering[i].shape, (4, 4, 4))
+        npt.assert_array_equal(radiosity._scattering[i], 1)
+    npt.assert_array_equal(radiosity._scattering_index[:3], 0)
+    npt.assert_array_equal(radiosity._scattering_index[3:], 1)
+    # check source and receiver direction
+    for i in range(6):
+        assert (np.sum(
+            radiosity._sources[i].cartesian*radiosity.walls_normal[i,:],
+            axis=-1)>0).all()
+        assert (np.sum(
+            radiosity._receivers[i].cartesian*radiosity.walls_normal[i,:],
+            axis=-1)>0).all()
+
+
+def test_total_number_of_patches():
+    points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]])
+    result = sp.radiosity_fast.total_number_of_patches(points, 0.2)
+    desired = 25
+    assert result == desired
+
+
+def test_init_energy_wrapper(sample_walls):
+    source_pos = np.array([0.5, 0.5, 0.5])
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+    (energy, distance) = radiosity.init_energy(source_pos)
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+    (energy_2, distance_2) = sp.radiosity_fast.calculate_init_energy(
+            source_pos,
+            radiosity.patches_center, radiosity.patches_normal,
+            radiosity.patches_size)
+    npt.assert_array_equal(energy.shape, energy_2.shape)
+    npt.assert_array_equal(distance.shape, distance_2.shape)
+    npt.assert_array_equal(energy, energy_2)
+    npt.assert_array_equal(distance, distance_2)
