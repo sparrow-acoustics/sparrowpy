@@ -20,14 +20,18 @@ class DRadiosityFast():
     _visibility_matrix: np.ndarray
     _form_factors: np.ndarray
 
-    _absorption: np.ndarray
-    _absorption_index: np.ndarray
+    # general data for material data
     _n_bins: int
     _frequencies = np.ndarray
+    # absorption data
+    _absorption: np.ndarray
+    _absorption_index: np.ndarray
     _scattering: np.ndarray
     _scattering_index: np.ndarray
     _sources: list[pf.Coordinates]
     _receivers: list[pf.Coordinates]
+
+    _air_attenuation: np.ndarray
 
 
     def __init__(
