@@ -6,14 +6,9 @@ import numpy as np
 class DRadiosityFast():
     """Radiosity object for directional scattering coefficients."""
 
-    _walls_area: np.ndarray
     _walls_points: np.ndarray
     _walls_normal: np.ndarray
-    _walls_center: np.ndarray
     _walls_up_vector: np.ndarray
-    _patches_area: np.ndarray
-    _patches_center: np.ndarray
-    _patches_size: np.ndarray
     _patches_points: np.ndarray
     _patches_normal: np.ndarray
     _patch_size: float
@@ -23,29 +18,23 @@ class DRadiosityFast():
     absorption: np.ndarray
     scattering: np.ndarray
 
-    visibility_matrix: np.ndarray
+    _visibility_matrix: np.ndarray
+    _form_factors: np.ndarray
     n_bins: int
     sound_attenuation_factor: np.ndarray
     patch_to_wall_ids: np.ndarray
-    speed_of_sound: float
-    form_factors: np.ndarray
+    _speed_of_sound: float
 
 
     def __init__(
-            self, walls_area, walls_points, walls_normal, walls_center,
-            walls_up_vector, patches_area, patches_center, patches_size,
+            self, walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
-            speed_of_sound,
-            max_order_k=None, visibility_matrix=None,):
+            speed_of_sound, max_order_k=None, visibility_matrix=None,
+            form_factors=None):
         """Create a Radiosity object for directional scattering coefficients."""
-        self._walls_area = walls_area
         self._walls_points = walls_points
         self._walls_normal = walls_normal
-        self._walls_center = walls_center
         self._walls_up_vector = walls_up_vector
-        self._patches_area = patches_area
-        self._patches_center = patches_center
-        self._patches_size = patches_size
         self._patches_points = patches_points
         self._patches_normal = patches_normal
         self._patch_size = patch_size
@@ -55,6 +44,8 @@ class DRadiosityFast():
             self._max_order_k = max_order_k
         if visibility_matrix is not None:
             self._visibility_matrix = visibility_matrix
+        if form_factors is not None:
+            self._form_factors = form_factors
 
     @classmethod
     def from_polygon(
@@ -83,19 +74,15 @@ class DRadiosityFast():
         """
         # save wall information
         walls_points = np.array([p.pts for p in polygon_list])
-        walls_area = np.array([p.size for p in polygon_list])
-        walls_center = np.array([p.center for p in polygon_list])
         walls_normal = np.array([p.normal for p in polygon_list])
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
 
         # create patches
-        (patches_area, patches_center, patches_size, patches_points,
-         patches_normal, n_patches) = process_patches(
-            walls_points, walls_normal, patch_size, walls_area.shape[0])
+        (patches_points, patches_normal, n_patches) = process_patches(
+            walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
-            walls_area, walls_points, walls_normal, walls_center,
-            walls_up_vector, patches_area, patches_center, patches_size,
+            walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
             speed_of_sound)
 
@@ -135,7 +122,7 @@ class DRadiosityFast():
     @property
     def walls_area(self):
         """Return the area of the walls."""
-        return self._walls_area
+        return _calculate_area(self._walls_points)
 
     @property
     def walls_points(self):
@@ -150,7 +137,7 @@ class DRadiosityFast():
     @property
     def walls_center(self):
         """Return the center of the walls."""
-        return self._walls_center
+        return _calculate_center(self._walls_points)
 
     @property
     def walls_up_vector(self):
@@ -160,17 +147,17 @@ class DRadiosityFast():
     @property
     def patches_area(self):
         """Return the area of the patches."""
-        return self._patches_area
+        return _calculate_area(self._patches_points)
 
     @property
     def patches_center(self):
         """Return the center of the patches."""
-        return self._patches_center
+        return _calculate_center(self._patches_points)
 
     @property
     def patches_size(self):
         """Return the size of the patches."""
-        return self._patches_size
+        return _calculate_size(self._patches_points)
 
     @property
     def patches_points(self):
@@ -218,12 +205,6 @@ def process_patches(
 
     Returns
     -------
-    patches_area : np.ndarray
-        area of all patches of shape (n_patches)
-    patches_center : np.ndarray
-        center of all patches of shape (n_patches, 3)
-    patches_size : np.ndarray
-        size of all patches of shape (n_patches, 3)
     patches_points : np.ndarray
         points of all patches of shape (n_patches, 4, 3)
     patches_normal : np.ndarray
@@ -253,12 +234,8 @@ def process_patches(
     n_patches = patches_points.shape[0]
 
     # calculate patch information
-    patches_size = _calculate_size(patches_points)
-    patches_area = _calculate_area(patches_points)
-    patches_center = _calculate_center(patches_points)
     patches_normal = walls_normal[patch_to_wall_ids, :]
     return (
-        patches_area, patches_center, patches_size,
         patches_points, patches_normal, n_patches)
 
 
