@@ -98,11 +98,19 @@ class DRadiosityFast():
         self._visibility_matrix = check_visibility(
             self.patches_center, self.patches_normal)
 
-    def calculate_form_factors(self):
-        """Calculate the form factors."""
-        self._form_factors = form_factor_kang(
-            self.patches_center, self.patches_normal,
-            self.patches_size, self.visibility_matrix)
+    def calculate_form_factors(self, method='kang'):
+        """Calculate the form factors.
+
+        Parameters
+        ----------
+        method : str, optional
+            _description_, by default 'kang'
+
+        """
+        if method == 'kang':
+            self._form_factors = form_factor_kang(
+                self.patches_center, self.patches_normal,
+                self.patches_size, self.visibility_matrix)
 
     @property
     def n_patches(self):
@@ -361,10 +369,13 @@ def check_visibility(
     """
     n_patches = patches_center.shape[0]
     visibility_matrix = np.empty((n_patches, n_patches), dtype=np.bool_)
-    indexes = np.array(
-        [(i_source, i_receiver) \
-            for i_source in range(n_patches) \
-                for i_receiver in range(n_patches)])
+    visibility_matrix.fill(False)
+    indexes = []
+    for i_source in range(n_patches):
+        for i_receiver in range(n_patches):
+            if i_source < i_receiver:
+                indexes.append((i_source, i_receiver))
+    indexes = np.array(indexes)
     for i in numba.prange(indexes.shape[0]):
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
@@ -404,6 +415,7 @@ def form_factor_kang(
     -------
     form_factors : np.ndarray
         form factors between all patches of shape (n_patches, n_patches)
+        note that just i_source < i_receiver are calculated ff[i, j] = ff[j, i]
 
     """
     n_patches = patches_center.shape[0]
