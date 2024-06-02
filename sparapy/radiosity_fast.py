@@ -121,7 +121,7 @@ class DRadiosityFast():
                 self.patches_center, self.patches_normal,
                 self.patches_size, self.visibility_matrix)
 
-    def _check_frequency(self, frequencies:np.ndarray):
+    def _check_set_frequency(self, frequencies:np.ndarray):
         """Check if the frequency data matches the radiosity object."""
         if self._n_bins is None:
             self._n_bins = frequencies.size
@@ -145,7 +145,7 @@ class DRadiosityFast():
             scattering data of cshape (1, )
 
         """
-        self._check_frequency(absorption.frequencies)
+        self._check_set_frequency(absorption.frequencies)
         if self._absorption is None:
             self._absorption_index = np.empty((self.n_walls), dtype=np.int64)
             self._absorption_index.fill(-1)
@@ -153,6 +153,19 @@ class DRadiosityFast():
 
         self._absorption.append(absorption.freq.squeeze())
         self._absorption_index[wall_indexes] = len(self._absorption)-1
+
+
+    def set_air_attenuation(self, air_attenuation:pf.FrequencyData):
+        """Set air attenuation factor in Np/m.
+
+        Parameters
+        ----------
+        air_attenuation : pf.FrequencyData
+            Air attenuation factor in Np/m.
+
+        """
+        self._check_set_frequency(air_attenuation.frequencies)
+        self._air_attenuation = air_attenuation.freq.squeeze()
 
     def set_wall_scattering(
             self, wall_indexes:list[int],
@@ -176,7 +189,7 @@ class DRadiosityFast():
             "Sources must be in the positive half space"
         assert (receivers.z >= 0).all(), \
             "Receivers must be in the positive half space"
-        self._check_frequency(scattering.frequencies)
+        self._check_set_frequency(scattering.frequencies)
         if self._sources is None:
             self._sources = np.empty((self.n_walls), dtype=pf.Coordinates)
             self._receivers = np.empty((self.n_walls), dtype=pf.Coordinates)

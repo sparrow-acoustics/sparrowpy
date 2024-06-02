@@ -173,6 +173,13 @@ def test_set_wall_absorption_different(sample_walls):
     npt.assert_array_equal(radiosity._absorption_index[3:], 1)
 
 
+def test_set_air_attenuation(sample_walls):
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+    radiosity.set_air_attenuation(pf.FrequencyData([0.1, 0.2], [500, 1000]))
+    npt.assert_array_equal(radiosity._air_attenuation, [0.1, 0.2])
+
+
 def test_total_number_of_patches():
     points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]])
     result = sp.radiosity_fast.total_number_of_patches(points, 0.2)
