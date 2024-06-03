@@ -82,9 +82,9 @@ def naive_integration(patch_i: polyg, patch_j: polyg, n_samples=4, random=False)
 
     for i_pt in i_samples:
         for j_pt in j_samples:
-            int_accum+= ffunction(i_pt, j_pt, patch_i.normal, patch_j.normal)*(patch_i.A/len(i_samples))*(patch_j.A/len(j_samples))
+            int_accum+= ffunction(i_pt, j_pt, patch_i.normal, patch_j.normal)*(patch_i.area/len(i_samples))*(patch_j.area/len(j_samples))
   
-    return int_accum/patch_i.A
+    return int_accum/patch_i.area
 
 def stokes_integration(patch_i: polyg, patch_j: polyg, approx_order=2):
     """
@@ -153,7 +153,7 @@ def stokes_integration(patch_i: polyg, patch_j: polyg, approx_order=2):
                 outer_integral += poly_integration(quadfactors,xi)
 
 
-    return outer_integral/(2*PI*patch_i.A)
+    return outer_integral/(2*PI*patch_i.area)
 
 def nusselt_integration(patch_i: polyg, patch_j: polyg, nsamples=2, random=False):
     """
@@ -231,7 +231,7 @@ def nusselt_integration(patch_i: polyg, patch_j: polyg, nsamples=2, random=False
 
         out += (projPolyArea + curved_area) 
        
-    return out * (patch_j.A/len(p0_array)) / (PI * patch_i.A)
+    return out * (patch_j.area/len(p0_array)) / (PI * patch_i.area)
 
 #######################################################################################
 ### helpers
