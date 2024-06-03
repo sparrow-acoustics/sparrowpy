@@ -75,11 +75,23 @@ class Polygon():
 
     @property
     def size(self) -> np.ndarray:
-        """Return the size in m^2 of the polygon."""
+        """Return the size in (lxmxn) of the polygon."""
         vec1 = np.array(self.pts[0])-np.array(self.pts[1])
         vec2 = np.array(self.pts[1])-np.array(self.pts[2])
         size = np.abs(vec1-vec2)
         return size
+    
+    @property
+    def area(self) -> np.ndarray:
+        """Return the area in m^2 of the polygon.
+        valid only for triangles and squares/rectangles/parallelograms
+        """
+        if len(self.pts) == 3:
+            area  = .5*np.linalg.norm(np.cross(self.pts[1]-self.pts[0], self.pts[2]-self.pts[0]))
+
+        if len(self.pts) == 4:
+            area  = .5*np.linalg.norm(np.cross(self.pts[3]-self.pts[2], self.pts[0]-self.pts[2])) + .5*np.linalg.norm(np.cross(self.pts[1]-self.pts[0], self.pts[2]-self.pts[0]))
+        return area
 
     @property
     def center(self) -> np.ndarray:
