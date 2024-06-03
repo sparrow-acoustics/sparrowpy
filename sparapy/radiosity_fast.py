@@ -1,5 +1,6 @@
 """Module for the radiosity simulation."""
 import numba
+import os
 import numpy as np
 import pyfar as pf
 
@@ -37,7 +38,8 @@ class DRadiosityFast():
     def __init__(
             self, walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
-            speed_of_sound, max_order_k=None, visibility_matrix=None,
+            patch_to_wall_ids, speed_of_sound, max_order_k=None,
+            visibility_matrix=None,
             form_factors=None):
         """Create a Radiosity object for directional scattering coefficients."""
         self._walls_points = walls_points
@@ -48,6 +50,7 @@ class DRadiosityFast():
         self._patch_size = patch_size
         self._n_patches = n_patches
         self._speed_of_sound = speed_of_sound
+        self._patch_to_wall_ids = patch_to_wall_ids
         if max_order_k is not None:
             self._max_order_k = max_order_k
         if visibility_matrix is not None:
@@ -59,6 +62,7 @@ class DRadiosityFast():
         self._sources = None
         self._receivers = None
         self._absorption = None
+        self._wrote_energy = False
 
     @classmethod
     def from_polygon(
@@ -91,20 +95,140 @@ class DRadiosityFast():
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
 
         # create patches
-        (patches_points, patches_normal, n_patches) = process_patches(
+        (patches_points, patches_normal, n_patches, patch_to_wall_ids) = process_patches(
             walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
             walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
-            speed_of_sound)
+            patch_to_wall_ids, speed_of_sound)
 
     def init_energy(self, source_position):
         """Calculate the initial energy."""
-        energy, distance = calculate_init_energy(
+        # write or read energy to file
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        file_path = os.path.join(dir_path, 'energy_exchange.far')
+        if self._wrote_energy:
+            data = pf.io.read(file_path)
+            self.energy_exchange = data['energy_exchange']
+        else:
+            pf.io.write(file_path, energy_exchange=self.energy_exchange)
+            self._wrote_energy = True
+        # calculate initial energy
+        energy_0, distance_0 = calculate_init_energy(
             source_position, self.patches_center, self.patches_normal,
             self.patches_size)
-        return energy, distance
+        air_attenuation = self._air_attenuation
+        n_patches = self.n_patches
+
+        for j in range(n_patches):
+            if air_attenuation is not None:
+                air_attenuation_factor = np.exp(
+                    -air_attenuation * distance_0[j])
+            else:
+                air_attenuation_factor = 1
+            self.energy_exchange[0, 0, j, :-1] = energy_0[j] * (
+                air_attenuation_factor)
+            self.energy_exchange[0, 0, j, -1] = distance_0[j]
+
+
+        patch_to_wall_ids = self._patch_to_wall_ids
+        patches_center = self.patches_center
+        absorption = self._absorption
+        absorption_index = self._absorption_index
+        sources = self._sources
+        receivers = self._receivers
+        scattering = self._scattering
+        scattering_index = self._scattering_index
+        form_factors = self.form_factors
+        n_bins = self.n_bins
+        visibility_matrix = self.visibility_matrix
+        n_combinations = np.sum(visibility_matrix)
+        pairs = np.empty((n_combinations, 2), dtype=np.int32)
+        i_counter = 0
+        for i_source in range(n_patches):
+            for i_receiver in range(n_patches):
+                if not visibility_matrix[i_source, i_receiver]:
+                    continue
+                pairs[i_counter, 0] = i_source
+                pairs[i_counter, 1] = i_receiver
+                i_counter += 1
+        for ii in range(n_combinations):
+            i = pairs[ii, 0]
+            j = pairs[ii, 1]
+            difference_source = source_position - patches_center[i]
+            difference_source = pf.Coordinates(
+                difference_source.T[0],
+                difference_source.T[1],
+                difference_source.T[2])
+            wall_id_i = patch_to_wall_ids[i]
+            difference_receiver = patches_center[i]-patches_center[j]
+            distance = np.linalg.norm(difference_receiver)
+            difference_receiver = pf.Coordinates(
+                difference_receiver.T[0],
+                difference_receiver.T[1],
+                difference_receiver.T[2])
+
+            if air_attenuation is not None:
+                air_attenuation_factor = np.exp(-air_attenuation * distance)
+            else:
+                air_attenuation_factor = 1
+            absorption_factor = 1-absorption[absorption_index[wall_id_i]]
+            source_idx = sources[wall_id_i].find_nearest(
+                difference_source)[0][0]
+            receiver_idx = receivers[wall_id_i].find_nearest(
+                difference_receiver)[0][0]
+            scattering_factor = scattering[scattering_index[wall_id_i]][
+                source_idx, receiver_idx, :]
+            self.energy_exchange[1, i, j, :-1] = self.energy_exchange[
+                0, 0, j, :-1]*form_factors[i, j] * (
+                air_attenuation_factor * absorption_factor * scattering_factor)
+            self.energy_exchange[1, i, j, -1] = distance_0[i]+distance
+        # calculate energy exchange
+        for j in range(n_patches):
+            self.energy_exchange[2:, :, j, :-1] *= self.energy_exchange[
+                1, :, j, :-1]
+            self.energy_exchange[2:, :, j, -1] += self.energy_exchange[
+                1, :, j, -1]
+
+
+    def collect_energy_receiver(
+            self, receiver_pos, histogram_time_resolution=1e-3, histogram_time_length=1):
+        """Collect the energy at the receiver."""
+        n_patches = self.n_patches
+        energy = np.zeros((n_patches, 2))
+        speed_of_sound = self._speed_of_sound
+        histogram = np.zeros(
+            ((int(histogram_time_length/histogram_time_resolution)),
+             self.n_bins))
+        patches_center = self.patches_center
+        patches_normal = self.patches_normal
+        air_attenuation = self._air_attenuation
+        energy_exchange = self.energy_exchange
+        idx = np.array(np.where(energy_exchange[:, :, :, -1] > 0))
+        for ii in range(idx.shape[1]):
+            k = idx[0, ii]
+            i = idx[1, ii]
+            j = idx[2, ii]
+
+            e = energy_exchange[k, i, j, :-1]
+            d = energy_exchange[k, i, j, -1]
+            samples_delay = int(d/speed_of_sound/histogram_time_resolution)
+
+            source_pos = patches_center[j]
+            R = np.linalg.norm(receiver_pos-source_pos)
+
+            cos_xi = np.abs(np.sum(
+                patches_normal[j, :]*np.abs(receiver_pos-source_pos))) / \
+                R
+
+            # Equation 20
+            receiver_factor = cos_xi * (np.exp(-air_attenuation*R)) / (
+                np.pi * R**2)
+            histogram[samples_delay, :] += e*receiver_factor
+
+        return histogram
+
 
     def check_visibility(self):
         """Check the visibility between patches."""
@@ -124,6 +248,27 @@ class DRadiosityFast():
             self._form_factors = form_factor_kang(
                 self.patches_center, self.patches_normal,
                 self.patches_size, self.visibility_matrix)
+
+    def calculate_form_factors_directivity(self):
+        """Calculate the form factors with directivity."""
+        self._form_factors_tilde = form_factors_with_directivity(
+            self.form_factors, self.n_bins, self.patches_center,
+            self._air_attenuation, self._absorption, self._absorption_index,
+            self._patch_to_wall_ids, self._scattering, self._scattering_index,
+            self._sources, self._receivers)
+
+    def calculate_energy_exchange(self, max_order_k: int):
+        """Calculate the energy exchange.
+
+        Parameters
+        ----------
+        max_order_k : int
+            maximal order of energy exchange iterations.
+
+        """
+        self.energy_exchange = _calculate_energy_exchange(
+            self._form_factors_tilde, self.patches_center,
+            max_order_k, self.n_patches, self.n_bins)
 
     def _check_set_frequency(self, frequencies:np.ndarray):
         """Check if the frequency data matches the radiosity object."""
@@ -318,6 +463,47 @@ class DRadiosityFast():
         """Return the speed of sound in m/s."""
         return self._speed_of_sound
 
+def form_factors_with_directivity(
+        form_factors, n_bins, patches_center, air_attenuation,
+        absorption, absorption_index, patch_to_wall_ids,
+        scattering, scattering_index, sources, receivers):
+    """Calculate the form factors with directivity."""
+    n_patches = patches_center.shape[0]
+    form_factors_tilde = np.empty((n_patches, n_patches, n_patches, n_bins))
+    # loop over previous patches
+    for h in range(n_patches):
+        # loop over source patches
+        for i in range(n_patches):
+            difference_source = patches_center[h]-patches_center[i]
+            difference_source = pf.Coordinates(
+                difference_source.T[0],
+                difference_source.T[1],
+                difference_source.T[2])
+            # loop over receiver patches
+            for j in range(n_patches):
+                wall_id_i = patch_to_wall_ids[i]
+                difference_receiver = patches_center[i]-patches_center[j]
+                difference_receiver = pf.Coordinates(
+                    difference_receiver.T[0],
+                    difference_receiver.T[1],
+                    difference_receiver.T[2])
+
+                distance = np.linalg.norm(difference_receiver)
+                if air_attenuation is not None:
+                    air_attenuation_factor = np.exp(-air_attenuation * distance)
+                else:
+                    air_attenuation_factor = 0
+                absorption_factor = 1-absorption[absorption_index[wall_id_i]]
+                source_idx = sources[wall_id_i].find_nearest(
+                    difference_source)[0][0]
+                receiver_idx = receivers[wall_id_i].find_nearest(
+                    difference_receiver)[0][0]
+                scattering_factor = scattering[scattering_index[wall_id_i]][
+                    source_idx, receiver_idx, :]
+                form_factors_tilde[h, i, j, :] = form_factors[i, j] * (
+                    air_attenuation_factor * absorption_factor * scattering_factor)
+    return form_factors_tilde
+
 
 @numba.jit(nopython=True)
 def process_patches(
@@ -369,7 +555,7 @@ def process_patches(
 
     # calculate patch information
     patches_normal = walls_normal[patch_to_wall_ids, :]
-    return (patches_points, patches_normal, n_patches)
+    return (patches_points, patches_normal, n_patches, patch_to_wall_ids)
 
 
 @numba.jit(nopython=True)
@@ -742,3 +928,35 @@ def _calculate_area(points):
     return np.abs(
         size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
             + size[..., 0]*size[..., 2])
+
+@numba.jit(nopython=True)
+def _calculate_energy_exchange(form_factors_tilde, patches_center, max_order_k, n_patches, n_bins):
+    energy_exchange = np.zeros(
+        (max_order_k+1, n_patches, n_patches, n_bins+1))
+    form_factors_tilde = form_factors_tilde
+    patches_center = patches_center
+    n_patches = n_patches
+    for ii in range(n_patches ** (max_order_k-2)):
+        k = int(ii/(n_patches**3)) % n_patches + 1
+        h = int(ii/(n_patches**2)) % n_patches
+        i = int(ii/n_patches) % n_patches
+        j = ii % n_patches
+        if k == 1:
+            energy_exchange[k, i, j, :-1] += form_factors_tilde[h, i, j, :]
+            energy_exchange[k, i, j, -1] += np.linalg.norm(
+                patches_center[i]-patches_center[j])
+        else:
+            energy_exchange[k, i, j, :-1] += energy_exchange[
+                k-1, i, j, :-1] + form_factors_tilde[h, i, j, :]
+            energy_exchange[k, i, j, -1] += energy_exchange[
+                k-1, i, j, -1] + np.linalg.norm(
+                    patches_center[i]-patches_center[j])
+    # for k in range(2, max_order_k):
+    #         energy_exchange[k, :, :, :-1] *= energy_exchange[
+    #             k-1, :, :, :-1]
+    #         energy_exchange[k, :, :, -1] += energy_exchange[
+    #             k-1, :, :, -1] + np.linalg.norm(
+    #                 patches_center[i]-patches_center[j])
+
+    return energy_exchange
+

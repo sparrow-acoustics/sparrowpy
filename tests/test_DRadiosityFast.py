@@ -99,6 +99,68 @@ def test_calc_form_factor_perpendicular_distance(
         npt.assert_almost_equal(radiosity.form_factors[4:, :4], 0)
 
 
+@pytest.mark.parametrize('walls', [
+    # perpendicular walls
+    [0, 2], [0, 3], [0, 4], [0, 5],
+    [1, 2], [1, 3], [1, 4], [1, 5],
+    [2, 0], [2, 1], [2, 4], [2, 5],
+    [3, 0], [3, 1], [3, 4], [3, 5],
+    [4, 0], [4, 1], [4, 2], [4, 3],
+    [5, 0], [5, 1], [5, 2], [5, 3],
+    # parallel walls
+    [0, 1], [2, 3], [4, 5],
+    [1, 0], [3, 2], [5, 4],
+    ])
+@pytest.mark.parametrize('patch_size', [
+    0.5,
+    ])
+def test_calc_form_factor_dir_perpendicular_distance(
+        sample_walls, walls, patch_size, sofa_data_diffuse):
+    """Test form factor calculation for perpendicular walls."""
+    source_pos = np.array([0.5, 0.5, 0.5])
+    receiver_pos = np.array([0.5, 0.5, 0.5])
+    wall_source = sample_walls[walls[0]]
+    wall_receiver = sample_walls[walls[1]]
+
+    patch_1 = sp.radiosity.Patches(wall_source, patch_size, [1], 0)
+    patch_2 = sp.radiosity.Patches(wall_receiver, patch_size, [0], 1)
+    patches = [patch_1, patch_2]
+    patch_1.calculate_form_factor(patches)
+    patch_2.calculate_form_factor(patches)
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        [wall_source, wall_receiver], patch_size)
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    data, sources, receivers = sofa_data_diffuse
+    radiosity.set_wall_scattering(
+        np.arange(2), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(2),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.calculate_form_factors_directivity()
+    radiosity.calculate_energy_exchange(3)
+    radiosity.init_energy(source_pos)
+    histogram = radiosity.collect_energy_receiver(receiver_pos, histogram_time_resolution=1e-3, histogram_time_length=1)
+
+
+    patch_pos = np.array([patch.center for patch in patch_1.patches])
+    if (np.abs(patch_pos- radiosity.patches_center[:4, :])<1e-5).all():
+        npt.assert_almost_equal(
+            radiosity.form_factors[:4, 4:], patch_1.form_factors)
+    else:
+        npt.assert_almost_equal(
+            radiosity.form_factors[:4, 4:], patch_1.form_factors.T)
+
+    patch_pos = np.array([patch.center for patch in patch_2.patches])
+    if (np.abs(patch_pos- radiosity.patches_center[4:, :])<1e-5).all():
+        npt.assert_almost_equal(radiosity.form_factors[4:, :4], 0)
+    else:
+        npt.assert_almost_equal(radiosity.form_factors[4:, :4], 0)
+
+
 def test_init_energy(sample_walls):
     source_pos = np.array([0.5, 0.5, 0.5])
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
