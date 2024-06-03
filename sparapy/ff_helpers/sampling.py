@@ -1,6 +1,5 @@
 import numpy as np
-from elmt import elmt
-from geometry import Polygon as polyg
+from sparapy.geometry import Polygon as polyg
 
 def sample_random(el: polyg, npoints=100):
     """

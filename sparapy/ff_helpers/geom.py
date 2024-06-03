@@ -1,7 +1,4 @@
 import numpy as np
-
-
-
 def vec_cos(v0,v1):
     """
     cosine of the angle between two arbitrary n-dimensional vectors

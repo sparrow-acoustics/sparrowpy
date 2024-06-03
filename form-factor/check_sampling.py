@@ -1,4 +1,4 @@
-import sampling
+import sparapy.ff_helpers.sampling as sampling
 import matplotlib.pyplot as plt
 from elmt import elmt
 

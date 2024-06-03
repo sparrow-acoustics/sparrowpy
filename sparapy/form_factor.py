@@ -1,21 +1,21 @@
 import numpy as np
 from math import pi as PI
-import ff_helpers.geom as geom
-import ff_helpers.sampling as sampling
-from ff_helpers.integrate_line import poly_estimation,poly_integration
-from geometry import Polygon 
+import sparapy.ff_helpers.geom as geom
+import sparapy.ff_helpers.sampling as sampling
+from sparapy.ff_helpers.integrate_line import poly_estimation,poly_integration
+from sparapy.geometry import Polygon 
 
 #######################################################################################
 ### main
 #######################################################################################
-def form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode='adaptive'):
+def calculate_form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode='adaptive'):
 
     match mode:
         case 'adaptive':
             if singularity_check(receiving_patch.pts, emitting_patch.pts):
                 return nusselt_integration(patch_i=emitting_patch, patch_j=receiving_patch, nsamples=25)
             else:
-                return stokes_integration(patch_i=emitting_patch, patch_j=receiving_patch, approx_order=4)
+                return stokes_integration(patch_i=emitting_patch, patch_j=receiving_patch, approx_order=2)
 
 
 #######################################################################################
@@ -86,7 +86,7 @@ def naive_integration(patch_i: Polygon, patch_j: Polygon, n_samples=4, random=Fa
   
     return int_accum/patch_i.area
 
-def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=2):
+def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=4):
     """
     calculate an estimation of the form factor between two patches 
     by computationally integrating a modified form function over the two patch boundaries.
@@ -153,7 +153,7 @@ def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=2):
                 outer_integral += poly_integration(quadfactors,xi)
 
 
-    return outer_integral/(2*PI*patch_i.area)
+    return abs(outer_integral/(2*PI*patch_i.area))
 
 def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=False):
     """

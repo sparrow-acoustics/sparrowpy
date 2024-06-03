@@ -6,7 +6,7 @@ import numpy as np
 from geometry import Polygon as polyg
 from elmt import elmt
 
-SCALE = 2.
+SCALE = .2
 
 def plot_comparisons(el0, elements):
 
