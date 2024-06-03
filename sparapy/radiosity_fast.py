@@ -930,33 +930,33 @@ def _calculate_area(points):
             + size[..., 0]*size[..., 2])
 
 @numba.jit(nopython=True)
-def _calculate_energy_exchange(form_factors_tilde, patches_center, max_order_k, n_patches, n_bins):
+def _calculate_energy_exchange(
+        form_factors_tilde, patches_center, max_order_k, n_patches, n_bins):
     energy_exchange = np.zeros(
         (max_order_k+1, n_patches, n_patches, n_bins+1))
     form_factors_tilde = form_factors_tilde
     patches_center = patches_center
     n_patches = n_patches
-    for ii in range(n_patches ** (max_order_k-2)):
+    for ii in numba.prange(n_patches ** (max_order_k-2)):
         k = int(ii/(n_patches**3)) % n_patches + 1
         h = int(ii/(n_patches**2)) % n_patches
         i = int(ii/n_patches) % n_patches
         j = ii % n_patches
         if k == 1:
-            energy_exchange[k, i, j, :-1] += form_factors_tilde[h, i, j, :]
-            energy_exchange[k, i, j, -1] += np.linalg.norm(
+            energy_exchange[k, i, j, :-1] = form_factors_tilde[h, i, j, :]
+            energy_exchange[k, i, j, -1] = np.linalg.norm(
                 patches_center[i]-patches_center[j])
         else:
-            energy_exchange[k, i, j, :-1] += energy_exchange[
-                k-1, i, j, :-1] + form_factors_tilde[h, i, j, :]
-            energy_exchange[k, i, j, -1] += energy_exchange[
-                k-1, i, j, -1] + np.linalg.norm(
+            energy_exchange[k, i, j, :-1] = form_factors_tilde[h, i, j, :]
+            energy_exchange[k, i, j, -1] = np.linalg.norm(
                     patches_center[i]-patches_center[j])
-    # for k in range(2, max_order_k):
-    #         energy_exchange[k, :, :, :-1] *= energy_exchange[
-    #             k-1, :, :, :-1]
-    #         energy_exchange[k, :, :, -1] += energy_exchange[
-    #             k-1, :, :, -1] + np.linalg.norm(
-    #                 patches_center[i]-patches_center[j])
+    if max_order_k < 3:
+        for k in range(3, max_order_k):
+                energy_exchange[k, :, :, :-1] *= energy_exchange[
+                    k-1, :, :, :-1]
+                energy_exchange[k, :, :, -1] += energy_exchange[
+                    k-1, :, :, -1] + np.linalg.norm(
+                        patches_center[i]-patches_center[j])
 
     return energy_exchange
 
