@@ -74,14 +74,14 @@ class Polygon():
         return self._normal
 
     @property
-    def A(self) -> np.ndarray:
+    def area(self) -> np.ndarray:
         """Return the size in m^2 of the polygon."""
         if len(self.pts) == 3:
-            size  = .5*np.linalg.norm(np.cross(self.pts[1]-self.pts[0], self.pts[2]-self.pts[0]))
+            area  = .5*np.linalg.norm(np.cross(self.pts[1]-self.pts[0], self.pts[2]-self.pts[0]))
 
         if len(self.pts) == 4:
-            size  = .5*np.linalg.norm(np.cross(self.pts[3]-self.pts[2], self.pts[0]-self.pts[2])) + .5*np.linalg.norm(np.cross(self.pts[1]-self.pts[0], self.pts[2]-self.pts[0]))
-        return size
+            area  = .5*np.linalg.norm(np.cross(self.pts[3]-self.pts[2], self.pts[0]-self.pts[2])) + .5*np.linalg.norm(np.cross(self.pts[1]-self.pts[0], self.pts[2]-self.pts[0]))
+        return area
     
     @property
     def size(self) -> np.ndarray:

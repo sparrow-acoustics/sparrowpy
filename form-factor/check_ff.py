@@ -105,7 +105,7 @@ def plot_comparisons(el0, elements):
         a.set_title(tit)
         a.grid()
 
-        plt.savefig("C:\\Users\\Work profile\\Desktop\\temp\\patch"+str(i+1)+"_"+str(SCALE)+".png")
+        plt.savefig("C:\\Users\\Work profile\\Desktop\\temp\\patch"+str(i+1)+".png")
 
 
 
