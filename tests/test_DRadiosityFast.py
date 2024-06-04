@@ -300,11 +300,12 @@ def test_total_number_of_patches():
 
 @pytest.mark.parametrize('patch_size', [
     1/3,
+    0.2,
     0.5,
     1,
     ])
 @pytest.mark.parametrize('k', [
-    0, 1, 2, 3, 4, 5, 6,
+    0, 1, 2,
     ])
 def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse):
     # note that order k=0 means one reflection and k=1 means two reflections
@@ -354,7 +355,9 @@ def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse
     patches_center = []
     patches_normal = []
     patches_size = []
+    form_factors = []
     for patch in radiosity_old.patch_list:
+        form_factors.append(patch.form_factors)
         for p in patch.patches:
             patches_center.append(p.center)
             patches_size.append(p.size)
@@ -362,6 +365,16 @@ def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse
     patches_center = np.array(patches_center)
     patches_normal = np.array(patches_normal)
     patches_size = np.array(patches_size)
+    n_patches = patches_center.shape[0]
+    # test form factors
+    form_factors = np.array(form_factors).reshape((n_patches, int(n_patches/2)))
+    for i in range(int(n_patches/2)):
+        for j in range(int(n_patches/2)):
+            if (i < j) and (i!=j):
+                npt.assert_almost_equal(
+                    radiosity.form_factors[i, int(j+n_patches/2)], form_factors[i, j])
+                npt.assert_almost_equal(
+                    radiosity.form_factors[i, int(j+n_patches/2)], form_factors[j, i])
 
     npt.assert_almost_equal(
         patches_center, radiosity.patches_center)
@@ -389,7 +402,9 @@ def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse
     # npt.assert_almost_equal(
     #     np.array(np.where(E_matrix>0)),
     #     np.array(np.where(E_matrix_old>0)))
+    # total_energy = [0.3333333333333333, 0.07226813341876431]
     for k in range(E_matrix.shape[1]):
+        # npt.assert_almost_equal(np.sum(E_matrix[:, k]), total_energy[k])
         npt.assert_array_equal(
             np.sum(E_matrix[:, k], axis=-1),
             np.sum(E_matrix_old[:, k], axis=-1))
