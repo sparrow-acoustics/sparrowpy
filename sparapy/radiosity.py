@@ -948,8 +948,6 @@ class Radiosity():
             Speed of sound in m/s, by default 346.18 m/s
         sampling_rate : int, optional
             samplingrate of the Energy histogram, by default 1000 -> 1ms
-        absorption: np.ndarray
-            Absorption coefficient of this wall for each frequency bin
         source : SoundSource, optional
             Source object, by default None, can be added later.
 
