@@ -844,7 +844,7 @@ def _init_energy_exchange(
         alpha = absorption[i_frequency]
         constant = sound_power * (1-alpha) * (
             np.exp(-attenuation[i_frequency]*distance))
-        #constant = 1
+        # constant = 1
         energy = constant * (
             np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
         energies[i_frequency] = energy
@@ -931,7 +931,7 @@ class Radiosity():
 
     def __init__(
             self, walls, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=346.18, sampling_rate=1000, source=None):
+            speed_of_sound=346.18, sampling_rate=1000, absorption=0.1, source=None):
         """Create Radiosity Object for simulation.
 
         Parameters
@@ -964,7 +964,7 @@ class Radiosity():
         for i, wall in enumerate(walls):
             index_list = [j for j in range(n_patches) if j != i]
             patches = wall if isinstance(wall, Patches) else Patches(
-                wall, self.patch_size, index_list, i)
+                wall, self.patch_size, index_list, i,absorption=absorption)
             patch_list.append(patches)
 
         self.patch_list = patch_list

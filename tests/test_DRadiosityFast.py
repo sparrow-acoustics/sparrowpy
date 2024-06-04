@@ -129,7 +129,7 @@ def test_full(
     radiosity_old = sp.radiosity.Radiosity(
         walls, patch_size, k, length_histogram,
         speed_of_sound=speed_of_sound,
-        sampling_rate=1/time_resolution)
+        sampling_rate=1/time_resolution, absorption=0)
     radiosity_old.run(
         sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
     histogram_old = radiosity_old.energy_at_receiver(
@@ -216,16 +216,6 @@ def test_form_factors_directivity_for_diffuse(
     for i in range(8):
         npt.assert_almost_equal(radiosity._form_factors_tilde[i, i, :, :], 0)
         npt.assert_almost_equal(radiosity._form_factors_tilde[:, i, i, :], 0)
-
-
-
-def test_init_energy(sample_walls):
-    source_pos = np.array([0.5, 0.5, 0.5])
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
-        sample_walls, 0.2)
-    (energy, distance) = radiosity.init_energy(source_pos)
-    npt.assert_array_equal(energy.shape, (150))
-    npt.assert_array_equal(distance.shape, (150))
 
 
 def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
@@ -322,3 +312,137 @@ def test_init_energy_wrapper(sample_walls):
     npt.assert_array_equal(distance.shape, distance_2.shape)
     npt.assert_array_equal(energy, energy_2)
     npt.assert_array_equal(distance, distance_2)
+
+
+@pytest.mark.parametrize('patch_size', [
+    1/3,
+    0.5,
+    1,
+    ])
+@pytest.mark.parametrize('k', [
+    1,
+    2,
+    3,
+    ])
+def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse):
+    data, sources, receivers = sofa_data_diffuse
+    walls = [0, 1]
+
+    source_pos = np.array([0.5, 0.5, 0.5])
+    receiver_pos = np.array([0.5, 0.5, 0.5])
+    wall_source = sample_walls[walls[0]]
+    wall_receiver = sample_walls[walls[1]]
+    walls = [wall_source, wall_receiver]
+    length_histogram = 0.1
+    time_resolution = 1e-3
+    speed_of_sound = 346.18
+
+    radiosity_old = sp.radiosity.Radiosity(
+        walls, patch_size, k, length_histogram,
+        speed_of_sound=speed_of_sound,
+        sampling_rate=1/time_resolution, absorption=0)
+
+    radiosity_old.run(
+        sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
+    histogram_old = radiosity_old.energy_at_receiver(
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(walls)), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    radiosity.calculate_form_factors_directivity()
+    radiosity.calculate_energy_exchange(k)
+    radiosity.init_energy(source_pos)
+    histogram = radiosity.collect_energy_receiver(
+        receiver_pos, speed_of_sound=speed_of_sound,
+        histogram_time_resolution=time_resolution,
+        histogram_time_length=length_histogram)
+
+    # ii = 0
+    # for i in range(2):
+    #     for j in range(len(radiosity_old.patch_list[i].patches)):
+    #         wall_id = int(ii / radiosity.n_patches/2)
+    #         energy = radiosity.energy_exchange[0, 0, j, :-1]
+    #         distance = radiosity.energy_exchange[0, 0, j, -1]
+    #         samples = int(distance /speed_of_sound/ time_resolution)
+
+    #         idx = np.where(
+    #             radiosity_old.patch_list[wall_id].E_matrix[0, 0, j, :] != 0)
+    #         idx = np.array(idx).squeeze()
+
+    #         assert samples == idx
+    #         npt.assert_almost_equal(
+    #             energy, radiosity_old.patch_list[wall_id].E_matrix[0, 0, j, idx])
+    #         ii += 1
+
+    for i in range(4):
+        npt.assert_almost_equal(np.sum(histogram[:, i]), np.sum(histogram_old[0, :]))
+        npt.assert_almost_equal(histogram[:, i], histogram_old[0, :])
+
+
+def test_init_source(sample_walls, sofa_data_diffuse):
+    k = 1
+    patch_size = 0.5
+    data, sources, receivers = sofa_data_diffuse
+    walls = [0, 1]
+
+    source_pos = np.array([0.5, 0.5, 0.5])
+    wall_source = sample_walls[walls[0]]
+    wall_receiver = sample_walls[walls[1]]
+    walls = [wall_source, wall_receiver]
+    length_histogram = 0.1
+    time_resolution = 1e-3
+    speed_of_sound = 346.18
+
+    radiosity_old = sp.radiosity.Radiosity(
+        walls, patch_size, k, length_histogram,
+        speed_of_sound=speed_of_sound,
+        sampling_rate=1/time_resolution, absorption=0)
+    radiosity_old.run(
+        sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(walls)), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    radiosity.calculate_form_factors_directivity()
+    radiosity.calculate_energy_exchange(k)
+    radiosity.init_energy(source_pos)
+
+    patches_center = []
+    patches_normal = []
+    patches_size = []
+    for patch in radiosity_old.patch_list:
+        for p in patch.patches:
+            patches_center.append(p.center)
+            patches_size.append(p.size)
+            patches_normal.append(p.normal)
+    patches_center = np.array(patches_center)
+    patches_normal = np.array(patches_normal)
+    patches_size = np.array(patches_size)
+
+    energy_0, distance_0 = sp.radiosity_fast.calculate_init_energy(
+        source_pos, patches_center, patches_normal,
+        patches_size)
+
+    idx =  np.where(radiosity_old.patch_list[0].E_matrix[0,0, ...]>0)
+    npt.assert_almost_equal(
+        energy_0[:4],
+        radiosity_old.patch_list[0].E_matrix[0,0, idx[0], idx[1]]*1)

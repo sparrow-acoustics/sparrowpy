@@ -1,6 +1,7 @@
 """Module for the radiosity simulation."""
 import numba
 import os
+import sparapy as sp
 import numpy as np
 import pyfar as pf
 
@@ -127,7 +128,7 @@ class DRadiosityFast():
                 air_attenuation_factor)
             self.energy_exchange[0, 0, j, -1] = distance_0[j]
 
-        if self.energy_exchange.shape[0] == 1:
+        if self.energy_exchange.shape[0] <= 2:
             return None
         patch_to_wall_ids = self._patch_to_wall_ids
         patches_center = self.patches_center
@@ -174,10 +175,12 @@ class DRadiosityFast():
                 difference_source)[0][0]
             receiver_idx = receivers[wall_id_i].find_nearest(
                 difference_receiver)[0][0]
+            ff = form_factors[i, j] if i < j else form_factors[j, i]
+
             scattering_factor = scattering[scattering_index[wall_id_i]][
                 source_idx, receiver_idx, :]
             self.energy_exchange[1, i, j, :-1] = self.energy_exchange[
-                0, 0, j, :-1]*form_factors[i, j] * (
+                0, 0, j, :-1] * ff * (
                 air_attenuation_factor * absorption_factor * scattering_factor)
             self.energy_exchange[1, i, j, -1] = distance_0[i]+distance
         # calculate energy exchange
@@ -260,9 +263,13 @@ class DRadiosityFast():
             maximal order of energy exchange iterations.
 
         """
-        self.energy_exchange = _calculate_energy_exchange(
-            self._form_factors_tilde, self.patches_center,
-            max_order_k, self.n_patches, self.n_bins)
+        if max_order_k <= 2:
+            self.energy_exchange = np.zeros(
+                (max_order_k+1, self.n_patches, self.n_patches, self.n_bins+1))
+        else:
+            self.energy_exchange = _calculate_energy_exchange(
+                self._form_factors_tilde, self.patches_center,
+                max_order_k, self.n_patches, self.n_bins)
 
     def _check_set_frequency(self, frequencies:np.ndarray):
         """Check if the frequency data matches the radiosity object."""
@@ -587,7 +594,7 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
     return patch_nums[x_idx]*patch_nums[y_idx]
 
-@numba.jit(parallel=True)
+# @numba.jit(parallel=True)
 def calculate_init_energy(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, patches_size: float):
@@ -614,44 +621,66 @@ def calculate_init_energy(
     """
     n_patches = patches_center.shape[0]
     energy = np.empty((n_patches, ))
-    distance = np.empty((n_patches, ))
-    for i in  numba.prange(n_patches):
-        idx_l = 1 if np.abs(patches_normal[i, 0]) > 0.99 else 0
-        idx_m = 1 if np.abs(patches_normal[i, 2]) > 0.99 else 2
-        idx_n = 0 if np.abs(
-            patches_normal[i, 0]) > 0.99 else 1 if np.abs(
-                patches_normal[i, 1]) > 0.99 else 2
-        dl = patches_center[i, idx_l]
-        dm = patches_center[i, idx_m]
-        dn = patches_center[i, idx_n]
-        dd_l = patches_size[i, idx_l]
-        dd_m = patches_size[i, idx_m]
-        dd_n = patches_size[i, idx_n]
-        S_x = source_position[idx_l]
-        S_y = source_position[idx_m]
-        S_z = source_position[idx_n]
+    distance_out = np.empty((n_patches, ))
+    for j in  numba.prange(n_patches):
+        source_pos = source_position.copy()
+        receiver_pos = patches_center[j, :].copy()
+        receiver_normal = patches_normal[j, :].copy()
+        receiver_size = patches_size[j, :].copy()
 
-        half_l = dd_l/2
-        half_n = dd_n/2
-        half_m = dd_m/2
+        # array([0., 1., 0.]), array([ 0., -1.,  0.]),
+        # array([0., 0., 1.]), array([ 0.,  0., -1.]),
+        # array([1., 0., 0.]), array([-1.,  0.,  0.])]
+        if np.abs(receiver_normal[2]) > 0.99:
+            i = 2
+            indexes = [0, 1, 2]
+        elif np.abs(receiver_normal[1]) > 0.99:
+            indexes = [2, 0, 1]
+            i = 1
+        elif np.abs(receiver_normal[0]) > 0.99:
+            i = 0
+            indexes = [1, 2, 0]
+        else:
+            raise AssertionError()
+        offset = receiver_pos[i]
+        source_pos[i] = np.abs(source_pos[i] - offset)
+        receiver_pos[i] = np.abs(receiver_pos[i] - offset)
+        dl = receiver_pos[indexes[0]]
+        dm = receiver_pos[indexes[1]]
+        dn = receiver_pos[indexes[2]]
+        dd_l = receiver_size[indexes[0]]
+        dd_m = receiver_size[indexes[1]]
+        dd_n = receiver_size[indexes[2]]
+        S_x = source_pos[indexes[0]]
+        S_y = source_pos[indexes[1]]
+        S_z = source_pos[indexes[2]]
 
-        sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
-            dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        # half_l = dd_l/2
+        # half_n = dd_n/2
+        # half_m = dd_m/2
 
-        k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
-        sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
-            dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        # sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
+        #     dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-        plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
-        minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
+        # k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
+        # sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
+        #     dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-        k_beta = -1 if ((dn - half_n) <= S_z) & (S_z <= (dn + half_n)) else 1
+        # plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
+        # minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
 
-        beta = np.abs(plus-(k_beta*minus))
+        # k_beta = -1 if ((dn - half_n) <= S_z) & (S_z <= (dn + half_n)) else 1
+        # beta = np.abs(plus-(k_beta*minus))
 
-        energy[i] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
-        distance[i] = np.sqrt(np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
-    return (energy, distance)
+        # energy[j] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
+        distance_out[j] = np.sqrt(
+            np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
+
+        energy[j] = sp.radiosity._init_energy_exchange(
+            dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
+            1, np.array([0]), distance_out[j],
+            np.array([0]), 1)
+    return (energy, distance_out)
 
 
 @numba.jit(nopython=True, parallel=True)
@@ -930,8 +959,6 @@ def _calculate_energy_exchange(
         form_factors_tilde, patches_center, max_order_k, n_patches, n_bins):
     energy_exchange = np.zeros(
         (max_order_k+1, n_patches, n_patches, n_bins+1))
-    if max_order_k < 2:
-        return energy_exchange
     form_factors_tilde = form_factors_tilde
     patches_center = patches_center
 
