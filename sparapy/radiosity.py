@@ -834,7 +834,9 @@ def _init_energy_exchange(
     plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
     minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
 
-    k_beta = -1 if np.abs(dn - half_n-S_z) <= 1e-12 else 1
+    test1 = dl-half_l-S_x <= 1e-12
+    test2 = S_x -dl-half_l <= 1e-12
+    k_beta = -1 if test1 and test2 else 1
     beta = np.abs(plus-(k_beta*minus))
 
     # don't forget to add constants
