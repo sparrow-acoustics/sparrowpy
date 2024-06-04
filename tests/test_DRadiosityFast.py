@@ -301,11 +301,14 @@ def test_total_number_of_patches():
 @pytest.mark.parametrize('patch_size', [
     1/3,
     0.5,
+    1,
     ])
 @pytest.mark.parametrize('k', [
-    0, 1, 2, 3, 5,
+    0, 1, 2, 3, 4, 5, 6,
     ])
 def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse):
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
     data, sources, receivers = sofa_data_diffuse
     walls = [0, 1]
 
@@ -383,6 +386,9 @@ def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse
                 E_matrix[:, k, j, samples] += e
     E_matrix_old = np.concatenate(
         [p.E_matrix for p in radiosity_old.patch_list], axis=-2)
+    npt.assert_almost_equal(
+        np.array(np.where(E_matrix>0)),
+        np.array(np.where(E_matrix_old>0)))
     npt.assert_almost_equal(E_matrix, E_matrix_old)
 
     # compare histogram

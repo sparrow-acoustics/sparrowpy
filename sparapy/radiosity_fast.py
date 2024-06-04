@@ -670,7 +670,7 @@ def calculate_init_energy(
         plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
         minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
 
-        k_beta = -1 if ((dn - half_n) <= S_z) & (S_z <= (dn + half_n)) else 1
+        k_beta = -1 if np.abs(dn - half_n-S_z) <= 1e-12 else 1
         beta = np.abs(plus-(k_beta*minus))
 
         energy[j] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
