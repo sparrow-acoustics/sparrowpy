@@ -495,7 +495,7 @@ def _form_factors_with_directivity(
             wall_id_i = int(patch_to_wall_ids[i])
             difference_source /= np.linalg.norm(difference_source)
             difference_receiver /= np.linalg.norm(difference_receiver)
-            ff = form_factors[i, j] if i<j else form_factors[j, i]
+            ff = form_factors[i, j] if i<j else form_factors[j, i] # * patch_j.Area / patch_i.Area # This needs to be included somehow
 
             distance = np.linalg.norm(difference_receiver)
             if air_attenuation is not None:
@@ -971,8 +971,8 @@ def _calculate_energy_exchange(
     form_factors_tilde = form_factors_tilde
     patches_center = patches_center
 
-    for ii in range(n_patches**3 * (max_order_k-2)):
-        k = (int(ii/(n_patches**3)) % n_patches)+2
+    for ii in range(n_patches**3 * (max_order_k)):
+        k = (int(ii/(n_patches**3)) % n_patches)+max_order_k-1
         h = int(ii/(n_patches**2)) % n_patches
         j = int(ii/n_patches) % n_patches
         i = ii % n_patches
@@ -981,7 +981,7 @@ def _calculate_energy_exchange(
         if k == 2:
             energy_exchange[k, i, j, :-1] += form_factors_tilde[h, i, j, :]
             energy_exchange[k, i, j, -1] = distance
-        else:
+        elif k>2:
             energy_exchange[k, i, j, :-1] += energy_exchange[
                 k-1, i, j, :-1]*form_factors_tilde[h, i, j, :]
             energy_exchange[k, i, j, -1] = energy_exchange[
