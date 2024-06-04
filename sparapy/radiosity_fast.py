@@ -1,7 +1,6 @@
 """Module for the radiosity simulation."""
 import numba
 import os
-import sparapy as sp
 import numpy as np
 import pyfar as pf
 
@@ -92,7 +91,9 @@ class DRadiosityFast():
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
 
         # create patches
-        (patches_points, patches_normal, n_patches, patch_to_wall_ids) = process_patches(
+        (
+            patches_points, patches_normal,
+            n_patches, patch_to_wall_ids) = process_patches(
             walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(

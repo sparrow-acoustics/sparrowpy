@@ -1,12 +1,10 @@
 # %%
 """Test the radiosity.Radiosity module."""
-import os
-
 import numpy as np
 import pyfar as pf
 import sparapy as sp
 import matplotlib.pyplot as plt
-%matplotlib inline
+# %matplotlib inline
 
 # %%
 X = 5
@@ -75,7 +73,8 @@ radiosity.init_energy(source_pos)
 
 for pos in receiver_pos:
     receiver = sp.geometry.Receiver(pos, [0, 1, 0], [0, 0, 1])
-    histograms.append(radiosity.collect_energy_receiver(receiver_pos, histogram_time_resolution=1e-3, histogram_time_length=1))
+    histograms.append(radiosity.collect_energy_receiver(
+        receiver_pos, histogram_time_resolution=1e-3, histogram_time_length=1))
 irs_new = np.array(histograms).squeeze()
 reverberation = pf.Signal(irs_new, sampling_rate=sampling_rate)
 
@@ -108,7 +107,8 @@ E_ratio_analytical = E_reverb_analytical/E_direct_analytical
 t = reverberation.times
 w_0 = E_reverb_analytical/ V # Kuttruff Eq 4.7
 t_0 = 0.03
-reverberation_analytic = w_0 * np.exp(+(speed_of_sound*S*np.log(1-alpha_dash)/(4*V))*(t-t_0)) # Kuttruff Eq 4.10
+reverberation_analytic = w_0 * np.exp(+(
+    speed_of_sound*S*np.log(1-alpha_dash)/(4*V))*(t-t_0)) # Kuttruff Eq 4.10
 reverberation_analytic = pf.Signal(reverberation_analytic, sampling_rate=sampling_rate)
 plt.figure()
 pf.plot.time(

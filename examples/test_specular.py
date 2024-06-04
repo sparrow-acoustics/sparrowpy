@@ -1,9 +1,11 @@
+"""Test specular reflections."""
 # %%
 import numpy as np
 import sparapy as sp
 import pyfar as pf
 import os
-%matplotlib ipympl
+import matplotlib.pyplot as plt
+# %matplotlib ipympl
 
 # %%
 sample_walls = sp.testing.shoebox_room_stub(1, 1, 1)
@@ -63,7 +65,6 @@ histogram = radiosity.collect_energy_receiver(
 old_sig = pf.Signal(histogram_old, 1/time_resolution)
 # old_sig.freq[:, 0] =0
 new_sig = pf.Signal(histogram.T[0, :], 1/time_resolution) /1
-import matplotlib.pyplot as plt
 
 soll = pf.Signal(np.zeros_like(histogram_old), 1/time_resolution)
 
@@ -80,8 +81,6 @@ soll.time[:, int(delta_d/speed_of_sound/time_resolution)] = 1 / (4*np.pi*delta_d
 result = pf.utils.concatenate_channels([soll, old_sig, new_sig])
 
 plt.figure()
-# pf.plot.time(pf.signals.impulse(length_histogram/time_resolution,int(1/speed_of_sound/time_resolution), sampling_rate=1/time_resolution), dB=True, log_prefix=10)
-# pf.plot.time(pf.signals.impulse(length_histogram/time_resolution,int(2/speed_of_sound/time_resolution), sampling_rate=1/time_resolution), dB=True, log_prefix=10)
 ax=pf.plot.time(result, dB=True, log_prefix=10)
 ax.set_xlim((0, 0.04))
 ax.set_ylim((-100, 0))
