@@ -231,7 +231,7 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
 
         out += (projPolyArea + curved_area) 
        
-    return out * (patch_j.area/len(p0_array)) / (PI * patch_i.area)
+    return out * (patch_i.area/len(p0_array)) / (PI * patch_i.area)
 
 #######################################################################################
 ### helpers
