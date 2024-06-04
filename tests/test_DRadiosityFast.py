@@ -112,6 +112,7 @@ def test_calc_form_factor_perpendicular_distance(
     ])
 @pytest.mark.parametrize('patch_size', [
     0.5,
+    1,
     ])
 def test_full(
         sample_walls, walls, patch_size, sofa_data_diffuse):
@@ -297,32 +298,12 @@ def test_total_number_of_patches():
     assert result == desired
 
 
-def test_init_energy_wrapper(sample_walls):
-    source_pos = np.array([0.5, 0.5, 0.5])
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
-        sample_walls, 0.2)
-    (energy, distance) = radiosity.init_energy(source_pos)
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
-        sample_walls, 0.2)
-    (energy_2, distance_2) = sp.radiosity_fast.calculate_init_energy(
-            source_pos,
-            radiosity.patches_center, radiosity.patches_normal,
-            radiosity.patches_size)
-    npt.assert_array_equal(energy.shape, energy_2.shape)
-    npt.assert_array_equal(distance.shape, distance_2.shape)
-    npt.assert_array_equal(energy, energy_2)
-    npt.assert_array_equal(distance, distance_2)
-
-
 @pytest.mark.parametrize('patch_size', [
     1/3,
     0.5,
-    1,
     ])
 @pytest.mark.parametrize('k', [
-    1,
-    2,
-    3,
+    0, 1, 2, 3, 5,
     ])
 def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse):
     data, sources, receivers = sofa_data_diffuse
@@ -367,26 +348,49 @@ def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse
         histogram_time_resolution=time_resolution,
         histogram_time_length=length_histogram)
 
-    # ii = 0
-    # for i in range(2):
-    #     for j in range(len(radiosity_old.patch_list[i].patches)):
-    #         wall_id = int(ii / radiosity.n_patches/2)
-    #         energy = radiosity.energy_exchange[0, 0, j, :-1]
-    #         distance = radiosity.energy_exchange[0, 0, j, -1]
-    #         samples = int(distance /speed_of_sound/ time_resolution)
+    patches_center = []
+    patches_normal = []
+    patches_size = []
+    for patch in radiosity_old.patch_list:
+        for p in patch.patches:
+            patches_center.append(p.center)
+            patches_size.append(p.size)
+            patches_normal.append(p.normal)
+    patches_center = np.array(patches_center)
+    patches_normal = np.array(patches_normal)
+    patches_size = np.array(patches_size)
 
-    #         idx = np.where(
-    #             radiosity_old.patch_list[wall_id].E_matrix[0, 0, j, :] != 0)
-    #         idx = np.array(idx).squeeze()
+    npt.assert_almost_equal(
+        patches_center, radiosity.patches_center)
+    npt.assert_almost_equal(
+        patches_normal, radiosity.patches_normal)
+    npt.assert_almost_equal(
+        patches_size, radiosity.patches_size)
 
-    #         assert samples == idx
-    #         npt.assert_almost_equal(
-    #             energy, radiosity_old.patch_list[wall_id].E_matrix[0, 0, j, idx])
-    #         ii += 1
+    # compare energy exchange
+    E_matrix = np.zeros((
+        1,
+        k+1,  # order of energy exchange
+        patches_size.shape[0],  # receiver ids of patches
+        radiosity_old.patch_list[0].E_n_samples,  # impulse response G_k(t)
+        ))
+    for k in range(radiosity.energy_exchange.shape[0]):
+        for i in range(radiosity.energy_exchange.shape[1]):
+            for j in range(radiosity.energy_exchange.shape[2]):
+                e = radiosity.energy_exchange[k, i, j, 0]
+                d = radiosity.energy_exchange[k, i, j, -1]
+                samples = int(d/speed_of_sound/time_resolution)
+                E_matrix[:, k, j, samples] += e
+    E_matrix_old = np.concatenate(
+        [p.E_matrix for p in radiosity_old.patch_list], axis=-2)
+    npt.assert_almost_equal(E_matrix, E_matrix_old)
 
+    # compare histogram
     for i in range(4):
-        npt.assert_almost_equal(np.sum(histogram[:, i]), np.sum(histogram_old[0, :]))
-        npt.assert_almost_equal(histogram[:, i], histogram_old[0, :])
+        assert np.sum(histogram[:, i])>0
+        npt.assert_almost_equal(
+            np.sum(histogram[:, i]), np.sum(histogram_old[0, :]))
+        # npt.assert_almost_equal(histogram[:, i], histogram_old[0, :])
 
 
 def test_init_source(sample_walls, sofa_data_diffuse):

@@ -128,7 +128,7 @@ class DRadiosityFast():
                 air_attenuation_factor)
             self.energy_exchange[0, 0, j, -1] = distance_0[j]
 
-        if self.energy_exchange.shape[0] <= 2:
+        if self.energy_exchange.shape[0] <= 1:
             return None
         patch_to_wall_ids = self._patch_to_wall_ids
         patches_center = self.patches_center
@@ -192,7 +192,8 @@ class DRadiosityFast():
 
 
     def collect_energy_receiver(
-            self, receiver_pos, histogram_time_resolution=1e-3, histogram_time_length=1, speed_of_sound=346.18):
+            self, receiver_pos, histogram_time_resolution=1e-3,
+            histogram_time_length=1, speed_of_sound=346.18):
         """Collect the energy at the receiver."""
         histogram = np.zeros(
             ((int(histogram_time_length/histogram_time_resolution)),
@@ -214,8 +215,7 @@ class DRadiosityFast():
             samples_delay = int(d/speed_of_sound/histogram_time_resolution)
 
             cos_xi = np.abs(np.sum(
-                patches_normal[j, :]*np.abs(receiver_pos-source_pos))) / \
-                R
+                patches_normal[j, :]*np.abs(receiver_pos-source_pos))) / R
 
             # Equation 20
             receiver_factor = cos_xi * (np.exp(-air_attenuation*R)) / (
@@ -263,7 +263,7 @@ class DRadiosityFast():
             maximal order of energy exchange iterations.
 
         """
-        if max_order_k <= 2:
+        if max_order_k <= 1:
             self.energy_exchange = np.zeros(
                 (max_order_k+1, self.n_patches, self.n_patches, self.n_bins+1))
         else:
@@ -655,31 +655,31 @@ def calculate_init_energy(
         S_y = source_pos[indexes[1]]
         S_z = source_pos[indexes[2]]
 
-        # half_l = dd_l/2
-        # half_n = dd_n/2
-        # half_m = dd_m/2
+        half_l = dd_l/2
+        half_n = dd_n/2
+        half_m = dd_m/2
 
-        # sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
-        #     dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
+            dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-        # k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
-        # sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
-        #     dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
+        sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
+            dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-        # plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
-        # minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
+        plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
+        minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
 
-        # k_beta = -1 if ((dn - half_n) <= S_z) & (S_z <= (dn + half_n)) else 1
-        # beta = np.abs(plus-(k_beta*minus))
+        k_beta = -1 if ((dn - half_n) <= S_z) & (S_z <= (dn + half_n)) else 1
+        beta = np.abs(plus-(k_beta*minus))
 
-        # energy[j] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
+        energy[j] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
         distance_out[j] = np.sqrt(
             np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
 
-        energy[j] = sp.radiosity._init_energy_exchange(
-            dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
-            1, np.array([0]), distance_out[j],
-            np.array([0]), 1)
+        # energy[j] = sp.radiosity._init_energy_exchange(
+        #     dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
+        #     1, np.array([0]), distance_out[j],
+        #     np.array([0]), 1)
     return (energy, distance_out)
 
 
@@ -973,8 +973,10 @@ def _calculate_energy_exchange(
             energy_exchange[k, i, j, :-1] += form_factors_tilde[h, i, j, :]
             energy_exchange[k, i, j, -1] = distance
         else:
-            energy_exchange[k, i, j, :-1] += energy_exchange[k-1, i, j, :-1]*form_factors_tilde[h, i, j, :]
-            energy_exchange[k, i, j, -1] = energy_exchange[k-1, i, j, -1] + distance
+            energy_exchange[k, i, j, :-1] += energy_exchange[
+                k-1, i, j, :-1]*form_factors_tilde[h, i, j, :]
+            energy_exchange[k, i, j, -1] = energy_exchange[
+                k-1, i, j, -1] + distance
 
     return energy_exchange
 
