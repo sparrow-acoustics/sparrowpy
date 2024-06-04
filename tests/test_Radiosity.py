@@ -52,7 +52,8 @@ def test_small_room_and_shift():
         ## new approach
         radi = sp.radiosity.Radiosity(
             walls, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate)
+            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate,
+            absorption=0.1)
 
         # run simulation
         radi.run(source)
@@ -121,7 +122,8 @@ def test_small_room_and_rotate():
         ## new approach
         radi = sp.radiosity.Radiosity(
             walls, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate)
+            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate,
+            absorption=0.1)
 
         # run simulation
         radi.run(source)
@@ -170,7 +172,8 @@ def test_small_room_and_rotate_init_energy():
         ## new approach
         radi = sp.radiosity.Radiosity(
             walls, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate)
+            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate,
+            absorption=0.1)
 
         # run init energy
         # B. First-order patch
@@ -213,7 +216,8 @@ def test_cube_and_rotate_init_energy():
     ## new approach
     radi = sp.radiosity.Radiosity(
         walls, patch_size, max_order_k, ir_length_s,
-        speed_of_sound=speed_of_sound, sampling_rate=sampling_rate)
+        speed_of_sound=speed_of_sound, sampling_rate=sampling_rate,
+        absorption=0.1)
 
     # run init energy
     # B. First-order patch sources
@@ -319,13 +323,6 @@ def test_radiosity_reference_with_read_write(max_order_k, tmpdir):
         os.path.dirname(__file__), 'test_data')
 
     # write test file
-    if create_reference_files:
-        pf.io.write(
-            os.path.join(
-                test_path,
-                f'simulation_X{X}_k{max_order_k}_{patch_size}m.far'),
-            signal=signal)
-
     result = pf.io.read(
         os.path.join(
             test_path,
