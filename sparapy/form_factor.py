@@ -15,7 +15,7 @@ def calculate_form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode
             if singularity_check(receiving_patch.pts, emitting_patch.pts):
                 return nusselt_integration(patch_i=emitting_patch, patch_j=receiving_patch, nsamples=25)
             else:
-                return stokes_integration(patch_i=emitting_patch, patch_j=receiving_patch, approx_order=2)
+                return stokes_integration(patch_i=emitting_patch, patch_j=receiving_patch, approx_order=4)
 
 
 #######################################################################################

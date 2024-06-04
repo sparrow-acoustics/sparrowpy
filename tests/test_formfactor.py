@@ -12,7 +12,7 @@ import sparapy.ff_helpers.exact_solutions as exact_solutions
     1.,2.,3.
     ])
 @pytest.mark.parametrize('distance', [
-    2.,3.
+    1.,2.,3.
     ])
 def test_parallel_facing_patches(width, height, distance):
     """Test universal form factor calculation for facing parallel patches of equal dimensions"""
