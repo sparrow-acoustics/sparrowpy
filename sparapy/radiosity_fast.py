@@ -971,8 +971,8 @@ def _calculate_energy_exchange(
     form_factors_tilde = form_factors_tilde
     patches_center = patches_center
 
-    for ii in range(n_patches**3 * (max_order_k)):
-        k = (int(ii/(n_patches**3)) % n_patches)+max_order_k-1
+    for ii in range(n_patches**3 * (max_order_k-2)):
+        k = (int(ii/(n_patches**3)) % n_patches)+2
         h = int(ii/(n_patches**2)) % n_patches
         j = int(ii/n_patches) % n_patches
         i = ii % n_patches

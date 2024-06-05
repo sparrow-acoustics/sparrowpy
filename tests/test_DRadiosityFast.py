@@ -299,9 +299,9 @@ def test_total_number_of_patches():
 
 
 @pytest.mark.parametrize('patch_size', [
+    .2,
     1/3,
-    0.2,
-    0.5,
+    .5,
     1,
     ])
 @pytest.mark.parametrize('k', [

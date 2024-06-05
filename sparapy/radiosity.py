@@ -827,8 +827,11 @@ def _init_energy_exchange(
     sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
         dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
-    k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
+    k_phi = -1 if (np.abs(dl - half_l - S_x) <= 1e-12 and np.abs(dl + half_l - S_x) >= 1e-12) else 1
     # k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
+
+    
+
     sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
         dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
@@ -838,8 +841,14 @@ def _init_energy_exchange(
     test1 = (dn - half_n) <= S_z
     test2 = S_z <= (dn + half_n)
     k_beta = -1 if test1 and test2 else 1
-
     # k_beta = -1 if (dn - half_n) <= np.abs(S_z) <= (dn + half_n) else 1
+
+    # if np.abs(sin_phi_delta-sin_phi) < 1e-11:
+    #     sin_phi *= -1
+
+    # if np.abs(plus-(k_beta*minus)) < 1e-11: 
+    #     k_beta  *= -1
+
     beta = np.abs(plus-(k_beta*minus))
 
     # don't forget to add constants
