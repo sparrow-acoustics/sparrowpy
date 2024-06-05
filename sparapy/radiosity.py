@@ -821,7 +821,7 @@ def _init_energy_exchange(
             dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
             sound_power, absorption, distance, attenuation, n_bins):
     half_l = dd_l/2
-    half_n = dd_n/2
+    # half_n = dd_n/2
     half_m = dd_m/2
 
     sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
