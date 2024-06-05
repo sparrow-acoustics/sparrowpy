@@ -202,9 +202,9 @@ def test_small_room_and_rotate_init_energy():
     npt.assert_array_almost_equal(E_matrix, E_matrix[0], decimal=4)
 
 
-def test_cube_and_rotate_init_energy():
+@pytest.mark.parametrize('patch_size', [1, 0.5])
+def test_cube_and_rotate_init_energy(patch_size):
     """Test if the results changes for rotated walls."""
-    patch_size = 0.5
     ir_length_s = 1
     sampling_rate = 1
     max_order_k = 0
@@ -628,3 +628,35 @@ def test_radiosity_read_write(tmpdir):
             patch_reconstructed.sound_attenuation_factor)
         np.testing.assert_array_equal(
             patch.E_matrix, patch_reconstructed.E_matrix)
+
+
+@pytest.mark.parametrize('patch_size', [1, 0.5, 0.2, 1/3])
+def test_init_energy_larger_0(patch_size):
+    """Test if the results changes for rotated walls."""
+    ir_length_s = 1
+    sampling_rate = 1
+    max_order_k = 0
+    speed_of_sound = 343
+    walls = sp.testing.shoebox_room_stub(1, 1, 1)
+    # create geometry
+    source = sp.geometry.SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
+
+    ## new approach
+    radi = sp.radiosity.Radiosity(
+        walls, patch_size, max_order_k, ir_length_s,
+        speed_of_sound=speed_of_sound, sampling_rate=sampling_rate,
+        absorption=0.1)
+
+    # run init energy
+    # B. First-order patch sources
+    for patches in radi.patch_list:
+        patches.init_energy_exchange(
+            radi.max_order_k, radi.ir_length_s, source,
+            sampling_rate=radi.sampling_rate)
+
+    E_matrix= np.concatenate([
+        radi.patch_list[i].E_matrix for i in range(6)], axis=-2)
+
+    # rotate all walls
+    assert E_matrix.flatten()[0] > 0
+
