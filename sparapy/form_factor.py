@@ -8,7 +8,7 @@ from sparapy.geometry import Polygon
 #######################################################################################
 ### main
 #######################################################################################
-def calculate_form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode='adaptive'):
+def calc_form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode='adaptive'):
 
     match mode:
         case 'adaptive':

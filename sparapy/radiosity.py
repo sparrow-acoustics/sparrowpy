@@ -4,7 +4,7 @@ import numpy as np
 import pyfar as pf
 import sofar as sf
 from tqdm import tqdm
-
+from sparapy.form_factor import calc_form_factor as universal_ffactor
 from sparapy.geometry import Polygon, SoundSource
 
 
@@ -422,6 +422,34 @@ class Patches(Polygon):
                     index_rec = i_receiver + i_receiver_offset
                     self.form_factors[i_source, index_rec] = ff
 
+                i_receiver_offset += len(receiver_wall.patches)
+
+    def calculate_univ_form_factor(self, patches_list) -> None:
+        """Calculate the form factors between patches using a universal method.
+
+        Parameters
+        ----------
+        patches_list : list of patches
+            List of patches.
+        M : float, optional
+            Air attenuation factor in Np/m, by default 0
+        alpha : float, optional
+            absorption coefficient of wall, by default 0.1
+
+        """
+        num_other_patches = np.sum([
+            len(patches_list[i].patches) for i in self.other_wall_ids])
+        self.form_factors = np.zeros((len(self.patches), num_other_patches))
+        for i_source, source_patch in enumerate(self.patches):
+            i_receiver_offset = 0
+            for receiver_wall_id in self.other_wall_ids:
+                receiver_wall = patches_list[receiver_wall_id]
+                for i_receiver, receiver_patch in enumerate(
+                        receiver_wall.patches):
+                    
+                    index_rec = i_receiver + i_receiver_offset
+                    self.form_factors[i_source, index_rec] = universal_ffactor(receiver_patch, source_patch)
+                
                 i_receiver_offset += len(receiver_wall.patches)
 
     def get_form_factor(
