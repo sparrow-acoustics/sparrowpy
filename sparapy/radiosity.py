@@ -828,15 +828,18 @@ def _init_energy_exchange(
         dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
     k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
+    # k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
     sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
         dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
 
     plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
     minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
 
-    test1 = dl-half_l-S_x <= 1e-12
-    test2 = S_x -dl-half_l <= 1e-12
+    test1 = (dn - half_n) <= S_z
+    test2 = S_z <= (dn + half_n)
     k_beta = -1 if test1 and test2 else 1
+
+    # k_beta = -1 if (dn - half_n) <= np.abs(S_z) <= (dn + half_n) else 1
     beta = np.abs(plus-(k_beta*minus))
 
     # don't forget to add constants
@@ -846,7 +849,7 @@ def _init_energy_exchange(
         alpha = absorption[i_frequency]
         constant = sound_power * (1-alpha) * (
             np.exp(-attenuation[i_frequency]*distance))
-        # constant = 1
+
         energy = constant * (
             np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
         energies[i_frequency] = energy
@@ -1003,7 +1006,7 @@ class Radiosity():
                 dict['source_view'], dict['source_up'])
         obj = cls(
             patch_list, dict['patch_size'], dict['max_order_k'], dict['ir_length_s'],
-            dict['speed_of_sound'], dict['sampling_rate'], source)
+            dict['speed_of_sound'], dict['sampling_rate'], source=source)
         return obj
 
     def run(self, source):
