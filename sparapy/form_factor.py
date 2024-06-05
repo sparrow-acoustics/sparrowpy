@@ -205,29 +205,33 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
             
         for segmt in connectivity:
 
-            if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
-                curved_area += area_under_curve(plnPts[segmt],order=2)
+            hand = np.cross(plnPts[segmt[0]], plnPts[segmt[-1]]-plnPts[segmt[0]])
 
-            else:                                                                       # if points span over 90º, additional sampling is required
-                mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
-                marc = mpoint/np.linalg.norm(mpoint) # midpoint on the arc projected on the hemisphere
+            if abs(hand) > 1e-12:
 
-                mpoint = np.inner(geom.rotation_matrix(patch_j.normal),mpoint)[:-1]
-                marc = np.inner(geom.rotation_matrix(patch_j.normal),marc)[:-1]
+                if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
+                    curved_area += area_under_curve(plnPts[segmt],order=2)
 
-                linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
-                
-                a = sphPts[segmt[0]] + (sphPts[segmt[1]] - sphPts[segmt[0]]) / 2
-                a = a/np.linalg.norm(a)
-                a = np.inner(geom.rotation_matrix(patch_j.normal),a)[:-1]
+                else:                                                                       # if points span over 90º, additional sampling is required
+                    mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
+                    marc = mpoint/np.linalg.norm(mpoint) # midpoint on the arc projected on the hemisphere
 
-                b = sphPts[segmt[1]] + (sphPts[segmt[-1]] - sphPts[segmt[1]]) / 2
-                b = b/np.linalg.norm(b)
-                b = np.inner(geom.rotation_matrix(patch_j.normal),b)[:-1]
+                    mpoint = np.inner(geom.rotation_matrix(patch_j.normal),mpoint)[:-1]
+                    marc = np.inner(geom.rotation_matrix(patch_j.normal),marc)[:-1]
 
-                left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]),order=2)
-                right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]),order=2)
-                curved_area += linArea * np.sign(left) + left + right
+                    linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
+                    
+                    a = sphPts[segmt[0]] + (sphPts[segmt[1]] - sphPts[segmt[0]]) / 2
+                    a = a/np.linalg.norm(a)
+                    a = np.inner(geom.rotation_matrix(patch_j.normal),a)[:-1]
+
+                    b = sphPts[segmt[1]] + (sphPts[segmt[-1]] - sphPts[segmt[1]]) / 2
+                    b = b/np.linalg.norm(b)
+                    b = np.inner(geom.rotation_matrix(patch_j.normal),b)[:-1]
+
+                    left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]),order=2)
+                    right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]),order=2)
+                    curved_area += (linArea * np.sign(left) + left + right)
 
         out += (projPolyArea + curved_area) 
        

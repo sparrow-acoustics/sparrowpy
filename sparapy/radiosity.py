@@ -441,16 +441,14 @@ class Patches(Polygon):
             len(patches_list[i].patches) for i in self.other_wall_ids])
         self.form_factors = np.zeros((len(self.patches), num_other_patches))
         for i_source, source_patch in enumerate(self.patches):
-            i_receiver_offset = 0
             for receiver_wall_id in self.other_wall_ids:
                 receiver_wall = patches_list[receiver_wall_id]
                 for i_receiver, receiver_patch in enumerate(
                         receiver_wall.patches):
                     
-                    index_rec = i_receiver + i_receiver_offset
+                    index_rec = i_receiver 
                     self.form_factors[i_source, index_rec] = universal_ffactor(receiver_patch, source_patch)
-                
-                i_receiver_offset += len(receiver_wall.patches)
+
 
     def get_form_factor(
             self, patches_list, source_path_id, receiver_wall_id,
