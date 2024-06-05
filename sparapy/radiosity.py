@@ -832,7 +832,7 @@ def _init_energy_exchange(
     k_phi = -1 if test1 and test2 else 1
     # k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
     sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
-        dl - half_l - S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
     if (sin_phi_delta-sin_phi) < 1e-11:
         sin_phi *= -1
 
