@@ -352,6 +352,7 @@ def test_init_energy_exchange_normal(sample_walls, patch_size, i_wall):
     if create_reference_files and sample_walls[i_wall] == sample_walls[0]:
         pf.io.write(path_sofa, E_matrix=patches.E_matrix)
     data = pf.io.read(path_sofa)
+    assert np.sum(patches.E_matrix>0) > 0
     npt.assert_almost_equal(
         data['E_matrix'], patches.E_matrix, decimal=4)
 
@@ -481,6 +482,7 @@ def test_energy_exchange(
         pf.io.write(path_sofa, E_matrix=patch_1.E_matrix)
     data = pf.io.read(path_sofa)
 
+    assert np.sum(patch_1.E_matrix>0) > 0
     npt.assert_almost_equal(
         data['E_matrix'], patch_1.E_matrix, decimal=4)
 
