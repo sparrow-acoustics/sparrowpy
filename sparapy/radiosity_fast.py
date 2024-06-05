@@ -3,6 +3,7 @@ import numba
 import os
 import numpy as np
 import pyfar as pf
+import sparapy as sp
 
 
 class DRadiosityFast():
@@ -685,10 +686,10 @@ def calculate_init_energy(
         distance_out[j] = np.sqrt(
             np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
 
-        # energy[j] = sp.radiosity._init_energy_exchange(
-        #     dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
-        #     1, np.array([0]), distance_out[j],
-        #     np.array([0]), 1)
+        energy[j] = sp.radiosity._init_energy_exchange(
+            dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
+            1, np.array([0]), distance_out[j],
+            np.array([0]), 1)
     return (energy, distance_out)
 
 
