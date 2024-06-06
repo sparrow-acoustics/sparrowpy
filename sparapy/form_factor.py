@@ -171,6 +171,7 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
             if True, the samples are randomly distributed in a uniform way
             if False, a regular sampling of the surface is performed
     """
+    hand = np.sign(np.inner(np.cross( patch_i.pts[1]-patch_i.pts[0] , patch_i.pts[2]-patch_i.pts[1] ), patch_i.normal) )
 
     if random:
         p0_array = sampling.sample_random(patch_j,nsamples)
@@ -206,14 +207,11 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
             plt.ylim([-1.2,1.2])
             plt.show()
 
-
         projPolyArea = polygon_area(plnPts[0::2])
-            
-        hand = np.sign(np.cross( plnPts[4]-plnPts[2] , plnPts[2]-plnPts[0]))
 
         for segmt in connectivity:
 
-            if abs(np.inner(plnPts[segmt[-1]],plnPts[segmt[0]])) < 1 - 1e-12:
+            if abs(np.cross(plnPts[segmt[-1]],plnPts[segmt[0]])) > 1e-12:
 
                 if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
                     curved_area += area_under_curve(plnPts[segmt],order=2,plotflag=plotflag)
