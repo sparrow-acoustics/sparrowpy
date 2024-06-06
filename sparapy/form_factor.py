@@ -5,6 +5,8 @@ import sparapy.ff_helpers.sampling as sampling
 from sparapy.ff_helpers.integrate_line import poly_estimation,poly_integration
 from sparapy.geometry import Polygon 
 
+import matplotlib.pyplot as plt
+
 #######################################################################################
 ### main
 #######################################################################################
@@ -13,7 +15,7 @@ def calc_form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode='ada
     match mode:
         case 'adaptive':
             if singularity_check(receiving_patch.pts, emitting_patch.pts):
-                return nusselt_integration(patch_i=emitting_patch, patch_j=receiving_patch, nsamples=25)
+                return nusselt_integration(patch_i=emitting_patch, patch_j=receiving_patch, nsamples=36)
             else:
                 return stokes_integration(patch_i=emitting_patch, patch_j=receiving_patch, approx_order=4)
 
@@ -155,7 +157,7 @@ def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=4):
 
     return abs(outer_integral/(2*PI*patch_i.area))
 
-def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=False):
+def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=False, plotflag=False):
     """
     Estimates the form factor by integrating the Nusselt analogue values (emitting patch) 
     over the surface of the receiving patch
@@ -192,48 +194,68 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
     for p0 in p0_array:
 
         curved_area = 0
- 
         
         for ii in range(len(b_points)):
             sphPts[ii] = ((b_points[ii]-p0)/np.linalg.norm(b_points[ii]-p0)) # patch j points projected on the hemisphere
+        proj_center = ((patch_i.center-p0)/np.linalg.norm(patch_i.center-p0))
 
         
         for ii in range(len(sphPts)):
             plnPts[ii,:] = np.inner(geom.rotation_matrix(patch_j.normal),sphPts[ii])[:-1] # points on the hemisphere projected onto 
+        proj_center = np.inner(geom.rotation_matrix(patch_j.normal),proj_center)[:-1]
+
+        if plotflag:
+            fig, ax = plt.subplots()
+            circle = plt.Circle((0,0), 1, color='blue', alpha=0.1)
+            ax.add_patch(circle)
+            ax.plot(plnPts[:,0] , plnPts[:,1], 'r*')
+            ax.grid()
+            ax.set_aspect('equal')
+            plt.xlim([-1.2,1.2])
+            plt.ylim([-1.2,1.2])
+            plt.show()
+
 
         projPolyArea = polygon_area(plnPts[0::2])
             
         for segmt in connectivity:
 
-            hand = np.cross(plnPts[segmt[0]], plnPts[segmt[-1]]-plnPts[segmt[0]])
+            hand = np.cross( plnPts[segmt[-1]]-plnPts[segmt[0]] , plnPts[segmt[0]]-proj_center)
 
             if abs(hand) > 1e-12:
 
                 if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
-                    curved_area += area_under_curve(plnPts[segmt],order=2)
+                    curved_area += area_under_curve(plnPts[segmt],order=2,plotflag=plotflag)
 
                 else:                                                                       # if points span over 90º, additional sampling is required
                     mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
                     marc = mpoint/np.linalg.norm(mpoint) # midpoint on the arc projected on the hemisphere
+                    a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
+                    b = marc + (sphPts[segmt[-1]] - marc) / 2
 
                     mpoint = np.inner(geom.rotation_matrix(patch_j.normal),mpoint)[:-1]
                     marc = np.inner(geom.rotation_matrix(patch_j.normal),marc)[:-1]
-
-                    linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
-                    
-                    a = sphPts[segmt[0]] + (sphPts[segmt[1]] - sphPts[segmt[0]]) / 2
                     a = a/np.linalg.norm(a)
                     a = np.inner(geom.rotation_matrix(patch_j.normal),a)[:-1]
 
-                    b = sphPts[segmt[1]] + (sphPts[segmt[-1]] - sphPts[segmt[1]]) / 2
                     b = b/np.linalg.norm(b)
                     b = np.inner(geom.rotation_matrix(patch_j.normal),b)[:-1]
 
-                    left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]),order=2)
-                    right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]),order=2)
-                    curved_area += (linArea * np.sign(left) + left + right)
+                    if plotflag:
+                        ax.plot(a[0] , a[1], 'g*')
+                        ax.plot(b[0] , b[1], 'g*')
+                        ax.plot(marc[0] , marc[1], 'b*')
 
-        out += (projPolyArea + curved_area) 
+
+                    linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
+                    left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]), order=2, plotflag=plotflag)
+                    right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]), order=2, plotflag=plotflag)
+                    curved_area += np.sign(hand)*(linArea * np.sign(left) + left + right)
+
+        
+        out += projPolyArea + curved_area 
+
+
        
     return out * (patch_i.area/len(p0_array)) / (PI * patch_i.area)
 
@@ -268,7 +290,7 @@ def polygon_area(pts: np.ndarray):
     if len(pts) == 4:
         return .5 * ( np.linalg.norm( np.cross( pts[3]-pts[2] , pts[0]-pts[2] ) ) + np.linalg.norm( np.cross( pts[1]-pts[0] , pts[2]-pts[0] ) ) )
 
-def area_under_curve(ps, order=2):
+def area_under_curve(ps, order=2, plotflag=False):
     """
     calculates the area under a polynomial curve sampled by a finite number of points (on a shared plane)
     
@@ -301,5 +323,20 @@ def area_under_curve(ps, order=2):
 
     coefs = poly_estimation(x,y)
     area = poly_integration(coefs,x)        # area between curve and ps[-1] - ps[0]
+
+    if plotflag:
+        ax = plt.gca()
+
+        xx = np.linspace(x[0], x[-1], 100)
+        yy = np.zeros_like(xx)
+
+        for o in range(len(ps)):
+            yy += coefs[o] * xx**( len(ps) - (o+1) )
+
+        smoothpts = np.transpose(np.transpose(np.inner( np.transpose(rotation_matrix), np.transpose(np.array([xx,yy])) )) + ps[0])
+
+        ax.plot(smoothpts[0], smoothpts[1], 'r--')
+
+
 
     return area
