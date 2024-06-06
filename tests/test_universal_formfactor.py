@@ -28,7 +28,7 @@ def test_parallel_facing_patches(width, height, distance):
 
     computed = form_factor.calc_form_factor(emitting_patch=patch_1, receiving_patch=patch_2)
 
-    assert 100 * abs(computed-exact) < 1.
+    assert 100 * abs(computed-exact)/exact < 1.
 
 @pytest.mark.parametrize('width', [
     1.,2.,3.
@@ -50,7 +50,7 @@ def test_perpendicular_coincidentline_patches(width, height, length):
 
     computed = form_factor.calc_form_factor(emitting_patch=patch_1, receiving_patch=patch_2)
 
-    assert 100 * abs(computed-exact) < 1.
+    assert 100 * abs(computed-exact)/exact < 5.
 
 
 @pytest.mark.parametrize('width1', [
@@ -76,7 +76,7 @@ def test_perpendicular_coincidentpoint_patches(width1, width2, length1, length2)
 
     computed = form_factor.calc_form_factor(emitting_patch=patch_1, receiving_patch=patch_2)
 
-    assert 100 * abs(computed-exact) < 1.
+    assert 100 * abs(computed-exact)/exact < 5.
 
 #########################################################################################################
 # compare to Kang implementation
@@ -89,7 +89,7 @@ def test_perpendicular_coincidentpoint_patches(width1, width2, length1, length2)
     0.5,
     1,
     ])
-def test_calc_form_factor_parallel(sample_walls, parallel_walls, patch_size):
+def test_kang_comparison_parallel(sample_walls, parallel_walls, patch_size):
     """Test form factor calculation for parallel walls."""
     wall_source = sample_walls[parallel_walls[0]]
     wall_receiver = sample_walls[parallel_walls[1]]
@@ -100,7 +100,7 @@ def test_calc_form_factor_parallel(sample_walls, parallel_walls, patch_size):
     patch_1.calculate_form_factor(patches)
     old_ff = patch_1.form_factors
     patch_1.calculate_univ_form_factor(patches)
-    assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 20
+    assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 10
 
 @pytest.mark.parametrize('perpendicular_walls', [
     [0, 2], [0, 3], [0, 4], [0, 5],
@@ -115,7 +115,7 @@ def test_calc_form_factor_parallel(sample_walls, parallel_walls, patch_size):
     0.5,
     1,
     ])
-def test_calc_form_factor_perpendicular(
+def test_kang_comparison_perpendicular(
         sample_walls, perpendicular_walls, patch_size):
     """Test form factor calculation for perpendicular walls."""
     wall_source = sample_walls[perpendicular_walls[0]]
@@ -127,4 +127,4 @@ def test_calc_form_factor_perpendicular(
     patch_1.calculate_form_factor(patches)
     old_ff = patch_1.form_factors
     patch_1.calculate_univ_form_factor(patches)
-    assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 20
+    assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 10

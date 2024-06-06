@@ -51,7 +51,7 @@ def  func(x,y):
     return np.log(np.linalg.norm(x-y))
 
 
-def poly_estimation(x,y):
+def poly_estimation(x,y) -> np.ndarray:
 
     xmat = np.empty(shape=[len(x),len(x)])
 

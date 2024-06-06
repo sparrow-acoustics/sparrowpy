@@ -15,7 +15,7 @@ def calc_form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode='ada
     match mode:
         case 'adaptive':
             if singularity_check(receiving_patch.pts, emitting_patch.pts):
-                return nusselt_integration(patch_i=emitting_patch, patch_j=receiving_patch, nsamples=36)
+                return nusselt_integration(patch_i=emitting_patch, patch_j=receiving_patch, nsamples=64)
             else:
                 return stokes_integration(patch_i=emitting_patch, patch_j=receiving_patch, approx_order=4)
 
@@ -116,13 +116,8 @@ def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=4):
     if singularity_check(i_bpoints,j_bpoints): 
         return float('nan')
 
-
     # first compute and store form function sample values
-    form_mat = [[[] for j in range(len(j_bpoints))] for i in range(len(i_bpoints))]
-
-    for j,pj in enumerate(j_bpoints):
-        for i,pi in enumerate(i_bpoints):
-            form_mat[i][j] = stokes_ffunction(pi,pj)
+    form_mat = load_stokes_entries(i_bpoints, j_bpoints)
 
 
     # double polynomial integration (per dimension (x,y,z))
@@ -130,8 +125,6 @@ def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=4):
     inner_integral = np.zeros(shape=[len(i_bpoints),len(j_bpoints[0])])
 
     for dim in range(len(j_bpoints[0])):                                # for each dimension
-
-
         # integrate form function over each point on patch i boundary
 
         for i in range(len(i_bpoints)):                                 # for each point in patch i boundary
@@ -197,12 +190,10 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
         
         for ii in range(len(b_points)):
             sphPts[ii] = ((b_points[ii]-p0)/np.linalg.norm(b_points[ii]-p0)) # patch j points projected on the hemisphere
-        proj_center = ((patch_i.center-p0)/np.linalg.norm(patch_i.center-p0))
 
         
         for ii in range(len(sphPts)):
             plnPts[ii,:] = np.inner(geom.rotation_matrix(patch_j.normal),sphPts[ii])[:-1] # points on the hemisphere projected onto 
-        proj_center = np.inner(geom.rotation_matrix(patch_j.normal),proj_center)[:-1]
 
         if plotflag:
             fig, ax = plt.subplots()
@@ -218,11 +209,11 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
 
         projPolyArea = polygon_area(plnPts[0::2])
             
+        hand = np.sign(np.cross( plnPts[4]-plnPts[2] , plnPts[2]-plnPts[0]))
+
         for segmt in connectivity:
 
-            hand = np.cross( plnPts[segmt[-1]]-plnPts[segmt[0]] , plnPts[segmt[0]]-proj_center)
-
-            if abs(hand) > 1e-12:
+            if abs(np.inner(plnPts[segmt[-1]],plnPts[segmt[0]])) < 1 - 1e-12:
 
                 if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
                     curved_area += area_under_curve(plnPts[segmt],order=2,plotflag=plotflag)
@@ -250,18 +241,28 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
                     linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
                     left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]), order=2, plotflag=plotflag)
                     right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]), order=2, plotflag=plotflag)
-                    curved_area += np.sign(hand)*(linArea * np.sign(left) + left + right)
+                    curved_area += hand*(linArea * np.sign(left) + left + right)
 
         
         out += projPolyArea + curved_area 
 
 
        
-    return out * (patch_i.area/len(p0_array)) / (PI * patch_i.area)
+    return out / (PI * len(p0_array))
 
 #######################################################################################
 ### helpers
 #######################################################################################
+
+def load_stokes_entries(i_bpoints, j_bpoints):
+    form_mat = [[[] for j in range(len(j_bpoints))] for i in range(len(i_bpoints))]
+
+    for j,pj in enumerate(j_bpoints):
+        for i,pi in enumerate(i_bpoints):
+            form_mat[i][j] = stokes_ffunction(pi,pj)
+
+    return form_mat
+
 
 def singularity_check(p0,p1):
     """
