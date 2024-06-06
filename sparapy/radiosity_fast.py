@@ -141,25 +141,15 @@ class DRadiosityFast():
         scattering = self._scattering
         scattering_index = self._scattering_index
         form_factors = self.form_factors
-        visibility_matrix = self.visibility_matrix
-        n_combinations = np.sum(visibility_matrix)
-        pairs = np.empty((n_combinations, 2), dtype=np.int32)
-        i_counter = 0
-        for i_source in range(n_patches):
-            for i_receiver in range(n_patches):
-                if not visibility_matrix[i_source, i_receiver]:
-                    continue
-                pairs[i_counter, 0] = i_source
-                pairs[i_counter, 1] = i_receiver
-                i_counter += 1
-        for ii in range(n_combinations):
+        visible_patches = self._visible_patches
+        for ii in range(visible_patches.shape[0]):
             for jj in range(2):
                 if jj == 0:
-                    i = pairs[ii, 0]
-                    j = pairs[ii, 1]
+                    i = visible_patches[ii, 0]
+                    j = visible_patches[ii, 1]
                 else:
-                    j = pairs[ii, 0]
-                    i = pairs[ii, 1]
+                    j = visible_patches[ii, 0]
+                    i = visible_patches[ii, 1]
                 difference_source = source_position - patches_center[i]
                 difference_source = pf.Coordinates(
                     difference_source.T[0],
@@ -187,16 +177,16 @@ class DRadiosityFast():
                 scattering_factor = scattering[scattering_index[wall_id_i]][
                     source_idx, receiver_idx, :]
                 self.energy_exchange[1, i, j, :-1] = self.energy_exchange[
-                    0, 0, j, :-1] * ff * (
+                    0, 0, i, :-1] * ff * (
                     air_attenuation_factor * absorption_factor * scattering_factor)
                 self.energy_exchange[1, i, j, -1] = distance_0[i]+distance
         # calculate energy exchange
         if self.energy_exchange.shape[0] > 2:
-            for j in range(n_patches):
-                self.energy_exchange[2:, :, j, :-1] *= self.energy_exchange[
-                    1, :, j, :-1]
-                self.energy_exchange[2:, :, j, -1] += self.energy_exchange[
-                    1, :, j, -1]
+            for i in range(n_patches):
+                self.energy_exchange[2:, i, :, :-1] *= self.energy_exchange[
+                    1, :, i, :-1]
+                self.energy_exchange[2:, i, :, -1] += self.energy_exchange[
+                    1, :, i, -1]
 
 
     def collect_energy_receiver(
@@ -238,6 +228,18 @@ class DRadiosityFast():
         self._visibility_matrix = check_visibility(
             self.patches_center, self.patches_normal)
 
+        n_combinations = np.sum(self.visibility_matrix)
+        visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
+        i_counter = 0
+        for i_source in range(self.n_patches):
+            for i_receiver in range(self.n_patches):
+                if not self.visibility_matrix[i_source, i_receiver]:
+                    continue
+                visible_patches[i_counter, 0] = i_source
+                visible_patches[i_counter, 1] = i_receiver
+                i_counter += 1
+        self._visible_patches = visible_patches
+
     def calculate_form_factors(self, method='kang'):
         """Calculate the form factors.
 
@@ -250,7 +252,7 @@ class DRadiosityFast():
         if method == 'kang':
             self._form_factors = form_factor_kang(
                 self.patches_center, self.patches_normal,
-                self.patches_size, self.visibility_matrix)
+                self.patches_size, self._visible_patches)
 
     def calculate_form_factors_directivity(self):
         """Calculate the form factors with directivity."""
@@ -276,7 +278,7 @@ class DRadiosityFast():
                 (max_order_k+1, self.n_patches, self.n_patches, self.n_bins+1))
         else:
             self.energy_exchange = _calculate_energy_exchange(
-                self._form_factors_tilde, self.patches_center,
+                self._visible_patches, self._form_factors_tilde, self.patches_center,
                 max_order_k, self.n_patches, self.n_bins)
 
     def _check_set_frequency(self, frequencies:np.ndarray):
@@ -741,7 +743,7 @@ def check_visibility(
 @numba.jit(nopython=True, parallel=True)
 def form_factor_kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
-        patches_size:np.ndarray, visibility_matrix:np.ndarray) -> np.ndarray:
+        patches_size:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
     """Calculate the form factors between patches.
 
     Parameters
@@ -765,19 +767,9 @@ def form_factor_kang(
     """
     n_patches = patches_center.shape[0]
     form_factors = np.zeros((n_patches, n_patches))
-    n_combinations = np.sum(visibility_matrix)
-    pairs = np.empty((n_combinations, 2), dtype=np.int32)
-    i_counter = 0
-    for i_source in range(n_patches):
-        for i_receiver in range(n_patches):
-            if not visibility_matrix[i_source, i_receiver]:
-                continue
-            pairs[i_counter, 0] = i_source
-            pairs[i_counter, 1] = i_receiver
-            i_counter += 1
-    for i in numba.prange(n_combinations):
-        i_source = int(pairs[i, 0])
-        i_receiver = int(pairs[i, 1])
+    for i in numba.prange(visible_patches.shape[0]):
+        i_source = int(visible_patches[i, 0])
+        i_receiver = int(visible_patches[i, 1])
         source_center = patches_center[i_source]
         source_normal = patches_normal[i_source]
         receiver_center = patches_center[i_receiver]
@@ -966,27 +958,40 @@ def _calculate_area(points):
 
 # @numba.jit(nopython=True)
 def _calculate_energy_exchange(
-        form_factors_tilde, patches_center, max_order_k, n_patches, n_bins):
+        visible_patches, form_factors_tilde, patches_center, max_order_k,
+        n_patches, n_bins):
     energy_exchange = np.zeros(
         (max_order_k+1, n_patches, n_patches, n_bins+1))
-    form_factors_tilde = form_factors_tilde
-    patches_center = patches_center
 
-    for ii in range(n_patches**3 * (max_order_k-2)):
-        k = (int(ii/(n_patches**3)) % n_patches)+2
-        h = int(ii/(n_patches**2)) % n_patches
-        j = int(ii/n_patches) % n_patches
-        i = ii % n_patches
-        distance = np.linalg.norm(
-            patches_center[i]-patches_center[j])
-        if k == 2:
-            energy_exchange[k, i, j, :-1] += form_factors_tilde[h, i, j, :]
-            energy_exchange[k, i, j, -1] = distance
-        else:
-            energy_exchange[k, i, j, :-1] += energy_exchange[
-                k-1, i, j, :-1]*form_factors_tilde[h, i, j, :]
-            energy_exchange[k, i, j, -1] = energy_exchange[
-                k-1, i, j, -1] + distance
+    for k in range(2, max_order_k+1):
+        for ii in range(visible_patches.shape[0]):
+            for jj in range(2):
+                if jj == 0:
+                    i = visible_patches[ii, 0]
+                    j = visible_patches[ii, 1]
+                else:
+                    j = visible_patches[ii, 0]
+                    i = visible_patches[ii, 1]
+                distance = np.linalg.norm(
+                    patches_center[i]-patches_center[j])
+                energy = np.zeros((n_bins, ))
+                n_non_zero = np.zeros((n_bins, ), dtype=np.int64)
+                for h in range(n_patches):
+                    mask = form_factors_tilde[h, i, j, :] > 0
+                    if mask.sum() > 0:
+                        energy[mask] += form_factors_tilde[h, i, j, mask]
+                        n_non_zero[mask] += 1
+                energy = energy/n_non_zero
+                assert np.sum(energy - form_factors_tilde[j, i, j, :]) < 1e-12
+                if np.sum(n_non_zero) > 0:
+                    if k == 2:
+                        energy_exchange[k, i, j, :-1] = energy
+                        energy_exchange[k, i, j, -1] = distance
+                    else:
+                        energy_exchange[k, i, j, :-1] = energy_exchange[
+                            k-1, i, j, :-1]*energy
+                        energy_exchange[k, i, j, -1] = energy_exchange[
+                            k-1, i, j, -1] + distance
 
     return energy_exchange
 
