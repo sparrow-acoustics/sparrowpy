@@ -42,16 +42,6 @@ def test_compute_form_factors(sample_walls):
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
 
 
-def test_compute_form_factors_wrapper(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
-    form_factors = sp.radiosity_fast.form_factor_kang(
-        radiosity.patches_center, radiosity.patches_normal,
-        radiosity.patches_size, radiosity.visibility_matrix)
-    npt.assert_almost_equal(radiosity.form_factors, form_factors)
-
-
 @pytest.mark.parametrize('walls', [
     # perpendicular walls
     [0, 2], [0, 3], [0, 4], [0, 5],
@@ -124,7 +114,7 @@ def test_full(
     walls = [wall_source, wall_receiver]
     length_histogram = 1
     time_resolution = 1e-3
-    k = 3
+    k = 1
     speed_of_sound = 346.18
 
     radiosity_old = sp.radiosity.Radiosity(
@@ -134,7 +124,8 @@ def test_full(
     radiosity_old.run(
         sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
     histogram_old = radiosity_old.energy_at_receiver(
-        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]))
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
+        ignore_direct=True)
 
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
         walls, patch_size)

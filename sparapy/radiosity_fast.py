@@ -666,22 +666,28 @@ def calculate_init_energy(
         S_z = source_pos[indexes[2]]
 
         half_l = dd_l/2
-        half_n = dd_n/2
+        # half_n = dd_n/2
         half_m = dd_m/2
 
         sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
             dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
-
-        k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
+        test1 = (dl - half_l) <= S_x
+        test2 = S_x <= (dl + half_l)
+        k_phi = -1 if test1 and test2 else 1
+        # k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
         sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
             dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        if (sin_phi_delta-sin_phi) < 1e-11:
+            sin_phi *= -1
 
-        plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
-        minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
+        plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
+        minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
 
-        test1 = dl-half_l-S_x <= 1e-12
-        test2 = S_x -dl-half_l <= 1e-12
+        test1 = (dm - half_m) <= S_y
+        test2 = S_y <= (dm + half_m)
         k_beta = -1 if test1 and test2 else 1
+
+        # k_beta = -1 if (dn - half_n) <= S_z <= (dn + half_n) else 1
         beta = np.abs(plus-(k_beta*minus))
 
         energy[j] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
@@ -754,9 +760,8 @@ def form_factor_kang(
         normal vectors of all patches of shape (n_patches, 3)
     patches_size : np.ndarray
         size of all patches of shape (n_patches, 3)
-    visibility_matrix : np.ndarray
-        boolean matrix of shape (n_patches, n_patches) with True if patches
-        can see each other, otherwise false
+    visible_patches : np.ndarray
+        index list of all visible patches combinations (n_combinations, 2)
 
     Returns
     -------
