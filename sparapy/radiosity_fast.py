@@ -663,11 +663,11 @@ def _init_energy_0(
         S_z = source_pos[indexes[2]]
 
         half_l = dd_l/2
+        # half_n = dd_n/2
         half_m = dd_m/2
 
         sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
             dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
-
         test1 = (dl - half_l) <= S_x
         test2 = S_x <= (dl + half_l)
         k_phi = -1 if test1 and test2 else 1
@@ -906,9 +906,8 @@ def form_factor_kang(
         normal vectors of all patches of shape (n_patches, 3)
     patches_size : np.ndarray
         size of all patches of shape (n_patches, 3)
-    visibility_matrix : np.ndarray
-        boolean matrix of shape (n_patches, n_patches) with True if patches
-        can see each other, otherwise false
+    visible_patches : np.ndarray
+        index list of all visible patches combinations (n_combinations, 2)
 
     Returns
     -------
