@@ -1,7 +1,7 @@
 import numpy as np
 from sparapy.geometry import Polygon as polyg
 
-def sample_random(el: polyg, npoints=100):
+def sample_random(el: np.ndarray, npoints=100):
     """
     Randomly sample points on the surface of a patch using a uniform distribution
     
@@ -21,8 +21,8 @@ def sample_random(el: polyg, npoints=100):
 
     ptlist=np.zeros((npoints,3)) 
     
-    u = el.pts[1]-el.pts[0]
-    v = el.pts[-1]-el.pts[0]
+    u = el[1]-el[0]
+    v = el[-1]-el[0]
 
     for i in range(npoints):
         s = np.random.uniform()
@@ -30,15 +30,15 @@ def sample_random(el: polyg, npoints=100):
 
         inside = s+t <= 1
 
-        if len(el.pts)==3 and not inside: # if sample falls outside of triangular patch, it is "reflected" inside 
+        if len(el)==3 and not inside: # if sample falls outside of triangular patch, it is "reflected" inside 
             s = 1-s
             t = 1-t
         
-        ptlist[i] = s*u + t*v + el.pts[0]
+        ptlist[i] = s*u + t*v + el[0]
 
     return ptlist
 
-def sample_regular(el: polyg, npoints=10):
+def sample_regular(el: np.ndarray, npoints=10):
     """
     Sample points on the surface of a patch using a regular distribution 
     over the directions defined by the patches' sides
@@ -58,10 +58,10 @@ def sample_regular(el: polyg, npoints=10):
     # TO DO: check that patch satisfies conditions for proper sampling
     # TO DO: if patch has >4 sides, subdivide into triangular patches and process independently ?
 
-    u = el.pts[1]-el.pts[0]
-    v = el.pts[-1]-el.pts[0] 
+    u = el[1]-el[0]
+    v = el[-1]-el[0] 
 
-    if len(el.pts)==3:
+    if len(el)==3:
         a = 2
     else:
         a = 1
@@ -91,18 +91,18 @@ def sample_regular(el: polyg, npoints=10):
     # TO DO: find way to sample triangles more evenly 
 
     for i,s in enumerate(tt):
-        if len(el.pts)==3:
+        if len(el)==3:
             jj = i
 
         for t in tz[0:len(tz)-round(npointsz/npointsx*jj)]: 
 
             inside = s+t <= 1-thres
-            if not(len(el.pts)==3 and not inside):
-                ptlist.append(s*u + t*v + el.pts[0])
+            if not(len(el)==3 and not inside):
+                ptlist.append(s*u + t*v + el[0])
 
     return np.array(ptlist)
 
-def sample_border(el: polyg,npoints=3):
+def sample_border(el: np.ndarray, npoints=3):
     """
     Sample points on the boundary of a patch at fractional intervals of each side
     
@@ -120,19 +120,19 @@ def sample_border(el: polyg,npoints=3):
 
     n_div = npoints - 1 # this function was written with a different logic in mind -- needs refactoring
 
-    pts = np.empty((len(el.pts)*(npoints-1),len(el.pts[0])))
-    conn=[[[] for i in range(npoints)] for j in range(len(el.pts))]
+    pts = np.empty((len(el)*(npoints-1),len(el[0])))
+    conn=[[[] for i in range(npoints)] for j in range(len(el))]
 
-    for i in range(len(el.pts)):
+    for i in range(len(el)):
 
-        conn[i][0]= (i*n_div)%(n_div*len(el.pts))
-        conn[i][-1]= (i*n_div+n_div)%(n_div*len(el.pts))
+        conn[i][0]= (i*n_div)%(n_div*len(el))
+        conn[i][-1]= (i*n_div+n_div)%(n_div*len(el))
 
         for ii in range(0,n_div):
 
-            pts[i*n_div+ii,:]= (el.pts[i] + ii*(el.pts[(i+1)%len(el.pts)]-el.pts[i])/n_div)
+            pts[i*n_div+ii,:]= (el[i] + ii*(el[(i+1)%len(el)]-el[i])/n_div)
 
-            conn[i][ii]=(i*n_div+ii)%(n_div*len(el.pts))
+            conn[i][ii]=(i*n_div+ii)%(n_div*len(el))
 
 
     return pts,conn

@@ -28,7 +28,7 @@ def test_parallel_facing_patches(width, height, distance):
 
     computed = form_factor.calc_form_factor(emitting_patch=patch_1, receiving_patch=patch_2)
 
-    assert 100 * abs(computed-exact)/exact < 1.
+    assert 100 * abs(computed-exact)/exact < .5
 
 @pytest.mark.parametrize('width', [
     1.,2.,3.

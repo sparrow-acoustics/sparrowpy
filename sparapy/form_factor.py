@@ -16,9 +16,11 @@ def calc_form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode='ada
     match mode:
         case 'adaptive':
             if singularity_check(receiving_patch.pts, emitting_patch.pts):
-                return nusselt_integration(patch_i=emitting_patch, patch_j=receiving_patch, nsamples=64)
+                return nusselt_integration(patch_i=emitting_patch.pts, patch_i_normal=emitting_patch.normal, patch_j=receiving_patch.pts, patch_j_normal=receiving_patch.normal, nsamples=64)
             else:
-                return stokes_integration(patch_i=emitting_patch, patch_j=receiving_patch, approx_order=4)
+                return stokes_integration(patch_i=emitting_patch.pts, patch_j=receiving_patch.pts, source_area=emitting_patch.area,  approx_order=4)
+        case 'naive':
+            return naive_integration()
 
 
 #######################################################################################
@@ -85,11 +87,36 @@ def naive_integration(patch_i: Polygon, patch_j: Polygon, n_samples=4, random=Fa
 
     for i_pt in i_samples:
         for j_pt in j_samples:
-            int_accum+= ffunction(i_pt, j_pt, patch_i.normal, patch_j.normal)*(patch_i.area/len(i_samples))*(patch_j.area/len(j_samples))
+            int_accum+= ffunction(i_pt, j_pt, patch_i.normal, patch_j.normal)
   
-    return int_accum/patch_i.area
+    return int_accum * patch_j.area / ( len(j_samples) * len(j_samples) )
 
-def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=4):
+def naive_pt_integration(pt: np.ndarray, patch: Polygon, mode='source', n_samples=4, random=False):
+    """
+
+
+    """
+
+    if random:
+        surfsampling = sampling.sample_random
+    else:
+        surfsampling = sampling.sample_regular
+
+    int_accum = 0. # initialize integral accumulator variable
+
+    patch_samples = surfsampling(patch.pts, npoints=n_samples)
+
+    if mode == 'source':
+        source_area = patch.area
+    elif mode == 'receiver':
+        source_area = 1
+
+    for patch_pt in patch_samples:
+        int_accum+= ffunction(pt, patch_pt, patch_pt-pt, patch.normal)*(patch.area/len(patch_samples))
+  
+    return int_accum / source_area
+
+def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: float, approx_order=4):
     """
     calculate an estimation of the form factor between two patches 
     by computationally integrating a modified form function over the two patch boundaries.
@@ -149,10 +176,10 @@ def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=4):
                 outer_integral += poly_integration(quadfactors,xi)
 
 
-    return abs(outer_integral/(2*PI*patch_i.area))
+    return abs(outer_integral/(2*PI*source_area))
 
 
-def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=False, plotflag=False):
+def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray, patch_j_normal: np.ndarray, nsamples=2, random=False, plotflag=False):
     """
     Estimates the form factor by integrating the Nusselt analogue values (emitting patch) 
     over the surface of the receiving patch
@@ -183,15 +210,15 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
     out = 0
 
     for p0 in p0_array:
-        out += nusselt_analog(surf_origin=p0, surf_normal=patch_j.normal, patch=patch_i)
+        out += nusselt_analog(surf_origin=p0, surf_normal=patch_j_normal, patch_points=patch_i, patch_normal=patch_i_normal)
 
     return out / (PI * len(p0_array))
 
-def nusselt_analog(surf_origin, surf_normal, patch, plotflag=False) -> float:
+def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal, plotflag=False) -> float:
 
-    boundary_points, connectivity = sampling.sample_border(patch, npoints=3) # 3 points per boundary segment (for quadratic approximation)
+    boundary_points, connectivity = sampling.sample_border(patch_points, npoints=3) # 3 points per boundary segment (for quadratic approximation)
 
-    hand = np.sign(np.inner(np.cross( patch.pts[1]-patch.pts[0] , patch.pts[2]-patch.pts[1] ), patch.normal) )
+    hand = np.sign(np.inner(np.cross( patch_points[1]-patch_points[0] , patch_points[2]-patch_points[1] ), patch_normal) )
 
     curved_area = 0
         
