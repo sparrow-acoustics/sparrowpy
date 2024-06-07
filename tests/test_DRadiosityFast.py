@@ -177,7 +177,6 @@ def test_form_factors_directivity_for_diffuse(
     wall_source = sample_walls[walls[0]]
     wall_receiver = sample_walls[walls[1]]
     walls = [wall_source, wall_receiver]
-    k = 5
 
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
         walls, patch_size)
@@ -192,7 +191,7 @@ def test_form_factors_directivity_for_diffuse(
         np.arange(len(walls)),
         pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
     radiosity.calculate_form_factors_directivity()
-    radiosity.calculate_energy_exchange(k)
+    # radiosity.calculate_energy_exchange(k)
     # radiosity.init_energy(source_pos)
     # histogram = radiosity.collect_energy_receiver(
     #     receiver_pos, speed_of_sound=speed_of_sound,
