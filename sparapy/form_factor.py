@@ -4,7 +4,8 @@ import sparapy.ff_helpers.geom as geom
 import sparapy.ff_helpers.sampling as sampling
 from sparapy.ff_helpers.integrate_line import poly_estimation,poly_integration
 from sparapy.geometry import Polygon 
-
+import numba as nb
+from numba import njit
 import matplotlib.pyplot as plt
 
 #######################################################################################
@@ -150,6 +151,7 @@ def stokes_integration(patch_i: Polygon, patch_j: Polygon, approx_order=4):
 
     return abs(outer_integral/(2*PI*patch_i.area))
 
+
 def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=False, plotflag=False):
     """
     Estimates the form factor by integrating the Nusselt analogue values (emitting patch) 
@@ -171,7 +173,7 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
             if True, the samples are randomly distributed in a uniform way
             if False, a regular sampling of the surface is performed
     """
-    hand = np.sign(np.inner(np.cross( patch_i.pts[1]-patch_i.pts[0] , patch_i.pts[2]-patch_i.pts[1] ), patch_i.normal) )
+    
 
     if random:
         p0_array = sampling.sample_random(patch_j,nsamples)
@@ -180,73 +182,74 @@ def nusselt_integration(patch_i: Polygon, patch_j: Polygon, nsamples=2, random=F
 
     out = 0
 
-    b_points, connectivity = sampling.sample_border(patch_i, npoints=3) # 3 points per boundary segment (for quadratic approximation)
-
-    sphPts = np.empty_like( b_points )
-    plnPts = np.empty( shape=(len(b_points),2) )
-
     for p0 in p0_array:
+        out += nusselt_analog(surf_origin=p0, surf_normal=patch_j.normal, patch=patch_i)
 
-        curved_area = 0
-        
-        for ii in range(len(b_points)):
-            sphPts[ii] = ((b_points[ii]-p0)/np.linalg.norm(b_points[ii]-p0)) # patch j points projected on the hemisphere
-
-        
-        for ii in range(len(sphPts)):
-            plnPts[ii,:] = np.inner(geom.rotation_matrix(patch_j.normal),sphPts[ii])[:-1] # points on the hemisphere projected onto 
-
-        if plotflag:
-            fig, ax = plt.subplots()
-            circle = plt.Circle((0,0), 1, color='blue', alpha=0.1)
-            ax.add_patch(circle)
-            ax.plot(plnPts[:,0] , plnPts[:,1], 'r*')
-            ax.grid()
-            ax.set_aspect('equal')
-            plt.xlim([-1.2,1.2])
-            plt.ylim([-1.2,1.2])
-            plt.show()
-
-        projPolyArea = polygon_area(plnPts[0::2])
-
-        for segmt in connectivity:
-
-            if abs(np.cross(plnPts[segmt[-1]],plnPts[segmt[0]])) > 1e-12:
-
-                if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
-                    curved_area += area_under_curve(plnPts[segmt],order=2,plotflag=plotflag)
-
-                else:                                                                       # if points span over 90º, additional sampling is required
-                    mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
-                    marc = mpoint/np.linalg.norm(mpoint) # midpoint on the arc projected on the hemisphere
-                    a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
-                    b = marc + (sphPts[segmt[-1]] - marc) / 2
-
-                    mpoint = np.inner(geom.rotation_matrix(patch_j.normal),mpoint)[:-1]
-                    marc = np.inner(geom.rotation_matrix(patch_j.normal),marc)[:-1]
-                    a = a/np.linalg.norm(a)
-                    a = np.inner(geom.rotation_matrix(patch_j.normal),a)[:-1]
-
-                    b = b/np.linalg.norm(b)
-                    b = np.inner(geom.rotation_matrix(patch_j.normal),b)[:-1]
-
-                    if plotflag:
-                        ax.plot(a[0] , a[1], 'g*')
-                        ax.plot(b[0] , b[1], 'g*')
-                        ax.plot(marc[0] , marc[1], 'b*')
-
-
-                    linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
-                    left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]), order=2, plotflag=plotflag)
-                    right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]), order=2, plotflag=plotflag)
-                    curved_area += hand*(linArea * np.sign(left) + left + right)
-
-        
-        out += projPolyArea + curved_area 
-
-
-       
     return out / (PI * len(p0_array))
+
+def nusselt_analog(surf_origin, surf_normal, patch, plotflag=False) -> float:
+
+    boundary_points, connectivity = sampling.sample_border(patch, npoints=3) # 3 points per boundary segment (for quadratic approximation)
+
+    hand = np.sign(np.inner(np.cross( patch.pts[1]-patch.pts[0] , patch.pts[2]-patch.pts[1] ), patch.normal) )
+
+    curved_area = 0
+        
+    sphPts = np.empty_like( boundary_points )
+    plnPts = np.empty( shape=(len(boundary_points),2) )
+
+    for ii in range(len(boundary_points)):
+        sphPts[ii] = ((boundary_points[ii]-surf_origin)/np.linalg.norm(boundary_points[ii]-surf_origin)) # patch j points projected on the hemisphere
+
+    for ii in range(len(sphPts)):
+        plnPts[ii,:] = np.inner(geom.rotation_matrix(surf_normal),sphPts[ii])[:-1] # points on the hemisphere projected onto 
+
+    if plotflag:
+        fig, ax = plt.subplots()
+        circle = plt.Circle((0,0), 1, color='blue', alpha=0.1)
+        ax.add_patch(circle)
+        ax.plot(plnPts[:,0] , plnPts[:,1], 'r*')
+        ax.grid()
+        ax.set_aspect('equal')
+        plt.xlim([-1.2,1.2])
+        plt.ylim([-1.2,1.2])
+        plt.show()
+
+    polygon_area(plnPts[0::2])
+
+    for segmt in connectivity:
+
+        if abs(np.cross(plnPts[segmt[-1]],plnPts[segmt[0]])) > 1e-12:
+
+            if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
+                curved_area += area_under_curve(plnPts[segmt],order=2,plotflag=plotflag)
+
+            else:                                                                       # if points span over 90º, additional sampling is required
+                mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
+                marc = mpoint/np.linalg.norm(mpoint) # midpoint on the arc projected on the hemisphere
+                a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
+                b = marc + (sphPts[segmt[-1]] - marc) / 2
+
+                mpoint = np.inner(geom.rotation_matrix(surf_normal),mpoint)[:-1]
+                marc = np.inner(geom.rotation_matrix(surf_normal),marc)[:-1]
+                a = a/np.linalg.norm(a)
+                a = np.inner(geom.rotation_matrix(surf_normal),a)[:-1]
+
+                b = b/np.linalg.norm(b)
+                b = np.inner(geom.rotation_matrix(surf_normal),b)[:-1]
+
+                if plotflag:
+                    ax.plot(a[0] , a[1], 'g*')
+                    ax.plot(b[0] , b[1], 'g*')
+                    ax.plot(marc[0] , marc[1], 'b*')
+
+
+                linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
+                left =  area_under_curve(np.array([plnPts[segmt[0]],a,marc]), order=2, plotflag=plotflag)
+                right = area_under_curve(np.array([marc,b,plnPts[segmt[-1]]]), order=2, plotflag=plotflag)
+                curved_area += hand*(linArea * np.sign(left) + left + right)
+
+    return polygon_area(plnPts[0::2]) + curved_area
 
 #######################################################################################
 ### helpers

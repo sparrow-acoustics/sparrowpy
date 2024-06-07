@@ -84,13 +84,26 @@ class Polygon():
     @property
     def area(self) -> np.ndarray:
         """Return the area in m^2 of the polygon.
-        valid only for triangles and squares/rectangles/parallelograms
+        supports all convex polygons and some concave polygons
         """
-        if len(self.pts) == 3:
-            area  = .5*np.linalg.norm(np.cross(self.pts[1]-self.pts[0], self.pts[2]-self.pts[0]))
 
-        if len(self.pts) == 4:
-            area  = .5*np.linalg.norm(np.cross(self.pts[3]-self.pts[2], self.pts[0]-self.pts[2])) + .5*np.linalg.norm(np.cross(self.pts[1]-self.pts[0], self.pts[2]-self.pts[0]))
+        area = 0
+
+        if len(self.pts) == 3:
+            area_pts = np.array([self.pts])
+
+        elif len(self.pts) == 4:
+            area_pts = np.array([self.pts[0:3],[self.pts[2],self.pts[3],self.pts[0]] ])
+
+        else:
+            area_pts = np.empty((self.pts.shape[0],3,3)) # slow, can be optimized
+
+            for i in range(area_pts.shape[0]):
+                area_pts[i] = np.array([self.pts[i%self.pts.shape[0]], self.pts[(i+1)%self.pts.shape[0]], self.center])
+
+        for tri in area_pts:
+            area  +=  .5*np.linalg.norm(np.cross(tri[1]-tri[0], tri[2]-tri[0]))
+        
         return area
 
     @property
