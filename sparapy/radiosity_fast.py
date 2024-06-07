@@ -105,14 +105,8 @@ class DRadiosityFast():
     def init_energy(self, source_position):
         """Calculate the initial energy."""
         # write or read energy to file
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        file_path = os.path.join(dir_path, 'energy_exchange.far')
-        if self._wrote_energy:
-            data = pf.io.read(file_path)
-            self.energy_exchange = data['energy_exchange']
-        else:
-            pf.io.write(file_path, energy_exchange=self.energy_exchange)
-            self._wrote_energy = True
+        self.energy_exchange = np.zeros(
+            (2, self.n_patches, self.n_patches, self.n_bins+1))
         # calculate initial energy
 
         energy_0, distance_0 = _init_energy_0(
@@ -142,6 +136,8 @@ class DRadiosityFast():
             scattering, scattering_index)
         self.energy_exchange[1, :, :, :-1] = energy_1
         self.energy_exchange[1, :, :, -1] = distance_1
+        self.energy_1 = energy_1
+        self.distance_1 = distance_1
 
 
     def collect_energy_receiver(
@@ -218,6 +214,20 @@ class DRadiosityFast():
             self._air_attenuation, np.array(self._absorption), self._absorption_index,
             self._patch_to_wall_ids, np.array(self._scattering), self._scattering_index,
             sources_array, receivers_array)
+
+    def calculate_energy_exchange_recursive(
+            self, receiver_pos, speed_of_sound, histogram_time_resolution,
+            histogram_length, threshold=1e-6):
+        n_samples = int(histogram_length/histogram_time_resolution)
+        ir = [np.zeros((n_samples)) for _ in range(self.n_bins)]
+        patch_receiver_distance = self.patches_center - receiver_pos
+        _calculate_energy_exchange_recursive(
+            ir, self.energy_1, self.distance_1, self._form_factors_tilde,
+            self.n_patches, patch_receiver_distance, self._air_attenuation,
+            speed_of_sound, histogram_time_resolution, self.patches_normal,
+            threshold=threshold)
+        return ir
+
 
     def calculate_energy_exchange(self, max_order_k: int):
         """Calculate the energy exchange.
@@ -1144,32 +1154,58 @@ def _init_energy_1(
 
 def _energy_exchange(
         ir, h, i, energy, distance, form_factors_tilde, distance_1,
-        threshold=1e-12):
+        patch_receiver_distance, air_attenuation, speed_of_sound,
+        histogram_time_resolution, patches_normal, threshold=1e-12,):
     n_patches = form_factors_tilde.shape[0]
     energy_new = energy * form_factors_tilde[h, i, :]
-    distance_new = distance + distance_1[i]
     for j in range(n_patches):
-        if energy_new[i] >= threshold:
-            energy_new += energy * form_factors_tilde[h, i, j]
-            _collect_receiver_energy(
-                ir, energy_new, distance_new)
+        distance_new = distance + distance_1[i, j]
+        if energy_new[j] >= threshold:
+            # energy_new += energy * form_factors_tilde[h, i, j]
+            ir = _collect_receiver_energy(
+                ir, energy_new[j], distance_new, patch_receiver_distance[j],
+                air_attenuation,
+                speed_of_sound, histogram_time_resolution, patches_normal)
             _energy_exchange(
-                ir, h, i, energy_new, distance_new, form_factors_tilde, distance_1)
+                ir, h, i, energy_new[j], distance_new, form_factors_tilde,
+                distance_1, patch_receiver_distance, air_attenuation,
+                speed_of_sound, histogram_time_resolution, patches_normal
+                )
 
-def _collect_receiver_energy(ir, energy, distance):
-    pass
+def _collect_receiver_energy(
+        ir, energy, distance, patch_receiver_distance, air_attenuation,
+        speed_of_sound, histogram_time_resolution, patches_normal):
+
+        R = np.linalg.norm(patch_receiver_distance)
+        d = distance+R
+        samples_delay = int(d/speed_of_sound/histogram_time_resolution)
+
+        cos_xi = np.abs(np.sum(
+            patches_normal*np.abs(patch_receiver_distance))) / R
+
+        # Equation 20
+        receiver_factor = cos_xi * (np.exp(-air_attenuation*R)) / (
+            np.pi * R**2)
+        ir[samples_delay] += energy*receiver_factor
+
 
 # @numba.jit(nopython=True)
-def _calculate_energy_exchange(
+def _calculate_energy_exchange_recursive(
         ir, energy_1, distance_1, form_factors_tilde,
-        n_patches):
+        n_patches, patch_receiver_distance, air_attenuation,
+        speed_of_sound, histogram_time_resolution, patches_normal,
+        threshold=1e-12):
     for h in range(n_patches):
         for i in range(n_patches):
-            _energy_exchange(
-                ir, h, i, energy_1[h, i], distance_1[i], form_factors_tilde, distance_1)
+            for i_freq in range(energy_1.shape[-1]):
+                _energy_exchange(
+                    ir[i_freq], h, i, energy_1[h, i, i_freq], distance_1[h, i],
+                    form_factors_tilde[..., i_freq], distance_1,
+                    patch_receiver_distance,
+                    air_attenuation[i_freq], speed_of_sound,
+                    histogram_time_resolution, patches_normal,
+                    threshold=threshold)
 
-
-    return None
 
 
 def _get_scattering_data(
