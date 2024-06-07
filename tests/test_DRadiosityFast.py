@@ -407,7 +407,7 @@ def test_energy_exchange_simple_k1(
         patches_size.shape[0],  # receiver ids of patches
         radiosity_old.patch_list[0].E_n_samples,  # impulse response G_k(t)
         ))
-    for k in range(radiosity.energy_exchange.shape[0]):
+    for k in range(E_matrix.shape[1]):
         for i in range(radiosity.energy_exchange.shape[1]):
             for j in range(radiosity.energy_exchange.shape[2]):
                 e = radiosity.energy_exchange[k, i, j, 0]
@@ -416,11 +416,8 @@ def test_energy_exchange_simple_k1(
                 E_matrix[:, k, j, samples] += e
     E_matrix_old = np.concatenate(
         [p.E_matrix for p in radiosity_old.patch_list], axis=-2)
-    # npt.assert_almost_equal(
-    #     np.array(np.where(E_matrix>0)),
-    #     np.array(np.where(E_matrix_old>0)))
-    # total_energy = [0.3333333333333333, 0.07226813341876431]
-    for k in range(E_matrix.shape[1]):
+
+    for k in range(k):
         # npt.assert_almost_equal(np.sum(E_matrix[:, k]), total_energy[k])
         npt.assert_allclose(
             np.sum(E_matrix[:, k], axis=-1),
@@ -485,11 +482,27 @@ def test_init_source(sample_walls, sofa_data_diffuse):
     patches_normal = np.array(patches_normal)
     patches_size = np.array(patches_size)
 
-    energy_0, distance_0 = sp.radiosity_fast.calculate_init_energy(
-        source_pos, patches_center, patches_normal,
-        patches_size)
+    energy_0, distance_0 = sp.radiosity_fast._init_energy_0(
+        source_pos, patches_center, patches_normal, radiosity._air_attenuation,
+        patches_size, radiosity._n_bins)
+
+    sources_array = np.array([s.cartesian for s in radiosity._sources])
+    receivers_array = np.array([s.cartesian for s in radiosity._receivers])
+    energy_1, distance_1 = sp.radiosity_fast._init_energy_1(
+        energy_0, distance_0, source_pos, patches_center,
+        patches_normal, radiosity._visible_patches,
+        radiosity._air_attenuation, patches_size, radiosity._n_bins,
+        radiosity._patch_to_wall_ids,
+        radiosity._absorption, radiosity._absorption_index,
+        radiosity.form_factors, sources_array, receivers_array,
+        radiosity._scattering, radiosity._scattering_index)
 
     idx =  np.where(radiosity_old.patch_list[0].E_matrix[0,0, ...]>0)
     npt.assert_almost_equal(
-        energy_0[:4],
+        energy_0[:4, 0],
         radiosity_old.patch_list[0].E_matrix[0,0, idx[0], idx[1]]*1)
+
+    idx =  np.where(radiosity_old.patch_list[0].E_matrix[0,1, ...]>0)
+    npt.assert_almost_equal(
+        energy_1[:4, 0],
+        radiosity_old.patch_list[0].E_matrix[0,1, idx[0], idx[1]]*1)
