@@ -184,10 +184,10 @@ def stokes_pt_integration(point: np.ndarray, patch: np.ndarray, source_area: flo
 
     """
 
-    if mode == 'receiver':
-        source_area = source_area
-    elif mode == 'source':
-        source_area = 1
+    # if mode == 'receiver':
+    #     source_area = source_area
+    # elif mode == 'source':
+    #     source_area = 1
 
     j_bpoints, j_conn = sampling.sample_border(patch, npoints=approx_order+1)
 
@@ -211,7 +211,33 @@ def stokes_pt_integration(point: np.ndarray, patch: np.ndarray, source_area: flo
                 integral += abs(poly_integration(quadfactors,xj))                          # analytical integration of the approx polynomial
 
 
-    return abs(integral/(2*PI*source_area)**2)
+    ll = 0
+    for s in j_conn:
+        ll += np.linalg.norm(j_bpoints[s[-1]]-j_bpoints[s[0]])
+
+    return source_area/ll*abs(integral/(2*PI))
+
+def nusselt_pt_solution(point: np.ndarray, patch_points: np.ndarray):
+    """
+
+    """
+
+    npoints = len(patch_points)
+
+    interior_angle_sum = 0
+
+    patch_onsphere = np.divide( (patch_points-point) , np.repeat(np.linalg.norm(patch_points-point, axis=1)[:,np.newaxis],3,axis=1) )
+
+    for i in range(npoints): 
+
+        v0 = calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i-1)%npoints])
+        v1 = calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i+1)%npoints])
+
+        interior_angle_sum += np.arccos(np.dot(v0,v1))
+
+    factor = interior_angle_sum - (len(patch_points)-2)*np.pi
+
+    return factor / (4 * np.pi)
 
 def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray, patch_j_normal: np.ndarray, nsamples=2, random=False, plotflag=False):
     """
@@ -400,6 +426,19 @@ def area_under_curve(ps, order=2, plotflag=False):
 
         ax.plot(smoothpts[0], smoothpts[1], 'r--')
 
-
-
     return area
+
+def calculate_tangent_vector(v0,v1):
+
+    
+
+    if np.inner(v0,v1)!=0:
+        scale = np.sqrt( np.square( np.linalg.norm(np.cross(v0,v1))/np.inner(v0,v1) ) + np.square( np.linalg.norm(v0) ) )
+
+        vout = v1*scale - v0
+        vout /= np.linalg.norm(vout)
+
+    else:
+        vout = v1/np.linalg.norm(v1)
+
+    return vout

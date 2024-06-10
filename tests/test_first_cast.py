@@ -60,16 +60,52 @@ def test_stokes_source_cast(l, src, patchsize, absor):
     rpatch = Patches(polygon=patch_pos, max_size=patchsize*l, other_wall_ids=[], wall_id=[0], absorption=absor)
     
     t0 = time.time()
-    stokes = form_factor.stokes_pt_integration(point=np.array([src.position]), patch=patch_pos.pts, source_area=1)
+    stokes = form_factor.stokes_pt_integration(point=np.array([src.position]), patch=patch_pos.pts, source_area=patch_pos.area)
     tf = time.time()-t0
 
     rpatch.nbins = 1
     rpatch.init_energy_exchange(source=src, max_order_k=0, ir_length_s=.5)
 
-    rel_error = abs(sum(rpatch.E_matrix[rpatch.E_matrix!=0]) - stokes*(1-absor))/sum(rpatch.E_matrix[rpatch.E_matrix!=0])
+    true = sum(rpatch.E_matrix[rpatch.E_matrix!=0])
 
-    assert tf<0.003
-    assert rel_error < 1./100
+    rel_error = abs(true - stokes*(1-absor))/true
+
+    assert tf<0.0015
+    assert rel_error < .5/100
+
+@pytest.mark.parametrize('l', [
+    .1,.2,.5,1,2,3,4,5,6
+    ])
+@pytest.mark.parametrize('src', [
+    SoundSource(position=np.array([1,7,1]), view=np.array([0,-1,0]),
+            up=np.array([0,0,1]))
+    ])
+@pytest.mark.parametrize('patchsize', [
+    .1
+    ])
+@pytest.mark.parametrize('absor', [
+    0.1, .2, .5
+    ])
+def test_nusselt_source_cast(l, src, patchsize, absor):
+    """Test universal form factor calculation for facing parallel patches of equal dimensions"""
+
+    patch_pos = geo.Polygon(points=[[0,0,0],[l, 0, 0],[l, 0, l],[0,0,l]], normal=[0,1,0], up_vector=[1,0,0])
+
+    rpatch = Patches(polygon=patch_pos, max_size=patchsize*l, other_wall_ids=[], wall_id=[0], absorption=absor)
+    
+    t0 = time.time()
+    nuss = form_factor.nusselt_pt_solution(point=src.position, patch_points=patch_pos.pts)
+    tf = time.time()-t0
+
+    rpatch.nbins = 1
+    rpatch.init_energy_exchange(source=src, max_order_k=0, ir_length_s=.5)
+
+    true = sum(rpatch.E_matrix[rpatch.E_matrix!=0])
+
+    rel_error = abs(true - nuss*(1-absor))/true
+
+    assert tf<0.0015
+    assert rel_error < .2/100
     
 
 @pytest.mark.parametrize('rpatch', [
