@@ -104,9 +104,6 @@ class DRadiosityFast():
 
     def init_energy(self, source_position):
         """Calculate the initial energy."""
-        # write or read energy to file
-        self.energy_exchange = np.zeros(
-            (2, self.n_patches, self.n_patches, self.n_bins+1))
         # calculate initial energy
 
         energy_0, distance_0 = _init_energy_0(
@@ -136,6 +133,34 @@ class DRadiosityFast():
             scattering, scattering_index)
         self.energy_exchange[1, :, :, :-1] = energy_1
         self.energy_exchange[1, :, :, -1] = distance_1
+        self.energy_1 = energy_1
+        self.distance_1 = distance_1
+
+
+    def init_energy_recursive(self, source_position):
+        """Calculate the initial energy."""
+        # calculate initial energy
+
+        energy_0, distance_0 = _init_energy_0(
+            source_position, self.patches_center, self.patches_normal,
+            self._air_attenuation, self.patches_size, self.n_bins)
+        patch_to_wall_ids = self._patch_to_wall_ids
+        absorption = self._absorption
+        absorption_index = self._absorption_index
+        sources = self._sources
+        receivers = self._receivers
+        scattering = self._scattering
+        scattering_index = self._scattering_index
+        form_factors = self.form_factors
+        energy_1, distance_1 = _init_energy_1(
+            energy_0, distance_0, source_position,
+            self.patches_center, self._visible_patches,
+            self._air_attenuation, self._n_bins, patch_to_wall_ids,
+            absorption, absorption_index,
+            form_factors, sources, receivers,
+            scattering, scattering_index)
+        self.energy_0 = energy_0
+        self.distance_0 = distance_0
         self.energy_1 = energy_1
         self.distance_1 = distance_1
 
@@ -218,15 +243,40 @@ class DRadiosityFast():
     def calculate_energy_exchange_recursive(
             self, receiver_pos, speed_of_sound, histogram_time_resolution,
             histogram_length, threshold=1e-6):
+
         n_samples = int(histogram_length/histogram_time_resolution)
         ir = [np.zeros((n_samples)) for _ in range(self.n_bins)]
         patch_receiver_distance = self.patches_center - receiver_pos
+        # add first 2 order energy exchange
+        air_attenuation = self._air_attenuation
+        patches_normal = self._patches_normal
+        for i_freq in range(self.n_bins):
+            for i in range(self.n_patches):
+                if self.energy_0[i, i_freq] > 0:
+                    _collect_receiver_energy(
+                        ir[i_freq], self.energy_0[i, i_freq],
+                        self.distance_0[i],
+                        patch_receiver_distance[i],
+                        air_attenuation[i_freq],
+                        speed_of_sound, histogram_time_resolution,
+                        patches_normal[i, :])
+                for j in range(self.n_patches):
+                    if self.energy_1[i, j, i_freq] > 0:
+                        _collect_receiver_energy(
+                            ir[i_freq], self.energy_1[i, j, i_freq],
+                            self.distance_1[i, j],
+                            patch_receiver_distance[j],
+                            air_attenuation[i_freq],
+                            speed_of_sound, histogram_time_resolution,
+                            patches_normal[j, :])
+
+        # add remaining energy
         _calculate_energy_exchange_recursive(
             ir, self.energy_1, self.distance_1, self._form_factors_tilde,
             self.n_patches, patch_receiver_distance, self._air_attenuation,
             speed_of_sound, histogram_time_resolution, self.patches_normal,
             threshold=threshold)
-        return ir
+        return np.array(ir)
 
 
     def calculate_energy_exchange(self, max_order_k: int):
@@ -267,7 +317,7 @@ class DRadiosityFast():
         wall_indexes : list[int]
             list of walls for the scattering data
         absorption : pf.FrequencyData
-            scattering data of cshape (1, )
+            absorption coefficient of cshape (1, )
 
         """
         self._check_set_frequency(absorption.frequencies)
@@ -276,7 +326,7 @@ class DRadiosityFast():
             self._absorption_index.fill(-1)
             self._absorption = []
 
-        self._absorption.append(absorption.freq.squeeze())
+        self._absorption.append(np.atleast_1d(absorption.freq.squeeze()))
         self._absorption_index[wall_indexes] = len(self._absorption)-1
 
 
@@ -290,7 +340,7 @@ class DRadiosityFast():
 
         """
         self._check_set_frequency(air_attenuation.frequencies)
-        self._air_attenuation = air_attenuation.freq.squeeze()
+        self._air_attenuation = np.atleast_1d(air_attenuation.freq.squeeze())
 
     def set_wall_scattering(
             self, wall_indexes:list[int],
@@ -1162,14 +1212,16 @@ def _energy_exchange(
         distance_new = distance + distance_1[i, j]
         if energy_new[j] >= threshold:
             # energy_new += energy * form_factors_tilde[h, i, j]
-            ir = _collect_receiver_energy(
+            _collect_receiver_energy(
                 ir, energy_new[j], distance_new, patch_receiver_distance[j],
                 air_attenuation,
-                speed_of_sound, histogram_time_resolution, patches_normal)
+                speed_of_sound, histogram_time_resolution,
+                patches_normal[j, :])
             _energy_exchange(
-                ir, h, i, energy_new[j], distance_new, form_factors_tilde,
+                ir, i, j, energy_new, distance_new, form_factors_tilde,
                 distance_1, patch_receiver_distance, air_attenuation,
-                speed_of_sound, histogram_time_resolution, patches_normal
+                speed_of_sound, histogram_time_resolution, patches_normal,
+                threshold=threshold
                 )
 
 def _collect_receiver_energy(
@@ -1195,9 +1247,9 @@ def _calculate_energy_exchange_recursive(
         n_patches, patch_receiver_distance, air_attenuation,
         speed_of_sound, histogram_time_resolution, patches_normal,
         threshold=1e-12):
-    for h in range(n_patches):
-        for i in range(n_patches):
-            for i_freq in range(energy_1.shape[-1]):
+    for i_freq in range(energy_1.shape[-1]):
+        for h in range(n_patches):
+            for i in range(n_patches):
                 _energy_exchange(
                     ir[i_freq], h, i, energy_1[h, i, i_freq], distance_1[h, i],
                     form_factors_tilde[..., i_freq], distance_1,
@@ -1205,7 +1257,6 @@ def _calculate_energy_exchange_recursive(
                     air_attenuation[i_freq], speed_of_sound,
                     histogram_time_resolution, patches_normal,
                     threshold=threshold)
-
 
 
 def _get_scattering_data(

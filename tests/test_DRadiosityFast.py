@@ -435,7 +435,6 @@ def test_energy_exchange_simple_k1(
         # npt.assert_almost_equal(histogram[:, i], histogram_old[0, :])
 
 
-
 @pytest.mark.parametrize('patch_size', [
     1/3,
     # 0.2,
@@ -496,9 +495,10 @@ def test_recursive(
     radiosity.calculate_form_factors()
     radiosity.calculate_form_factors_directivity()
 
-    radiosity.init_energy(source_pos)
+    radiosity.init_energy_recursive(source_pos)
     histogram = radiosity.calculate_energy_exchange_recursive(
-        receiver_pos, speed_of_sound, time_resolution, length_histogram)
+        receiver_pos, speed_of_sound, time_resolution, length_histogram,
+        threshold=1e-8)
 
     patches_center = []
     patches_normal = []
@@ -543,11 +543,96 @@ def test_recursive(
 
     # compare histogram
     for i in range(4):
-        assert np.sum(histogram[:, i])>0
+        assert np.sum(histogram[i, :])>0
         npt.assert_allclose(
-            np.sum(histogram[:, i]), np.sum(histogram_old[0, :]),
+            np.sum(histogram[i, :]), np.sum(histogram_old[0, :]),
             err_msg=f'histogram i_bin={i}')
+        # npt.assert_almost_equal(histogram[0, :], histogram_old[0, :])
+
+
+@pytest.mark.parametrize('patch_size', [
+    1/3,
+    # 0.2,
+    0.5,
+    1,
+    ])
+@pytest.mark.parametrize('source_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    np.array([0.25, 0.25, 0.25]),
+    ])
+@pytest.mark.parametrize('receiver_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    np.array([0.25, 0.25, 0.25]),
+    ])
+def test_recursive_k2(
+        patch_size, source_pos, receiver_pos, sample_walls, sofa_data_diffuse):
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
+    data, sources, receivers = sofa_data_diffuse
+    walls = [0, 1]
+
+    # source_pos = np.array([0.3, 0.5, 0.5])
+    # receiver_pos = np.array([0.5, 0.5, 0.5])
+    wall_source = sample_walls[walls[0]]
+    wall_receiver = sample_walls[walls[1]]
+    walls = [wall_source, wall_receiver]
+    length_histogram = 0.1
+    time_resolution = 1e-3
+    speed_of_sound = 346.18
+
+    radiosity_old = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity_old.set_wall_scattering(
+        np.arange(len(walls)), data, sources, receivers)
+    radiosity_old.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity_old.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity_old.check_visibility()
+    radiosity_old.calculate_form_factors()
+    radiosity_old.calculate_form_factors_directivity()
+    radiosity_old.calculate_energy_exchange(1)
+    radiosity_old.init_energy(source_pos)
+    histogram_old = radiosity_old.collect_energy_receiver(
+        receiver_pos, speed_of_sound=speed_of_sound,
+        histogram_time_resolution=time_resolution,
+        histogram_time_length=length_histogram)
+
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(walls)), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    radiosity.calculate_form_factors_directivity()
+
+    radiosity.init_energy_recursive(source_pos)
+    histogram = radiosity.calculate_energy_exchange_recursive(
+        receiver_pos, speed_of_sound, time_resolution, length_histogram,
+        threshold=1)
+
+    # compare energy
+    for i in range(4):
+        npt.assert_allclose(
+            radiosity_old.energy_1, radiosity.energy_1)
         # npt.assert_almost_equal(histogram[:, i], histogram_old[0, :])
+
+    # compare histogram
+    for i in range(4):
+        assert np.sum(histogram[i, :])>0
+        npt.assert_allclose(
+            np.sum(histogram[i, :]), np.sum(histogram_old[:, i]),
+            err_msg=f'histogram i_bin={i}')
+        # npt.assert_almost_equal(histogram[i, :], histogram_old[:, 0])
 
 
 def test_init_source(sample_walls, sofa_data_diffuse):
