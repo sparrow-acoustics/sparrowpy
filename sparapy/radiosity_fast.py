@@ -242,7 +242,7 @@ class DRadiosityFast():
 
     def calculate_energy_exchange_recursive(
             self, receiver_pos, speed_of_sound, histogram_time_resolution,
-            histogram_length, threshold=1e-6):
+            histogram_length, threshold=1e-6, max_time=0.1):
 
         n_samples = int(histogram_length/histogram_time_resolution)
         ir = [np.zeros((n_samples)) for _ in range(self.n_bins)]
@@ -275,7 +275,7 @@ class DRadiosityFast():
             ir, self.energy_1, self.distance_1, self._form_factors_tilde,
             self.n_patches, patch_receiver_distance, self._air_attenuation,
             speed_of_sound, histogram_time_resolution, self.patches_normal,
-            threshold=threshold)
+            threshold=threshold, max_time=max_time)
         return np.array(ir)
 
 
@@ -976,7 +976,7 @@ def _calculate_area(points):
         size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
             + size[..., 0]*size[..., 2])
 
-# @numba.jit(nopython=True)
+@numba.jit(nopython=True, parallel=True)
 def _calculate_energy_exchange(
         visible_patches, form_factors_tilde, patches_center, max_order_k,
         n_patches, n_bins):
@@ -1016,7 +1016,7 @@ def _calculate_energy_exchange(
     return energy_exchange
 
 
-# @numba.jit(parallel=True)
+@numba.jit(nopython=True, parallel=True)
 def _init_energy_0(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, air_attenuation:np.ndarray,
@@ -1120,6 +1120,7 @@ def _init_energy_0(
     return (energy, distance_out)
 
 
+@numba.jit(nopython=True)
 def _init_energy_1(
         energy_0, distance_0, source_position: np.ndarray,
         patches_center: np.ndarray, visible_patches: np.ndarray,
@@ -1202,6 +1203,7 @@ def _init_energy_1(
     return (energy_1, distance_1)
 
 
+@numba.jit(nopython=True)
 def _energy_exchange(
         ir, h, i, energy, distance, form_factors_tilde, distance_1,
         patch_receiver_distance, air_attenuation, speed_of_sound,
@@ -1225,6 +1227,7 @@ def _energy_exchange(
                 threshold, max_distance
                 )
 
+@numba.jit(nopython=True)
 def _collect_receiver_energy(
         ir, energy, distance, patch_receiver_distance, air_attenuation,
         speed_of_sound, histogram_time_resolution, patches_normal):
@@ -1242,7 +1245,7 @@ def _collect_receiver_energy(
         ir[samples_delay] += energy*receiver_factor
 
 
-# @numba.jit(nopython=True)
+@numba.jit(nopython=True)
 def _calculate_energy_exchange_recursive(
         ir, energy_1, distance_1, form_factors_tilde,
         n_patches, patch_receiver_distance, air_attenuation,
@@ -1261,6 +1264,7 @@ def _calculate_energy_exchange_recursive(
                     threshold=threshold, max_distance=max_distance)
 
 
+@numba.jit(nopython=True)
 def _get_scattering_data(
         pos_h, pos_i, pos_j, sources, receivers, wall_id_i,
         scattering, scattering_index):
