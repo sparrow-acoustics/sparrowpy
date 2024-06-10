@@ -550,6 +550,83 @@ def test_recursive(
         # npt.assert_almost_equal(histogram[0, :], histogram_old[0, :])
 
 
+
+@pytest.mark.parametrize('patch_size', [
+    # 1/3,
+    # 0.2,
+    0.5,
+    1,
+    ])
+@pytest.mark.parametrize('source_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    # np.array([0.25, 0.5, 0.5]),
+    # np.array([0.5, 0.25, 0.5]),
+    # np.array([0.5, 0.5, 0.25]),
+    np.array([0.25, 0.25, 0.25]),
+    ])
+@pytest.mark.parametrize('receiver_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    # np.array([0.25, 0.5, 0.5]),
+    # np.array([0.5, 0.25, 0.5]),
+    # np.array([0.5, 0.5, 0.25]),
+    np.array([0.25, 0.25, 0.25]),
+    ])
+def test_recursive_exact(
+        patch_size, source_pos, receiver_pos, sample_walls, sofa_data_diffuse):
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
+    data, sources, receivers = sofa_data_diffuse
+    walls = [0, 1]
+
+    # source_pos = np.array([0.3, 0.5, 0.5])
+    # receiver_pos = np.array([0.5, 0.5, 0.5])
+    wall_source = sample_walls[walls[0]]
+    wall_receiver = sample_walls[walls[1]]
+    walls = [wall_source, wall_receiver]
+    length_histogram = 0.2
+    time_resolution = 1e-3
+    speed_of_sound = 346.18
+
+    radiosity_old = sp.radiosity.Radiosity(
+        walls, patch_size, 1+5+2-2, length_histogram,
+        speed_of_sound=speed_of_sound,
+        sampling_rate=1/time_resolution, absorption=0)
+
+    radiosity_old.run(
+        sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
+    histogram_old = radiosity_old.energy_at_receiver(
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(walls)), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    radiosity.calculate_form_factors_directivity()
+
+    radiosity.init_energy_recursive(source_pos)
+    histogram = radiosity.calculate_energy_exchange_recursive(
+        receiver_pos, speed_of_sound, time_resolution, length_histogram)
+
+    # compare histogram
+    for i in range(4):
+        assert np.sum(histogram[i, :])>0
+        npt.assert_allclose(
+            np.sum(histogram[i, :]), np.sum(histogram_old[0, :]),
+            err_msg=f'histogram i_bin={i}')
+        # hist_shorten = histogram[0, histogram[0, :]>1e-12]
+        # hist_old_shorten = histogram_old[0, histogram_old[0, :]>1e-12]
+        # npt.assert_almost_equal(hist_shorten, hist_old_shorten)
+        # npt.assert_almost_equal(histogram[0, :], histogram_old[0, :])
+
+
 @pytest.mark.parametrize('patch_size', [
     1/3,
     # 0.2,
