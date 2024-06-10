@@ -467,7 +467,7 @@ def test_recursive(
     wall_source = sample_walls[walls[0]]
     wall_receiver = sample_walls[walls[1]]
     walls = [wall_source, wall_receiver]
-    length_histogram = 0.1
+    length_histogram = 0.2
     time_resolution = 1e-3
     speed_of_sound = 346.18
 
@@ -498,7 +498,7 @@ def test_recursive(
     radiosity.init_energy_recursive(source_pos)
     histogram = radiosity.calculate_energy_exchange_recursive(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
-        threshold=1e-6)
+        max_time=0.01)
 
     patches_center = []
     patches_normal = []
@@ -618,7 +618,7 @@ def test_recursive_k2(
     radiosity.init_energy_recursive(source_pos)
     histogram = radiosity.calculate_energy_exchange_recursive(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
-        threshold=1)
+        max_time=0)
 
     # compare energy
     for i in range(4):

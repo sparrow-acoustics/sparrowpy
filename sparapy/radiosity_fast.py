@@ -610,7 +610,7 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     return patch_nums[x_idx]*patch_nums[y_idx]
 
 
-@numba.njit(parallel=True)
+# @numba.njit(parallel=True)
 def calculate_init_energy(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, patches_size: float):
@@ -967,7 +967,7 @@ def _calculate_area(points):
         size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
             + size[..., 0]*size[..., 2])
 
-@numba.njit()
+# @numba.njit()
 def _calculate_energy_exchange(
         visible_patches, form_factors_tilde, patches_center, max_order_k,
         n_patches, n_bins):
@@ -1194,7 +1194,7 @@ def _init_energy_1(
     return (energy_1, distance_1)
 
 
-@numba.njit()
+# @numba.njit()
 def _energy_exchange(
         ir, h, i, energy, distance, form_factors_tilde, distance_1,
         patch_receiver_distance, air_attenuation, speed_of_sound,
@@ -1204,7 +1204,7 @@ def _energy_exchange(
     energy_new = energy * form_factors_tilde[h, i, :]
     for j in range(n_patches):
         distance_new = distance + distance_1[i, j]
-        if (energy_new[j] >= threshold) or (distance_new < max_distance):
+        if (energy_new[j] > 0) and (distance_new < max_distance):
             # energy_new += energy * form_factors_tilde[h, i, j]
             _collect_receiver_energy(
                 ir, energy_new[j], distance_new, patch_receiver_distance[j],
@@ -1219,7 +1219,7 @@ def _energy_exchange(
                 )
 
 
-@numba.njit()
+# @numba.njit()
 def _collect_receiver_energy(
         ir, energy, distance, patch_receiver_distance, air_attenuation,
         speed_of_sound, histogram_time_resolution, patches_normal):
@@ -1237,7 +1237,7 @@ def _collect_receiver_energy(
         ir[samples_delay] += energy*receiver_factor
 
 
-@numba.njit()
+# @numba.njit()
 def _calculate_energy_exchange_second_order(
         ir, energy_0, distance_0, energy_1, distance_1,
         patch_receiver_distance,air_attenuation ,speed_of_sound,
