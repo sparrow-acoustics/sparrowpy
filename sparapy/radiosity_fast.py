@@ -1218,10 +1218,10 @@ def _energy_exchange(
                 speed_of_sound, histogram_time_resolution,
                 patches_normal[j, :])
             _energy_exchange(
-                ir, i, j, energy_new, distance_new, form_factors_tilde,
+                ir, i, j, energy_new[j], distance_new, form_factors_tilde,
                 distance_1, patch_receiver_distance, air_attenuation,
                 speed_of_sound, histogram_time_resolution, patches_normal,
-                threshold=threshold
+                threshold
                 )
 
 def _collect_receiver_energy(
