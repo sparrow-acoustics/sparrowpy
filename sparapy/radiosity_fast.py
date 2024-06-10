@@ -1205,7 +1205,7 @@ def _energy_exchange(
     energy_new = energy * form_factors_tilde[h, i, :]
     for j in range(n_patches):
         distance_new = distance + distance_1[i, j]
-        if (energy_new[j] > 0) and (depth < 5):
+        if (energy_new[j] > 0) and (depth < 7):
             # energy_new += energy * form_factors_tilde[h, i, j]
             _collect_receiver_energy(
                 ir, energy_new[j], distance_new, patch_receiver_distance[j],

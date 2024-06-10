@@ -588,7 +588,7 @@ def test_recursive_exact(
     speed_of_sound = 346.18
 
     radiosity_old = sp.radiosity.Radiosity(
-        walls, patch_size, 1+5+2-2, length_histogram,
+        walls, patch_size, 1+5+2, length_histogram,
         speed_of_sound=speed_of_sound,
         sampling_rate=1/time_resolution, absorption=0)
 
