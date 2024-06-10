@@ -1205,12 +1205,13 @@ def _init_energy_1(
 def _energy_exchange(
         ir, h, i, energy, distance, form_factors_tilde, distance_1,
         patch_receiver_distance, air_attenuation, speed_of_sound,
-        histogram_time_resolution, patches_normal, threshold=1e-12,):
+        histogram_time_resolution, patches_normal, threshold=1e-12,
+        max_distance=0.1):
     n_patches = form_factors_tilde.shape[0]
     energy_new = energy * form_factors_tilde[h, i, :]
     for j in range(n_patches):
         distance_new = distance + distance_1[i, j]
-        if energy_new[j] >= threshold:
+        if (energy_new[j] >= threshold) or (distance_new < max_distance):
             # energy_new += energy * form_factors_tilde[h, i, j]
             _collect_receiver_energy(
                 ir, energy_new[j], distance_new, patch_receiver_distance[j],
@@ -1221,7 +1222,7 @@ def _energy_exchange(
                 ir, i, j, energy_new[j], distance_new, form_factors_tilde,
                 distance_1, patch_receiver_distance, air_attenuation,
                 speed_of_sound, histogram_time_resolution, patches_normal,
-                threshold
+                threshold, max_distance
                 )
 
 def _collect_receiver_energy(
@@ -1246,7 +1247,8 @@ def _calculate_energy_exchange_recursive(
         ir, energy_1, distance_1, form_factors_tilde,
         n_patches, patch_receiver_distance, air_attenuation,
         speed_of_sound, histogram_time_resolution, patches_normal,
-        threshold=1e-12):
+        threshold=1e-12, max_time=0.1):
+    max_distance = max_time*speed_of_sound
     for i_freq in range(energy_1.shape[-1]):
         for h in range(n_patches):
             for i in range(n_patches):
@@ -1256,7 +1258,7 @@ def _calculate_energy_exchange_recursive(
                     patch_receiver_distance,
                     air_attenuation[i_freq], speed_of_sound,
                     histogram_time_resolution, patches_normal,
-                    threshold=threshold)
+                    threshold=threshold, max_distance=max_distance)
 
 
 def _get_scattering_data(
