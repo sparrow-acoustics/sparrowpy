@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pyfar as pf
 import sparapy as sp
+from tqdm import tqdm
 
 
 class DRadiosityFast():
@@ -1270,7 +1271,7 @@ def _calculate_energy_exchange_recursive(
         threshold=1e-12, max_time=0.1):
     max_distance = max_time*speed_of_sound
     for i_freq in range(energy_1.shape[-1]):
-        for h in range(n_patches):
+        for h in tqdm(range(n_patches)):
             for i in range(n_patches):
                 _energy_exchange(
                     ir[i_freq], h, i, energy_1[h, i, i_freq], distance_1[h, i],
