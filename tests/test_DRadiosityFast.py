@@ -2,9 +2,13 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
+import os
 import pyfar as pf
 
 import sparapy as sp
+
+
+create_reference_files = False
 
 def test_init(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
@@ -551,81 +555,6 @@ def test_recursive(
 
 
 
-@pytest.mark.parametrize('patch_size', [
-    # 1/3,
-    # 0.2,
-    0.5,
-    1,
-    ])
-@pytest.mark.parametrize('source_pos', [
-    np.array([0.5, 0.5, 0.5]),
-    # np.array([0.25, 0.5, 0.5]),
-    # np.array([0.5, 0.25, 0.5]),
-    # np.array([0.5, 0.5, 0.25]),
-    np.array([0.25, 0.25, 0.25]),
-    ])
-@pytest.mark.parametrize('receiver_pos', [
-    np.array([0.5, 0.5, 0.5]),
-    # np.array([0.25, 0.5, 0.5]),
-    # np.array([0.5, 0.25, 0.5]),
-    # np.array([0.5, 0.5, 0.25]),
-    np.array([0.25, 0.25, 0.25]),
-    ])
-def test_recursive_exact(
-        patch_size, source_pos, receiver_pos, sample_walls, sofa_data_diffuse):
-    # note that order k=0 means one reflection and k=1 means two reflections
-    # (2nd order)
-    data, sources, receivers = sofa_data_diffuse
-    walls = [0, 1]
-
-    # source_pos = np.array([0.3, 0.5, 0.5])
-    # receiver_pos = np.array([0.5, 0.5, 0.5])
-    wall_source = sample_walls[walls[0]]
-    wall_receiver = sample_walls[walls[1]]
-    walls = [wall_source, wall_receiver]
-    length_histogram = 0.2
-    time_resolution = 1e-3
-    speed_of_sound = 346.18
-
-    radiosity_old = sp.radiosity.Radiosity(
-        walls, patch_size, 1+5+2, length_histogram,
-        speed_of_sound=speed_of_sound,
-        sampling_rate=1/time_resolution, absorption=0)
-
-    radiosity_old.run(
-        sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
-    histogram_old = radiosity_old.energy_at_receiver(
-        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
-
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
-        walls, patch_size)
-
-    radiosity.set_wall_scattering(
-        np.arange(len(walls)), data, sources, receivers)
-    radiosity.set_air_attenuation(
-        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.set_wall_absorption(
-        np.arange(len(walls)),
-        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
-    radiosity.calculate_form_factors_directivity()
-
-    radiosity.init_energy_recursive(source_pos)
-    histogram = radiosity.calculate_energy_exchange_recursive(
-        receiver_pos, speed_of_sound, time_resolution, length_histogram)
-
-    # compare histogram
-    for i in range(4):
-        assert np.sum(histogram[i, :])>0
-        npt.assert_allclose(
-            np.sum(histogram[i, :]), np.sum(histogram_old[0, :]),
-            err_msg=f'histogram i_bin={i}')
-        # hist_shorten = histogram[0, histogram[0, :]>1e-12]
-        # hist_old_shorten = histogram_old[0, histogram_old[0, :]>1e-12]
-        # npt.assert_almost_equal(hist_shorten, hist_old_shorten)
-        # npt.assert_almost_equal(histogram[0, :], histogram_old[0, :])
-
 
 @pytest.mark.parametrize('patch_size', [
     1/3,
@@ -769,3 +698,60 @@ def test_init_source(sample_walls, sofa_data_diffuse):
     npt.assert_almost_equal(
         energy_0[:4],
         radiosity_old.patch_list[0].E_matrix[0,0, idx[0], idx[1]]*1)
+
+
+create_reference_files = False
+
+
+@pytest.mark.parametrize('patch_size', [1, 0.5])
+def test_recursive_reference(
+        patch_size, sample_walls, sofa_data_diffuse):
+    """Test if the results changes."""
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
+    data, sources, receivers = sofa_data_diffuse
+    data = pf.FrequencyData(data.freq[..., :1], data.frequencies[0])
+
+    source_pos = np.array([0.3, 0.5, 0.5])
+    receiver_pos = np.array([0.5, 0.5, 0.5])
+    length_histogram = 0.1
+    time_resolution = 1e-3
+    speed_of_sound = 346.18
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        sample_walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(sample_walls)), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(sample_walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    radiosity.calculate_form_factors_directivity()
+
+    radiosity.init_energy_recursive(source_pos)
+    histogram = radiosity.calculate_energy_exchange_recursive(
+        receiver_pos, speed_of_sound, time_resolution, length_histogram,
+        max_time=0.011)
+
+    signal = pf.Signal(histogram, 1/time_resolution)
+    signal.time /= np.max(np.abs(signal.time))
+
+    test_path = os.path.join(
+        os.path.dirname(__file__), 'test_data')
+
+    reference_path = os.path.join(
+            test_path,
+            f'sim_recursive_{patch_size}.far')
+    if create_reference_files:
+        pf.io.write(reference_path, signal=signal)
+    result = pf.io.read(reference_path)
+
+    for i_frequency in range(signal.time.shape[0]):
+        npt.assert_almost_equal(
+            result['signal'].time[0, ...], signal.time[i_frequency, ...],
+            decimal=4)
+    npt.assert_almost_equal(result['signal'].times, signal.times)

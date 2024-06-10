@@ -1279,7 +1279,7 @@ def _calculate_energy_exchange_recursive(
                     patch_receiver_distance,
                     air_attenuation[i_freq], speed_of_sound,
                     histogram_time_resolution, patches_normal,
-                    threshold=threshold, max_distance=max_distance, depth=0)
+                    threshold=threshold, max_distance=max_distance)
 
 
 # @numba.njit()
