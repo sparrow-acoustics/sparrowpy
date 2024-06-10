@@ -498,7 +498,7 @@ def test_recursive(
     radiosity.init_energy_recursive(source_pos)
     histogram = radiosity.calculate_energy_exchange_recursive(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
-        max_time=0.01)
+        max_time=0.02)
 
     patches_center = []
     patches_normal = []
