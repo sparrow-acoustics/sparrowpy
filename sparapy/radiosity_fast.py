@@ -1,10 +1,8 @@
 """Module for the radiosity simulation."""
 import numba
-import os
 import numpy as np
 import pyfar as pf
 import sparapy as sp
-from tqdm import tqdm
 
 
 class DRadiosityFast():
@@ -246,6 +244,7 @@ class DRadiosityFast():
     def calculate_energy_exchange_recursive(
             self, receiver_pos, speed_of_sound, histogram_time_resolution,
             histogram_length, threshold=1e-6, max_time=0.1):
+        """Calculate the energy exchange."""
         n_samples = int(histogram_length/histogram_time_resolution)
         ir = [np.zeros((n_samples)) for _ in range(self.n_bins)]
         patch_receiver_distance = self.patches_center - receiver_pos
