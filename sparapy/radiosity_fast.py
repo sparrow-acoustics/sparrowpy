@@ -1,6 +1,5 @@
 """Module for the radiosity simulation."""
 import numba
-import os
 import numpy as np
 import pyfar as pf
 
@@ -103,99 +102,66 @@ class DRadiosityFast():
 
     def init_energy(self, source_position):
         """Calculate the initial energy."""
-        # write or read energy to file
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        file_path = os.path.join(dir_path, 'energy_exchange.far')
-        if self._wrote_energy:
-            data = pf.io.read(file_path)
-            self.energy_exchange = data['energy_exchange']
-        else:
-            pf.io.write(file_path, energy_exchange=self.energy_exchange)
-            self._wrote_energy = True
         # calculate initial energy
-        energy_0, distance_0 = calculate_init_energy(
-            source_position, self.patches_center, self.patches_normal,
-            self.patches_size)
-        air_attenuation = self._air_attenuation
-        n_patches = self.n_patches
 
+        energy_0, distance_0 = _init_energy_0(
+            source_position, self.patches_center, self.patches_normal,
+            self._air_attenuation, self.patches_size, self.n_bins)
+        n_patches = self.n_patches
         for j in range(n_patches):
-            if air_attenuation is not None:
-                air_attenuation_factor = np.exp(
-                    -air_attenuation * distance_0[j])
-            else:
-                air_attenuation_factor = 1
-            self.energy_exchange[0, 0, j, :-1] = energy_0[j] * (
-                air_attenuation_factor)
+            self.energy_exchange[0, 0, j, :-1] = energy_0[j]
             self.energy_exchange[0, 0, j, -1] = distance_0[j]
 
         if self.energy_exchange.shape[0] <= 1:
             return None
         patch_to_wall_ids = self._patch_to_wall_ids
-        patches_center = self.patches_center
-        absorption = self._absorption
+        absorption = np.atleast_2d(np.array(self._absorption))
         absorption_index = self._absorption_index
-        sources = self._sources
-        receivers = self._receivers
-        scattering = self._scattering
+        sources = np.array([s.cartesian for s in self._sources])
+        receivers = np.array([s.cartesian for s in self._receivers])
+        scattering = np.array(self._scattering)
         scattering_index = self._scattering_index
         form_factors = self.form_factors
-        visibility_matrix = self.visibility_matrix
-        n_combinations = np.sum(visibility_matrix)
-        pairs = np.empty((n_combinations, 2), dtype=np.int32)
-        i_counter = 0
-        for i_source in range(n_patches):
-            for i_receiver in range(n_patches):
-                if not visibility_matrix[i_source, i_receiver]:
-                    continue
-                pairs[i_counter, 0] = i_source
-                pairs[i_counter, 1] = i_receiver
-                i_counter += 1
-        for ii in range(n_combinations):
-            for jj in range(2):
-                if jj == 0:
-                    i = pairs[ii, 0]
-                    j = pairs[ii, 1]
-                else:
-                    j = pairs[ii, 0]
-                    i = pairs[ii, 1]
-                difference_source = source_position - patches_center[i]
-                difference_source = pf.Coordinates(
-                    difference_source.T[0],
-                    difference_source.T[1],
-                    difference_source.T[2])
-                wall_id_i = patch_to_wall_ids[i]
-                difference_receiver = patches_center[i]-patches_center[j]
-                distance = np.linalg.norm(difference_receiver)
-                difference_receiver = pf.Coordinates(
-                    difference_receiver.T[0],
-                    difference_receiver.T[1],
-                    difference_receiver.T[2])
+        energy_1, distance_1 = _init_energy_1(
+            energy_0, distance_0, source_position,
+            self.patches_center, self._visible_patches,
+            self._air_attenuation, self._n_bins, patch_to_wall_ids,
+            absorption, absorption_index,
+            form_factors, sources, receivers,
+            scattering, scattering_index)
+        self.energy_exchange[1, :, :, :-1] = energy_1
+        self.energy_exchange[1, :, :, -1] = distance_1
+        self.energy_1 = energy_1
+        self.distance_1 = distance_1
 
-                if air_attenuation is not None:
-                    air_attenuation_factor = np.exp(-air_attenuation * distance)
-                else:
-                    air_attenuation_factor = 1
-                absorption_factor = 1-absorption[absorption_index[wall_id_i]]
-                source_idx = sources[wall_id_i].find_nearest(
-                    difference_source)[0][0]
-                receiver_idx = receivers[wall_id_i].find_nearest(
-                    difference_receiver)[0][0]
-                ff = form_factors[i, j] if i < j else form_factors[j, i]
 
-                scattering_factor = scattering[scattering_index[wall_id_i]][
-                    source_idx, receiver_idx, :]
-                self.energy_exchange[1, i, j, :-1] = self.energy_exchange[
-                    0, 0, j, :-1] * ff * (
-                    air_attenuation_factor * absorption_factor * scattering_factor)
-                self.energy_exchange[1, i, j, -1] = distance_0[i]+distance
-        # calculate energy exchange
-        if self.energy_exchange.shape[0] > 2:
-            for j in range(n_patches):
-                self.energy_exchange[2:, :, j, :-1] *= self.energy_exchange[
-                    1, :, j, :-1]
-                self.energy_exchange[2:, :, j, -1] += self.energy_exchange[
-                    1, :, j, -1]
+    def init_energy_recursive(self, source_position):
+        """Calculate the initial energy."""
+        # calculate initial energy
+        source_position = np.array(source_position)
+
+        energy_0, distance_0 = _init_energy_0(
+            source_position, self.patches_center, self.patches_normal,
+            self._air_attenuation, self.patches_size, self.n_bins)
+        patch_to_wall_ids = self._patch_to_wall_ids
+        absorption = np.atleast_2d(np.array(self._absorption))
+        absorption_index = self._absorption_index
+        sources = np.array([s.cartesian for s in self._sources])
+        receivers = np.array([s.cartesian for s in self._receivers])
+        scattering = np.array(self._scattering)
+        scattering_index = self._scattering_index
+        form_factors = self.form_factors
+        energy_1, distance_1 = _init_energy_1(
+            energy_0, distance_0, source_position,
+            self.patches_center, self._visible_patches,
+            self._air_attenuation, self._n_bins, patch_to_wall_ids,
+            absorption, absorption_index,
+            form_factors, sources, receivers,
+            scattering, scattering_index)
+        self.energy_0 = energy_0
+        self.distance_0 = distance_0
+        self.energy_1 = energy_1
+        self.distance_1 = distance_1
 
 
     def collect_energy_receiver(
@@ -237,6 +203,18 @@ class DRadiosityFast():
         self._visibility_matrix = check_visibility(
             self.patches_center, self.patches_normal)
 
+        n_combinations = np.sum(self.visibility_matrix)
+        visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
+        i_counter = 0
+        for i_source in range(self.n_patches):
+            for i_receiver in range(self.n_patches):
+                if not self.visibility_matrix[i_source, i_receiver]:
+                    continue
+                visible_patches[i_counter, 0] = i_source
+                visible_patches[i_counter, 1] = i_receiver
+                i_counter += 1
+        self._visible_patches = visible_patches
+
     def calculate_form_factors(self, method='kang'):
         """Calculate the form factors.
 
@@ -249,7 +227,7 @@ class DRadiosityFast():
         if method == 'kang':
             self._form_factors = form_factor_kang(
                 self.patches_center, self.patches_normal,
-                self.patches_size, self.visibility_matrix)
+                self.patches_size, self._visible_patches)
 
     def calculate_form_factors_directivity(self):
         """Calculate the form factors with directivity."""
@@ -257,9 +235,42 @@ class DRadiosityFast():
         receivers_array = np.array([s.cartesian for s in self._receivers])
         self._form_factors_tilde = _form_factors_with_directivity(
             self.visibility_matrix, self.form_factors, self.n_bins, self.patches_center,
-            self._air_attenuation, np.array(self._absorption), self._absorption_index,
-            self._patch_to_wall_ids, np.array(self._scattering), self._scattering_index,
+            self._air_attenuation, np.atleast_2d(np.array(self._absorption)),
+            np.array(self._absorption_index),
+            self._patch_to_wall_ids, np.array(self._scattering),
+            np.array(self._scattering_index),
             sources_array, receivers_array)
+
+    def calculate_energy_exchange_recursive(
+            self, receiver_pos, speed_of_sound, histogram_time_resolution,
+            histogram_length, threshold=1e-6, max_time=0.1):
+        """Calculate the energy exchange."""
+        n_samples = int(histogram_length/histogram_time_resolution)
+        ir = [np.zeros((n_samples)) for _ in range(self.n_bins)]
+        patch_receiver_distance = self.patches_center - receiver_pos
+        air_attenuation = self._air_attenuation
+        patches_normal = self._patches_normal
+        energy_0 = self.energy_0
+        distance_0 = self.distance_0
+        energy_1 = self.energy_1
+        distance_1 = self.distance_1
+        n_patches = self.n_patches
+        n_bins = self.n_bins
+        patch_receiver_energy = _calculate_patch_receiver_energy(
+            patch_receiver_distance, patches_normal, air_attenuation)
+        # add first 2 order energy exchange
+        _calculate_energy_exchange_second_order(
+            ir, energy_0, distance_0, energy_1, distance_1,
+            patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
+            histogram_time_resolution, n_patches, n_bins)
+        # add remaining energy
+        _calculate_energy_exchange_recursive(
+            ir, self.energy_1, self.distance_1, self._form_factors_tilde,
+            self.n_patches, patch_receiver_distance, patch_receiver_energy,
+            speed_of_sound, histogram_time_resolution,
+            threshold=threshold, max_time=max_time)
+        return np.array(ir)
+
 
     def calculate_energy_exchange(self, max_order_k: int):
         """Calculate the energy exchange.
@@ -275,7 +286,7 @@ class DRadiosityFast():
                 (max_order_k+1, self.n_patches, self.n_patches, self.n_bins+1))
         else:
             self.energy_exchange = _calculate_energy_exchange(
-                self._form_factors_tilde, self.patches_center,
+                self._visible_patches, self._form_factors_tilde, self.patches_center,
                 max_order_k, self.n_patches, self.n_bins)
 
     def _check_set_frequency(self, frequencies:np.ndarray):
@@ -299,7 +310,7 @@ class DRadiosityFast():
         wall_indexes : list[int]
             list of walls for the scattering data
         absorption : pf.FrequencyData
-            scattering data of cshape (1, )
+            absorption coefficient of cshape (1, )
 
         """
         self._check_set_frequency(absorption.frequencies)
@@ -308,7 +319,7 @@ class DRadiosityFast():
             self._absorption_index.fill(-1)
             self._absorption = []
 
-        self._absorption.append(absorption.freq.squeeze())
+        self._absorption.append(np.atleast_1d(absorption.freq.squeeze()))
         self._absorption_index[wall_indexes] = len(self._absorption)-1
 
 
@@ -322,7 +333,7 @@ class DRadiosityFast():
 
         """
         self._check_set_frequency(air_attenuation.frequencies)
-        self._air_attenuation = air_attenuation.freq.squeeze()
+        self._air_attenuation = np.atleast_1d(air_attenuation.freq.squeeze())
 
     def set_wall_scattering(
             self, wall_indexes:list[int],
@@ -471,7 +482,8 @@ class DRadiosityFast():
         """Return the speed of sound in m/s."""
         return self._speed_of_sound
 
-# @numba.jit(nopython=True)
+
+@numba.njit(parallel=True)
 def _form_factors_with_directivity(
         visibility_matrix, form_factors, n_bins, patches_center, air_attenuation,
         absorption, absorption_index, patch_to_wall_ids,
@@ -481,7 +493,7 @@ def _form_factors_with_directivity(
     form_factors_tilde = np.zeros((n_patches, n_patches, n_patches, n_bins))
     # loop over previous patches, current and next patch
 
-    for ii in range(n_patches**3):
+    for ii in numba.prange(n_patches**3):
         h = ii % n_patches
         i = int(ii/n_patches) % n_patches
         j = int(ii/n_patches**2) % n_patches
@@ -490,32 +502,29 @@ def _form_factors_with_directivity(
         visible_ij = visibility_matrix[
             i, j] if i < j else visibility_matrix[j, i]
         if visible_hi and visible_ij:
-            difference_source = patches_center[h]-patches_center[i]
             difference_receiver = patches_center[i]-patches_center[j]
             wall_id_i = int(patch_to_wall_ids[i])
-            difference_source /= np.linalg.norm(difference_source)
             difference_receiver /= np.linalg.norm(difference_receiver)
             ff = form_factors[i, j] if i<j else form_factors[j, i]
 
             distance = np.linalg.norm(difference_receiver)
-            if air_attenuation is not None:
-                air_attenuation_factor = np.exp(-air_attenuation * distance)
-            else:
-                air_attenuation_factor = 0
             source_wall_idx = absorption_index[wall_id_i]
             absorption_factor = 1-absorption[source_wall_idx]
-            source_idx = np.argmin(np.linalg.norm(
-                sources[wall_id_i]-difference_source, axis=-1))
-            receiver_idx = np.argmin(np.linalg.norm(
-                receivers[wall_id_i]-difference_receiver, axis=-1))
-            scattering_factor = scattering[scattering_index[wall_id_i],
-                source_idx, receiver_idx, :]
-            form_factors_tilde[h, i, j, :] = ff * (
-                air_attenuation_factor * absorption_factor * scattering_factor)
+            scattering_factor = _get_scattering_data(
+                patches_center[h], patches_center[i], patches_center[j],
+                sources, receivers, wall_id_i,
+                scattering, scattering_index)
+            if air_attenuation is not None:
+                form_factors_tilde[h, i, j, :] = ff * (
+                    np.exp(-air_attenuation * distance) * absorption_factor
+                    * scattering_factor)
+            else:
+                form_factors_tilde[h, i, j, :] = ff * (
+                    absorption_factor * scattering_factor)
     return form_factors_tilde
 
 
-@numba.jit(nopython=True)
+@numba.njit()
 def process_patches(
         polygon_points_array: np.ndarray,
         walls_normal: np.ndarray,
@@ -568,7 +577,7 @@ def process_patches(
     return (patches_points, patches_normal, n_patches, patch_to_wall_ids)
 
 
-@numba.jit(nopython=True)
+@numba.njit()
 def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     """Calculate the total number of patches.
 
@@ -601,7 +610,8 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
     return patch_nums[x_idx]*patch_nums[y_idx]
 
-# @numba.jit(parallel=True)
+
+@numba.njit(parallel=True)
 def calculate_init_energy(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, patches_size: float):
@@ -657,42 +667,43 @@ def calculate_init_energy(
         dn = receiver_pos[indexes[2]]
         dd_l = receiver_size[indexes[0]]
         dd_m = receiver_size[indexes[1]]
-        dd_n = receiver_size[indexes[2]]
+        # dd_n = receiver_size[indexes[2]]
         S_x = source_pos[indexes[0]]
         S_y = source_pos[indexes[1]]
         S_z = source_pos[indexes[2]]
 
         half_l = dd_l/2
-        half_n = dd_n/2
+        # half_n = dd_n/2
         half_m = dd_m/2
 
         sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
             dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
-
-        k_phi = -1 if np.abs(dl - half_l - S_x) <= 1e-12 else 1
+        test1 = (dl - half_l) <= S_x
+        test2 = S_x <= (dl + half_l)
+        k_phi = -1 if test1 and test2 else 1
+        # k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
         sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
             dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        if (sin_phi_delta-sin_phi) < 1e-11:
+            sin_phi *= -1
 
-        plus  = np.arctan(np.abs((dm+half_m-S_y)/S_z))
-        minus = np.arctan(np.abs((dm-half_m-S_y)/S_z))
+        plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
+        minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
 
-        test1 = dl-half_l-S_x <= 1e-12
-        test2 = S_x -dl-half_l <= 1e-12
+        test1 = (dm - half_m) <= S_y
+        test2 = S_y <= (dm + half_m)
         k_beta = -1 if test1 and test2 else 1
+
+        # k_beta = -1 if (dn - half_n) <= S_z <= (dn + half_n) else 1
         beta = np.abs(plus-(k_beta*minus))
 
         energy[j] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
         distance_out[j] = np.sqrt(
             np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
-
-        # energy[j] = sp.radiosity._init_energy_exchange(
-        #     dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
-        #     1, np.array([0]), distance_out[j],
-        #     np.array([0]), 1)
     return (energy, distance_out)
 
 
-@numba.jit(nopython=True, parallel=True)
+@numba.njit(parallel=True)
 def check_visibility(
         patches_center:np.ndarray, patches_normal:np.ndarray) -> np.ndarray:
     """Check the visibility between patches.
@@ -737,10 +748,10 @@ def check_visibility(
     return visibility_matrix
 
 
-@numba.jit(nopython=True, parallel=True)
+@numba.njit(parallel=True)
 def form_factor_kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
-        patches_size:np.ndarray, visibility_matrix:np.ndarray) -> np.ndarray:
+        patches_size:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
     """Calculate the form factors between patches.
 
     Parameters
@@ -751,9 +762,8 @@ def form_factor_kang(
         normal vectors of all patches of shape (n_patches, 3)
     patches_size : np.ndarray
         size of all patches of shape (n_patches, 3)
-    visibility_matrix : np.ndarray
-        boolean matrix of shape (n_patches, n_patches) with True if patches
-        can see each other, otherwise false
+    visible_patches : np.ndarray
+        index list of all visible patches combinations (n_combinations, 2)
 
     Returns
     -------
@@ -764,19 +774,9 @@ def form_factor_kang(
     """
     n_patches = patches_center.shape[0]
     form_factors = np.zeros((n_patches, n_patches))
-    n_combinations = np.sum(visibility_matrix)
-    pairs = np.empty((n_combinations, 2), dtype=np.int32)
-    i_counter = 0
-    for i_source in range(n_patches):
-        for i_receiver in range(n_patches):
-            if not visibility_matrix[i_source, i_receiver]:
-                continue
-            pairs[i_counter, 0] = i_source
-            pairs[i_counter, 1] = i_receiver
-            i_counter += 1
-    for i in numba.prange(n_combinations):
-        i_source = int(pairs[i, 0])
-        i_receiver = int(pairs[i, 1])
+    for i in numba.prange(visible_patches.shape[0]):
+        i_source = int(visible_patches[i, 0])
+        i_receiver = int(visible_patches[i, 1])
         source_center = patches_center[i_source]
         source_normal = patches_normal[i_source]
         receiver_center = patches_center[i_receiver]
@@ -903,7 +903,7 @@ def form_factor_kang(
     return form_factors
 
 
-@numba.jit(nopython=True)
+@numba.njit()
 def _create_patches(polygon_points:np.ndarray, max_size):
     """Create patches from a polygon."""
     size = np.empty(polygon_points.shape[1])
@@ -944,17 +944,17 @@ def _create_patches(polygon_points:np.ndarray, max_size):
     return patches_points
 
 
-@numba.jit(nopython=True)
+@numba.njit()
 def _calculate_center(points):
     return np.sum(points, axis=-2) / points.shape[-2]
 
-@numba.jit(nopython=True)
+@numba.njit()
 def _calculate_size(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
     return np.abs(vec1-vec2)
 
-@numba.jit(nopython=True)
+@numba.njit()
 def _calculate_area(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
@@ -963,29 +963,340 @@ def _calculate_area(points):
         size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
             + size[..., 0]*size[..., 2])
 
-# @numba.jit(nopython=True)
+@numba.njit()
 def _calculate_energy_exchange(
-        form_factors_tilde, patches_center, max_order_k, n_patches, n_bins):
+        visible_patches, form_factors_tilde, patches_center, max_order_k,
+        n_patches, n_bins):
     energy_exchange = np.zeros(
         (max_order_k+1, n_patches, n_patches, n_bins+1))
-    form_factors_tilde = form_factors_tilde
-    patches_center = patches_center
 
-    for ii in range(n_patches**3 * (max_order_k-2)):
-        k = (int(ii/(n_patches**3)) % n_patches)+2
-        h = int(ii/(n_patches**2)) % n_patches
-        j = int(ii/n_patches) % n_patches
-        i = ii % n_patches
-        distance = np.linalg.norm(
-            patches_center[i]-patches_center[j])
-        if k == 2:
-            energy_exchange[k, i, j, :-1] += form_factors_tilde[h, i, j, :]
-            energy_exchange[k, i, j, -1] = distance
-        else:
-            energy_exchange[k, i, j, :-1] += energy_exchange[
-                k-1, i, j, :-1]*form_factors_tilde[h, i, j, :]
-            energy_exchange[k, i, j, -1] = energy_exchange[
-                k-1, i, j, -1] + distance
+    for k in range(2, max_order_k+1):
+        for ii in range(visible_patches.shape[0]):
+            for jj in range(2):
+                if jj == 0:
+                    i = visible_patches[ii, 0]
+                    j = visible_patches[ii, 1]
+                else:
+                    j = visible_patches[ii, 0]
+                    i = visible_patches[ii, 1]
+                distance = np.linalg.norm(
+                    patches_center[i]-patches_center[j])
+                energy = np.zeros((n_bins, ))
+                n_non_zero = np.zeros((n_bins, ), dtype=np.int64)
+                for h in range(n_patches):
+                    mask = form_factors_tilde[h, i, j, :] > 0
+                    if mask.sum() > 0:
+                        energy[mask] += form_factors_tilde[h, i, j, mask]
+                        n_non_zero[mask] += 1
+                energy = energy/n_non_zero
+                assert np.sum(energy - form_factors_tilde[j, i, j, :]) < 1e-12
+                if np.sum(n_non_zero) > 0:
+                    if k == 2:
+                        energy_exchange[k, i, j, :-1] = energy
+                        energy_exchange[k, i, j, -1] = distance
+                    else:
+                        energy_exchange[k, i, j, :-1] = energy_exchange[
+                            k-1, i, j, :-1]*energy
+                        energy_exchange[k, i, j, -1] = energy_exchange[
+                            k-1, i, j, -1] + distance
 
     return energy_exchange
 
+
+@numba.njit(parallel=True)
+def _init_energy_0(
+        source_position: np.ndarray, patches_center: np.ndarray,
+        patches_normal: np.ndarray, air_attenuation:np.ndarray,
+        patches_size: float, n_bins:float):
+    """Calculate the initial energy from the source.
+
+    Parameters
+    ----------
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_normal : np.ndarray
+        normal of all patches of shape (n_patches, 3)
+    air_attenuation : np.ndarray
+        air attenuation factor in Np/m (n_bins,)
+    patches_size : float
+        size of all patches of shape (n_patches, 3)
+    n_bins : float
+        number of frequency bins.
+
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
+
+    """
+    n_patches = patches_center.shape[0]
+    energy = np.empty((n_patches, n_bins))
+    distance_out = np.empty((n_patches, ))
+    for j in numba.prange(n_patches):
+        source_pos = source_position.copy()
+        receiver_pos = patches_center[j, :].copy()
+        receiver_normal = patches_normal[j, :].copy()
+        receiver_size = patches_size[j, :].copy()
+
+        # array([0., 1., 0.]), array([ 0., -1.,  0.]),
+        # array([0., 0., 1.]), array([ 0.,  0., -1.]),
+        # array([1., 0., 0.]), array([-1.,  0.,  0.])]
+        if np.abs(receiver_normal[2]) > 0.99:
+            i = 2
+            indexes = [0, 1, 2]
+        elif np.abs(receiver_normal[1]) > 0.99:
+            indexes = [2, 0, 1]
+            i = 1
+        elif np.abs(receiver_normal[0]) > 0.99:
+            i = 0
+            indexes = [1, 2, 0]
+        offset = receiver_pos[i]
+        source_pos[i] = np.abs(source_pos[i] - offset)
+        receiver_pos[i] = np.abs(receiver_pos[i] - offset)
+        dl = receiver_pos[indexes[0]]
+        dm = receiver_pos[indexes[1]]
+        dn = receiver_pos[indexes[2]]
+        dd_l = receiver_size[indexes[0]]
+        dd_m = receiver_size[indexes[1]]
+        # dd_n = receiver_size[indexes[2]]
+        S_x = source_pos[indexes[0]]
+        S_y = source_pos[indexes[1]]
+        S_z = source_pos[indexes[2]]
+
+        half_l = dd_l/2
+        # half_n = dd_n/2
+        half_m = dd_m/2
+
+        sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
+            dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        test1 = (dl - half_l) <= S_x
+        test2 = S_x <= (dl + half_l)
+        k_phi = -1 if test1 and test2 else 1
+        # k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
+        sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
+            dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        if (sin_phi_delta-sin_phi) < 1e-11:
+            sin_phi *= -1
+
+        plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
+        minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
+
+        test1 = (dm - half_m) <= S_y
+        test2 = S_y <= (dm + half_m)
+        k_beta = -1 if test1 and test2 else 1
+
+        # k_beta = -1 if (dn - half_n) <= S_z <= (dn + half_n) else 1
+        beta = np.abs(plus-(k_beta*minus))
+        distance_out[j] = np.sqrt(
+            np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
+
+        if air_attenuation is not None:
+            energy[j, :] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (
+                4*np.pi) * np.exp(
+                -air_attenuation * distance_out[j])
+        else:
+            energy[j, :] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (
+                4*np.pi)
+
+    return (energy, distance_out)
+
+
+@numba.njit(parallel=True)
+def _init_energy_1(
+        energy_0, distance_0, source_position: np.ndarray,
+        patches_center: np.ndarray, visible_patches: np.ndarray,
+        air_attenuation:np.ndarray, n_bins:float, patch_to_wall_ids:np.ndarray,
+        absorption:np.ndarray, absorption_index:np.ndarray,
+        form_factors: np.ndarray, sources: np.ndarray, receivers: np.ndarray,
+        scattering: np.ndarray, scattering_index: np.ndarray):
+    """Calculate the initial energy from the source.
+
+    Parameters
+    ----------
+    energy_0 : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance_0 : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    visible_patches : np.ndarray
+        index list of all visible patches combinations (n_combinations, 2)
+    air_attenuation : np.ndarray
+        air attenuation factor in Np/m (n_bins,)
+    n_bins : float
+        number of frequency bins.
+    patch_to_wall_ids : np.ndarray
+        indexes from each patch to the wall of shape (n_patches)
+    absorption : np.ndarray
+        absorption factor of shape (n_walls, n_bins)
+    absorption_index : np.ndarray
+        mapping from the wall id to absorption database index (n_walls)
+    form_factors : np.ndarray
+        form factors between all patches of shape (n_patches, n_patches)
+    sources : np.ndarray
+        source positions of shape (n_walls, n_sources, 3)
+    receivers : np.ndarray
+        receiver positions of shape (n_walls, n_receivers, 3)
+    scattering : np.ndarray
+        scattering data of shape (n_walls, n_sources, n_receivers, n_bins)
+    scattering_index : np.ndarray
+        mapping from the wall id to scattering database index (n_walls)
+
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
+
+    """
+    n_patches = patches_center.shape[0]
+    energy_1 = np.zeros((n_patches, n_patches, n_bins))
+    distance_1 = np.zeros((n_patches, n_patches))
+    for ii in numba.prange(visible_patches.shape[0]):
+        for jj in range(2):
+            if jj == 0:
+                i = visible_patches[ii, 0]
+                j = visible_patches[ii, 1]
+            else:
+                j = visible_patches[ii, 0]
+                i = visible_patches[ii, 1]
+            wall_id_i = int(patch_to_wall_ids[i])
+            scattering_factor = _get_scattering_data(
+                source_position, patches_center[i], patches_center[j],
+                sources, receivers, wall_id_i, scattering, scattering_index)
+            distance = np.linalg.norm(patches_center[i] - patches_center[j])
+
+            ff = form_factors[i, j] if i<j else form_factors[j, i]
+
+            absorption_factor = 1-absorption[absorption_index[wall_id_i], :]
+            if air_attenuation is not None:
+                energy_1[i, j, :] = energy_0[i] * ff * (
+                    np.exp(-air_attenuation * distance) * absorption_factor
+                    * scattering_factor)
+            else:
+                energy_1[i, j, :] = energy_0[i] * ff * (
+                    absorption_factor * scattering_factor)
+
+            distance_1[i, j] = distance_0[i]+distance
+
+    return (energy_1, distance_1)
+
+
+@numba.njit()
+def _energy_exchange(
+        ir, h, i, energy, distance, form_factors_tilde, distance_1,
+        patch_receiver_distance, patch_receiver_energy, speed_of_sound,
+        histogram_time_resolution, threshold=1e-12,
+        max_distance=0.1):
+    n_patches = form_factors_tilde.shape[0]
+    energy_new = energy * form_factors_tilde[h, i, :]
+    for j in range(n_patches):
+        distance_new = distance + distance_1[i, j]
+        if (energy_new[j] > 0) and (distance_new < max_distance):
+            # energy_new += energy * form_factors_tilde[h, i, j]
+            _collect_receiver_energy(
+                ir, energy_new[j], distance_new, patch_receiver_distance[j],
+                patch_receiver_energy[j],
+                speed_of_sound, histogram_time_resolution)
+            _energy_exchange(
+                ir, i, j, energy_new[j], distance_new, form_factors_tilde,
+                distance_1, patch_receiver_distance, patch_receiver_energy,
+                speed_of_sound, histogram_time_resolution,
+                threshold, max_distance,
+                )
+
+
+@numba.njit()
+def _collect_receiver_energy(
+        ir, energy, distance, patch_receiver_distance, patch_receiver_energy,
+        speed_of_sound, histogram_time_resolution):
+
+    R = np.linalg.norm(patch_receiver_distance)
+    d = distance+R
+    samples_delay = int(d/speed_of_sound/histogram_time_resolution)
+
+    # Equation 20
+    ir[samples_delay] += energy*patch_receiver_energy
+
+
+# @numba.njit()
+def _calculate_patch_receiver_energy(
+        patch_receiver_distance, patches_normal, air_attenuation):
+    receiver_factor = np.empty((
+        patch_receiver_distance.shape[0], air_attenuation.size))
+    for i in range(patch_receiver_distance.shape[0]):
+        R = np.sqrt(np.sum((patch_receiver_distance[i, :]**2)))
+
+        cos_xi = np.abs(np.sum(
+            patches_normal[i, :]*np.abs(patch_receiver_distance[i, :]))) / R
+
+        # Equation 20
+        receiver_factor[i, :] = cos_xi * (np.exp(-air_attenuation*R)) / (
+            np.pi * R**2)
+    return receiver_factor
+
+
+@numba.njit()
+def _calculate_energy_exchange_second_order(
+        ir, energy_0, distance_0, energy_1, distance_1,
+        patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
+        histogram_time_resolution, n_patches, n_bins):
+    for i_freq in range(n_bins):
+        for i in range(n_patches):
+            if energy_0[i, i_freq] > 0:
+                _collect_receiver_energy(
+                    ir[i_freq], energy_0[i, i_freq],
+                    distance_0[i],
+                    patch_receiver_distance[i],
+                    patch_receiver_energy[i, i_freq],
+                    speed_of_sound, histogram_time_resolution)
+            for j in range(n_patches):
+                if energy_1[i, j, i_freq] > 0:
+                    _collect_receiver_energy(
+                        ir[i_freq], energy_1[i, j, i_freq],
+                        distance_1[i, j],
+                        patch_receiver_distance[j],
+                        patch_receiver_energy[j, i_freq],
+                        speed_of_sound, histogram_time_resolution)
+
+@numba.njit()
+def _calculate_energy_exchange_recursive(
+        ir, energy_1, distance_1, form_factors_tilde,
+        n_patches, patch_receiver_distance, patch_receiver_energy,
+        speed_of_sound, histogram_time_resolution,
+        threshold=1e-12, max_time=0.1):
+    max_distance = max_time*speed_of_sound
+    for i_freq in range(energy_1.shape[-1]):
+        for h in range(n_patches):
+            for i in range(n_patches):
+                _energy_exchange(
+                    ir[i_freq], h, i, energy_1[h, i, i_freq], distance_1[h, i],
+                    form_factors_tilde[..., i_freq], distance_1,
+                    patch_receiver_distance,
+                    patch_receiver_energy[..., i_freq], speed_of_sound,
+                    histogram_time_resolution,
+                    threshold=threshold, max_distance=max_distance)
+
+
+@numba.njit()
+def _get_scattering_data(
+        pos_h, pos_i, pos_j, sources, receivers, wall_id_i,
+        scattering, scattering_index):
+    difference_source = pos_h-pos_i
+    difference_receiver = pos_i-pos_j
+    # wall_id_i = int(patch_to_wall_ids[i])
+    difference_source /= np.linalg.norm(difference_source)
+    difference_receiver /= np.linalg.norm(difference_receiver)
+    source_idx = np.argmin(np.sum(
+        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+    receiver_idx = np.argmin(np.sum(
+        (receivers[wall_id_i, :]-difference_receiver)**2, axis=-1))
+    return scattering[scattering_index[wall_id_i],
+        source_idx, receiver_idx, :]

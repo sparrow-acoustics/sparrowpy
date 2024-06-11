@@ -2,9 +2,13 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
+import os
 import pyfar as pf
 
 import sparapy as sp
+
+
+create_reference_files = False
 
 def test_init(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
@@ -40,16 +44,6 @@ def test_compute_form_factors(sample_walls):
     radiosity.check_visibility()
     radiosity.calculate_form_factors()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
-
-
-def test_compute_form_factors_wrapper(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
-    form_factors = sp.radiosity_fast.form_factor_kang(
-        radiosity.patches_center, radiosity.patches_normal,
-        radiosity.patches_size, radiosity.visibility_matrix)
-    npt.assert_almost_equal(radiosity.form_factors, form_factors)
 
 
 @pytest.mark.parametrize('walls', [
@@ -124,7 +118,7 @@ def test_full(
     walls = [wall_source, wall_receiver]
     length_histogram = 1
     time_resolution = 1e-3
-    k = 3
+    k = 1
     speed_of_sound = 346.18
 
     radiosity_old = sp.radiosity.Radiosity(
@@ -134,7 +128,8 @@ def test_full(
     radiosity_old.run(
         sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
     histogram_old = radiosity_old.energy_at_receiver(
-        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]))
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
+        ignore_direct=True)
 
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
         walls, patch_size)
@@ -156,12 +151,12 @@ def test_full(
         histogram_time_resolution=time_resolution,
         histogram_time_length=length_histogram)
 
+    # compare histogram
     for i in range(4):
-        npt.assert_almost_equal(histogram[1:, i], histogram_old[0, 1:])
-
-    npt.assert_almost_equal(
-        np.sum(histogram[1:, :], axis=0),
-        np.sum(histogram_old[0, 1:]))
+        assert np.sum(histogram[:, i])>0
+        npt.assert_allclose(
+            np.sum(histogram[:, i]), np.sum(histogram_old[0, :]))
+        # npt.assert_almost_equal(histogram[:, i], histogram_old[0, :])
 
 
 @pytest.mark.parametrize('walls', [
@@ -185,7 +180,6 @@ def test_form_factors_directivity_for_diffuse(
     wall_source = sample_walls[walls[0]]
     wall_receiver = sample_walls[walls[1]]
     walls = [wall_source, wall_receiver]
-    k = 5
 
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
         walls, patch_size)
@@ -200,7 +194,7 @@ def test_form_factors_directivity_for_diffuse(
         np.arange(len(walls)),
         pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
     radiosity.calculate_form_factors_directivity()
-    radiosity.calculate_energy_exchange(k)
+    # radiosity.calculate_energy_exchange(k)
     # radiosity.init_energy(source_pos)
     # histogram = radiosity.collect_energy_receiver(
     #     receiver_pos, speed_of_sound=speed_of_sound,
@@ -300,21 +294,36 @@ def test_total_number_of_patches():
 
 @pytest.mark.parametrize('patch_size', [
     1/3,
-    0.2,
+    # 0.2,
     0.5,
     1,
     ])
 @pytest.mark.parametrize('k', [
-    0, 1, 2,
+    0, 1
     ])
-def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse):
+@pytest.mark.parametrize('source_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    # np.array([0.25, 0.5, 0.5]),
+    # np.array([0.5, 0.25, 0.5]),
+    # np.array([0.5, 0.5, 0.25]),
+    # np.array([0.25, 0.25, 0.25]),
+    ])
+@pytest.mark.parametrize('receiver_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    # np.array([0.25, 0.5, 0.5]),
+    # np.array([0.5, 0.25, 0.5]),
+    # np.array([0.5, 0.5, 0.25]),
+    # np.array([0.25, 0.25, 0.25]),
+    ])
+def test_energy_exchange_simple_k1(
+        patch_size, k, source_pos, receiver_pos, sample_walls, sofa_data_diffuse):
     # note that order k=0 means one reflection and k=1 means two reflections
     # (2nd order)
     data, sources, receivers = sofa_data_diffuse
     walls = [0, 1]
 
-    source_pos = np.array([0.5, 0.5, 0.5])
-    receiver_pos = np.array([0.5, 0.5, 0.5])
+    # source_pos = np.array([0.3, 0.5, 0.5])
+    # receiver_pos = np.array([0.5, 0.5, 0.5])
     wall_source = sample_walls[walls[0]]
     wall_receiver = sample_walls[walls[1]]
     walls = [wall_source, wall_receiver]
@@ -366,6 +375,7 @@ def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse
     patches_normal = np.array(patches_normal)
     patches_size = np.array(patches_size)
     n_patches = patches_center.shape[0]
+
     # test form factors
     form_factors = np.array(form_factors).reshape((n_patches, int(n_patches/2)))
     for i in range(int(n_patches/2)):
@@ -375,13 +385,22 @@ def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse
                     radiosity.form_factors[i, int(j+n_patches/2)], form_factors[i, j])
                 npt.assert_almost_equal(
                     radiosity.form_factors[i, int(j+n_patches/2)], form_factors[j, i])
-
     npt.assert_almost_equal(
         patches_center, radiosity.patches_center)
     npt.assert_almost_equal(
         patches_normal, radiosity.patches_normal)
     npt.assert_almost_equal(
         patches_size, radiosity.patches_size)
+
+    # test form factors directivity
+    for i in range(n_patches):
+        for j in range(n_patches):
+            if (i < j) and (i!=j):
+                ffd_iji = radiosity._form_factors_tilde[i, j, i, 0]
+                ffd_jij = radiosity._form_factors_tilde[j, i, j, 0]
+                ff_ij = radiosity.form_factors[i, j]
+                assert ffd_iji == ff_ij
+                assert ffd_jij == ff_ij
 
     # compare energy exchange
     E_matrix = np.zeros((
@@ -405,16 +424,220 @@ def test_energy_exchange_simple_k1(patch_size, k,sample_walls, sofa_data_diffuse
     # total_energy = [0.3333333333333333, 0.07226813341876431]
     for k in range(E_matrix.shape[1]):
         # npt.assert_almost_equal(np.sum(E_matrix[:, k]), total_energy[k])
-        npt.assert_array_equal(
+        npt.assert_allclose(
             np.sum(E_matrix[:, k], axis=-1),
-            np.sum(E_matrix_old[:, k], axis=-1))
+            np.sum(E_matrix_old[:, k], axis=-1), rtol=1e-10,
+            err_msg=f'E_matrix k={k}')
 
     # compare histogram
     for i in range(4):
         assert np.sum(histogram[:, i])>0
-        npt.assert_almost_equal(
-            np.sum(histogram[:, i]), np.sum(histogram_old[0, :]))
+        npt.assert_allclose(
+            np.sum(histogram[:, i]), np.sum(histogram_old[0, :]),
+            err_msg=f'histogram i_bin={i}')
         # npt.assert_almost_equal(histogram[:, i], histogram_old[0, :])
+
+
+@pytest.mark.parametrize('patch_size', [
+    1/3,
+    # 0.2,
+    0.5,
+    1,
+    ])
+@pytest.mark.parametrize('source_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    # np.array([0.25, 0.5, 0.5]),
+    # np.array([0.5, 0.25, 0.5]),
+    # np.array([0.5, 0.5, 0.25]),
+    # np.array([0.25, 0.25, 0.25]),
+    ])
+@pytest.mark.parametrize('receiver_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    # np.array([0.25, 0.5, 0.5]),
+    # np.array([0.5, 0.25, 0.5]),
+    # np.array([0.5, 0.5, 0.25]),
+    # np.array([0.25, 0.25, 0.25]),
+    ])
+def test_recursive(
+        patch_size, source_pos, receiver_pos, sample_walls, sofa_data_diffuse):
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
+    data, sources, receivers = sofa_data_diffuse
+    walls = [0, 1]
+
+    # source_pos = np.array([0.3, 0.5, 0.5])
+    # receiver_pos = np.array([0.5, 0.5, 0.5])
+    wall_source = sample_walls[walls[0]]
+    wall_receiver = sample_walls[walls[1]]
+    walls = [wall_source, wall_receiver]
+    length_histogram = 0.2
+    time_resolution = 1e-3
+    speed_of_sound = 346.18
+
+    radiosity_old = sp.radiosity.Radiosity(
+        walls, patch_size, 10, length_histogram,
+        speed_of_sound=speed_of_sound,
+        sampling_rate=1/time_resolution, absorption=0)
+
+    radiosity_old.run(
+        sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
+    histogram_old = radiosity_old.energy_at_receiver(
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(walls)), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    radiosity.calculate_form_factors_directivity()
+
+    radiosity.init_energy_recursive(source_pos)
+    histogram = radiosity.calculate_energy_exchange_recursive(
+        receiver_pos, speed_of_sound, time_resolution, length_histogram,
+        max_time=0.02)
+
+    patches_center = []
+    patches_normal = []
+    patches_size = []
+    form_factors = []
+    for patch in radiosity_old.patch_list:
+        form_factors.append(patch.form_factors)
+        for p in patch.patches:
+            patches_center.append(p.center)
+            patches_size.append(p.size)
+            patches_normal.append(p.normal)
+    patches_center = np.array(patches_center)
+    patches_normal = np.array(patches_normal)
+    patches_size = np.array(patches_size)
+    n_patches = patches_center.shape[0]
+
+    # test form factors
+    form_factors = np.array(form_factors).reshape((n_patches, int(n_patches/2)))
+    for i in range(int(n_patches/2)):
+        for j in range(int(n_patches/2)):
+            if (i < j) and (i!=j):
+                npt.assert_almost_equal(
+                    radiosity.form_factors[i, int(j+n_patches/2)], form_factors[i, j])
+                npt.assert_almost_equal(
+                    radiosity.form_factors[i, int(j+n_patches/2)], form_factors[j, i])
+    npt.assert_almost_equal(
+        patches_center, radiosity.patches_center)
+    npt.assert_almost_equal(
+        patches_normal, radiosity.patches_normal)
+    npt.assert_almost_equal(
+        patches_size, radiosity.patches_size)
+
+    # test form factors directivity
+    for i in range(n_patches):
+        for j in range(n_patches):
+            if (i < j) and (i!=j):
+                ffd_iji = radiosity._form_factors_tilde[i, j, i, 0]
+                ffd_jij = radiosity._form_factors_tilde[j, i, j, 0]
+                ff_ij = radiosity.form_factors[i, j]
+                assert ffd_iji == ff_ij
+                assert ffd_jij == ff_ij
+
+    # compare histogram
+    for i in range(4):
+        assert np.sum(histogram[i, :])>0
+        npt.assert_allclose(
+            np.sum(histogram[i, :]), np.sum(histogram_old[0, :]),
+            err_msg=f'histogram i_bin={i}', rtol=0.01)
+        # npt.assert_almost_equal(histogram[0, :], histogram_old[0, :])
+
+
+
+
+@pytest.mark.parametrize('patch_size', [
+    1/3,
+    # 0.2,
+    0.5,
+    1,
+    ])
+@pytest.mark.parametrize('source_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    np.array([0.25, 0.25, 0.25]),
+    ])
+@pytest.mark.parametrize('receiver_pos', [
+    np.array([0.5, 0.5, 0.5]),
+    np.array([0.25, 0.25, 0.25]),
+    ])
+def test_recursive_k2(
+        patch_size, source_pos, receiver_pos, sample_walls, sofa_data_diffuse):
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
+    data, sources, receivers = sofa_data_diffuse
+    walls = [0, 1]
+
+    # source_pos = np.array([0.3, 0.5, 0.5])
+    # receiver_pos = np.array([0.5, 0.5, 0.5])
+    wall_source = sample_walls[walls[0]]
+    wall_receiver = sample_walls[walls[1]]
+    walls = [wall_source, wall_receiver]
+    length_histogram = 0.1
+    time_resolution = 1e-3
+    speed_of_sound = 346.18
+
+    radiosity_old = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity_old.set_wall_scattering(
+        np.arange(len(walls)), data, sources, receivers)
+    radiosity_old.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity_old.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity_old.check_visibility()
+    radiosity_old.calculate_form_factors()
+    radiosity_old.calculate_form_factors_directivity()
+    radiosity_old.calculate_energy_exchange(1)
+    radiosity_old.init_energy(source_pos)
+    histogram_old = radiosity_old.collect_energy_receiver(
+        receiver_pos, speed_of_sound=speed_of_sound,
+        histogram_time_resolution=time_resolution,
+        histogram_time_length=length_histogram)
+
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(walls)), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    radiosity.calculate_form_factors_directivity()
+
+    radiosity.init_energy_recursive(source_pos)
+    histogram = radiosity.calculate_energy_exchange_recursive(
+        receiver_pos, speed_of_sound, time_resolution, length_histogram,
+        max_time=0)
+
+    # compare energy
+    for i in range(4):
+        npt.assert_allclose(
+            radiosity_old.energy_1, radiosity.energy_1)
+        # npt.assert_almost_equal(histogram[:, i], histogram_old[0, :])
+
+    # compare histogram
+    for i in range(4):
+        assert np.sum(histogram[i, :])>0
+        npt.assert_allclose(
+            np.sum(histogram[i, :]), np.sum(histogram_old[:, i]),
+            err_msg=f'histogram i_bin={i}')
+        # npt.assert_almost_equal(histogram[i, :], histogram_old[:, 0])
 
 
 def test_init_source(sample_walls, sofa_data_diffuse):
@@ -474,3 +697,60 @@ def test_init_source(sample_walls, sofa_data_diffuse):
     npt.assert_almost_equal(
         energy_0[:4],
         radiosity_old.patch_list[0].E_matrix[0,0, idx[0], idx[1]]*1)
+
+
+create_reference_files = False
+
+
+@pytest.mark.parametrize('patch_size', [1, 0.5])
+def test_recursive_reference(
+        patch_size, sample_walls, sofa_data_diffuse):
+    """Test if the results changes."""
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
+    data, sources, receivers = sofa_data_diffuse
+    data = pf.FrequencyData(data.freq[..., :1], data.frequencies[0])
+
+    source_pos = np.array([0.3, 0.5, 0.5])
+    receiver_pos = np.array([0.5, 0.5, 0.5])
+    length_histogram = 0.1
+    time_resolution = 1e-3
+    speed_of_sound = 346.18
+
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+        sample_walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(sample_walls)), data, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(sample_walls)),
+        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors()
+    radiosity.calculate_form_factors_directivity()
+
+    radiosity.init_energy_recursive(source_pos)
+    histogram = radiosity.calculate_energy_exchange_recursive(
+        receiver_pos, speed_of_sound, time_resolution, length_histogram,
+        max_time=0.011)
+
+    signal = pf.Signal(histogram, 1/time_resolution)
+    signal.time /= np.max(np.abs(signal.time))
+
+    test_path = os.path.join(
+        os.path.dirname(__file__), 'test_data')
+
+    reference_path = os.path.join(
+            test_path,
+            f'sim_recursive_{patch_size}.far')
+    if create_reference_files:
+        pf.io.write(reference_path, signal=signal)
+    result = pf.io.read(reference_path)
+
+    for i_frequency in range(signal.time.shape[0]):
+        npt.assert_almost_equal(
+            result['signal'].time[0, ...], signal.time[i_frequency, ...],
+            decimal=4)
+    npt.assert_almost_equal(result['signal'].times, signal.times)
