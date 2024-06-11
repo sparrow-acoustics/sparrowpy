@@ -100,41 +100,6 @@ class DRadiosityFast():
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
 
-    def init_energy(self, source_position):
-        """Calculate the initial energy."""
-        # calculate initial energy
-
-        energy_0, distance_0 = _init_energy_0(
-            source_position, self.patches_center, self.patches_normal,
-            self._air_attenuation, self.patches_size, self.n_bins)
-        n_patches = self.n_patches
-        for j in range(n_patches):
-            self.energy_exchange[0, 0, j, :-1] = energy_0[j]
-            self.energy_exchange[0, 0, j, -1] = distance_0[j]
-
-        if self.energy_exchange.shape[0] <= 1:
-            return None
-        patch_to_wall_ids = self._patch_to_wall_ids
-        absorption = np.atleast_2d(np.array(self._absorption))
-        absorption_index = self._absorption_index
-        sources = np.array([s.cartesian for s in self._sources])
-        receivers = np.array([s.cartesian for s in self._receivers])
-        scattering = np.array(self._scattering)
-        scattering_index = self._scattering_index
-        form_factors = self.form_factors
-        energy_1, distance_1 = _init_energy_1(
-            energy_0, distance_0, source_position,
-            self.patches_center, self._visible_patches,
-            self._air_attenuation, self._n_bins, patch_to_wall_ids,
-            absorption, absorption_index,
-            form_factors, sources, receivers,
-            scattering, scattering_index)
-        self.energy_exchange[1, :, :, :-1] = energy_1
-        self.energy_exchange[1, :, :, -1] = distance_1
-        self.energy_1 = energy_1
-        self.distance_1 = distance_1
-
-
     def init_energy_recursive(self, source_position):
         """Calculate the initial energy."""
         # calculate initial energy
@@ -162,41 +127,6 @@ class DRadiosityFast():
         self.distance_0 = distance_0
         self.energy_1 = energy_1
         self.distance_1 = distance_1
-
-
-    def collect_energy_receiver(
-            self, receiver_pos, histogram_time_resolution=1e-3,
-            histogram_time_length=1, speed_of_sound=346.18):
-        """Collect the energy at the receiver."""
-        histogram = np.zeros(
-            ((int(histogram_time_length/histogram_time_resolution)),
-             self.n_bins))
-        patches_center = self.patches_center
-        patches_normal = self.patches_normal
-        air_attenuation = self._air_attenuation
-        energy_exchange = self.energy_exchange
-        idx = np.array(np.where(energy_exchange[:, :, :, -1] > 0))
-        for ii in range(idx.shape[1]):
-            k = idx[0, ii]
-            i = idx[1, ii]
-            j = idx[2, ii]
-
-            source_pos = patches_center[j]
-            R = np.linalg.norm(receiver_pos-source_pos)
-            e = energy_exchange[k, i, j, :-1]
-            d = energy_exchange[k, i, j, -1]+R
-            samples_delay = int(d/speed_of_sound/histogram_time_resolution)
-
-            cos_xi = np.abs(np.sum(
-                patches_normal[j, :]*np.abs(receiver_pos-source_pos))) / R
-
-            # Equation 20
-            receiver_factor = cos_xi * (np.exp(-air_attenuation*R)) / (
-                np.pi * R**2)
-            histogram[samples_delay, :] += e*receiver_factor
-
-        return histogram
-
 
     def check_visibility(self):
         """Check the visibility between patches."""
@@ -271,23 +201,6 @@ class DRadiosityFast():
             threshold=threshold, max_time=max_time)
         return np.array(ir)
 
-
-    def calculate_energy_exchange(self, max_order_k: int):
-        """Calculate the energy exchange.
-
-        Parameters
-        ----------
-        max_order_k : int
-            maximal order of energy exchange iterations.
-
-        """
-        if max_order_k <= 1:
-            self.energy_exchange = np.zeros(
-                (max_order_k+1, self.n_patches, self.n_patches, self.n_bins+1))
-        else:
-            self.energy_exchange = _calculate_energy_exchange(
-                self._visible_patches, self._form_factors_tilde, self.patches_center,
-                max_order_k, self.n_patches, self.n_bins)
 
     def _check_set_frequency(self, frequencies:np.ndarray):
         """Check if the frequency data matches the radiosity object."""
@@ -962,45 +875,6 @@ def _calculate_area(points):
     return np.abs(
         size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
             + size[..., 0]*size[..., 2])
-
-@numba.njit()
-def _calculate_energy_exchange(
-        visible_patches, form_factors_tilde, patches_center, max_order_k,
-        n_patches, n_bins):
-    energy_exchange = np.zeros(
-        (max_order_k+1, n_patches, n_patches, n_bins+1))
-
-    for k in range(2, max_order_k+1):
-        for ii in range(visible_patches.shape[0]):
-            for jj in range(2):
-                if jj == 0:
-                    i = visible_patches[ii, 0]
-                    j = visible_patches[ii, 1]
-                else:
-                    j = visible_patches[ii, 0]
-                    i = visible_patches[ii, 1]
-                distance = np.linalg.norm(
-                    patches_center[i]-patches_center[j])
-                energy = np.zeros((n_bins, ))
-                n_non_zero = np.zeros((n_bins, ), dtype=np.int64)
-                for h in range(n_patches):
-                    mask = form_factors_tilde[h, i, j, :] > 0
-                    if mask.sum() > 0:
-                        energy[mask] += form_factors_tilde[h, i, j, mask]
-                        n_non_zero[mask] += 1
-                energy = energy/n_non_zero
-                assert np.sum(energy - form_factors_tilde[j, i, j, :]) < 1e-12
-                if np.sum(n_non_zero) > 0:
-                    if k == 2:
-                        energy_exchange[k, i, j, :-1] = energy
-                        energy_exchange[k, i, j, -1] = distance
-                    else:
-                        energy_exchange[k, i, j, :-1] = energy_exchange[
-                            k-1, i, j, :-1]*energy
-                        energy_exchange[k, i, j, -1] = energy_exchange[
-                            k-1, i, j, -1] + distance
-
-    return energy_exchange
 
 
 @numba.njit(parallel=True)
