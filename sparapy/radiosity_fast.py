@@ -256,16 +256,18 @@ class DRadiosityFast():
         distance_1 = self.distance_1
         n_patches = self.n_patches
         n_bins = self.n_bins
+        patch_receiver_energy = _calculate_patch_receiver_energy(
+            patch_receiver_distance, patches_normal, air_attenuation)
         # add first 2 order energy exchange
         _calculate_energy_exchange_second_order(
             ir, energy_0, distance_0, energy_1, distance_1,
-            patch_receiver_distance,air_attenuation ,speed_of_sound,
-            histogram_time_resolution, patches_normal, n_patches, n_bins)
+            patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
+            histogram_time_resolution, n_patches, n_bins)
         # add remaining energy
         _calculate_energy_exchange_recursive(
             ir, self.energy_1, self.distance_1, self._form_factors_tilde,
-            self.n_patches, patch_receiver_distance, self._air_attenuation,
-            speed_of_sound, histogram_time_resolution, self.patches_normal,
+            self.n_patches, patch_receiver_distance, patch_receiver_energy,
+            speed_of_sound, histogram_time_resolution,
             threshold=threshold, max_time=max_time)
         return np.array(ir)
 
@@ -1190,8 +1192,8 @@ def _init_energy_1(
 @numba.njit()
 def _energy_exchange(
         ir, h, i, energy, distance, form_factors_tilde, distance_1,
-        patch_receiver_distance, air_attenuation, speed_of_sound,
-        histogram_time_resolution, patches_normal, threshold=1e-12,
+        patch_receiver_distance, patch_receiver_energy, speed_of_sound,
+        histogram_time_resolution, threshold=1e-12,
         max_distance=0.1):
     n_patches = form_factors_tilde.shape[0]
     energy_new = energy * form_factors_tilde[h, i, :]
@@ -1201,40 +1203,51 @@ def _energy_exchange(
             # energy_new += energy * form_factors_tilde[h, i, j]
             _collect_receiver_energy(
                 ir, energy_new[j], distance_new, patch_receiver_distance[j],
-                air_attenuation,
-                speed_of_sound, histogram_time_resolution,
-                patches_normal[j, :])
+                patch_receiver_energy[j],
+                speed_of_sound, histogram_time_resolution)
             _energy_exchange(
                 ir, i, j, energy_new[j], distance_new, form_factors_tilde,
-                distance_1, patch_receiver_distance, air_attenuation,
-                speed_of_sound, histogram_time_resolution, patches_normal,
+                distance_1, patch_receiver_distance, patch_receiver_energy,
+                speed_of_sound, histogram_time_resolution,
                 threshold, max_distance,
                 )
 
 
 @numba.njit()
 def _collect_receiver_energy(
-        ir, energy, distance, patch_receiver_distance, air_attenuation,
-        speed_of_sound, histogram_time_resolution, patches_normal):
+        ir, energy, distance, patch_receiver_distance, patch_receiver_energy,
+        speed_of_sound, histogram_time_resolution):
 
-        R = np.linalg.norm(patch_receiver_distance)
-        d = distance+R
-        samples_delay = int(d/speed_of_sound/histogram_time_resolution)
+    R = np.linalg.norm(patch_receiver_distance)
+    d = distance+R
+    samples_delay = int(d/speed_of_sound/histogram_time_resolution)
+
+    # Equation 20
+    ir[samples_delay] += energy*patch_receiver_energy
+
+
+# @numba.njit()
+def _calculate_patch_receiver_energy(
+        patch_receiver_distance, patches_normal, air_attenuation):
+    receiver_factor = np.empty((
+        patch_receiver_distance.shape[0], air_attenuation.size))
+    for i in range(patch_receiver_distance.shape[0]):
+        R = np.sqrt(np.sum((patch_receiver_distance[i, :]**2)))
 
         cos_xi = np.abs(np.sum(
-            patches_normal*np.abs(patch_receiver_distance))) / R
+            patches_normal[i, :]*np.abs(patch_receiver_distance[i, :]))) / R
 
         # Equation 20
-        receiver_factor = cos_xi * (np.exp(-air_attenuation*R)) / (
+        receiver_factor[i, :] = cos_xi * (np.exp(-air_attenuation*R)) / (
             np.pi * R**2)
-        ir[samples_delay] += energy*receiver_factor
+    return receiver_factor
 
 
 @numba.njit()
 def _calculate_energy_exchange_second_order(
         ir, energy_0, distance_0, energy_1, distance_1,
-        patch_receiver_distance,air_attenuation ,speed_of_sound,
-        histogram_time_resolution, patches_normal, n_patches, n_bins):
+        patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
+        histogram_time_resolution, n_patches, n_bins):
     for i_freq in range(n_bins):
         for i in range(n_patches):
             if energy_0[i, i_freq] > 0:
@@ -1242,24 +1255,22 @@ def _calculate_energy_exchange_second_order(
                     ir[i_freq], energy_0[i, i_freq],
                     distance_0[i],
                     patch_receiver_distance[i],
-                    air_attenuation[i_freq],
-                    speed_of_sound, histogram_time_resolution,
-                    patches_normal[i, :])
+                    patch_receiver_energy[i, i_freq],
+                    speed_of_sound, histogram_time_resolution)
             for j in range(n_patches):
                 if energy_1[i, j, i_freq] > 0:
                     _collect_receiver_energy(
                         ir[i_freq], energy_1[i, j, i_freq],
                         distance_1[i, j],
                         patch_receiver_distance[j],
-                        air_attenuation[i_freq],
-                        speed_of_sound, histogram_time_resolution,
-                        patches_normal[j, :])
+                        patch_receiver_energy[j, i_freq],
+                        speed_of_sound, histogram_time_resolution)
 
 @numba.njit()
 def _calculate_energy_exchange_recursive(
         ir, energy_1, distance_1, form_factors_tilde,
-        n_patches, patch_receiver_distance, air_attenuation,
-        speed_of_sound, histogram_time_resolution, patches_normal,
+        n_patches, patch_receiver_distance, patch_receiver_energy,
+        speed_of_sound, histogram_time_resolution,
         threshold=1e-12, max_time=0.1):
     max_distance = max_time*speed_of_sound
     for i_freq in range(energy_1.shape[-1]):
@@ -1269,8 +1280,8 @@ def _calculate_energy_exchange_recursive(
                     ir[i_freq], h, i, energy_1[h, i, i_freq], distance_1[h, i],
                     form_factors_tilde[..., i_freq], distance_1,
                     patch_receiver_distance,
-                    air_attenuation[i_freq], speed_of_sound,
-                    histogram_time_resolution, patches_normal,
+                    patch_receiver_energy[..., i_freq], speed_of_sound,
+                    histogram_time_resolution,
                     threshold=threshold, max_distance=max_distance)
 
 
