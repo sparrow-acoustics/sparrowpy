@@ -8,6 +8,7 @@ dependencies:
   - numpy
   - matplotlib
   - scipy
+  - numba
   - pip:
     - sofar
     - tqdm
