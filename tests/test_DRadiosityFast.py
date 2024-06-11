@@ -6,6 +6,7 @@ import os
 import pyfar as pf
 
 import sparapy as sp
+import time
 
 
 create_reference_files = False
@@ -46,24 +47,34 @@ def test_compute_form_factors(sample_walls):
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
 
 def test_compute_form_factor_vals(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .2)
     radiosity.check_visibility()
+    
+    t0 = time.time()
     radiosity.calculate_form_factors(method='universal')
+    tuniv = time.time()-t0
     univ = radiosity.form_factors
+
+    t0 = time.time()
     radiosity.calculate_form_factors(method='kang')
+    tkang = time.time()-t0
     kang = radiosity.form_factors
 
     diff = abs(kang-univ)
 
     maximo = np.max(diff)
-    rms = np.sqrt(sum(np.square(diff)))/(diff.shape[0]**2)
+    rms = np.sqrt(np.sum(np.square(diff)))/(diff.shape[0]**2)
+    mmean = np.mean(diff)
 
-    maximo_rel = maximo/kang[int(np.argmax(diff)/len(diff)),np.argmax(diff)%len(diff)]
+    maximo_rel = 100*maximo/kang[int(np.argmax(diff)/len(diff)),np.argmax(diff)%len(diff)]
 
-    rms_rel = rms/np.mean(kang)
+    rms_rel = 100*rms/np.mean(kang)
+
+    mean_rel = 100*mmean/np.mean(kang)
 
     assert maximo_rel*100 < 50
-    assert rms_rel*100 < 20
+    assert rms_rel*100 < 30
+    assert mean_rel*100 < 30
 
 
 @pytest.mark.parametrize('walls', [

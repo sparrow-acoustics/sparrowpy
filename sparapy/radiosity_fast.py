@@ -938,8 +938,10 @@ def form_factor_universal(
     for i in numba.prange(n_patches-1):
         for j in range(i+1, n_patches):
             print(f'{i} {j}')
-            form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
-            form_factors[j,i] = patches_area[i]/patches_area[j] * form_factors[i,j]
+            if (visible_patches == [i,j]).all(1).any(): # numba does not like this
+                form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
+            if (visible_patches == [j,i]).all(1).any():
+                form_factors[j,i] = patches_area[i]/patches_area[j] * form_factors[i,j]
 
     return form_factors
 
