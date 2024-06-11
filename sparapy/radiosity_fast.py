@@ -173,7 +173,7 @@ class DRadiosityFast():
 
     def calculate_energy_exchange_recursive(
             self, receiver_pos, speed_of_sound, histogram_time_resolution,
-            histogram_length, threshold=1e-6, max_time=0.1):
+            histogram_length, threshold=1e-6, max_time=0.1, max_depth=-1):
         """Calculate the energy exchange."""
         n_samples = int(histogram_length/histogram_time_resolution)
         ir = [np.zeros((n_samples)) for _ in range(self.n_bins)]
@@ -198,7 +198,7 @@ class DRadiosityFast():
             ir, self.energy_1, self.distance_1, self._form_factors_tilde,
             self.n_patches, patch_receiver_distance, patch_receiver_energy,
             speed_of_sound, histogram_time_resolution,
-            threshold=threshold, max_time=max_time)
+            threshold=threshold, max_time=max_time, max_depth=max_depth)
         return np.array(ir)
 
 
@@ -1068,12 +1068,12 @@ def _energy_exchange(
         ir, h, i, energy, distance, form_factors_tilde, distance_1,
         patch_receiver_distance, patch_receiver_energy, speed_of_sound,
         histogram_time_resolution, threshold=1e-12,
-        max_distance=0.1):
+        max_distance=0.1, current_depth=0, max_depth=-1):
     n_patches = form_factors_tilde.shape[0]
     energy_new = energy * form_factors_tilde[h, i, :]
     for j in range(n_patches):
         distance_new = distance + distance_1[i, j]
-        if (energy_new[j] > 0) and (distance_new < max_distance):
+        if (energy_new[j] > 0) and (distance_new < max_distance) and (current_depth<max_depth):
             # energy_new += energy * form_factors_tilde[h, i, j]
             _collect_receiver_energy(
                 ir, energy_new[j], distance_new, patch_receiver_distance[j],
@@ -1083,8 +1083,7 @@ def _energy_exchange(
                 ir, i, j, energy_new[j], distance_new, form_factors_tilde,
                 distance_1, patch_receiver_distance, patch_receiver_energy,
                 speed_of_sound, histogram_time_resolution,
-                threshold, max_distance,
-                )
+                threshold, max_distance, current_depth+1, max_depth)
 
 
 @numba.njit()
@@ -1145,7 +1144,7 @@ def _calculate_energy_exchange_recursive(
         ir, energy_1, distance_1, form_factors_tilde,
         n_patches, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution,
-        threshold=1e-12, max_time=0.1):
+        threshold=1e-12, max_time=0.1, max_depth=-1):
     max_distance = max_time*speed_of_sound
     for i_freq in range(energy_1.shape[-1]):
         for h in range(n_patches):
@@ -1156,7 +1155,8 @@ def _calculate_energy_exchange_recursive(
                     patch_receiver_distance,
                     patch_receiver_energy[..., i_freq], speed_of_sound,
                     histogram_time_resolution,
-                    threshold=threshold, max_distance=max_distance)
+                    threshold=threshold, max_distance=max_distance,
+                    current_depth=1, max_depth=max_depth)
 
 
 @numba.njit()
