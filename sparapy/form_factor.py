@@ -109,12 +109,12 @@ def naive_pt_integration(pt: np.ndarray, patch: Polygon, mode='source', n_sample
     if mode == 'receiver':
         source_area = patch.area
     elif mode == 'source':
-        source_area = 1
+        source_area = 4
 
     for patch_pt in patch_samples:
         int_accum+= ffunction(pt, patch_pt, patch_pt-pt, patch.normal)*patch.area/len(patch_samples)
   
-    return int_accum / (4*source_area)
+    return int_accum / (source_area)
 
 def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: float, approx_order=4):
     """
@@ -178,49 +178,14 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
 
     return abs(outer_integral/(2*PI*source_area))
 
-def stokes_pt_integration(point: np.ndarray, patch: np.ndarray, source_area: float, mode='source', approx_order=4):
-    """
-
-
-    """
-
-    # if mode == 'receiver':
-    #     source_area = source_area
-    # elif mode == 'source':
-    #     source_area = 1
-
-    j_bpoints, j_conn = sampling.sample_border(patch, npoints=approx_order+1)
-
-    # first compute and store form function sample values
-    form_mat = load_stokes_entries(point, j_bpoints)
-
-
-    # double polynomial integration (per dimension (x,y,z))
-    integral = 0
-
-    for dim in range(len(j_bpoints[0])):                                # for each dimension
-        # integrate form function over each point on patch i boundary
-
-
-        for segj in j_conn:                                         # for each segment segj in patch j boundary
-            
-            xj = j_bpoints[segj][:,dim]          
-
-            if xj[-1]-xj[0]!=0:
-                quadfactors = poly_estimation(xj,[form_mat[0][segj[k]] for k in range(len(segj))] ) # compute polynomial coefficients of approx form function over boundary segment xj
-                integral += abs(poly_integration(quadfactors,xj))                          # analytical integration of the approx polynomial
-
-
-    ll = 0
-    for s in j_conn:
-        ll += np.linalg.norm(j_bpoints[s[-1]]-j_bpoints[s[0]])
-
-    return source_area/ll*abs(integral/(2*PI))
-
-def nusselt_pt_solution(point: np.ndarray, patch_points: np.ndarray):
+def nusselt_pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     """
 
     """
+    if mode == 'receiver':
+        source_area = polygon_area(patch_points)
+    elif mode == 'source':
+        source_area = 4
 
     npoints = len(patch_points)
 
@@ -237,7 +202,7 @@ def nusselt_pt_solution(point: np.ndarray, patch_points: np.ndarray):
 
     factor = interior_angle_sum - (len(patch_points)-2)*np.pi
 
-    return factor / (4 * np.pi)
+    return factor / (np.pi*source_area)
 
 def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray, patch_j_normal: np.ndarray, nsamples=2, random=False, plotflag=False):
     """
@@ -429,8 +394,6 @@ def area_under_curve(ps, order=2, plotflag=False):
     return area
 
 def calculate_tangent_vector(v0,v1):
-
-    
 
     if np.inner(v0,v1)!=0:
         scale = np.sqrt( np.square( np.linalg.norm(np.cross(v0,v1))/np.inner(v0,v1) ) + np.square( np.linalg.norm(v0) ) )

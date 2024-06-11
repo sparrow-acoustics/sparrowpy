@@ -7,7 +7,9 @@ import numpy.testing as npt
 import sparapy.form_factor as form_factor
 import sparapy.ff_helpers.exact_solutions as exact_solutions
 import sparapy.radiosity as radiosity
-
+from sparapy.sound_object import SoundSource, Receiver
+from sparapy.radiosity import Patches
+import time
 
 @pytest.mark.parametrize('width', [
     1.,2.,3.
@@ -128,3 +130,103 @@ def test_kang_comparison_perpendicular(
     old_ff = patch_1.form_factors
     patch_1.calculate_univ_form_factor(patches)
     assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 10
+
+
+
+@pytest.mark.parametrize('l', [
+    .1,.2,.5,1,2
+    ])
+@pytest.mark.parametrize('source', [
+    SoundSource(position=np.array([1,7,1]), view=np.array([0,-1,0]),
+            up=np.array([0,0,1])),
+    ])
+@pytest.mark.parametrize('receiver', [
+
+    Receiver(position=np.array([1,1,1]), view=np.array([0,-1,0]),
+            up=np.array([0,0,1])),
+    ])
+@pytest.mark.parametrize('patchsize', [
+    .1
+    ])
+def test_point_surface_interactions(l, source, receiver, patchsize):
+
+    absor_factor = .1
+
+    patch_pos = geo.Polygon(points=[[0,0,0],[l, 0, 0],[l, 0, l],[0,0,l]], normal=[0,1,0], up_vector=[1,0,0])
+
+    patch = Patches(polygon=patch_pos, max_size=patchsize*l, other_wall_ids=[], wall_id=[0], absorption=absor_factor)
+
+    patch = source_cast(source, patch, absor_factor)
+
+    receiver_cast(receiver, patch, absor_factor)
+
+
+def source_cast(src, rpatch, absor):
+    """Test initial energy cast from a point to a generalized patch in space
+    naïve integration approach and Nusselt-analog-based options compared"""
+
+    t0 = time.time()
+    naive = form_factor.naive_pt_integration(pt=src.position, patch=rpatch, n_samples=100)
+    tf_naive = time.time()-t0
+
+    rpatch.nbins = 1
+    rpatch.init_energy_exchange(source=src, max_order_k=0, ir_length_s=.5)
+
+    rel_error_naive = abs(sum(rpatch.E_matrix[rpatch.E_matrix!=0]) - naive*(1-absor))/sum(rpatch.E_matrix[rpatch.E_matrix!=0]) * 100
+    
+    assert rel_error_naive < 1.
+    print("naive approach error: " + str(rel_error_naive) + "%")
+    print("naive approach runtime: " + str(tf_naive*1000) + "ms \n\n")
+
+    t0 = time.time()
+    nuss = form_factor.nusselt_pt_solution(point=src.position, patch_points=rpatch.pts)
+    tf_nusselt = time.time()-t0
+
+    true = sum(rpatch.E_matrix[rpatch.E_matrix!=0])
+
+    rel_error_nuss = abs(true - nuss*(1-absor))/true * 100
+
+    assert rel_error_nuss < 1.
+
+    print("nusselt approach error: " + str(rel_error_nuss) + "%")
+    print("nusselt approach runtime: " + str(tf_nusselt*1000) + "ms \n #################################")
+
+    # check that nusselt outperforms naive approach
+    assert rel_error_nuss < rel_error_naive
+    assert tf_nusselt < tf_naive
+
+    return rpatch
+    
+
+def receiver_cast(rcv, patch, absor):
+    """Test final energy cast from a generalized patch in space to a point
+    naïve integration approach and Nusselt-analog-based options compared"""
+
+    true_rec_energy = np.sum(patch.energy_at_receiver(receiver=rcv, max_order=0, ir_length_s=0.1))
+
+    patch_energy = np.sum(patch.E_matrix)
+
+    t0 = time.time()
+    naive = patch_energy * form_factor.naive_pt_integration(pt=rcv.position, patch=patch, mode='receiver', n_samples=100)
+    tf_naive = time.time()-t0
+
+    rel_error_naive = abs(true_rec_energy-naive)/true_rec_energy * 100
+    
+    assert rel_error_naive < 1.
+    print("naive approach error: " + str(rel_error_naive) + "%")
+    print("naive approach runtime: " + str(tf_naive*1000) + "ms \n\n")
+
+    t0 = time.time()
+    nuss = form_factor.nusselt_pt_solution(point=rcv.position, patch_points=patch.pts, mode='receiver') * patch_energy
+    tf_nusselt = time.time()-t0
+
+    rel_error_nuss = abs(true_rec_energy - nuss)/true_rec_energy * 100
+
+    assert rel_error_nuss < 1.
+
+    print("nusselt approach error: " + str(rel_error_nuss) + "%")
+    print("nusselt approach runtime: " + str(tf_nusselt*1000) + "ms \n #################################")
+
+    # check that nusselt outperforms naive approach
+    #assert rel_error_nuss < rel_error_naive
+    assert tf_nusselt < tf_naive
