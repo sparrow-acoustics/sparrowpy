@@ -40,10 +40,30 @@ def test_check_visibility_wrapper(sample_walls):
 
 
 def test_compute_form_factors(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .2)
     radiosity.check_visibility()
     radiosity.calculate_form_factors()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
+
+def test_compute_form_factor_vals(sample_walls):
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
+    radiosity.check_visibility()
+    radiosity.calculate_form_factors(method='universal')
+    univ = radiosity.form_factors
+    radiosity.calculate_form_factors(method='kang')
+    kang = radiosity.form_factors
+
+    diff = abs(kang-univ)
+
+    maximo = np.max(diff)
+    rms = np.sqrt(sum(np.square(diff)))/(diff.shape[0]**2)
+
+    maximo_rel = maximo/kang[int(np.argmax(diff)/len(diff)),np.argmax(diff)%len(diff)]
+
+    rms_rel = rms/np.mean(kang)
+
+    assert maximo_rel*100 < 50
+    assert rms_rel*100 < 20
 
 
 @pytest.mark.parametrize('walls', [

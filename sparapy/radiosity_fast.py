@@ -2,6 +2,7 @@
 import numba
 import numpy as np
 import pyfar as pf
+from sparapy.form_factor import calc_form_factor as univ_ff
 
 
 class DRadiosityFast():
@@ -228,6 +229,12 @@ class DRadiosityFast():
             self._form_factors = form_factor_kang(
                 self.patches_center, self.patches_normal,
                 self.patches_size, self._visible_patches)
+        elif method == 'universal':
+            self._form_factors = form_factor_universal(
+                self.patches_points, self.patches_normal,
+                self.patches_area, self._visible_patches)
+        else:
+            RuntimeWarning("no form factor calculation method")
 
     def calculate_form_factors_directivity(self):
         """Calculate the form factors with directivity."""
@@ -900,6 +907,40 @@ def form_factor_kang(
                 dm-dm_prime) ** 2 ) ) / ( np.pi * ( d**4 ) )
 
         form_factors[i_source, i_receiver] = ff
+    return form_factors
+
+#@numba.njit(parallel=True)
+def form_factor_universal(
+        patches_points:np.ndarray, patches_normal:np.ndarray,
+        patches_area:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
+    """Calculate the form factors between patches.
+
+    Parameters
+    ----------
+    patches_area : np.ndarray
+        area values of the patches (n_patches,)
+    patches_normal : np.ndarray
+        normal vectors of all patches of shape (n_patches, 3)
+    patches_size : np.ndarray
+        size of all patches of shape (n_patches, 3)
+    visible_patches : np.ndarray
+        index list of all visible patches combinations (n_combinations, 2)
+
+    Returns
+    -------
+    form_factors : np.ndarray
+        form factors between all patches of shape (n_patches, n_patches)
+        note that just i_source < i_receiver are calculated ff[i, j] = ff[j, i]
+
+    """
+    n_patches = len(patches_area)
+    form_factors = np.zeros((n_patches, n_patches))
+    for i in numba.prange(n_patches-1):
+        for j in range(i+1, n_patches):
+            print(f'{i} {j}')
+            form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
+            form_factors[j,i] = patches_area[i]/patches_area[j] * form_factors[i,j]
+
     return form_factors
 
 

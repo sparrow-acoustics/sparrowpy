@@ -11,14 +11,14 @@ import matplotlib.pyplot as plt
 #######################################################################################
 ### main
 #######################################################################################
-def calc_form_factor(receiving_patch: Polygon, emitting_patch:Polygon, mode='adaptive'):
+def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, source_pts: np.ndarray, source_normal: np.ndarray, mode='adaptive') -> float:
 
     match mode:
         case 'adaptive':
-            if singularity_check(receiving_patch.pts, emitting_patch.pts):
-                return nusselt_integration(patch_i=emitting_patch.pts, patch_i_normal=emitting_patch.normal, patch_j=receiving_patch.pts, patch_j_normal=receiving_patch.normal, nsamples=64)
+            if singularity_check(receiving_pts, source_pts):
+                return nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_j=receiving_pts, patch_j_normal=receiving_normal, nsamples=64)
             else:
-                return stokes_integration(patch_i=emitting_patch.pts, patch_j=receiving_patch.pts, source_area=emitting_patch.area,  approx_order=4)
+                return stokes_integration(patch_i=source_pts, patch_j=receiving_pts, source_area=polygon_area(source_pts),  approx_order=4)
         case 'naive':
             return naive_integration()
 

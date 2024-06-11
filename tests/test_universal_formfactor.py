@@ -28,7 +28,7 @@ def test_parallel_facing_patches(width, height, distance):
 
     patch_2 = geo.Polygon(points=[[0,distance,0],[width, distance, 0],[width, distance, height],[0,distance,height]], normal=[0,-1,0], up_vector=[1,0,0])
 
-    computed = form_factor.calc_form_factor(emitting_patch=patch_1, receiving_patch=patch_2)
+    computed = form_factor.calc_form_factor(source_pts=patch_1.pts, receiving_pts=patch_2.pts, source_normal=patch_1.normal, receiving_normal=patch_2.normal)
 
     assert 100 * abs(computed-exact)/exact < .5
 
@@ -50,7 +50,7 @@ def test_perpendicular_coincidentline_patches(width, height, length):
 
     patch_2 = geo.Polygon(points=[[0,0,0],[0, length, 0],[0, length, height],[0,0,height]], normal=[1,0,0], up_vector=[1,0,0])
 
-    computed = form_factor.calc_form_factor(emitting_patch=patch_1, receiving_patch=patch_2)
+    computed = form_factor.calc_form_factor(source_pts=patch_1.pts, receiving_pts=patch_2.pts, source_normal=patch_1.normal, receiving_normal=patch_2.normal)
 
     assert 100 * abs(computed-exact)/exact < 5.
 
@@ -76,7 +76,7 @@ def test_perpendicular_coincidentpoint_patches(width1, width2, length1, length2)
 
     patch_2 = geo.Polygon(points=[[0,length1,0],[width2, length1, 0],[width2, length1+length2, 0],[0,length1+length2,0]], normal=[0,0,1], up_vector=[1,0,0])
 
-    computed = form_factor.calc_form_factor(emitting_patch=patch_1, receiving_patch=patch_2)
+    computed = form_factor.calc_form_factor(source_pts=patch_1.pts, receiving_pts=patch_2.pts, source_normal=patch_1.normal, receiving_normal=patch_2.normal)
 
     assert 100 * abs(computed-exact)/exact < 5.
 

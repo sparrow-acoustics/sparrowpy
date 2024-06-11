@@ -448,7 +448,7 @@ class Patches(Polygon):
                         receiver_wall.patches):
                     
                     index_rec = i_receiver 
-                    self.form_factors[i_source, index_rec] = universal_ffactor(receiving_patch=receiver_patch, emitting_patch=source_patch)
+                    self.form_factors[i_source, index_rec] = universal_ffactor(source_pts=source_patch.pts, receiving_pts=receiver_patch.pts, source_normal=source_patch.normal, receiving_normal=receiver_patch.normal)
 
                 i_receiver_offset += len(receiver_wall.patches)
 
