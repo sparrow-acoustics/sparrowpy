@@ -151,7 +151,6 @@ def test_full(
         histogram_time_resolution=time_resolution,
         histogram_time_length=length_histogram)
 
-
     # compare histogram
     for i in range(4):
         assert np.sum(histogram[:, i])>0

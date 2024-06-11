@@ -2,7 +2,6 @@
 import numba
 import numpy as np
 import pyfar as pf
-import sparapy as sp
 
 
 class DRadiosityFast():
@@ -139,6 +138,7 @@ class DRadiosityFast():
     def init_energy_recursive(self, source_position):
         """Calculate the initial energy."""
         # calculate initial energy
+        source_position = np.array(source_position)
 
         energy_0, distance_0 = _init_energy_0(
             source_position, self.patches_center, self.patches_normal,
@@ -481,7 +481,7 @@ class DRadiosityFast():
         return self._speed_of_sound
 
 
-# @numba.njit(debug=True)
+@numba.njit(parallel=True)
 def _form_factors_with_directivity(
         visibility_matrix, form_factors, n_bins, patches_center, air_attenuation,
         absorption, absorption_index, patch_to_wall_ids,
@@ -506,18 +506,19 @@ def _form_factors_with_directivity(
             ff = form_factors[i, j] if i<j else form_factors[j, i]
 
             distance = np.linalg.norm(difference_receiver)
-            if air_attenuation is not None:
-                air_attenuation_factor = np.exp(-air_attenuation * distance)
-            else:
-                air_attenuation_factor = 0
             source_wall_idx = absorption_index[wall_id_i]
             absorption_factor = 1-absorption[source_wall_idx]
             scattering_factor = _get_scattering_data(
                 patches_center[h], patches_center[i], patches_center[j],
                 sources, receivers, wall_id_i,
                 scattering, scattering_index)
-            form_factors_tilde[h, i, j, :] = ff * (
-                air_attenuation_factor * absorption_factor * scattering_factor)
+            if air_attenuation is not None:
+                form_factors_tilde[h, i, j, :] = ff * (
+                    np.exp(-air_attenuation * distance) * absorption_factor
+                    * scattering_factor)
+            else:
+                form_factors_tilde[h, i, j, :] = ff * (
+                    absorption_factor * scattering_factor)
     return form_factors_tilde
 
 
@@ -608,7 +609,7 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     return patch_nums[x_idx]*patch_nums[y_idx]
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def calculate_init_energy(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, patches_size: float):
@@ -664,7 +665,7 @@ def calculate_init_energy(
         dn = receiver_pos[indexes[2]]
         dd_l = receiver_size[indexes[0]]
         dd_m = receiver_size[indexes[1]]
-        dd_n = receiver_size[indexes[2]]
+        # dd_n = receiver_size[indexes[2]]
         S_x = source_pos[indexes[0]]
         S_y = source_pos[indexes[1]]
         S_z = source_pos[indexes[2]]
@@ -697,11 +698,6 @@ def calculate_init_energy(
         energy[j] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (4*np.pi)
         distance_out[j] = np.sqrt(
             np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
-
-        energy[j] = sp.radiosity._init_energy_exchange(
-            dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
-            1, np.array([0]), distance_out[j],
-            np.array([0]), 1)
     return (energy, distance_out)
 
 
@@ -1005,7 +1001,7 @@ def _calculate_energy_exchange(
     return energy_exchange
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _init_energy_0(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, air_attenuation:np.ndarray,
@@ -1038,7 +1034,7 @@ def _init_energy_0(
     n_patches = patches_center.shape[0]
     energy = np.empty((n_patches, n_bins))
     distance_out = np.empty((n_patches, ))
-    for j in  numba.prange(n_patches):
+    for j in numba.prange(n_patches):
         source_pos = source_position.copy()
         receiver_pos = patches_center[j, :].copy()
         receiver_normal = patches_normal[j, :].copy()
@@ -1056,8 +1052,6 @@ def _init_energy_0(
         elif np.abs(receiver_normal[0]) > 0.99:
             i = 0
             indexes = [1, 2, 0]
-        else:
-            raise AssertionError()
         offset = receiver_pos[i]
         source_pos[i] = np.abs(source_pos[i] - offset)
         receiver_pos[i] = np.abs(receiver_pos[i] - offset)
@@ -1099,17 +1093,17 @@ def _init_energy_0(
             np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
 
         if air_attenuation is not None:
-            air_attenuation_factor = np.exp(
+            energy[j, :] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (
+                4*np.pi) * np.exp(
                 -air_attenuation * distance_out[j])
         else:
-            air_attenuation_factor = 1
+            energy[j, :] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (
+                4*np.pi)
 
-        energy[j, :] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (
-            4*np.pi) * air_attenuation_factor
     return (energy, distance_out)
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _init_energy_1(
         energy_0, distance_0, source_position: np.ndarray,
         patches_center: np.ndarray, visible_patches: np.ndarray,
@@ -1179,14 +1173,15 @@ def _init_energy_1(
 
             ff = form_factors[i, j] if i<j else form_factors[j, i]
 
+            absorption_factor = 1-absorption[absorption_index[wall_id_i], :]
             if air_attenuation is not None:
-                air_attenuation_factor = np.exp(-air_attenuation * distance)
+                energy_1[i, j, :] = energy_0[i] * ff * (
+                    np.exp(-air_attenuation * distance) * absorption_factor
+                    * scattering_factor)
             else:
-                air_attenuation_factor = 1
-            absorption_factor = 1-absorption[absorption_index[wall_id_i]]
+                energy_1[i, j, :] = energy_0[i] * ff * (
+                    absorption_factor * scattering_factor)
 
-            energy_1[i, j, :] = energy_0[i] * ff * (
-                air_attenuation_factor * absorption_factor * scattering_factor)
             distance_1[i, j] = distance_0[i]+distance
 
     return (energy_1, distance_1)
@@ -1279,7 +1274,7 @@ def _calculate_energy_exchange_recursive(
                     threshold=threshold, max_distance=max_distance)
 
 
-# @numba.njit()
+@numba.njit()
 def _get_scattering_data(
         pos_h, pos_i, pos_j, sources, receivers, wall_id_i,
         scattering, scattering_index):
