@@ -1,6 +1,8 @@
 import numpy as np
 from sparapy.geometry import Polygon as polyg
+import numba
 
+@numba.njit()
 def sample_random(el: np.ndarray, npoints=100):
     """
     Randomly sample points on the surface of a patch using a uniform distribution
@@ -38,6 +40,7 @@ def sample_random(el: np.ndarray, npoints=100):
 
     return ptlist
 
+@numba.njit()
 def sample_regular(el: np.ndarray, npoints=10):
     """
     Sample points on the surface of a patch using a regular distribution 
@@ -76,11 +79,11 @@ def sample_regular(el: np.ndarray, npoints=10):
 
     ptlist=[]
 
-    tt = np.linspace(0,1,npointsx, endpoint=False)
+    tt = np.linspace(0,1-1/npointsx,npointsx)
     sstep =  1/(npointsx*2)
     tt += sstep
 
-    tz = np.linspace(0,1,npointsz, endpoint=False)
+    tz = np.linspace(0,1-1/npointsz,npointsz)
     sstepz =  1/(npointsz*2)
     tz += sstepz
 
@@ -100,8 +103,16 @@ def sample_regular(el: np.ndarray, npoints=10):
             if not(len(el)==3 and not inside):
                 ptlist.append(s*u + t*v + el[0])
 
-    return np.array(ptlist)
 
+    out = np.empty((len(ptlist), len(ptlist[0])))
+
+    for i in numba.prange(len(ptlist)):
+        for j in numba.prange(len(ptlist[0])):
+            out[i][j] = ptlist[i][j]
+    
+    return out
+
+@numba.njit()
 def sample_border(el: np.ndarray, npoints=3):
     """
     Sample points on the boundary of a patch at fractional intervals of each side
@@ -120,8 +131,8 @@ def sample_border(el: np.ndarray, npoints=3):
 
     n_div = npoints - 1 # this function was written with a different logic in mind -- needs refactoring
 
-    pts = np.empty((len(el)*(npoints-1),len(el[0])))
-    conn=[[[] for i in range(npoints)] for j in range(len(el))]
+    pts  = np.empty((len(el)*(npoints-1),len(el[0])))
+    conn = np.empty((npoints,len(el)))
 
     for i in range(len(el)):
 

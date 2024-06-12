@@ -1,11 +1,11 @@
 import numpy as np
-from math import pi as PI
 import sparapy.ff_helpers.geom as geom
 import sparapy.ff_helpers.sampling as sampling
 from sparapy.ff_helpers.integrate_line import poly_estimation,poly_integration
 from sparapy.geometry import Polygon 
 import numba
 import matplotlib.pyplot as plt
+from sparapy.ff_helpers.geom import inner
 
 #######################################################################################
 ### main
@@ -31,7 +31,7 @@ def ffunction(p0: np.ndarray, p1: np.ndarray, n0: np.ndarray, n1: np.ndarray):
     rsq = np.square(np.linalg.norm(p0-p1))
 
     if rsq != 0:
-        return(cos0*cos1/(rsq*PI))
+        return(cos0*cos1/(rsq*np.pi))
     else:
         return 0
     
@@ -185,7 +185,7 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
                 outer_integral += poly_integration(quadfactors,xi)
 
 
-    return abs(outer_integral/(2*PI*source_area))
+    return abs(outer_integral/(2*np.pi*source_area))
 
 def nusselt_pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     """
@@ -213,7 +213,8 @@ def nusselt_pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='sourc
 
     return factor / (np.pi*source_area)
 
-def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray, patch_j_normal: np.ndarray, nsamples=2, random=False, plotflag=False):
+@numba.njit()
+def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray, patch_j_normal: np.ndarray, nsamples=2, random=False):
     """
     Estimates the form factor by integrating the Nusselt analogue values (emitting patch) 
     over the surface of the receiving patch
@@ -235,24 +236,26 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
             if False, a regular sampling of the surface is performed
     """
     
-
     if random:
         p0_array = sampling.sample_random(patch_j,nsamples)
     else:
         p0_array = sampling.sample_regular(patch_j,nsamples)
 
-    out = 0
+    out = 0.
 
     for p0 in p0_array:
         out += nusselt_analog(surf_origin=p0, surf_normal=patch_j_normal, patch_points=patch_i, patch_normal=patch_i_normal)
 
-    return out / (PI * len(p0_array))
+    out /= (np.pi * len(p0_array))
 
-def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal, plotflag=False) -> float:
+    return out 
+
+@numba.njit()
+def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> float:
 
     boundary_points, connectivity = sampling.sample_border(patch_points, npoints=3) # 3 points per boundary segment (for quadratic approximation)
 
-    hand = np.sign(np.inner(np.cross( patch_points[1]-patch_points[0] , patch_points[2]-patch_points[1] ), patch_normal) )
+    hand = np.sign(np.dot(np.cross( patch_points[1]-patch_points[0] , patch_points[2]-patch_points[1] ), patch_normal) )
 
     curved_area = 0
         
@@ -262,19 +265,10 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal, plotfla
     for ii in range(len(boundary_points)):
         sphPts[ii] = ((boundary_points[ii]-surf_origin)/np.linalg.norm(boundary_points[ii]-surf_origin)) # patch j points projected on the hemisphere
 
-    for ii in range(len(sphPts)):
-        plnPts[ii,:] = np.inner(geom.rotation_matrix(surf_normal),sphPts[ii])[:-1] # points on the hemisphere projected onto 
+    rotmat = geom.rotation_matrix(n_in=surf_normal)
 
-    if plotflag:
-        fig, ax = plt.subplots()
-        circle = plt.Circle((0,0), 1, color='blue', alpha=0.1)
-        ax.add_patch(circle)
-        ax.plot(plnPts[:,0] , plnPts[:,1], 'r*')
-        ax.grid()
-        ax.set_aspect('equal')
-        plt.xlim([-1.2,1.2])
-        plt.ylim([-1.2,1.2])
-        plt.show()
+    for ii in range(len(sphPts)):
+        plnPts[ii,:] = inner(rotmat,sphPts[ii])[:-1] # points on the hemisphere projected onto 
 
     polygon_area(plnPts[0::2])
 
@@ -282,8 +276,8 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal, plotfla
 
         if abs(np.cross(plnPts[segmt[-1]],plnPts[segmt[0]])) > 1e-12:
 
-            if np.inner( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
-                curved_area += area_under_curve(plnPts[segmt],order=2,plotflag=plotflag)
+            if np.dot( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
+                curved_area += area_under_curve(plnPts[segmt],order=2)
 
             else:                                                                       # if points span over 90º, additional sampling is required
                 mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
@@ -291,19 +285,13 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal, plotfla
                 a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
                 b = marc + (sphPts[segmt[-1]] - marc) / 2
 
-                mpoint = np.inner(geom.rotation_matrix(surf_normal),mpoint)[:-1]
-                marc = np.inner(geom.rotation_matrix(surf_normal),marc)[:-1]
+                mpoint = inner(geom.rotation_matrix(surf_normal),mpoint)[:-1]
+                marc = inner(geom.rotation_matrix(surf_normal),marc)[:-1]
                 a = a/np.linalg.norm(a)
-                a = np.inner(geom.rotation_matrix(surf_normal),a)[:-1]
+                a = inner(geom.rotation_matrix(surf_normal),a)[:-1]
 
                 b = b/np.linalg.norm(b)
-                b = np.inner(geom.rotation_matrix(surf_normal),b)[:-1]
-
-                if plotflag:
-                    ax.plot(a[0] , a[1], 'g*')
-                    ax.plot(b[0] , b[1], 'g*')
-                    ax.plot(marc[0] , marc[1], 'b*')
-
+                b = inner(geom.rotation_matrix(surf_normal),b)[:-1]
 
                 linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
 
@@ -346,6 +334,7 @@ def singularity_check(p0: np.ndarray, p1: np.ndarray) -> bool:
 
     return flag
 
+@numba.njit()
 def polygon_area(pts: np.ndarray) -> float:
     """
     calculates the area of a convex 3- or 4-sided polygon
@@ -401,7 +390,7 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
     for k in range(1,order+1):
 
         c = ps[k] - ps[0]                   # translate point towards new origin
-        cc = np.inner(rotation_matrix,c)    # rotate point around origin to align with new axis
+        cc = inner(rotation_matrix,c)    # rotate point around origin to align with new axis
         
         x[k] = cc[0]
         y[k] = cc[1]
@@ -415,8 +404,8 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
 @numba.njit()
 def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
 
-    if np.inner(v0,v1)!=0:
-        scale = np.sqrt( np.square( np.linalg.norm(np.cross(v0,v1))/np.inner(v0,v1) ) + np.square( np.linalg.norm(v0) ) )
+    if np.dot(v0,v1)!=0:
+        scale = np.sqrt( np.square( np.linalg.norm(np.cross(v0,v1))/np.dot(v0,v1) ) + np.square( np.linalg.norm(v0) ) )
 
         vout = v1*scale - v0
         vout /= np.linalg.norm(vout)
@@ -425,3 +414,5 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
         vout = v1/np.linalg.norm(v1)
 
     return vout
+
+
