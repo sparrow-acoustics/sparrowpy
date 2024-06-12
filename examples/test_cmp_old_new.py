@@ -1,13 +1,12 @@
+"""Test k=2 reflections old vs new."""
 # %%
 import numpy as np
 import numpy.testing as npt
-import pytest
-import os
 import pyfar as pf
 import matplotlib.pyplot as plt
 
 import sparapy as sp
-%matplotlib ipympl
+# %matplotlib ipympl
 #%%
 patch_size = 1
 max_order_k = 2
@@ -34,9 +33,11 @@ receiver_pos = np.array([3, 4, 2])
 radiosity_old.run(
     sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
 histogram_old = radiosity_old.energy_at_receiver(
-    sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
+    sp.geometry.Receiver(
+        receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
 histogram_old_1 = radiosity_old.energy_at_receiver(
-    sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True, max_order_k=1)
+    sp.geometry.Receiver(
+        receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True, max_order_k=1)
 # histogram_old = histogram_old-histogram_old_1
 radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
     walls, patch_size)
@@ -72,7 +73,7 @@ merged = pf.utils.concatenate_channels([
     histogram_old_diff_sig[0],
     # histogram_old_1_sig[0],
     # histogram_old_sig[0],
-    histogram_diff_sig,
+    histogram_diff_sig[0],
     ])
 plt.figure()
 pf.plot.time(merged, dB=True, log_prefix=10)

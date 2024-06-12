@@ -185,7 +185,14 @@ class DRadiosityFast():
         energy_1 = self.energy_1
         distance_1 = self.distance_1
         n_patches = self.n_patches
-        n_bins = self.n_bins
+        n_bins = self.n_bins#
+        patches_center = self.patches_center
+        distance_i_j = np.empty((n_patches, n_patches))
+        for i in range(n_patches):
+            for j in range(n_patches):
+                distance_i_j[i, j] = np.linalg.norm(
+                    patches_center[i, :]-patches_center[j, :])
+
         patch_receiver_energy = _calculate_patch_receiver_energy(
             patch_receiver_distance, patches_normal, air_attenuation)
         # add first 2 order energy exchange
@@ -195,7 +202,7 @@ class DRadiosityFast():
             histogram_time_resolution, n_patches, n_bins)
         # add remaining energy
         _calculate_energy_exchange_recursive(
-            ir, self.energy_1, self.distance_1, self._form_factors_tilde,
+            ir, energy_1, distance_1, distance_i_j, self._form_factors_tilde,
             self.n_patches, patch_receiver_distance, patch_receiver_energy,
             speed_of_sound, histogram_time_resolution,
             threshold=threshold, max_time=max_time, max_depth=max_depth)
@@ -396,7 +403,7 @@ class DRadiosityFast():
         return self._speed_of_sound
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _form_factors_with_directivity(
         visibility_matrix, form_factors, n_bins, patches_center, air_attenuation,
         absorption, absorption_index, patch_to_wall_ids,
@@ -437,7 +444,7 @@ def _form_factors_with_directivity(
     return form_factors_tilde
 
 
-# @numba.njit()
+@numba.njit()
 def process_patches(
         polygon_points_array: np.ndarray,
         walls_normal: np.ndarray,
@@ -490,7 +497,7 @@ def process_patches(
     return (patches_points, patches_normal, n_patches, patch_to_wall_ids)
 
 
-# @numba.njit()
+@numba.njit()
 def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     """Calculate the total number of patches.
 
@@ -524,7 +531,7 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     return patch_nums[x_idx]*patch_nums[y_idx]
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def calculate_init_energy(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, patches_size: float):
@@ -616,7 +623,7 @@ def calculate_init_energy(
     return (energy, distance_out)
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def check_visibility(
         patches_center:np.ndarray, patches_normal:np.ndarray) -> np.ndarray:
     """Check the visibility between patches.
@@ -661,7 +668,7 @@ def check_visibility(
     return visibility_matrix
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def form_factor_kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
         patches_size:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
@@ -816,7 +823,7 @@ def form_factor_kang(
     return form_factors
 
 
-# @numba.njit()
+@numba.njit()
 def _create_patches(polygon_points:np.ndarray, max_size):
     """Create patches from a polygon."""
     size = np.empty(polygon_points.shape[1])
@@ -857,17 +864,17 @@ def _create_patches(polygon_points:np.ndarray, max_size):
     return patches_points
 
 
-# @numba.njit()
+@numba.njit()
 def _calculate_center(points):
     return np.sum(points, axis=-2) / points.shape[-2]
 
-# @numba.njit()
+@numba.njit()
 def _calculate_size(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
     return np.abs(vec1-vec2)
 
-# @numba.njit()
+@numba.njit()
 def _calculate_area(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
@@ -877,7 +884,7 @@ def _calculate_area(points):
             + size[..., 0]*size[..., 2])
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _init_energy_0(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, air_attenuation:np.ndarray,
@@ -979,7 +986,7 @@ def _init_energy_0(
     return (energy, distance_out)
 
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _init_energy_1(
         energy_0, distance_0, source_position: np.ndarray,
         patches_center: np.ndarray, visible_patches: np.ndarray,
@@ -1063,7 +1070,7 @@ def _init_energy_1(
     return (energy_1, distance_1)
 
 
-# @numba.njit()
+@numba.njit()
 def _energy_exchange(
         ir, i_freq, h, i, energy, distance, form_factors_tilde, distance_1,
         patch_receiver_distance, patch_receiver_energy, speed_of_sound,
@@ -1072,7 +1079,6 @@ def _energy_exchange(
     n_patches = form_factors_tilde.shape[0]
     energy_new = energy * form_factors_tilde[h, i, :]
     if current_depth<max_depth:
-        # print(f'run at current_depth={current_depth}>max_depth={max_depth}')
         for j in range(n_patches):
             distance_new = distance + distance_1[i, j]
             if (energy_new[j] > 0) and (distance_new < max_distance):
@@ -1086,13 +1092,9 @@ def _energy_exchange(
                     distance_1, patch_receiver_distance, patch_receiver_energy,
                     speed_of_sound, histogram_time_resolution,
                     threshold, max_distance, current_depth+1, max_depth)
-            # else:
-            #     print(f'(energy_new[j]={energy_new[j]} > 0) and (distance_new={distance_new} < max_distance{max_distance}):')
-    # else:
-    #     print(f'break at current_depth={current_depth}>max_depth={max_depth}')
 
 
-# @numba.njit()
+@numba.njit()
 def _collect_receiver_energy(
         ir, i_freq,energy, distance, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution):
@@ -1106,7 +1108,7 @@ def _collect_receiver_energy(
     return ir
 
 
-# @numba.njit()
+@numba.njit()
 def _calculate_patch_receiver_energy(
         patch_receiver_distance, patches_normal, air_attenuation):
     receiver_factor = np.empty((
@@ -1123,7 +1125,7 @@ def _calculate_patch_receiver_energy(
     return receiver_factor
 
 
-# @numba.njit()
+@numba.njit()
 def _calculate_energy_exchange_second_order(
         ir, energy_0, distance_0, energy_1, distance_1,
         patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
@@ -1146,20 +1148,20 @@ def _calculate_energy_exchange_second_order(
                         patch_receiver_energy[j, i_freq],
                         speed_of_sound, histogram_time_resolution)
 
-# @numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _calculate_energy_exchange_recursive(
-        ir, energy_1, distance_1, form_factors_tilde,
+        ir, energy_1, distance_1,distance_i_j, form_factors_tilde,
         n_patches, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution,
         threshold=1e-12, max_time=0.1, max_depth=-1):
     max_distance = max_time*speed_of_sound
-    for h in numba.prange(n_patches):
-        for i_freq in range(energy_1.shape[-1]):
+    for i_freq in numba.prange(energy_1.shape[-1]):
+        for h in range(n_patches):
             for i in range(n_patches):
                 if energy_1[h, i, i_freq] > 0:
                     _energy_exchange(
                         ir, i_freq, h, i, energy_1[h, i, i_freq], distance_1[h, i],
-                        form_factors_tilde[..., i_freq], distance_1,
+                        form_factors_tilde[..., i_freq], distance_i_j,
                         patch_receiver_distance,
                         patch_receiver_energy[..., i_freq], speed_of_sound,
                         histogram_time_resolution,
@@ -1167,7 +1169,7 @@ def _calculate_energy_exchange_recursive(
                         current_depth=1, max_depth=max_depth)
 
 
-# @numba.njit()
+@numba.njit()
 def _get_scattering_data(
         pos_h, pos_i, pos_j, sources, receivers, wall_id_i,
         scattering, scattering_index):
