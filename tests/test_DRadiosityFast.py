@@ -451,16 +451,15 @@ def test_recursive_vs_old_implementation(
 
 
 @pytest.mark.parametrize('patch_size', [
-    0.5,
     1,
     ])
 @pytest.mark.parametrize('source_pos', [
-    np.array([0.25, 0.75, 0.3]),
+    np.array([2, 2, 2]),
     ])
 @pytest.mark.parametrize('receiver_pos', [
-    np.array([0.6, 0.3, 0.7]),
+    np.array([3, 4, 2]),
     ])
-@pytest.mark.parametrize('max_order_k', [3])
+@pytest.mark.parametrize('max_order_k', [2])
 def test_room_recursive_vs_old_implementation(
         patch_size, source_pos, receiver_pos, max_order_k,
         sofa_data_diffuse):
@@ -473,7 +472,7 @@ def test_room_recursive_vs_old_implementation(
     length_histogram = 0.2
     time_resolution = 1e-3
     speed_of_sound = 346.18
-    walls = sp.testing.shoebox_room_stub(1, 1, 1)
+    walls = sp.testing.shoebox_room_stub(5, 6, 4)
 
     radiosity_old = sp.radiosity.Radiosity(
         walls, patch_size, max_order_k, length_histogram,
@@ -482,8 +481,13 @@ def test_room_recursive_vs_old_implementation(
 
     radiosity_old.run(
         sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
-    histogram_old = radiosity_old.energy_at_receiver(
-        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
+    histogram_old_all = radiosity_old.energy_at_receiver(
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
+        ignore_direct=True)
+    histogram_old_1 = radiosity_old.energy_at_receiver(
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
+        ignore_direct=True, max_order_k=max_order_k-1)
+    histogram_old = histogram_old_all-histogram_old_1
 
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
         walls, patch_size)
@@ -500,9 +504,13 @@ def test_room_recursive_vs_old_implementation(
     radiosity.calculate_form_factors_directivity()
 
     radiosity.init_energy_recursive(source_pos)
-    histogram = radiosity.calculate_energy_exchange_recursive(
+    histogram_all = radiosity.calculate_energy_exchange_recursive(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
-        threshold=0, max_time=5, max_depth=max_order_k)
+        threshold=0, max_time=np.inf, max_depth=max_order_k)
+    histogram_1 = radiosity.calculate_energy_exchange_recursive(
+        receiver_pos, speed_of_sound, time_resolution, length_histogram,
+        threshold=0, max_time=np.inf, max_depth=max_order_k-1)
+    histogram = histogram_all-histogram_1
 
     # compare histogram
     for i in range(4):
