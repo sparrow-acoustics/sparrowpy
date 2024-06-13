@@ -58,7 +58,6 @@ def test_compute_form_factor_vals(sample_walls):
     tuniv = time.time()-t0
     univ = radiosity.form_factors
 
-
     radiosity.calculate_form_factors(method='kang')
     
     t0 = time.time()

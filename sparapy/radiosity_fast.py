@@ -755,7 +755,7 @@ def check_visibility(
     return visibility_matrix
 
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def form_factor_kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
         patches_size:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
@@ -935,13 +935,13 @@ def form_factor_universal(
     """
     n_patches = len(patches_area)
     form_factors = np.zeros((n_patches, n_patches))
-    for i in numba.prange(n_patches-1):
-        for j in range(i+1, n_patches):
-            print(f'{i} {j}')
-            if (visible_patches == [i,j]).all(1).any(): # numba does not like this
-                form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
-            if (visible_patches == [j,i]).all(1).any():
-                form_factors[j,i] = patches_area[i]/patches_area[j] * form_factors[i,j]
+    # for pairID in numba.prange(visible_patches.shape[0]):
+    #     i = visible_patches[pairID,0]
+    #     j = visible_patches[pairID,1]
+    for i in numba.prange(visible_patches.shape[0]):
+        for j in numba.prange(i+1, visible_patches.shape[0]):
+            form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
+
 
     return form_factors
 

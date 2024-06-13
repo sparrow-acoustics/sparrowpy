@@ -15,13 +15,13 @@ def sample(p0,p1,nsamples=3):
         
     return samples,step
 
-#@numba.njit()
+@numba.njit()
 def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
-    xmat = np.empty(shape=[len(x),len(x)])
+    xmat = np.empty((len(x),len(x)))
 
     if x[-1]-x[0]==0:
-        b = np.zeros((len(x,1)))
+        b = np.zeros(len(x))
     else:
         for i,xi in enumerate(x):
             for o in range(len(x)):
