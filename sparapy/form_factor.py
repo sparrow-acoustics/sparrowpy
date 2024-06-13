@@ -5,13 +5,15 @@ import numba
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### patch-to-patch
-@numba.njit()
+#@numba.njit()
 def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, source_pts: np.ndarray, source_normal: np.ndarray) -> float:
 
     if helpers.coincidence_check(receiving_pts, source_pts):
         out = nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_j=receiving_pts, patch_j_normal=receiving_normal, nsamples=64)
+        print("nuss")
     else:
         out = stokes_integration(patch_i=source_pts, patch_j=receiving_pts, source_area=helpers.polygon_area(source_pts),  approx_order=4)
+        print("stokes")
     
     return out
 
