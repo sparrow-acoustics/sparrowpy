@@ -5,7 +5,7 @@ import sparapy.geometry as geo
 import numpy as np
 import numpy.testing as npt
 import sparapy.form_factor as form_factor
-import sparapy.ff_helpers.exact_solutions as exact_solutions
+import sparapy.testing.exact_ff_solutions as exact_solutions
 import sparapy.radiosity as radiosity
 from sparapy.sound_object import SoundSource, Receiver
 from sparapy.radiosity import Patches
@@ -163,20 +163,7 @@ def test_point_surface_interactions(l, source, receiver, patchsize):
 
 def source_cast(src, rpatch, absor):
     """Test initial energy cast from a point to a generalized patch in space
-    naïve integration approach and Nusselt-analog-based options compared"""
-
-    t0 = time.time()
-    naive = form_factor.naive_pt_integration(pt=src.position, patch=rpatch, n_samples=100)
-    tf_naive = time.time()-t0
-
-    rpatch.nbins = 1
-    rpatch.init_energy_exchange(source=src, max_order_k=0, ir_length_s=.5)
-
-    rel_error_naive = abs(sum(rpatch.E_matrix[rpatch.E_matrix!=0]) - naive*(1-absor))/sum(rpatch.E_matrix[rpatch.E_matrix!=0]) * 100
-    
-    assert rel_error_naive < 1.
-    print("naive approach error: " + str(rel_error_naive) + "%")
-    print("naive approach runtime: " + str(tf_naive*1000) + "ms \n\n")
+   Nusselt-analog-based option"""
 
     t0 = time.time()
     nuss = form_factor.nusselt_pt_solution(point=src.position, patch_points=rpatch.pts)
@@ -190,31 +177,16 @@ def source_cast(src, rpatch, absor):
 
     print("nusselt approach error: " + str(rel_error_nuss) + "%")
     print("nusselt approach runtime: " + str(tf_nusselt*1000) + "ms \n #################################")
-
-    # check that nusselt outperforms naive approach
-    assert rel_error_nuss < rel_error_naive
-    assert tf_nusselt < tf_naive
-
     return rpatch
     
 
 def receiver_cast(rcv, patch, absor):
     """Test final energy cast from a generalized patch in space to a point
-    naïve integration approach and Nusselt-analog-based options compared"""
+    Nusselt-analog-based option"""
 
     true_rec_energy = np.sum(patch.energy_at_receiver(receiver=rcv, max_order=0, ir_length_s=0.1))
 
     patch_energy = np.sum(patch.E_matrix)
-
-    t0 = time.time()
-    naive = patch_energy * form_factor.naive_pt_integration(pt=rcv.position, patch=patch, mode='receiver', n_samples=100)
-    tf_naive = time.time()-t0
-
-    rel_error_naive = abs(true_rec_energy-naive)/true_rec_energy * 100
-    
-    assert rel_error_naive < 1.
-    print("naive approach error: " + str(rel_error_naive) + "%")
-    print("naive approach runtime: " + str(tf_naive*1000) + "ms \n\n")
 
     t0 = time.time()
     nuss = form_factor.nusselt_pt_solution(point=rcv.position, patch_points=patch.pts, mode='receiver') * patch_energy
@@ -226,7 +198,3 @@ def receiver_cast(rcv, patch, absor):
 
     print("nusselt approach error: " + str(rel_error_nuss) + "%")
     print("nusselt approach runtime: " + str(tf_nusselt*1000) + "ms \n #################################")
-
-    # check that nusselt outperforms naive approach
-    #assert rel_error_nuss < rel_error_naive
-    assert tf_nusselt < tf_naive

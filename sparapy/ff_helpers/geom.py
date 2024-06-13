@@ -1,21 +1,6 @@
 import numpy as np
 import numba
 
-@numba.njit()
-def vec_cos(v0,v1):
-    """
-    cosine of the angle between two arbitrary n-dimensional vectors
-    returns 1 if any vector has length 0
-
-    Parameters
-    ----------
-    v0, v1 : numpy.ndarray 
-            vectors of equal (N,1) dimensions
-    """
-    if np.linalg.norm(v1)==0 or np.linalg.norm(v0)==0:
-        return 1
-    else:
-        return np.dot(v0,v1)/(np.linalg.norm(v0)*np.linalg.norm(v1))
     
 @numba.njit()
 def universal_transform(o, u, pts):

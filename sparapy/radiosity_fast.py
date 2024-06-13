@@ -935,12 +935,10 @@ def form_factor_universal(
     """
     n_patches = len(patches_area)
     form_factors = np.zeros((n_patches, n_patches))
-    # for pairID in numba.prange(visible_patches.shape[0]):
-    #     i = visible_patches[pairID,0]
-    #     j = visible_patches[pairID,1]
-    for i in numba.prange(visible_patches.shape[0]):
-        for j in numba.prange(i+1, visible_patches.shape[0]):
-            form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
+    for pairID in numba.prange(visible_patches.shape[0]):
+        i = visible_patches[pairID,0]
+        j = visible_patches[pairID,1]
+        form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
 
 
     return form_factors

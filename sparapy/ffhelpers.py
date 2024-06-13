@@ -1,11 +1,9 @@
 import numpy as np
 import numba
-from sparapy.ff_helpers import geom
-
 
 ###################################################
-# 1D polynomial integration
-
+# integration
+################# 1D , polynomial
 @numba.njit()
 def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
@@ -18,7 +16,7 @@ def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
             for o in range(len(x)):
                 xmat[i,len(x)-1-o] = xi**o
         
-        b = geom.inner(np.linalg.inv(xmat), y)
+        b = inner(np.linalg.inv(xmat), y)
 
     return b
 
@@ -33,11 +31,65 @@ def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
 
     return out
 
+################# surface areas
+@numba.njit()
+def polygon_area(pts: np.ndarray) -> float:
+    """
+    calculates the area of a convex n-sided polygon
+
+    Parameters
+    ----------
+    pts: np.ndarray
+        list of 3D points which define the vertices of the polygon
+    """
+
+    area = 0
+
+    for tri in range(pts.shape[0]-2):
+        area  +=  .5 * np.linalg.norm(np.cross(pts[tri+1] - pts[0], pts[tri+2]-pts[0]))
+    
+    return area
+
+@numba.njit()
+def area_under_curve(ps: np.ndarray, order=2) -> float:
+    """
+    calculates the area under a polynomial curve sampled by a finite number of points (on a shared plane)
+    
+    Parameters
+    ----------
+    ps : np.ndarray
+        sample points
+
+    order : int
+        polynomial order of the curve
+    """
+
+    order = min(order,len(ps)-1) # the order of the curve may be overwritten depending on the sample size
+
+    f  = ps[-1] - ps[0] # the vector between first and last sample (y==0) (new space's x axis)
+
+    rotation_matrix = np.array([[f[0],f[1]],[-f[1],f[0]]])/np.linalg.norm(f) 
+
+    x = np.zeros(order+1)
+    y = np.zeros(order+1)
+
+    for k in range(1,order+1):
+
+        c = ps[k] - ps[0]                   # translate point towards new origin
+        cc = inner(rotation_matrix,c)    # rotate point around origin to align with new axis
+        
+        x[k] = cc[0]
+        y[k] = cc[1]
+
+
+    coefs = poly_estimation(x,y)
+    area = poly_integration(coefs,x)        # area between curve and ps[-1] - ps[0]
+
+    return area
 
 ####################################################
-#sampling
-
-
+# sampling
+################# surface
 @numba.njit()
 def sample_random(el: np.ndarray, npoints=100):
     """
@@ -148,6 +200,7 @@ def sample_regular(el: np.ndarray, npoints=10):
     
     return out
 
+################# boundary
 @numba.njit()
 def sample_border(el: np.ndarray, npoints=3):
     """
@@ -183,3 +236,106 @@ def sample_border(el: np.ndarray, npoints=3):
 
 
     return pts,conn.astype(np.int8)
+
+
+####################################################
+# geometry
+@numba.njit()
+def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
+
+    out = np.empty(matrix.shape[0])
+
+    for i in numba.prange(matrix.shape[0]):
+        out[i] = np.dot(matrix[i],vector)
+
+    return out
+
+@numba.njit()
+def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
+    """
+    Computes a rotation matrix from a given input vector and desired output direction
+
+    TO DO: expand to N-D arrays
+
+    Parameters
+    ----------
+    n_in : numpy.ndarray(3,) 
+        input vector
+            
+    n_out : numpy.ndarray(3,)
+        direction to which n_in is to be rotated
+    """
+
+    if n_out.shape[0] == 0:
+        n_out = np.zeros_like(n_in)
+        n_out[-1] = 1.
+    else:
+        n_out = n_out
+
+    #check if all the vector entries coincide
+    counter = int(0)
+
+    for i in numba.prange(n_in.shape[0]):
+        if n_in[i] == n_out[i]:
+            counter+=1
+        else:
+            counter=counter
+        
+
+    if counter == n_in.shape[0]:               # if input vector is the same as output return identity matrix
+
+        matrix = np.eye( len(n_in) , dtype=np.float64)
+        
+    else:
+
+        a = n_in / np.linalg.norm(n_in)
+        a = np.reshape(a, len(n_in) )
+
+        b = n_out / np.linalg.norm(n_out)
+        b = np.reshape(b, len(n_in) )
+
+        c = np.dot(a,b)
+        
+        if c!=-1:
+            v = np.cross(a,b)
+            s = np.linalg.norm(v)
+            kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+            matrix =  np.eye( len(n_in) ) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+
+        else: # in case the in and out vectors have symmetrical directions
+            matrix = np.array([[-1.,0.,0.],[0.,1.,0.],[0.,0.,-1.]])
+
+    return matrix
+
+@numba.njit()
+def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
+    
+    if np.dot(v0,v1)!=0:
+        scale = np.sqrt( np.square( np.linalg.norm(np.cross(v0,v1))/np.dot(v0,v1) ) + np.square( np.linalg.norm(v0) ) )
+
+        vout = v1*scale - v0
+        vout /= np.linalg.norm(vout)
+
+    else:
+        vout = v1/np.linalg.norm(v1)
+
+    return vout
+
+####################################################
+# checks
+@numba.njit()
+def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
+    """
+    returns true if two patches have any common points
+    """
+    flag=False
+
+    for k in numba.prange(p0.shape[1]):
+        for i in numba.prange(p0.shape[0]):
+            for j in numba.prange(p1.shape[0]):
+                if p0[i,k]==p1[j,k]:
+                    flag=True
+                else:
+                    pass
+
+    return flag
