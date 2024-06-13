@@ -63,7 +63,7 @@ def translation(origin, pt_list):
     return np.array(pt_list) - np.array([origin for i in range(len(pt_list))])
 
 @numba.njit()
-def rotation_matrix(n_in: np.ndarray, n_out=np.array([0.,0.,0.])):
+def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     """
     Computes a rotation matrix from a given input vector and desired output direction
 
@@ -78,7 +78,7 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([0.,0.,0.])):
         direction to which n_in is to be rotated
     """
 
-    if n_out == np.array([0,0,0]):
+    if n_out.shape[0] == 0:
         n_out = np.zeros_like(n_in)
         n_out[-1] = 1.
     else:

@@ -132,7 +132,7 @@ def sample_border(el: np.ndarray, npoints=3):
     n_div = npoints - 1 # this function was written with a different logic in mind -- needs refactoring
 
     pts  = np.empty((len(el)*(npoints-1),len(el[0])))
-    conn = np.empty((npoints,len(el)))
+    conn = np.empty((len(el),npoints), dtype=np.int8)
 
     for i in range(len(el)):
 
@@ -146,4 +146,4 @@ def sample_border(el: np.ndarray, npoints=3):
             conn[i][ii]=(i*n_div+ii)%(n_div*len(el))
 
 
-    return pts,conn
+    return pts,conn.astype(np.int8)

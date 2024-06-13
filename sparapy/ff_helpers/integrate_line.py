@@ -1,7 +1,8 @@
 import numpy as np
 import numba
+from sparapy.ff_helpers import geom
 
-@numba.njit(nopython=True)
+@numba.njit()
 def sample(p0,p1,nsamples=3):
 
     samples = np.empty([nsamples,len(p0)])
@@ -14,45 +15,41 @@ def sample(p0,p1,nsamples=3):
         
     return samples,step
 
-@numba.njit(nopython=True)
+#@numba.njit()
 def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     xmat = np.empty(shape=[len(x),len(x)])
 
     if x[-1]-x[0]==0:
-        return np.zeros([len(x,1)])
+        b = np.zeros((len(x,1)))
     else:
         for i,xi in enumerate(x):
             for o in range(len(x)):
                 xmat[i,len(x)-1-o] = xi**o
         
-        b = np.dot(np.linalg.inv(xmat), y)
+        b = geom.inner(np.linalg.inv(xmat), y)
 
-        return b
+    return b
 
-@numba.njit(nopython=True)
+@numba.njit()
 def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
 
-    a0 = integ(c,x[0])
-    a1 = integ(c,x[-1])
+    out = 0
 
-    # fig,a = plt.subplots()
+    for j in [-1,0]:
+        for i in range(len(c)):
+            out -= -1**j * c[i] * x[j]**(len(c)-i) / (len(c)-i)
 
-    # a.plot(np.linspace(x[0], x[-1], 50),integ(c,np.linspace(x[0], x[-1], 50)))
-    # a.fill_between(np.linspace(x[0], x[-1], 50), quad(c,np.linspace(x[0], x[-1], 50)), alpha=.5)
-    # a.plot(x,quad(c,x),'r*')
+    return out
 
-    # plt.show()
-
-    return a1-a0
-
-@numba.njit(nopython=True)
+@numba.njit()
 def integ(b: np.ndarray, y: np.ndarray) -> float:
 
-        out = 0
+    out = 0
 
-        for i in range(len(b)):
+    for i in range(len(b)):
+        out += b[i] * y**(len(b)-i) / (len(b)-i)
 
-            out += b[i] * y**(len(b)-i) / (len(b)-i)
+    return out
 
-        return out
+
