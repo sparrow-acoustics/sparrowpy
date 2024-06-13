@@ -11,7 +11,7 @@ import sparapy as sp
 create_reference_files = False
 
 def test_init(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
     npt.assert_almost_equal(radiosity.patches_points.shape, (150, 4, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (150))
     npt.assert_almost_equal(radiosity.patches_center.shape, (150, 3))
@@ -20,8 +20,8 @@ def test_init(sample_walls):
 
 
 def test_check_visibility(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
-    radiosity.check_visibility()
+    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity._visibility_matrix.shape, (150, 150))
     # npt.assert_array_equal(
     #     radiosity._visibility_matrix, radiosity._visibility_matrix.T)
@@ -32,17 +32,16 @@ def test_check_visibility(sample_walls):
 
 
 def test_check_visibility_wrapper(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
-    radiosity.check_visibility()
-    visibility_matrix = sp.radiosity_fast.check_visibility(
+    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity.bake_geometry()
+    visibility_matrix = sp.radiosity_fast.geometry.check_visibility(
         radiosity.patches_center, radiosity.patches_normal)
     npt.assert_almost_equal(radiosity._visibility_matrix, visibility_matrix)
 
 
 def test_compute_form_factors(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 0.2)
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
+    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
 
 
@@ -72,10 +71,9 @@ def test_calc_form_factor_perpendicular_distance(
     patch_1.calculate_form_factor(patches)
     patch_2.calculate_form_factor(patches)
 
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         [wall_source, wall_receiver], patch_size)
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
+    radiosity.bake_geometry()
 
     patch_pos = np.array([patch.center for patch in patch_1.patches])
     if (np.abs(patch_pos- radiosity.patches_center[:4, :])<1e-5).all():
@@ -114,10 +112,8 @@ def test_form_factors_directivity_for_diffuse(
     wall_receiver = sample_walls[walls[1]]
     walls = [wall_source, wall_receiver]
 
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
     data, sources, receivers = sofa_data_diffuse
     radiosity.set_wall_scattering(
         np.arange(len(walls)), data, sources, receivers)
@@ -126,7 +122,7 @@ def test_form_factors_directivity_for_diffuse(
     radiosity.set_wall_absorption(
         np.arange(len(walls)),
         pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.calculate_form_factors_directivity()
+    radiosity.bake_geometry()
     # radiosity.calculate_energy_exchange(k)
     # radiosity.init_energy(source_pos)
     # histogram = radiosity.collect_energy_receiver(
@@ -147,7 +143,7 @@ def test_form_factors_directivity_for_diffuse(
 
 
 def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         sample_walls, 0.2)
     (data, sources, receivers) = sofa_data_diffuse
     radiosity.set_wall_scattering(np.arange(6), data, sources, receivers)
@@ -167,7 +163,7 @@ def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
 
 
 def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         sample_walls, 0.2)
     (data, sources, receivers) = sofa_data_diffuse
     radiosity.set_wall_scattering([0, 1, 2], data, sources, receivers)
@@ -190,7 +186,7 @@ def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
 
 
 def test_set_wall_absorption(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         sample_walls, 0.2)
     radiosity.set_wall_absorption(
         np.arange(6), pf.FrequencyData([0.1, 0.2], [500, 1000]))
@@ -199,7 +195,7 @@ def test_set_wall_absorption(sample_walls):
 
 
 def test_set_wall_absorption_different(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         sample_walls, 0.2)
     radiosity.set_wall_absorption(
         [0, 1, 2], pf.FrequencyData([0.1, 0.1], [500, 1000]))
@@ -212,7 +208,7 @@ def test_set_wall_absorption_different(sample_walls):
 
 
 def test_set_air_attenuation(sample_walls):
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         sample_walls, 0.2)
     radiosity.set_air_attenuation(pf.FrequencyData([0.1, 0.2], [500, 1000]))
     npt.assert_array_equal(radiosity._air_attenuation, [0.1, 0.2])
@@ -220,7 +216,7 @@ def test_set_air_attenuation(sample_walls):
 
 def test_total_number_of_patches():
     points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]])
-    result = sp.radiosity_fast.total_number_of_patches(points, 0.2)
+    result = sp.radiosity_fast.geometry.total_number_of_patches(points, 0.2)
     desired = 25
     assert result == desired
 
@@ -263,7 +259,7 @@ def test_recursive_vs_old_implementation(
     histogram_old = radiosity_old.energy_at_receiver(
         sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
 
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
 
     radiosity.set_wall_scattering(
@@ -273,12 +269,10 @@ def test_recursive_vs_old_implementation(
     radiosity.set_wall_absorption(
         np.arange(len(walls)),
         pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
-    radiosity.calculate_form_factors_directivity()
+    radiosity.bake_geometry()
 
-    radiosity.init_energy_recursive(source_pos)
-    histogram = radiosity.calculate_energy_exchange_recursive(
+    radiosity.init_source_energy(source_pos)
+    histogram = radiosity.calculate_energy_exchange_receiver(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
         threshold=0, max_time=5, max_depth=max_order_k)
 
@@ -373,7 +367,7 @@ def test_room_recursive_vs_old_implementation(
         ignore_direct=True, max_order_k=max_order_k-1)
     histogram_old = histogram_old_all-histogram_old_1
 
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
 
     radiosity.set_wall_scattering(
@@ -383,15 +377,13 @@ def test_room_recursive_vs_old_implementation(
     radiosity.set_wall_absorption(
         np.arange(len(walls)),
         pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
-    radiosity.calculate_form_factors_directivity()
+    radiosity.bake_geometry()
 
-    radiosity.init_energy_recursive(source_pos)
-    histogram_all = radiosity.calculate_energy_exchange_recursive(
+    radiosity.init_source_energy(source_pos)
+    histogram_all = radiosity.calculate_energy_exchange_receiver(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
         threshold=0, max_time=np.inf, max_depth=max_order_k)
-    histogram_1 = radiosity.calculate_energy_exchange_recursive(
+    histogram_1 = radiosity.calculate_energy_exchange_receiver(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
         threshold=0, max_time=np.inf, max_depth=max_order_k-1)
     histogram = histogram_all-histogram_1
@@ -421,7 +413,7 @@ def test_recursive_reference(
     time_resolution = 1e-3
     speed_of_sound = 346.18
 
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radiosity = sp.DRadiosityFast.from_polygon(
         sample_walls, patch_size)
 
     radiosity.set_wall_scattering(
@@ -431,12 +423,10 @@ def test_recursive_reference(
     radiosity.set_wall_absorption(
         np.arange(len(sample_walls)),
         pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.check_visibility()
-    radiosity.calculate_form_factors()
-    radiosity.calculate_form_factors_directivity()
+    radiosity.bake_geometry()
 
-    radiosity.init_energy_recursive(source_pos)
-    histogram = radiosity.calculate_energy_exchange_recursive(
+    radiosity.init_source_energy(source_pos)
+    histogram = radiosity.calculate_energy_exchange_receiver(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
         max_time=0.011)
 
