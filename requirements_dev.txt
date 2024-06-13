@@ -20,3 +20,6 @@ pydata-sphinx-theme
 sphinx-design
 sphinx-favicon
 sphinx-reredirects
+numba
+ipykernel
+ipympl

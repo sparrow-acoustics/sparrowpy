@@ -18,6 +18,7 @@ requirements = [
     'pyfar',
     'sofar',
     'tqdm',
+    'numba',
 ]
 
 setup_requirements = [
