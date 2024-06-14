@@ -7,6 +7,7 @@ import pyfar as pf
 
 import sparapy as sp
 import time
+import matplotlib.pyplot as plt
 
 
 create_reference_files = False
@@ -48,10 +49,10 @@ def test_compute_form_factors(sample_walls):
 
 def test_compute_form_factor_vals(sample_walls):
     
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .2)
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
     radiosity.check_visibility()
 
-    radiosity.calculate_form_factors(method='universal')
+    #radiosity.calculate_form_factors(method='universal')
 
     t0 = time.time()
     radiosity.calculate_form_factors(method='universal')
@@ -66,6 +67,15 @@ def test_compute_form_factor_vals(sample_walls):
     kang = radiosity.form_factors
 
     diff = abs(kang-univ)
+
+    plt.figure()
+    plt.plot(diff.flatten(), label="diff")
+    plt.plot(kang.flatten(), label="kang")
+    plt.plot(univ.flatten(), label="univ")
+    plt.legend()
+    plt.grid()
+    plt.show()
+    
 
     maximo = np.max(diff)
     rms = np.sqrt(np.sum(np.square(diff)))/(diff.shape[0]**2)
