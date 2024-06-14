@@ -909,7 +909,7 @@ def form_factor_kang(
         form_factors[i_source, i_receiver] = ff
     return form_factors
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def form_factor_universal(
         patches_points:np.ndarray, patches_normal:np.ndarray,
         patches_area:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
@@ -935,12 +935,10 @@ def form_factor_universal(
     """
     n_patches = len(patches_area)
     form_factors = np.zeros((n_patches, n_patches))
-    # for pairID in numba.prange(visible_patches.shape[0]):
-    #     i = visible_patches[pairID,0]
-    #     j = visible_patches[pairID,1]
-    for i in numba.prange(visible_patches.shape[0]):
-        for j in numba.prange(i+1, visible_patches.shape[0]):
-            form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
+    for iD in numba.prange(visible_patches.shape[0]):
+        i = int(visible_patches[iD,0])
+        j = int(visible_patches[iD,1])
+        form_factors[i,j] = univ_ff(source_pts=patches_points[i], source_normal=patches_normal[i], receiving_pts=patches_points[j], receiving_normal=patches_normal[j])
 
 
     return form_factors
