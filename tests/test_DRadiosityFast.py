@@ -52,7 +52,7 @@ def test_compute_form_factor_vals(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
     radiosity.check_visibility()
 
-    #radiosity.calculate_form_factors(method='universal')
+    radiosity.calculate_form_factors(method='universal')
 
     t0 = time.time()
     radiosity.calculate_form_factors(method='universal')
@@ -87,9 +87,9 @@ def test_compute_form_factor_vals(sample_walls):
 
     mean_rel = 100*mmean/np.mean(kang)
 
-    assert maximo_rel*100 < 50
-    assert rms_rel*100 < 30
-    assert mean_rel*100 < 30
+    assert maximo_rel*100 < 20
+    assert rms_rel*100 < 2
+    assert mean_rel*100 < 2
 
 
 @pytest.mark.parametrize('walls', [
