@@ -121,6 +121,7 @@ def _collect_receiver_energy(
     R = np.linalg.norm(patch_receiver_distance)
     d = distance+R
     samples_delay = int(d/speed_of_sound/histogram_time_resolution)
+    print(f'n_old = {samples_delay}')
 
     # Equation 20
     ir[samples_delay,i_freq] += energy*patch_receiver_energy
