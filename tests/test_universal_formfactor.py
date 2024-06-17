@@ -156,7 +156,9 @@ def test_point_surface_interactions(l, source, receiver, patchsize):
 
     patch = Patches(polygon=patch_pos, max_size=patchsize*l, other_wall_ids=[], wall_id=[0], absorption=absor_factor)
 
-    patch = source_cast(source, patch, absor_factor)
+    patch.init_energy_exchange( 0, .1, source)
+
+    patch = source_cast(src=source, rpatch=patch, absor=absor_factor)
 
     receiver_cast(receiver, patch, absor_factor)
 
@@ -166,7 +168,7 @@ def source_cast(src, rpatch, absor):
    Nusselt-analog-based option"""
 
     t0 = time.time()
-    nuss = form_factor.nusselt_pt_solution(point=src.position, patch_points=rpatch.pts)
+    nuss = form_factor.pt_solution(point=src.position, patch_points=rpatch.pts)
     tf_nusselt = time.time()-t0
 
     true = sum(rpatch.E_matrix[rpatch.E_matrix!=0])
@@ -189,7 +191,7 @@ def receiver_cast(rcv, patch, absor):
     patch_energy = np.sum(patch.E_matrix)
 
     t0 = time.time()
-    nuss = form_factor.nusselt_pt_solution(point=rcv.position, patch_points=patch.pts, mode='receiver') * patch_energy
+    nuss = form_factor.pt_solution(point=rcv.position, patch_points=patch.pts, mode='receiver') * patch_energy
     tf_nusselt = time.time()-t0
 
     rel_error_nuss = abs(true_rec_energy - nuss)/true_rec_energy * 100
