@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 ###################################################
 # integration
 ################# 1D , polynomial
-@numba.njit()
+#@numba.njit()
 def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     xmat = np.empty((len(x),len(x)))
@@ -21,21 +21,19 @@ def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     return b
 
-@numba.njit()
+#@numba.njit()
 def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
 
     out = 0
 
-    s = -np.sign(x[-1]-x[0])
-
-    for j in [-1,0]:
-        for i in range(len(c)):
-            out -= s * -1**j * c[i] * x[j]**(len(c)-i) / (len(c)-i)
+    for i in range(len(c)):
+        out += c[i] * x[-1]**(len(c)-i) / (len(c)-i)
+        out -= c[i] * x[0]**(len(c)-i) / (len(c)-i)
 
     return out
 
 ################# surface areas
-@numba.njit()
+#@numba.njit()
 def polygon_area(pts: np.ndarray) -> float:
     """
     calculates the area of a convex n-sided polygon
@@ -53,7 +51,7 @@ def polygon_area(pts: np.ndarray) -> float:
     
     return area
 
-@numba.njit()
+#@numba.njit()
 def area_under_curve(ps: np.ndarray, order=2) -> float:
     """
     calculates the area under a polynomial curve sampled by a finite number of points (on a shared plane)
@@ -93,7 +91,7 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
 ####################################################
 # sampling
 ################# surface
-@numba.njit()
+#@numba.njit()
 def sample_random(el: np.ndarray, npoints=100):
     """
     Randomly sample points on the surface of a patch using a uniform distribution
@@ -131,7 +129,7 @@ def sample_random(el: np.ndarray, npoints=100):
 
     return ptlist
 
-@numba.njit()
+#@numba.njit()
 def sample_regular(el: np.ndarray, npoints=10):
     """
     Sample points on the surface of a patch using a regular distribution 
@@ -210,7 +208,7 @@ def sample_regular(el: np.ndarray, npoints=10):
     return out
 
 ################# boundary
-@numba.njit()
+#@numba.njit()
 def sample_border(el: np.ndarray, npoints=3):
     """
     Sample points on the boundary of a patch at fractional intervals of each side
@@ -249,7 +247,7 @@ def sample_border(el: np.ndarray, npoints=3):
 
 ####################################################
 # geometry
-@numba.njit()
+#@numba.njit()
 def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
 
     out = np.empty(matrix.shape[0])
@@ -259,7 +257,7 @@ def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
 
     return out
 
-@numba.njit()
+#@numba.njit()
 def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     """
     Computes a rotation matrix from a given input vector and desired output direction
@@ -316,7 +314,7 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
 
     return matrix
 
-@numba.njit()
+#@numba.njit()
 def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
     
     if np.dot(v0,v1)!=0:
@@ -332,7 +330,7 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
 
 ####################################################
 # checks
-@numba.njit()
+#@numba.njit()
 def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
     """
     returns true if two patches have any common points

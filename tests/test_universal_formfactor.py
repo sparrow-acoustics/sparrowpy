@@ -12,13 +12,13 @@ from sparapy.radiosity import Patches
 import time
 
 @pytest.mark.parametrize('width', [
-    1.,2.,3.
+    .5,1.,1.5
     ])
 @pytest.mark.parametrize('height', [
-    1.,2.,3.
+    .5,1.,1.5
     ])
 @pytest.mark.parametrize('distance', [
-    1.,2.,3.
+    .5,1.,1.5
     ])
 def test_parallel_facing_patches(width, height, distance):
     """Test universal form factor calculation for facing parallel patches of equal dimensions"""

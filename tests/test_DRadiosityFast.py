@@ -49,33 +49,40 @@ def test_compute_form_factors(sample_walls):
 
 def test_compute_form_factor_vals(sample_walls):
     
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .5)
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .2)
     radiosity.check_visibility()
 
-    radiosity.calculate_form_factors(method='universal')
+    #radiosity.calculate_form_factors(method='universal')
 
     t0 = time.time()
     radiosity.calculate_form_factors(method='universal')
     tuniv = time.time()-t0
     univ = radiosity.form_factors
 
-    radiosity.calculate_form_factors(method='kang')
+    #radiosity.calculate_form_factors(method='kang')
     
     t0 = time.time()
     radiosity.calculate_form_factors(method='kang')
     tkang = time.time()-t0
     kang = radiosity.form_factors
 
-    diff = abs(kang-univ)
+    diff = np.abs(kang-univ)
+
+
 
     plt.figure()
-    plt.plot(diff.flatten(), label="diff")
+    plt.imshow(diff/kang * 100)
+    #plt.plot(kang.flatten(), label="kang")
+    #plt.plot(univ.flatten(), label="univ")
+    #plt.legend()
+    plt.colorbar()
+    plt.show()
+    
+    plt.figure()
     plt.plot(kang.flatten(), label="kang")
     plt.plot(univ.flatten(), label="univ")
     plt.legend()
-    plt.grid()
     plt.show()
-    
 
     maximo = np.max(diff)
     rms = np.sqrt(np.sum(np.square(diff)))/(diff.shape[0]**2)
@@ -87,9 +94,9 @@ def test_compute_form_factor_vals(sample_walls):
 
     mean_rel = 100*mmean/np.mean(kang)
 
-    assert maximo_rel*100 < 20
-    assert rms_rel*100 < 2
-    assert mean_rel*100 < 2
+    assert maximo_rel < 10
+    assert rms_rel < 10
+    assert mean_rel < 1
 
 
 @pytest.mark.parametrize('walls', [

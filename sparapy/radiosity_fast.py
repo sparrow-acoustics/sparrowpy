@@ -909,7 +909,7 @@ def form_factor_kang(
         form_factors[i_source, i_receiver] = ff
     return form_factors
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def form_factor_universal(
         patches_points:np.ndarray, patches_normal:np.ndarray,
         patches_area:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:

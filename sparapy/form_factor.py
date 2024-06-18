@@ -5,19 +5,21 @@ import numba
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### patch-to-patch
-@numba.njit()
+#@numba.njit()
 def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, source_pts: np.ndarray, source_normal: np.ndarray) -> float:
 
     if helpers.coincidence_check(receiving_pts, source_pts):
-        out = nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_j=receiving_pts, patch_j_normal=receiving_normal, nsamples=100)
+        out = nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_j=receiving_pts, patch_j_normal=receiving_normal, nsamples=1)
     else:
         out = stokes_integration(patch_i=source_pts, patch_j=receiving_pts, source_area=helpers.polygon_area(source_pts),  approx_order=4)
+
+    #out = nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_j=receiving_pts, patch_j_normal=receiving_normal, nsamples=49)
 
     return out
 
 #######################################################################################
 ### Stokes integration 
-@numba.njit()
+#@numba.njit()
 def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
 
     n = np.linalg.norm(p1-p0)
@@ -27,7 +29,7 @@ def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
 
     return result
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
 
     form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)))
@@ -38,7 +40,7 @@ def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndar
 
     return form_mat
 
-@numba.njit(parallel=False)
+#@numba.njit(parallel=False)
 def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: float, approx_order=4) -> float:
     """
     calculate an estimation of the form factor between two patches 
@@ -74,8 +76,6 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
     # first compute and store form function sample values
     form_mat = load_stokes_entries(i_bpoints, j_bpoints)
 
-    hand = 1#np.sign(np.dot(np.cross( patch_i[1]-patch_i[0] , patch_i[2]-patch_i[1] ), np.cross( patch_j[1]-patch_j[0] , patch_j[2]-patch_j[1] )) )
-
     # double polynomial integration (per dimension (x,y,z))
     outer_integral = 0
     inner_integral = np.zeros((len(i_bpoints),len(j_bpoints[0])))
@@ -92,7 +92,7 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
                     quadfactors = helpers.poly_estimation(x=xj, y=subsecj) # compute polynomial coefficients of approx form function over boundary segment xj
-                    inner_integral[i][dim] += helpers.poly_integration(c=quadfactors,x=xj)                          # analytical integration of the approx polynomial
+                    inner_integral[i][dim] += helpers.poly_integration(c=quadfactors,x=xj)                       # analytical integration of the approx polynomia
 
 
         # integrate previously computed integral over each boundary segment of patch i
@@ -105,20 +105,19 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
                 quadfactors = helpers.poly_estimation(x=xi, y=subseci) 
-                outer_integral += hand * helpers.poly_integration(c=quadfactors,x=xi)
-
+                outer_integral += helpers.poly_integration(c=quadfactors,x=xi)
 
     return np.abs(outer_integral/(2*np.pi*source_area))
 
 
 #######################################################################################
 ### Nusselt analog integration
-@numba.njit(parallel=False)
+#@numba.njit(parallel=False)
 def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> float:
 
     boundary_points, connectivity = helpers.sample_border(patch_points, npoints=3) # 3 points per boundary segment (for quadratic approximation)
 
-    hand = -np.sign(np.dot(np.cross( patch_points[1]-patch_points[0] , patch_points[2]-patch_points[1] ), patch_normal) )
+    hand = np.sign(np.dot(np.cross( patch_points[1]-patch_points[0] , patch_points[2]-patch_points[1] ), patch_normal) )
 
     curved_area = 0
         
@@ -184,7 +183,7 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> floa
 
     return big_poly + hand*curved_area
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray, patch_j_normal: np.ndarray, nsamples=2, random=False) -> float:
     """
     Estimates the form factor by integrating the Nusselt analogue values (emitting patch) 
@@ -225,7 +224,7 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### point-to-patch and patch-to-point
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     """
 
