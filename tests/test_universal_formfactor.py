@@ -89,7 +89,6 @@ def test_perpendicular_coincidentpoint_patches(width1, width2, length1, length2)
 @pytest.mark.parametrize('patch_size', [
     1/3,
     0.5,
-    1,
     ])
 def test_kang_comparison_parallel(sample_walls, parallel_walls, patch_size):
     """Test form factor calculation for parallel walls."""

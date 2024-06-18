@@ -30,7 +30,7 @@ def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, so
     """
 
     if helpers.coincidence_check(receiving_pts, source_pts):
-        out = nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_j=receiving_pts, patch_j_normal=receiving_normal, nsamples=1)
+        out = nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_j=receiving_pts, patch_j_normal=receiving_normal, nsamples=64)
     else:
         out = stokes_integration(patch_i=source_pts, patch_j=receiving_pts, source_area=helpers.polygon_area(source_pts),  approx_order=4)
 
@@ -296,7 +296,7 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
     for i in numba.prange(p0_array.shape[0]):
         out += nusselt_analog(surf_origin=p0_array[i], surf_normal=patch_i_normal, patch_points=patch_j, patch_normal=patch_j_normal)
 
-    out /= (np.pi * len(p0_array))
+    out *= helpers.polygon_area(patch_i)/(np.pi * len(p0_array) * helpers.polygon_area(patch_j))
 
     return out 
 
