@@ -124,6 +124,10 @@ class DRadiosityFast():
             self._form_factors = form_factor.kang(
                 self.patches_center, self.patches_normal,
                 self.patches_size, self._visible_patches)
+        elif ff_method == 'universal':
+            self._form_factors = form_factor.universal(
+                self.patches_points, self.patches_normal,
+                self.patches_area, self._visible_patches)
         else:
             raise NotImplementedError()
 

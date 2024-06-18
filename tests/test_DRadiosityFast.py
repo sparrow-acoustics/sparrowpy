@@ -47,26 +47,21 @@ def test_compute_form_factors(sample_walls):
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
 
 def test_compute_form_factor_vals(sample_walls):
-    
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
-    radiosity.check_visibility()
-
     # just to compile the programs
-    radiosity.calculate_form_factors(method='universal')
-    radiosity.calculate_form_factors(method='kang')
-
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
+    radiosity.bake_geometry(ff_method='kang')
+    radiosity.bake_geometry(ff_method='universal')
 
     # actual run
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .2)
-    radiosity.check_visibility()
-
+    
     t0 = time.time()
-    radiosity.calculate_form_factors(method='universal')
+    radiosity.bake_geometry(ff_method='universal')
     tuniv = time.time()-t0
     univ = radiosity.form_factors
 
     t0 = time.time()
-    radiosity.calculate_form_factors(method='kang')
+    radiosity.bake_geometry(ff_method='kang')
     tkang = time.time()-t0
     kang = radiosity.form_factors
 
