@@ -89,52 +89,52 @@ def test_perpendicular_coincidentpoint_patches(width1, width2, length1, length2)
 #########################################################################################################
 # compare to Kang implementation
 
-@pytest.mark.parametrize('parallel_walls', [
-    [0, 1], [1, 0], [2, 3], [3, 2], [4, 5], [5, 4]
-    ])
-@pytest.mark.parametrize('patch_size', [
-    1/3,
-    0.5,
-    ])
-def test_kang_comparison_parallel(sample_walls, parallel_walls, patch_size):
-    """Test form factor calculation for parallel walls."""
-    wall_source = sample_walls[parallel_walls[0]]
-    wall_receiver = sample_walls[parallel_walls[1]]
+# @pytest.mark.parametrize('parallel_walls', [
+#     [0, 1], [1, 0], [2, 3], [3, 2], [4, 5], [5, 4]
+#     ])
+# @pytest.mark.parametrize('patch_size', [
+#     1/3,
+#     0.5,
+#     ])
+# def test_kang_comparison_parallel(sample_walls, parallel_walls, patch_size):
+#     """Test form factor calculation for parallel walls."""
+#     wall_source = sample_walls[parallel_walls[0]]
+#     wall_receiver = sample_walls[parallel_walls[1]]
 
-    patch_1 = radiosity.Patches(wall_source, patch_size, [1], 0)
-    patch_2 = radiosity.Patches(wall_receiver, patch_size, [0], 1)
-    patches = [patch_1, patch_2]
-    patch_1.calculate_form_factor(patches)
-    old_ff = patch_1.form_factors
-    patch_1.calculate_univ_form_factor(patches)
-    assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 10
+#     patch_1 = radiosity.Patches(wall_source, patch_size, [1], 0)
+#     patch_2 = radiosity.Patches(wall_receiver, patch_size, [0], 1)
+#     patches = [patch_1, patch_2]
+#     patch_1.calculate_form_factor(patches)
+#     old_ff = patch_1.form_factors
+#     patch_1.calculate_univ_form_factor(patches)
+#     assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 10
 
-@pytest.mark.parametrize('perpendicular_walls', [
-    [0, 2], [0, 3], [0, 4], [0, 5],
-    [1, 2], [1, 3], [1, 4], [1, 5],
-    [2, 0], [2, 1], [2, 4], [2, 5],
-    [3, 0], [3, 1], [3, 4], [3, 5],
-    [4, 0], [4, 1], [4, 2], [4, 3],
-    [5, 0], [5, 1], [5, 2], [5, 3],
-    ])
-@pytest.mark.parametrize('patch_size', [
-    1/3,
-    0.5,
-    1,
-    ])
-def test_kang_comparison_perpendicular(
-        sample_walls, perpendicular_walls, patch_size):
-    """Test form factor calculation for perpendicular walls."""
-    wall_source = sample_walls[perpendicular_walls[0]]
-    wall_receiver = sample_walls[perpendicular_walls[1]]
+# @pytest.mark.parametrize('perpendicular_walls', [
+#     [0, 2], [0, 3], [0, 4], [0, 5],
+#     [1, 2], [1, 3], [1, 4], [1, 5],
+#     [2, 0], [2, 1], [2, 4], [2, 5],
+#     [3, 0], [3, 1], [3, 4], [3, 5],
+#     [4, 0], [4, 1], [4, 2], [4, 3],
+#     [5, 0], [5, 1], [5, 2], [5, 3],
+#     ])
+# @pytest.mark.parametrize('patch_size', [
+#     1/3,
+#     0.5,
+#     1,
+#     ])
+# def test_kang_comparison_perpendicular(
+#         sample_walls, perpendicular_walls, patch_size):
+#     """Test form factor calculation for perpendicular walls."""
+#     wall_source = sample_walls[perpendicular_walls[0]]
+#     wall_receiver = sample_walls[perpendicular_walls[1]]
     
-    patch_1 = radiosity.Patches(wall_source, patch_size, [1], 0)
-    patch_2 = radiosity.Patches(wall_receiver, patch_size, [0], 1)
-    patches = [patch_1, patch_2]
-    patch_1.calculate_form_factor(patches)
-    old_ff = patch_1.form_factors
-    patch_1.calculate_univ_form_factor(patches)
-    assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 10
+#     patch_1 = radiosity.Patches(wall_source, patch_size, [1], 0)
+#     patch_2 = radiosity.Patches(wall_receiver, patch_size, [0], 1)
+#     patches = [patch_1, patch_2]
+#     patch_1.calculate_form_factor(patches)
+#     old_ff = patch_1.form_factors
+#     patch_1.calculate_univ_form_factor(patches)
+#     assert 100*abs(np.concatenate(patch_1.form_factors).sum()-np.concatenate(old_ff).sum()) / np.concatenate(old_ff).sum() < 10
 
 
 

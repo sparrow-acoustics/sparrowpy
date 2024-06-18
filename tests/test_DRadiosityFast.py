@@ -45,6 +45,8 @@ def test_compute_form_factors(sample_walls):
     radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
+    radiosity.bake_geometry(ff_method='universal')
+    npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
 
 def test_compute_form_factor_vals(sample_walls):
     # just to compile the programs
