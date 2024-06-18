@@ -1,6 +1,42 @@
 import numpy as np
-from sparapy.geometry import Polygon as polyg
 import numba
+from sparapy.ff_helpers import geom
+
+
+###################################################
+# 1D polynomial integration
+
+@numba.njit()
+def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+
+    xmat = np.empty((len(x),len(x)))
+
+    if x[-1]-x[0]==0:
+        b = np.zeros(len(x))
+    else:
+        for i,xi in enumerate(x):
+            for o in range(len(x)):
+                xmat[i,len(x)-1-o] = xi**o
+        
+        b = geom.inner(np.linalg.inv(xmat), y)
+
+    return b
+
+@numba.njit()
+def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
+
+    out = 0
+
+    for j in [-1,0]:
+        for i in range(len(c)):
+            out -= -1**j * c[i] * x[j]**(len(c)-i) / (len(c)-i)
+
+    return out
+
+
+####################################################
+#sampling
+
 
 @numba.njit()
 def sample_random(el: np.ndarray, npoints=100):

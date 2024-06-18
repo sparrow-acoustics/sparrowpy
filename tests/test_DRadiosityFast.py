@@ -7,6 +7,7 @@ import pyfar as pf
 
 import sparapy as sp
 import time
+import matplotlib.pyplot as plt
 
 
 create_reference_files = False
@@ -51,21 +52,38 @@ def test_compute_form_factor_vals(sample_walls):
     radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
     radiosity.check_visibility()
 
+    # just to compile the programs
     radiosity.calculate_form_factors(method='universal')
+    radiosity.calculate_form_factors(method='kang')
+
+
+    # actual run
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .2)
+    radiosity.check_visibility()
 
     t0 = time.time()
     radiosity.calculate_form_factors(method='universal')
     tuniv = time.time()-t0
     univ = radiosity.form_factors
 
-    radiosity.calculate_form_factors(method='kang')
-    
     t0 = time.time()
     radiosity.calculate_form_factors(method='kang')
     tkang = time.time()-t0
     kang = radiosity.form_factors
 
-    diff = abs(kang-univ)
+    diff = np.abs(kang-univ)
+
+    plt.figure()
+    plt.imshow(diff/kang * 100)
+    plt.colorbar()
+    plt.savefig(".\\tests\\test_data\\kang_vs_univ_ff_rel_diff.png")
+    
+    plt.figure()
+    plt.title("form factor values")
+    plt.plot(kang.flatten(), label="kang")
+    plt.plot(univ.flatten(), label="univ")
+    plt.legend()
+    plt.savefig(".\\tests\\test_data\\kang_vs_univ_ff_abs_values.png")
 
     maximo = np.max(diff)
     rms = np.sqrt(np.sum(np.square(diff)))/(diff.shape[0]**2)
@@ -77,9 +95,9 @@ def test_compute_form_factor_vals(sample_walls):
 
     mean_rel = 100*mmean/np.mean(kang)
 
-    assert maximo_rel*100 < 50
-    assert rms_rel*100 < 30
-    assert mean_rel*100 < 30
+    assert maximo_rel < 10
+    assert rms_rel < 1
+    assert mean_rel < 10
 
 
 @pytest.mark.parametrize('walls', [
