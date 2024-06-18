@@ -5,8 +5,29 @@ import numba
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### patch-to-patch
-#@numba.njit()
+@numba.njit()
 def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, source_pts: np.ndarray, source_normal: np.ndarray) -> float:
+    """
+    returns the form factor depending on the characteristics of the input patches
+    
+    Parameters
+    ----------
+    receiving_pts: np.ndarray
+        receiver patch vertex coordinates (n_vertices,3)
+
+    receiving_normal: np.ndarray
+        receiver patch normal (3,)
+
+    source_pts: np.ndarray
+        source patch vertex coordinates (n_vertices,3)
+
+    source_normal: np.ndarray
+        source patch normal (3,)
+
+    out: float
+        form factor
+
+    """
 
     if helpers.coincidence_check(receiving_pts, source_pts):
         out = nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_j=receiving_pts, patch_j_normal=receiving_normal, nsamples=1)
@@ -19,18 +40,47 @@ def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, so
 
 #######################################################################################
 ### Stokes integration 
-#@numba.njit()
+@numba.njit()
 def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
+    """
+    returns the form function value for the stokes form factor integration method
+    
+    Parameters
+    ----------
+    p0: np.ndarray
+        a point in space (3,)
+        in the stokes integration of the form factor, a point on a patch's boundary
+
+    p0: np.ndarray
+        a point in space (3,)
+        in the stokes integration of the form factor, a point on a different patch's boundary
+
+    """
 
     n = np.linalg.norm(p1-p0)
-
 
     result = np.log(n)
 
     return result
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
+    """
+    calculates aall the stokes form function values between two patches 
+    and stores them in a matrix.
+
+    Parameters
+    ----------
+    i_bpoints: np.ndarray
+        list of points in patch i boundary (n_boundary_points_i , 3)
+
+    j_bpoints: np.ndarray
+        list of points in patch j boundary (n_boundary_points_j , 3)
+
+    form_mat: np.ndarray
+        matrix of form function values (n_boundary_points_i , n_boundary_points_j)
+
+    """
 
     form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)))
 
@@ -40,7 +90,7 @@ def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndar
 
     return form_mat
 
-#@numba.njit(parallel=False)
+@numba.njit(parallel=False)
 def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: float, approx_order=4) -> float:
     """
     calculate an estimation of the form factor between two patches 
@@ -51,15 +101,17 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
     
     Parameters
     ----------
-    patch_i : geometry.Polygon
-        radiance emitting patch
+    patch_i : np.ndarray
+        vertex coordinates of patch i (n_vertices, 3)
 
-    patch_j : geometry.Polygon
-        radiance receiving patch
+    patch_j : np.ndarray
+        vertex coordinates of patch j (n_vertices, 3)
+
+    source_area: float
+        area of the source patch
 
     approx_order: int
-        determines the order of the polynomial integration order. 
-        also determines the number of samples in each patch's boundary.
+        polynomial order of the form function integration estimation
 
     """
 
@@ -112,8 +164,30 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
 
 #######################################################################################
 ### Nusselt analog integration
-#@numba.njit(parallel=False)
+@numba.njit(parallel=False)
 def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> float:
+    """
+    Implementation of the nusselt analog. 
+    Projects a given receiver patch onto a hemisphere centered around a point on a source patch surface.
+    The hemispherical projection is then projected onto the source patch plane. 
+    The area of this projection relative to the unit circle area is the differential form factor between the two patches.
+    
+    Parameters
+    ----------
+    surf_origin : np.ndarray
+        point on source patch for differential form factor evaluation (3,)
+        (global origin)
+
+    surf_normal : np.ndarray
+        normal of source patch (3,)
+
+    patch_points : np.ndarray
+        vertex coordinates of the receiver patch (n_vertices, 3)
+
+    patch_normal: np.ndarray
+        normal of receiver patch (3,)
+
+    """
 
     boundary_points, connectivity = helpers.sample_border(patch_points, npoints=3) # 3 points per boundary segment (for quadratic approximation)
 
@@ -183,22 +257,28 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> floa
 
     return big_poly + hand*curved_area
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray, patch_j_normal: np.ndarray, nsamples=2, random=False) -> float:
     """
-    Estimates the form factor by integrating the Nusselt analogue values (emitting patch) 
-    over the surface of the receiving patch
+    Estimates the form factor by integrating the differential form factor (Nusselt analogue)
+    over the surface of the source patch 
 
     Parameters
     ----------
-    patch_i: geometry.Polygon
-            emitting patch
+    patch_i: np.ndarray
+        vertex coordinates of the source patch
 
-    patch_j: geometry.Polygon
-            receiving patch
+    patch_j: np.ndarray
+        vertex coordinates of the receiver patch
+    
+    patch_i_normal: np.ndarray
+        source patch normal (3,)
+
+    patch_j_normal: np.ndarray
+        receiver patch normal (3,)
 
     nsamples: int
-            number of surface samples for integration
+        number of receiver surface samples for integration
 
     random: bool
             determines the distribution of the samples on patch_i surface 
@@ -207,14 +287,14 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
     """
     
     if random:
-        p0_array = helpers.sample_random(patch_j,nsamples)
+        p0_array = helpers.sample_random(patch_i,nsamples)
     else:
-        p0_array = helpers.sample_regular(patch_j,nsamples)
+        p0_array = helpers.sample_regular(patch_i,nsamples)
 
     out = 0
 
     for i in numba.prange(p0_array.shape[0]):
-        out += nusselt_analog(surf_origin=p0_array[i], surf_normal=patch_j_normal, patch_points=patch_i, patch_normal=patch_i_normal)
+        out += nusselt_analog(surf_origin=p0_array[i], surf_normal=patch_i_normal, patch_points=patch_j, patch_normal=patch_j_normal)
 
     out /= (np.pi * len(p0_array))
 
@@ -224,11 +304,26 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### point-to-patch and patch-to-point
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     """
+    calculates the "form factor" between a point (source or receiver) and a patch
+    using a modified version of the Nusselt analogue, transformed for a -point- source, 
+    rather than differential surface element.
 
+    Parameters
+    ----------
+    point: np.ndarray
+        source or receiver point
+
+    patch_points: np.ndarray
+        vertex coordinates of the patch
+
+    mode: string
+        determines if point is acting as a source ('source')
+        or as a receiver ('receiver')
     """
+    
     if mode == 'receiver':
         source_area = helpers.polygon_area(patch_points)
     elif mode == 'source':

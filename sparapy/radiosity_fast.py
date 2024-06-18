@@ -231,8 +231,7 @@ class DRadiosityFast():
                 self.patches_size, self._visible_patches)
         elif method == 'universal':
             self._form_factors = form_factor_universal(
-                self.patches_points, self.patches_normal,
-                self.patches_area, self._visible_patches)
+                self.patches_points, self.patches_normal, self._visible_patches)
         else:
             RuntimeWarning("no form factor calculation method")
 
@@ -755,7 +754,7 @@ def check_visibility(
     return visibility_matrix
 
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def form_factor_kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
         patches_size:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
@@ -909,20 +908,17 @@ def form_factor_kang(
         form_factors[i_source, i_receiver] = ff
     return form_factors
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def form_factor_universal(
-        patches_points:np.ndarray, patches_normal:np.ndarray,
-        patches_area:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
+        patches_points:np.ndarray, patches_normal:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
     """Calculate the form factors between patches.
 
     Parameters
     ----------
-    patches_area : np.ndarray
-        area values of the patches (n_patches,)
     patches_normal : np.ndarray
         normal vectors of all patches of shape (n_patches, 3)
-    patches_size : np.ndarray
-        size of all patches of shape (n_patches, 3)
+    patches_points : np.ndarray
+        coordinates of each patch's vertices (n_patches, n_points, 3)
     visible_patches : np.ndarray
         index list of all visible patches combinations (n_combinations, 2)
 
@@ -933,7 +929,7 @@ def form_factor_universal(
         note that just i_source < i_receiver are calculated ff[i, j] = ff[j, i]
 
     """
-    n_patches = len(patches_area)
+    n_patches = patches_normal.shape[0]
     form_factors = np.zeros((n_patches, n_patches))
     for pairID in numba.prange(visible_patches.shape[0]):
         i = int(visible_patches[pairID,0])
