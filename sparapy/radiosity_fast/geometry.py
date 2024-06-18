@@ -3,7 +3,7 @@ import numba
 import numpy as np
 
 
-@numba.njit()
+#@numba.njit()
 def get_scattering_data(
         pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,
         sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
@@ -49,7 +49,7 @@ def get_scattering_data(
 
 
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def check_visibility(
         patches_center:np.ndarray, patches_normal:np.ndarray) -> np.ndarray:
     """Check the visibility between patches.
@@ -93,7 +93,7 @@ def check_visibility(
             visibility_matrix[i_source, i_receiver] = True
     return visibility_matrix
 
-@numba.njit()
+#@numba.njit()
 def _create_patches(polygon_points:np.ndarray, max_size):
     """Create patches from a polygon."""
     size = np.empty(polygon_points.shape[1])
@@ -134,27 +134,27 @@ def _create_patches(polygon_points:np.ndarray, max_size):
     return patches_points
 
 
-@numba.njit()
+#@numba.njit()
 def _calculate_center(points):
     return np.sum(points, axis=-2) / points.shape[-2]
 
-@numba.njit()
+#@numba.njit()
 def _calculate_size(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
     return np.abs(vec1-vec2)
 
-@numba.njit()
+#@numba.njit()
 def _calculate_area(points):
-    vec1 = points[..., 0, :]-points[..., 1, :]
-    vec2 = points[..., 1, :]-points[..., 2, :]
-    size = vec1-vec2
-    return np.abs(
-        size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
-            + size[..., 0]*size[..., 2])
 
+    area = np.zeros(points.shape[0])
+    
+    for tri in range(points.shape[1]-2):
+        area +=  .5 * np.linalg.norm(np.cross(points[..., tri+1,:] - points[..., 0,:], points[..., tri+2,:]-points[..., 0,:]), axis=1)
+    
+    return area
 
-@numba.njit()
+##@numba.njit()
 def process_patches(
         polygon_points_array: np.ndarray,
         walls_normal: np.ndarray,
@@ -207,7 +207,7 @@ def process_patches(
     return (patches_points, patches_normal, n_patches, patch_to_wall_ids)
 
 
-@numba.njit()
+#@numba.njit()
 def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     """Calculate the total number of patches.
 
