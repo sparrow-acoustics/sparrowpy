@@ -3,6 +3,7 @@ import numpy as np
 import pyfar as pf
 from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_recursive as ee_recursive
+from . import energy_exchange_queue as ee_queue
 
 
 class DRadiosityFast():
@@ -56,6 +57,7 @@ class DRadiosityFast():
         self._receivers = None
         self._absorption = None
         self._air_attenuation = None
+        self._hi_indices = None
 
     @classmethod
     def from_polygon(
@@ -188,6 +190,20 @@ class DRadiosityFast():
             self.distance_0 = distance_0
             self.energy_1 = energy_1
             self.distance_1 = distance_1
+        elif algorithm == 'queue':
+            energy_0, distance_0 = source_energy._init_energy_universal(
+                source_position, self.patches_center, self.patches_points, 
+                self.n_bins)
+            indices, energy_1, distance_1 = ee_queue._init_energy_1(energy_0, 
+                distance_0, source_position, self.patches_center, 
+                self._visible_patches, self.patches_area, self.n_bins,
+                patch_to_wall_ids, absorption, absorption_index, form_factors, 
+                sources, receivers, scattering, scattering_index)
+            self.energy_0 = energy_0
+            self.distance_0 = distance_0
+            self.energy_1 = energy_1
+            self.distance_1 = distance_1
+            self._hi_indices = indices
         else:
             raise NotImplementedError()
 
@@ -209,7 +225,7 @@ class DRadiosityFast():
             energy_1 = self.energy_1
             distance_1 = self.distance_1
             n_patches = self.n_patches
-            n_bins = self.n_bins#
+            n_bins = self.n_bins
             patches_center = self.patches_center
             distance_i_j = np.empty((n_patches, n_patches))
             for i in range(n_patches):
@@ -230,6 +246,41 @@ class DRadiosityFast():
                 self.n_patches, patch_receiver_distance, patch_receiver_energy,
                 speed_of_sound, histogram_time_resolution,
                 threshold=threshold, max_time=max_time, max_depth=max_depth)
+            return ir.T
+        elif algorithm == 'queue':
+            energy_threshold = 1e-6
+            n_samples = int(histogram_length/histogram_time_resolution)
+            ir = np.array([np.zeros((n_samples)) for _ in range(self.n_bins)]).T
+            patch_receiver_distance = np.linalg.norm(self.patches_center - receiver_pos)
+            air_attenuation = self._air_attenuation
+            patches_normal = self._patches_normal
+            patch_points = self._patches_points
+            patch_area = self.patches_area
+            energy_0 = self.energy_0
+            distance_0 = self.distance_0
+            energy_1 = self.energy_1
+            distance_1 = self.distance_1
+            indices = self._hi_indices
+            n_patches = self.n_patches
+            n_bins = self.n_bins
+            patches_center = self.patches_center
+            distance_i_j = np.empty((n_patches, n_patches))
+            for i in range(n_patches):
+                for j in range(n_patches):
+                    distance_i_j[i, j] = np.linalg.norm(
+                        patches_center[i, :]-patches_center[j, :])
+
+            patch_receiver_energy = receiver_energy._universal(
+                receiver_pos, patch_points, patch_area, patch_receiver_distance,
+                air_attenuation)
+            # add first 2 order energy exchange
+            ee_queue._calculate_energy_exchange_first_order(
+                    ir, energy_0, distance_0, indices, energy_1, distance_1, patch_receiver_energy,
+                    speed_of_sound, histogram_time_resolution,n_bins, thres=energy_threshold)
+            ee_queue._calculate_energy_exchange_queue(ir, indices, energy_1, distance_1, distance_i_j,
+                                    self._form_factors_tilde,patch_receiver_distance, patch_receiver_energy,
+                                    speed_of_sound, histogram_time_resolution,
+                                    threshold=energy_threshold)
             return ir.T
         else:
             raise NotImplementedError()

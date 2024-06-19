@@ -306,9 +306,9 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
 #######################################################################################
 ### point-to-patch and patch-to-point
 @numba.njit(parallel=True)
-def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
+def pt_solution_source(point: np.ndarray, patch_points: np.ndarray):
     """
-    calculates the "form factor" between a point (source or receiver) and a patch
+    calculates the "form factor" between a point source and a patch
     using a modified version of the Nusselt analogue, transformed for a -point- source, 
     rather than differential surface element.
 
@@ -320,15 +320,7 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     patch_points: np.ndarray
         vertex coordinates of the patch
 
-    mode: string
-        determines if point is acting as a source ('source')
-        or as a receiver ('receiver')
     """
-    
-    if mode == 'receiver':
-        source_area = helpers.polygon_area(patch_points)
-    elif mode == 'source':
-        source_area = 4
 
     npoints = len(patch_points)
 
@@ -350,4 +342,46 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
 
     factor = interior_angle_sum - (len(patch_points)-2)*np.pi
 
-    return factor / (np.pi*source_area)
+    return factor / (np.pi*4)
+
+def pt_solution_receiver(point: np.ndarray, patch_points: np.ndarray, patch_area: np.ndarray):
+    """
+    calculates the "form factor" between a point receiver and a patch
+    using a modified version of the Nusselt analogue, transformed for a -point- receiver, 
+    rather than differential surface element.
+
+    Parameters
+    ----------
+    point: np.ndarray
+        source or receiver point
+        (3,)
+
+    patch_points: np.ndarray
+        vertex coordinates of the patch
+        (n_vertices,3)
+
+    patch_area: float
+        surface area of the patch
+    """
+
+    npoints = len(patch_points)
+
+    interior_angle_sum = 0
+
+    #patch_onsphere1 = np.transpose(np.divide( np.transpose(patch_points-point) , np.linalg.norm(patch_points-point, axis=1) ))
+
+    patch_onsphere = np.zeros_like(patch_points)
+
+    for i in range(npoints):
+        patch_onsphere[i]= (patch_points[i]-point) / np.linalg.norm(patch_points[i]-point)
+
+    for i in range(npoints): 
+
+        v0 = helpers.calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i-1)%npoints])
+        v1 = helpers.calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i+1)%npoints])
+
+        interior_angle_sum += np.arccos(np.dot(v0,v1))
+
+    factor = interior_angle_sum - (len(patch_points)-2)*np.pi
+
+    return factor / (np.pi*patch_area)

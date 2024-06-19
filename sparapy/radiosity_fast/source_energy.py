@@ -1,7 +1,7 @@
 """Calculate initial energy from the source to the patch."""
 import numba
 import numpy as np
-
+from .universal_ff.univ_form_factor import pt_solution_source as source_patch_energies
 
 @numba.njit(parallel=True)
 def _init_energy_kang(
@@ -103,3 +103,24 @@ def _init_energy_kang(
                 4*np.pi)
 
     return (energy, distance_out)
+
+
+
+def _init_energy_universal(source_position: np.ndarray, patches_center: np.ndarray, 
+                           patches_points: np.ndarray,  n_bins:int):
+    
+    n_patches = patches_points.shape[0]
+
+    energy = np.zeros((n_bins,n_patches))
+    d = np.empty((n_patches))
+
+
+    # source-2-patch
+    for j in numba.prange(n_patches):
+        energy[j,:] = source_patch_energies(source_position, patches_points[j])
+
+        d[j] = np.linalg.norm(patches_center[j]-source_position)
+
+
+
+    return (energy,d)

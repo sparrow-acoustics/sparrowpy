@@ -72,7 +72,7 @@ def _init_energy_1(
                 sources, receivers, wall_id_i, scattering, scattering_index)
             distance = np.linalg.norm(patches_center[i] - patches_center[j])
 
-            ff = form_factors[i, j] if i<j else form_factors[j, i]
+            ff = form_factors[i, j] if i<j else form_factors[j, i] # not true if patches are different areas. fix is easy, maybe slow -- joao
 
             absorption_factor = 1-absorption[absorption_index[wall_id_i], :]
             if air_attenuation is not None:
