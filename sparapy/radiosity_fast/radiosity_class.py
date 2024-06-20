@@ -26,6 +26,7 @@ class DRadiosityFast():
     # general data for material data
     _n_bins: int
     _frequencies = np.ndarray
+
     # absorption data
     _absorption: np.ndarray
     _absorption_index: np.ndarray
@@ -192,12 +193,12 @@ class DRadiosityFast():
             self.distance_1 = distance_1
         elif algorithm == 'queue':
             energy_0, distance_0 = source_energy._init_energy_universal(
-                source_position, self.patches_center, self.patches_points, 
+                source_position, self.patches_center, self.patches_points,
                 self.n_bins)
-            indices, energy_1, distance_1 = ee_queue._init_energy_1(energy_0, 
-                distance_0, source_position, self.patches_center, 
+            indices, energy_1, distance_1 = ee_queue._init_energy_1(energy_0,
+                distance_0, source_position, self.patches_center,
                 self._visible_patches, self.patches_area, self.n_bins,
-                patch_to_wall_ids, absorption, absorption_index, form_factors, 
+                patch_to_wall_ids, absorption, absorption_index, form_factors,
                 sources, receivers, scattering, scattering_index)
             self.energy_0 = energy_0
             self.distance_0 = distance_0
@@ -239,7 +240,7 @@ class DRadiosityFast():
             ee_recursive._calculate_energy_exchange_second_order(
                 ir, energy_0, distance_0, energy_1, distance_1,
                 patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
-                histogram_time_resolution, n_patches, n_bins)
+                histogram_time_resolution, n_patches, n_bins, threshold)
             # add remaining energy
             ee_recursive._calculate_energy_exchange_recursive(
                 ir, energy_1, distance_1, distance_i_j, self._form_factors_tilde,
@@ -275,12 +276,14 @@ class DRadiosityFast():
                 air_attenuation)
             # add first 2 order energy exchange
             ee_queue._calculate_energy_exchange_first_order(
-                    ir, energy_0, distance_0, indices, energy_1, distance_1, patch_receiver_energy,
-                    speed_of_sound, histogram_time_resolution,n_bins, thres=energy_threshold)
-            ee_queue._calculate_energy_exchange_queue(ir, indices, energy_1, distance_1, distance_i_j,
-                                    self._form_factors_tilde,patch_receiver_distance, patch_receiver_energy,
-                                    speed_of_sound, histogram_time_resolution,
-                                    threshold=energy_threshold)
+                    ir, energy_0, distance_0, indices, energy_1, distance_1,
+                    patch_receiver_energy, speed_of_sound, histogram_time_resolution,
+                    n_bins, thres=energy_threshold)
+            ee_queue._calculate_energy_exchange_queue(ir, indices, energy_1, distance_1,
+                    distance_i_j, self._form_factors_tilde,patch_receiver_distance,
+                    patch_receiver_energy, speed_of_sound, histogram_time_resolution,
+                    threshold=energy_threshold)
+
             return ir.T
         else:
             raise NotImplementedError()

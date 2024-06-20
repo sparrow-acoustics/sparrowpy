@@ -100,7 +100,7 @@ def _energy_exchange(
     if current_depth<max_depth:
         for j in range(n_patches):
             distance_new = distance + distance_1[i, j]
-            if (energy_new[j] > 0) and (distance_new < max_distance):
+            if (energy_new[j] > threshold):# and (distance_new < max_distance):
                 # energy_new += energy * form_factors_tilde[h, i, j]
                 ir = _collect_receiver_energy(
                     ir, i_freq, energy_new[j], distance_new, patch_receiver_distance[j],
@@ -132,10 +132,10 @@ def _collect_receiver_energy(
 def _calculate_energy_exchange_second_order(
         ir, energy_0, distance_0, energy_1, distance_1,
         patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
-        histogram_time_resolution, n_patches, n_bins):
+        histogram_time_resolution, n_patches, n_bins, thres):
     for i_freq in range(n_bins):
         for i in range(n_patches):
-            if energy_0[i, i_freq] > 0:
+            if energy_0[i, i_freq] > thres:
                 ir = _collect_receiver_energy(
                     ir, i_freq, energy_0[i, i_freq],
                     distance_0[i],
@@ -143,7 +143,7 @@ def _calculate_energy_exchange_second_order(
                     patch_receiver_energy[i, i_freq],
                     speed_of_sound, histogram_time_resolution)
             for j in range(n_patches):
-                if energy_1[i, j, i_freq] > 0:
+                if energy_1[i, j, i_freq] > thres:
                     ir = _collect_receiver_energy(
                         ir, i_freq, energy_1[i, j, i_freq],
                         distance_1[i, j],
@@ -156,12 +156,12 @@ def _calculate_energy_exchange_recursive(
         ir, energy_1, distance_1,distance_i_j, form_factors_tilde,
         n_patches, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution,
-        threshold=1e-12, max_time=0.1, max_depth=-1):
+        threshold=1e-12, max_time=0.1, max_depth=-1, thres=1e-6):
     max_distance = max_time*speed_of_sound
     for i_freq in numba.prange(energy_1.shape[-1]):
         for h in range(n_patches):
             for i in range(n_patches):
-                if energy_1[h, i, i_freq] > 0:
+                if energy_1[h, i, i_freq] > threshold:
                     _energy_exchange(
                         ir, i_freq, h, i, energy_1[h, i, i_freq], distance_1[h, i],
                         form_factors_tilde[..., i_freq], distance_i_j,
