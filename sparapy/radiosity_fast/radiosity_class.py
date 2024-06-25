@@ -237,12 +237,12 @@ class DRadiosityFast():
             patch_receiver_energy = receiver_energy._kang(
                 patch_receiver_distance, patches_normal, air_attenuation)
             # add first 2 order energy exchange
-            ee_recursive._calculate_energy_exchange_second_order(
+            ir = ee_recursive._calculate_energy_exchange_second_order(
                 ir, energy_0, distance_0, energy_1, distance_1,
                 patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
                 histogram_time_resolution, n_patches, n_bins, threshold)
             # add remaining energy
-            ee_recursive._calculate_energy_exchange_recursive(
+            ir = ee_recursive._calculate_energy_exchange_recursive(
                 ir, energy_1, distance_1, distance_i_j, self._form_factors_tilde,
                 self.n_patches, patch_receiver_distance, patch_receiver_energy,
                 speed_of_sound, histogram_time_resolution,

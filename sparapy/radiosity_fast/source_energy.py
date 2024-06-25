@@ -111,7 +111,7 @@ def _init_energy_universal(source_position: np.ndarray, patches_center: np.ndarr
     
     n_patches = patches_points.shape[0]
 
-    energy = np.zeros((n_bins,n_patches))
+    energy = np.zeros((n_patches,n_bins))
     d = np.empty((n_patches))
 
 
