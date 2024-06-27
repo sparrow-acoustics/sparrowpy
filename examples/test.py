@@ -1,6 +1,3 @@
-
-#%matplotlib inline
-
 import sparapy as sp
 import sparapy.geometry as geo
 from sparapy.radiosity import DirectionalRadiosity
@@ -101,7 +98,7 @@ for method in ['queue']:
         start_loop = datetime.now()
         print(f'{datetime.now()} run({i+1}/{n_max}): {max_size}')
         # run fast two times
-        for j in range(repeat):
+        for j in [0]:
             # create patches and add material
             tracemalloc.start()
             start = datetime.now()
@@ -141,8 +138,9 @@ for method in ['queue']:
             tracemalloc.start()
             start = datetime.now()
             histogram = radiosity.calculate_energy_exchange_receiver(
-                [0.5, 0.5, 0.5], 343, 1e-3, 1, algorithm=method, threshold=energy_threshold,
-                max_time=0.011)
+                receiver_pos=np.array([0.5,0.5,0.5]), speed_of_sound=343.,
+                histogram_time_resolution=1e-3, histogram_length=0.1, algorithm=method,
+                threshold=energy_threshold)
             memory_fast[3, i, j] = tracemalloc.get_traced_memory()[1] # get peak memory
             tracemalloc.stop()
             fast_second[3, i, j] = (delta.seconds*1e6 + delta.microseconds)/repeat

@@ -249,10 +249,10 @@ class DRadiosityFast():
                 threshold=threshold, max_time=max_time, max_depth=max_depth)
             return ir.T
         elif algorithm == 'queue':
-            energy_threshold = 1e-6
+            energy_threshold = threshold
             n_samples = int(histogram_length/histogram_time_resolution)
             ir = np.array([np.zeros((n_samples)) for _ in range(self.n_bins)]).T
-            patch_receiver_distance = np.linalg.norm(self.patches_center - receiver_pos)
+            patch_receiver_distance = np.linalg.norm(self.patches_center - receiver_pos, axis=1)
             air_attenuation = self._air_attenuation
             patches_normal = self._patches_normal
             patch_points = self._patches_points
@@ -276,10 +276,10 @@ class DRadiosityFast():
                 air_attenuation)
             # add first 2 order energy exchange
             ee_queue._calculate_energy_exchange_first_order(
-                    ir, energy_0, distance_0, indices, energy_1, distance_1,
+                    ir, energy_0, distance_0, indices, energy_0, distance_0,
                     patch_receiver_energy, speed_of_sound, histogram_time_resolution,
                     n_bins, thres=energy_threshold)
-            ee_queue._calculate_energy_exchange_queue(ir, indices, energy_1, distance_1,
+            ee_queue._calculate_energy_exchange_queue(ir, indices, energy_0, distance_0,
                     distance_i_j, self._form_factors_tilde,patch_receiver_distance,
                     patch_receiver_energy, speed_of_sound, histogram_time_resolution,
                     threshold=energy_threshold)

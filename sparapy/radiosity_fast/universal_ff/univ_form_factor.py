@@ -1,23 +1,42 @@
+"""Functions for the calculation of form factors.
+
+This module provides:
+  - calc_form_factor: Return the form factor between two patches.
+
+"""
+
+
 import numpy as np
 import sparapy.radiosity_fast.universal_ff.ffhelpers as helpers
 import numba
 
-#/////////////////////////////////////////////////////////////////////////////////////#
+
+# /////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### patch-to-patch
 @numba.njit()
-def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray, source_area:np.ndarray, 
-                    receiver_pts: np.ndarray, receiver_normal: np.ndarray, receiver_area: np.ndarray) -> float:
-    """
-    returns the form factor depending on the characteristics of the input patches
-    
+def calc_form_factor(
+    source_pts: np.ndarray,
+    source_normal: np.ndarray,
+    source_area: np.ndarray,
+    receiver_pts: np.ndarray,
+    receiver_normal: np.ndarray,
+    receiver_area: np.ndarray,
+) -> float:
+    """Return the form factor between two patches.
+
+    The method is selected according to  the characteristics of the input patches
+
     Parameters
     ----------
-    receiving_pts: np.ndarray
+    receiver_pts: np.ndarray
         receiver patch vertex coordinates (n_vertices,3)
 
-    receiving_normal: np.ndarray
+    receiver_normal: np.ndarray
         receiver patch normal (3,)
+
+    receiver_area: float
+        receiver patch area
 
     source_pts: np.ndarray
         source patch vertex coordinates (n_vertices,3)
@@ -25,50 +44,63 @@ def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray, source_a
     source_normal: np.ndarray
         source patch normal (3,)
 
+    source_area: float
+        receiver patch area
+
     out: float
         form factor
 
     """
-
     if helpers.coincidence_check(receiver_pts, source_pts):
-        out = nusselt_integration(patch_i=source_pts, patch_i_normal=source_normal, patch_i_area=source_area,
-                                   patch_j=receiver_pts, patch_j_normal=receiver_normal, patch_j_area=receiver_area,
-                                   nsamples=64)
+        out = nusselt_integration(
+            patch_i=source_pts,
+            patch_i_normal=source_normal,
+            patch_i_area=source_area,
+            patch_j=receiver_pts,
+            patch_j_normal=receiver_normal,
+            patch_j_area=receiver_area,
+            nsamples=64,
+        )
     else:
-        out = stokes_integration(patch_i=source_pts, patch_j=receiver_pts, patch_i_area=source_area,  approx_order=4)
+        out = stokes_integration(
+            patch_i=source_pts,
+            patch_j=receiver_pts,
+            patch_i_area=source_area,
+            approx_order=4,
+        )
 
     return out
 
+
 #######################################################################################
-### Stokes integration 
+### Stokes integration
 @numba.njit()
-def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
-    """
-    returns the form function value for the stokes form factor integration method
-    
+def stokes_ffunction(p0: np.ndarray, p1: np.ndarray) -> float:
+    """Return the form function value for the stokes form factor integration method.
+
     Parameters
     ----------
     p0: np.ndarray
         a point in space (3,)
-        in the stokes integration of the form factor, a point on a patch's boundary
+        in the stokes integration of the form factor, a point on a patch boundary
 
-    p0: np.ndarray
+    p1: np.ndarray
         a point in space (3,)
-        in the stokes integration of the form factor, a point on a different patch's boundary
+        in the stokes integration of the form factor, a point on another patch boundary
 
     """
-
-    n = np.linalg.norm(p1-p0)
+    n = np.linalg.norm(p1 - p0)
 
     result = np.log(n)
 
     return result
 
+
 @numba.njit(parallel=True)
 def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
-    """
-    calculates aall the stokes form function values between two patches 
-    and stores them in a matrix.
+    """Calculate all the stokes form function values between two patches.
+
+    Function values are computed and and stored them in a matrix.
 
     Parameters
     ----------
@@ -82,24 +114,26 @@ def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndar
         matrix of form function values (n_boundary_points_i , n_boundary_points_j)
 
     """
-
-    form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)))
+    form_mat = np.zeros((len(i_bpoints), len(j_bpoints)))
 
     for i in numba.prange(i_bpoints.shape[0]):
         for j in numba.prange(j_bpoints.shape[0]):
-            form_mat[i][j] = stokes_ffunction(i_bpoints[i],j_bpoints[j])
+            form_mat[i][j] = stokes_ffunction(i_bpoints[i], j_bpoints[j])
 
     return form_mat
 
-@numba.njit(parallel=False)
-def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float, approx_order=4) -> float:
-    """
-    calculate an estimation of the form factor between two patches 
-    by computationally integrating a modified form function over the two patch boundaries.
-    The modified form function follows Stokes' theorem.
 
-    The modified form function integral is calculated using a polynomial approximation based on sampled values.
-    
+@numba.njit(parallel=False)
+def stokes_integration(
+    patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float, approx_order=4
+) -> float:
+    """Calculate an estimation of the form factor between two patches.
+
+    Computationally integrates a modified form function over the two patch boundaries.
+    The modified form function follows Stokes' theorem.
+    The modified form function integral is calculated using a polynomial approximation 
+    based on sampled values.
+
     Parameters
     ----------
     patch_i : np.ndarray
@@ -108,22 +142,21 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: f
     patch_j : np.ndarray
         vertex coordinates of patch j (n_vertices, 3)
 
-    source_area: float
+    patch_i_area: float
         area of the source patch
 
     approx_order: int
         polynomial order of the form function integration estimation
 
     """
-
-    i_bpoints, i_conn = helpers.sample_border(patch_i, npoints=approx_order+1)
-    j_bpoints, j_conn = helpers.sample_border(patch_j, npoints=approx_order+1)
+    i_bpoints, i_conn = helpers.sample_border(patch_i, npoints=approx_order + 1)
+    j_bpoints, j_conn = helpers.sample_border(patch_j, npoints=approx_order + 1)
 
     subsecj = np.zeros((j_conn.shape[1]))
     subseci = np.zeros((i_conn.shape[1]))
-    form_mat = np.zeros((i_bpoints.shape[0],j_bpoints.shape[0]))
+    form_mat = np.zeros((i_bpoints.shape[0], j_bpoints.shape[0]))
 
-    # if coincidence_check(i_bpoints,j_bpoints): 
+    # if coincidence_check(i_bpoints,j_bpoints):
     #     return float('nan')
 
     # first compute and store form function sample values
@@ -131,48 +164,50 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: f
 
     # double polynomial integration (per dimension (x,y,z))
     outer_integral = 0
-    inner_integral = np.zeros((len(i_bpoints),len(j_bpoints[0])))
+    inner_integral = np.zeros((len(i_bpoints), len(j_bpoints[0])))
 
-    for dim in range(len(j_bpoints[0])):                                # for each dimension
+    for dim in range(len(j_bpoints[0])):  # for each dimension
         # integrate form function over each point on patch i boundary
 
-        for i in range(len(i_bpoints)):                                 # for each point in patch i boundary
-            for segj in j_conn:                                         # for each segment segj in patch j boundary
-                
-                xj = j_bpoints[segj][:,dim]          
+        for i in range(len(i_bpoints)):  # for each point in patch i boundary
+            for segj in j_conn:  # for each segment segj in patch j boundary
+                xj = j_bpoints[segj][:, dim]
 
-                if xj[-1]-xj[0]!=0:
+                if xj[-1] - xj[0] != 0:
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
-                    quadfactors = helpers.poly_estimation(x=xj, y=subsecj) # compute polynomial coefficients of approx form function over boundary segment xj
-                    inner_integral[i][dim] += helpers.poly_integration(c=quadfactors,x=xj)                       # analytical integration of the approx polynomia
-
+                    quadfactors = helpers.poly_estimation(
+                        x=xj, y=subsecj
+                    )  # compute polynomial coefficients over boundary segment xj
+                    inner_integral[i][dim] += helpers.poly_integration(
+                        c=quadfactors, x=xj
+                    )  # analytical integration of the approx polynomial
 
         # integrate previously computed integral over each boundary segment of patch i
 
-        for segi in i_conn:                     # for each segment segi in patch i boundary
+        for segi in i_conn:  # for each segment segi in patch i boundary
+            xi = i_bpoints[segi][:, dim]
 
-            xi = i_bpoints[segi][:,dim]
-
-            if xi[-1]-xi[0]!=0:
+            if xi[-1] - xi[0] != 0:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                quadfactors = helpers.poly_estimation(x=xi, y=subseci) 
-                outer_integral += helpers.poly_integration(c=quadfactors,x=xi)
+                quadfactors = helpers.poly_estimation(x=xi, y=subseci)
+                outer_integral += helpers.poly_integration(c=quadfactors, x=xi)
 
-    return np.abs(outer_integral/(2*np.pi*patch_i_area))
+    return np.abs(outer_integral / (2 * np.pi * patch_i_area))
 
 
 #######################################################################################
 ### Nusselt analog integration
 @numba.njit(parallel=False)
 def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> float:
-    """
-    Implementation of the nusselt analog. 
-    Projects a given receiver patch onto a hemisphere centered around a point on a source patch surface.
-    The hemispherical projection is then projected onto the source patch plane. 
-    The area of this projection relative to the unit circle area is the differential form factor between the two patches.
-    
+    """Implementation of the nusselt analog.
+
+    Projects a given receiver patch onto a hemisphere centered around a point on a
+    source patch surface. The hemispherical projection is then projected onto the
+    source patch plane. The area of this projection relative to the unit circle area is
+    the differential form factor between the two patches.
+
     Parameters
     ----------
     surf_origin : np.ndarray
@@ -188,60 +223,77 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> floa
     patch_normal: np.ndarray
         normal of receiver patch (3,)
 
-    """
+    """  # noqa: D401
+    boundary_points, connectivity = helpers.sample_border(
+        patch_points, npoints=3
+    )  # 3 points per boundary segment (for quadratic approximation)
 
-    boundary_points, connectivity = helpers.sample_border(patch_points, npoints=3) # 3 points per boundary segment (for quadratic approximation)
-
-    hand = np.sign(np.dot(np.cross( patch_points[1]-patch_points[0] , patch_points[2]-patch_points[1] ), patch_normal) )
+    hand = np.sign(
+        np.dot(
+            np.cross(
+                patch_points[1] - patch_points[0], patch_points[2] - patch_points[1]
+            ),
+            patch_normal,
+        )
+    )
 
     curved_area = 0
-        
-    sphPts = np.empty_like( boundary_points )
-    projPts = np.empty_like( boundary_points )
-    plnPts = np.empty( shape=(len(boundary_points),2) )
+
+    sphPts = np.empty_like(boundary_points)
+    projPts = np.empty_like(boundary_points)
+    plnPts = np.empty(shape=(len(boundary_points), 2))
 
     for ii in numba.prange(len(boundary_points)):
-        sphPts[ii] = (boundary_points[ii]-surf_origin)/np.linalg.norm(boundary_points[ii]-surf_origin) # patch j points projected on the hemisphere
+        sphPts[ii] = (boundary_points[ii] - surf_origin) / np.linalg.norm(
+            boundary_points[ii] - surf_origin
+        )  # patch j points projected on the hemisphere
 
     rotmat = helpers.rotation_matrix(n_in=surf_normal)
 
     for ii in numba.prange(len(sphPts)):
-        plnPts[ii,:] = helpers.inner(matrix=rotmat,vector=sphPts[ii])[:-1] # points on the hemisphere projected onto 
-        projPts[ii,:-1] = plnPts[ii,:]
-        projPts[ii,-1] = 0.
-
+        plnPts[ii, :] = helpers.inner(matrix=rotmat, vector=sphPts[ii])[
+            :-1
+        ]  # points on the hemisphere projected onto
+        projPts[ii, :-1] = plnPts[ii, :]
+        projPts[ii, -1] = 0.0
 
     big_poly = helpers.polygon_area(projPts[0::2])
 
-    segmt=np.empty_like(connectivity[0])
+    segmt = np.empty_like(connectivity[0])
 
-    leftseg=np.empty((3,2))
-    rightseg=np.empty((3,2))
+    leftseg = np.empty((3, 2))
+    rightseg = np.empty((3, 2))
 
     for jj in numba.prange(connectivity.shape[0]):
-
         segmt = connectivity[jj]
 
-        if np.linalg.norm(np.cross(projPts[segmt[-1]],projPts[segmt[0]])) > 1e-20:
+        if np.linalg.norm(np.cross(projPts[segmt[-1]], projPts[segmt[0]])) > 1e-20:
+            if (
+                np.dot(plnPts[segmt[-1]], plnPts[segmt[0]]) >= 0
+            ):  # if the points on the segment span less than 90 degrees relative to the
+                curved_area += helpers.area_under_curve(plnPts[segmt], order=2)
 
-            if np.dot( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:                    # if the points on the segment span less than 90 degrees relative to the origin
-                curved_area += helpers.area_under_curve(plnPts[segmt],order=2)
-
-            else:                                                                       # if points span over 90º, additional sampling is required
+            else:  # if points span over 90º, additional sampling is required
                 mpoint = sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2
-                marc = mpoint/np.linalg.norm(mpoint) # midpoint on the arc projected on the hemisphere
+                marc = mpoint / np.linalg.norm(
+                    mpoint
+                )  # midpoint on the arc projected on the hemisphere
                 a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
                 b = marc + (sphPts[segmt[-1]] - marc) / 2
 
-                mpoint = helpers.inner(matrix=rotmat,vector=mpoint)[:-1]
-                marc = helpers.inner(matrix=rotmat,vector=marc)[:-1]
-                a = a/np.linalg.norm(a)
-                a = helpers.inner(matrix=rotmat,vector=a)[:-1]
+                mpoint = helpers.inner(matrix=rotmat, vector=mpoint)[:-1]
+                marc = helpers.inner(matrix=rotmat, vector=marc)[:-1]
+                a = a / np.linalg.norm(a)
+                a = helpers.inner(matrix=rotmat, vector=a)[:-1]
 
-                b = b/np.linalg.norm(b)
-                b = helpers.inner(matrix=rotmat,vector=b)[:-1]
+                b = b / np.linalg.norm(b)
+                b = helpers.inner(matrix=rotmat, vector=b)[:-1]
 
-                linArea = np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) * np.linalg.norm(mpoint-marc)/2
+                linArea = (
+                    np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]])
+                    * np.linalg.norm(mpoint - marc)
+                    / 2
+                )
 
                 leftseg[0] = plnPts[segmt[0]]
                 leftseg[1] = a
@@ -251,18 +303,28 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> floa
                 rightseg[1] = b
                 rightseg[2] = plnPts[segmt[-1]]
 
-
-                left =  helpers.area_under_curve(leftseg, order=2)
+                left = helpers.area_under_curve(leftseg, order=2)
                 right = helpers.area_under_curve(rightseg, order=2)
-                curved_area += (linArea * np.sign(left) + left + right)
+                curved_area += linArea * np.sign(left) + left + right
 
-    return big_poly + hand*curved_area
+    return big_poly + hand * curved_area
+
 
 @numba.njit(parallel=True)
-def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray, patch_j_normal: np.ndarray, patch_i_area: np.ndarray, patch_j_area: np.ndarray, nsamples=2, random=False) -> float:
-    """
-    Estimates the form factor by integrating the differential form factor (Nusselt analogue)
-    over the surface of the source patch 
+def nusselt_integration(
+    patch_i: np.ndarray,
+    patch_j: np.ndarray,
+    patch_i_normal: np.ndarray,
+    patch_j_normal: np.ndarray,
+    patch_i_area: np.ndarray,
+    patch_j_area: np.ndarray,
+    nsamples=2,
+    random=False,
+) -> float:
+    """Estimate the form factor.
+
+    Done by integrating the differential form factor (Nusselt analogue)
+    over the surface of the source patch.
 
     Parameters
     ----------
@@ -271,45 +333,56 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
 
     patch_j: np.ndarray
         vertex coordinates of the receiver patch
-    
+
     patch_i_normal: np.ndarray
         source patch normal (3,)
 
     patch_j_normal: np.ndarray
         receiver patch normal (3,)
 
+    patch_i_area: np.ndarray
+        source patch area (3,)
+
+    patch_j_area: np.ndarray
+        receiver patch area (3,)
+
     nsamples: int
         number of receiver surface samples for integration
 
     random: bool
-            determines the distribution of the samples on patch_i surface 
+            determines the distribution of the samples on patch_i surface
             if True, the samples are randomly distributed in a uniform way
             if False, a regular sampling of the surface is performed
+
     """
-    
     if random:
-        p0_array = helpers.sample_random(patch_i,nsamples)
+        p0_array = helpers.sample_random(patch_i, nsamples)
     else:
-        p0_array = helpers.sample_regular(patch_i,nsamples)
+        p0_array = helpers.sample_regular(patch_i, nsamples)
 
     out = 0
 
     for i in numba.prange(p0_array.shape[0]):
-        out += nusselt_analog(surf_origin=p0_array[i], surf_normal=patch_i_normal, patch_points=patch_j, patch_normal=patch_j_normal)
+        out += nusselt_analog(
+            surf_origin=p0_array[i],
+            surf_normal=patch_i_normal,
+            patch_points=patch_j,
+            patch_normal=patch_j_normal,
+        )
 
-    out *= patch_i_area / ( np.pi * len(p0_array) * patch_j_area )
+    out *= patch_i_area / (np.pi * len(p0_array) * patch_j_area)
 
-    return out 
+    return out
 
 
-#/////////////////////////////////////////////////////////////////////////////////////#
+# /////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### point-to-patch and patch-to-point
 @numba.njit(parallel=True)
 def pt_solution_source(point: np.ndarray, patch_points: np.ndarray):
-    """
-    calculates the "form factor" between a point source and a patch
-    using a modified version of the Nusselt analogue, transformed for a -point- source, 
+    """Calculate the "form factor" between a point source and a patch.
+
+    Uses a modified version of the Nusselt analogue, transformed for a -point- source,
     rather than differential surface element.
 
     Parameters
@@ -321,33 +394,38 @@ def pt_solution_source(point: np.ndarray, patch_points: np.ndarray):
         vertex coordinates of the patch
 
     """
-
     npoints = len(patch_points)
 
     interior_angle_sum = 0
 
-    #patch_onsphere1 = np.transpose(np.divide( np.transpose(patch_points-point) , np.linalg.norm(patch_points-point, axis=1) ))
-
     patch_onsphere = np.zeros_like(patch_points)
 
     for i in range(npoints):
-        patch_onsphere[i]= (patch_points[i]-point) / np.linalg.norm(patch_points[i]-point)
+        patch_onsphere[i] = (patch_points[i] - point) / np.linalg.norm(
+            patch_points[i] - point
+        )
 
-    for i in range(npoints): 
+    for i in range(npoints):
+        v0 = helpers.calculate_tangent_vector(
+            patch_onsphere[i], patch_onsphere[(i - 1) % npoints]
+        )
+        v1 = helpers.calculate_tangent_vector(
+            patch_onsphere[i], patch_onsphere[(i + 1) % npoints]
+        )
 
-        v0 = helpers.calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i-1)%npoints])
-        v1 = helpers.calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i+1)%npoints])
+        interior_angle_sum += np.arccos(np.dot(v0, v1))
 
-        interior_angle_sum += np.arccos(np.dot(v0,v1))
+    factor = interior_angle_sum - (len(patch_points) - 2) * np.pi
 
-    factor = interior_angle_sum - (len(patch_points)-2)*np.pi
+    return factor / (np.pi * 4)
 
-    return factor / (np.pi*4)
 
-def pt_solution_receiver(point: np.ndarray, patch_points: np.ndarray, patch_area: np.ndarray):
-    """
-    calculates the "form factor" between a point receiver and a patch
-    using a modified version of the Nusselt analogue, transformed for a -point- receiver, 
+def pt_solution_receiver(
+    point: np.ndarray, patch_points: np.ndarray, patch_area: np.ndarray
+):
+    """Calculate the "form factor" between a point receiver and a patch.
+
+    Uses a modified version of the Nusselt analogue, transformed for a -point- receiver,
     rather than differential surface element.
 
     Parameters
@@ -362,26 +440,29 @@ def pt_solution_receiver(point: np.ndarray, patch_points: np.ndarray, patch_area
 
     patch_area: float
         surface area of the patch
-    """
 
+    """
     npoints = len(patch_points)
 
     interior_angle_sum = 0
 
-    #patch_onsphere1 = np.transpose(np.divide( np.transpose(patch_points-point) , np.linalg.norm(patch_points-point, axis=1) ))
-
     patch_onsphere = np.zeros_like(patch_points)
 
     for i in range(npoints):
-        patch_onsphere[i]= (patch_points[i]-point) / np.linalg.norm(patch_points[i]-point)
+        patch_onsphere[i] = (patch_points[i] - point) / np.linalg.norm(
+            patch_points[i] - point
+        )
 
-    for i in range(npoints): 
+    for i in range(npoints):
+        v0 = helpers.calculate_tangent_vector(
+            patch_onsphere[i], patch_onsphere[(i - 1) % npoints]
+        )
+        v1 = helpers.calculate_tangent_vector(
+            patch_onsphere[i], patch_onsphere[(i + 1) % npoints]
+        )
 
-        v0 = helpers.calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i-1)%npoints])
-        v1 = helpers.calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i+1)%npoints])
+        interior_angle_sum += np.arccos(np.dot(v0, v1))
 
-        interior_angle_sum += np.arccos(np.dot(v0,v1))
+    factor = interior_angle_sum - (len(patch_points) - 2) * np.pi
 
-    factor = interior_angle_sum - (len(patch_points)-2)*np.pi
-
-    return factor / (np.pi*patch_area)
+    return factor / (np.pi * patch_area)
