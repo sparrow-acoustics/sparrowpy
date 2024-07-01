@@ -100,10 +100,11 @@ for method in ['queue']:
         # run fast two times
         for j in [0]:
             # create patches and add material
-            tracemalloc.start()
-            start = datetime.now()
+            print("initializing radiosity....",end="")
             radiosity = DRadiosityFast.from_polygon(sample_walls, max_size)
-
+            print("done!")
+            
+            print("setting up room characteristics....",end="")
             radiosity.set_wall_scattering(
                 np.arange(6), data, sources, receivers)
             radiosity.set_air_attenuation(
@@ -111,39 +112,23 @@ for method in ['queue']:
             radiosity.set_wall_absorption(
                 np.arange(6),
                 pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-            delta = (datetime.now() - start)
-            memory_fast[0, i, j] = tracemalloc.get_traced_memory()[1] # get peak memory
-            tracemalloc.stop()
-            fast_second[0, i, j] = (delta.seconds*1e6 + delta.microseconds)/repeat
+            print("done!")
 
-            # form factor
-            tracemalloc.start()
-            start = datetime.now()
+
+            print("baking geometry (ff-tilde)......",end="")
             radiosity.bake_geometry()
-            delta = (datetime.now() - start)
-            memory_fast[2, i, j] = tracemalloc.get_traced_memory()[1] # get peak memory
-            tracemalloc.stop()
-            fast_second[2, i, j] = (delta.seconds*1e6 + delta.microseconds)/repeat
+            print("done!")
 
-            # set energy
-            tracemalloc.start()
-            start = datetime.now()
+            print("initializing energy from source.....",end="")
             radiosity.init_source_energy([0.5, 0.5, 0.5], algorithm=method)
-            delta = (datetime.now() - start)
-            memory_fast[1, i, j] = tracemalloc.get_traced_memory()[1] # get peak memory
-            tracemalloc.stop()
-            fast_second[1, i, j] = (delta.seconds*1e6 + delta.microseconds)/repeat
+            print('done!')
 
-            # energy exchange
-            tracemalloc.start()
-            start = datetime.now()
+            print("energy exchange........",end="")
             histogram = radiosity.calculate_energy_exchange_receiver(
                 receiver_pos=np.array([0.5,0.5,0.5]), speed_of_sound=343.,
                 histogram_time_resolution=1e-3, histogram_length=0.1, algorithm=method,
                 threshold=energy_threshold)
-            memory_fast[3, i, j] = tracemalloc.get_traced_memory()[1] # get peak memory
-            tracemalloc.stop()
-            fast_second[3, i, j] = (delta.seconds*1e6 + delta.microseconds)/repeat
+            print("done!")
 
         number_of_patches[i] = radiosity.n_patches
         if i < 4:

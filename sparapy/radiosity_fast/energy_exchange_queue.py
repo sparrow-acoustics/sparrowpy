@@ -23,8 +23,8 @@ def _init_energy_1(
     scattering_index: np.ndarray,
 ):
     n_patches = patches_center.shape[0]
-    energy_1 = np.zeros((n_patches, n_bins))
-    distance_1 = np.zeros((n_patches))
+    energy_1 = np.zeros((0, n_bins))
+    distance_1 = np.array([])
     hhh = np.array([])
     iii = np.array([])
     for ii in numba.prange(visible_patches.shape[0]):
@@ -60,9 +60,9 @@ def _init_energy_1(
             )
 
             absorption_factor = 1 - absorption[absorption_index[wall_id_i], :]
-            energy_1[j, :] = energy_0[i, :] * ff * absorption_factor * scattering_factor
+            energy_1 = np.append(energy_1, [energy_0[i, :] * ff * absorption_factor * scattering_factor], axis=0)
 
-            distance_1[j] = distance_0[i] + distance
+            distance_1 = np.append(distance_1, distance_0[i] + distance)
 
     return (np.array([hhh, iii]), energy_1, distance_1)
 
@@ -71,9 +71,6 @@ def _calculate_energy_exchange_first_order(
     ir,
     energy_0,
     distance_0,
-    indices,
-    energy_1,
-    distance_1,
     patch_receiver_energy,
     speed_of_sound,
     histogram_time_resolution,
@@ -82,7 +79,6 @@ def _calculate_energy_exchange_first_order(
 ):
     for i_freq in numba.prange(n_bins):
         i0 = np.nonzero(energy_0[:, i_freq] > thres)[0]
-
         ir = _collect_receiver_from_queue(
             ir,
             i_freq,
@@ -104,6 +100,7 @@ def _calculate_energy_exchange_queue(
     distance_0,
     distance_i_j,
     form_factors_tilde,
+    visibility_matrix,
     patch_receiver_distance,
     patch_receiver_energy,
     speed_of_sound,
@@ -113,32 +110,34 @@ def _calculate_energy_exchange_queue(
     max_depth=-1,
 ):
     queue = np.empty((indices.shape[1], 4))
-    queue[:,0:2] = np.transpose(indices)
+    queue[:,0:2] = np.transpose(indices).astype(int)
 
     for ii in range(indices.shape[1]):
-        queue[:,-1] = distance_0[indices[0,ii]] + distance_i_j[indices[0,ii],indices[1,ii]]  # noqa: E501
+        queue[ii,-1] = distance_0[int(queue[ii,0])] + distance_i_j[int(queue[ii,0]),int(queue[ii,1])]  # noqa: E501
 
     for i_freq in numba.prange(energy_0.shape[-1]):
-        queue[2] = energy_0[:, i_freq]
-
-    ir = _energy_exchange(
-        ir,
-        queue,
-        form_factors_tilde,
-        distance_i_j,
-        patch_receiver_energy,
-        patch_receiver_distance,
-        i_freq,
-        speed_of_sound,
-        histogram_time_resolution,
-        threshold,
-    )
+        queue[:,2] = energy_0[:,i_freq]
+        
+        ir = _energy_exchange(
+            ir,
+            queue,
+            form_factors_tilde,
+            visibility_matrix,
+            distance_i_j,
+            patch_receiver_energy,
+            patch_receiver_distance,
+            i_freq,
+            speed_of_sound,
+            histogram_time_resolution,
+            threshold,
+        )
 
 
 def _energy_exchange(
     ir,
     queue,
     form_factors_tilde,
+    visibility_matrix,
     patch_distances,
     patch_receiver_energy,
     patch_receiver_distance,
@@ -152,16 +151,17 @@ def _energy_exchange(
         queue = np.delete(queue, 0, 0)
 
         appendix, ir = _shoot(
-            row,
-            form_factors_tilde,
-            patch_distances,
-            patch_receiver_energy,
-            patch_receiver_distance,
-            ir,
-            i_freq,
-            speed_of_sound,
-            histogram_time_resolution,
-            thres
+        row,
+        form_factors_tilde,
+        patch_distances,
+        patch_receiver_energy[:,i_freq],
+        patch_receiver_distance,
+        ir,
+        i_freq,
+        visibility_matrix,
+        speed_of_sound,
+        histogram_time_resolution,
+        thres
         )
 
         queue = np.append(queue, appendix, 0)
@@ -182,19 +182,17 @@ def _shoot(
     histogram_time_resolution,
     thres=1e-6,
 ):
-    h = row_in[0]
-    i = row_in[1]
+    h = int(row_in[0])
+    i = int(row_in[1])
     e = row_in[2]
     d = row_in[3]
 
-    j = np.nonzero(visibility_matrix[i, :])
-    j = np.unique(
-        np.append(np.nonzero(visibility_matrix[:, i]))
-    )  # list indices of all visible patches
+    j = visibility_matrix[i, :]
+    j = j + visibility_matrix[:, i]  # list indices of all visible patches
 
-    ej = e[j] * form_factors_tilde[h, i, j]
+    ej = e * form_factors_tilde[h, i, j, i_freq]
 
-    eR = ej * patch_receiver_energy
+    eR = ej * patch_receiver_energy[j]
 
     jj = np.nonzero(eR > thres)[0]
 
@@ -203,9 +201,9 @@ def _shoot(
     ir = _collect_receiver_from_queue(
         ir,
         i_freq,
-        eR[jj,i_freq],
+        eR[jj],
         dR,
-        patch_receiver_energy[jj,i_freq],
+        patch_receiver_energy[jj],
         speed_of_sound,
         histogram_time_resolution,
     )
@@ -219,7 +217,7 @@ def _shoot(
 
     return queue_out, ir
 
-
+#@numba.njit()
 def _collect_receiver_from_queue(
     ir,
     i_freq,
@@ -229,7 +227,7 @@ def _collect_receiver_from_queue(
     speed_of_sound,
     histogram_time_resolution,
 ):
-    samples_delay = np.empty_like(distance,dtype=int)
+    samples_delay = np.zeros(distance.shape[0],dtype=int64)
 
     for i in range(distance.shape[0]):
         samples_delay[i] = int(distance[i] / speed_of_sound / histogram_time_resolution)
