@@ -227,7 +227,7 @@ def _collect_receiver_from_queue(
     speed_of_sound,
     histogram_time_resolution,
 ):
-    samples_delay = np.zeros(distance.shape[0],dtype=int64)
+    samples_delay = np.zeros(distance.shape[0],dtype=int)
 
     for i in range(distance.shape[0]):
         samples_delay[i] = int(distance[i] / speed_of_sound / histogram_time_resolution)
