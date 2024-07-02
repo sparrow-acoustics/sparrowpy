@@ -105,10 +105,10 @@ def _init_energy_kang(
     return (energy, distance_out)
 
 
-
+@numba.njit(parallel=True)
 def _init_energy_universal(source_position: np.ndarray, patches_center: np.ndarray, 
                            patches_points: np.ndarray,  n_bins:int):
-    
+
     n_patches = patches_points.shape[0]
 
     energy = np.zeros((n_patches,n_bins))

@@ -60,7 +60,7 @@ steps_names = [
     'create patches', 'init energy', 'form factor',
     'energy exchange', 'collect energy',
     ]
-energy_threshold = 1e-1
+energy_threshold = 1e-3
 
 steps = len(steps_names)
 fast_second = np.zeros((steps, n_max, repeat))
@@ -103,7 +103,7 @@ for method in ['queue']:
             print("initializing radiosity....",end="")
             radiosity = DRadiosityFast.from_polygon(sample_walls, max_size)
             print("done!")
-            
+
             print("setting up room characteristics....",end="")
             radiosity.set_wall_scattering(
                 np.arange(6), data, sources, receivers)
@@ -208,6 +208,7 @@ ax.set_ylabel('time [s]')
 ax.set_title(f'overall (n={repeat})')
 ax.set_ylim([1e-6, 1e2])
 plt.legend()
+#plt.show()
 
 for i in range(steps):
     plt.figure()

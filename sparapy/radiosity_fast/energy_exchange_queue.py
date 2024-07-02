@@ -4,7 +4,7 @@ import numba
 import numpy as np
 from . import geometry
 
-
+@numba.njit(parallel=True)
 def _init_energy_1(
     energy_0,
     distance_0,
@@ -12,7 +12,7 @@ def _init_energy_1(
     patches_center: np.ndarray,
     visible_patches: np.ndarray,
     patches_areas: np.ndarray,
-    n_bins: float,
+    n_bins: int,
     patch_to_wall_ids: np.ndarray,
     absorption: np.ndarray,
     absorption_index: np.ndarray,
@@ -22,11 +22,10 @@ def _init_energy_1(
     scattering: np.ndarray,
     scattering_index: np.ndarray,
 ):
-    n_patches = patches_center.shape[0]
-    energy_1 = np.zeros((0, n_bins))
-    distance_1 = np.array([])
-    hhh = np.array([])
-    iii = np.array([])
+    energy_1 = np.empty((2*visible_patches.shape[0] , int(n_bins)))
+    distance_1 = np.empty((2*visible_patches.shape[0]))
+    indices = np.empty((2,2*visible_patches.shape[0]))
+
     for ii in numba.prange(visible_patches.shape[0]):
         for jj in range(2):
             if jj == 0:
@@ -37,8 +36,8 @@ def _init_energy_1(
                 i = visible_patches[ii, 1]
             wall_id_i = int(patch_to_wall_ids[i])
 
-            hhh = np.append(hhh, i)
-            iii = np.append(iii, j)
+            indices[0,2*ii+jj] = i
+            indices[1,2*ii+jj] = j
 
             scattering_factor = geometry.get_scattering_data(
                 source_position,
@@ -60,13 +59,14 @@ def _init_energy_1(
             )
 
             absorption_factor = 1 - absorption[absorption_index[wall_id_i], :]
-            energy_1 = np.append(energy_1, [energy_0[i, :] * ff * absorption_factor * scattering_factor], axis=0)
+            energy_1[2*ii+jj,:] = energy_0[i, :] * ff * absorption_factor * scattering_factor
 
-            distance_1 = np.append(distance_1, distance_0[i] + distance)
+            distance_1[2*ii+jj] = distance_0[i] + distance
 
-    return (np.array([hhh, iii]), energy_1, distance_1)
+    return (indices, energy_1, distance_1)
 
 
+@numba.njit(parallel=True)
 def _calculate_energy_exchange_first_order(
     ir,
     energy_0,
@@ -77,11 +77,10 @@ def _calculate_energy_exchange_first_order(
     n_bins,
     thres=1e-6,
 ):
-    for i_freq in numba.prange(n_bins):
+    for i_freq in numba.prange(int(n_bins)):
         i0 = np.nonzero(energy_0[:, i_freq] > thres)[0]
-        ir = _collect_receiver_from_queue(
-            ir,
-            i_freq,
+        ir[:,i_freq] = _collect_receiver_from_queue(
+            ir[:,i_freq],
             energy_0[i0, i_freq],
             distance_0[i0],
             patch_receiver_energy[i0,i_freq],
@@ -89,10 +88,10 @@ def _calculate_energy_exchange_first_order(
             histogram_time_resolution,
         )
 
-
     return ir
 
 
+@numba.njit(parallel=True)
 def _calculate_energy_exchange_queue(
     ir,
     indices,
@@ -110,21 +109,21 @@ def _calculate_energy_exchange_queue(
     max_depth=-1,
 ):
     queue = np.empty((indices.shape[1], 4))
-    queue[:,0:2] = np.transpose(indices).astype(int)
+    queue[:,0:2] = np.transpose(indices)
 
-    for ii in range(indices.shape[1]):
+    for ii in numba.prange(indices.shape[1]):
         queue[ii,-1] = distance_0[int(queue[ii,0])] + distance_i_j[int(queue[ii,0]),int(queue[ii,1])]  # noqa: E501
+
 
     for i_freq in numba.prange(energy_0.shape[-1]):
         queue[:,2] = energy_0[:,i_freq]
-        
-        ir = _energy_exchange(
-            ir,
+        ir[:,i_freq] = _energy_exchange(
+            ir[:,i_freq],
             queue,
             form_factors_tilde,
             visibility_matrix,
             distance_i_j,
-            patch_receiver_energy,
+            patch_receiver_energy[:,i_freq],
             patch_receiver_distance,
             i_freq,
             speed_of_sound,
@@ -132,7 +131,9 @@ def _calculate_energy_exchange_queue(
             threshold,
         )
 
+    return ir
 
+@numba.njit()
 def _energy_exchange(
     ir,
     queue,
@@ -146,15 +147,20 @@ def _energy_exchange(
     histogram_time_resolution,
     thres=1e-6,
 ):
+
+    n_vals = queue.shape[1]
+    queue=queue.reshape(n_vals*queue.shape[0],)
+
     while queue.shape[0] > 0:
-        row = queue[0]
-        queue = np.delete(queue, 0, 0)
+
+        row = queue[0:n_vals]
+        queue = np.delete(queue,np.arange(n_vals))
 
         appendix, ir = _shoot(
         row,
         form_factors_tilde,
         patch_distances,
-        patch_receiver_energy[:,i_freq],
+        patch_receiver_energy,
         patch_receiver_distance,
         ir,
         i_freq,
@@ -164,11 +170,11 @@ def _energy_exchange(
         thres
         )
 
-        queue = np.append(queue, appendix, 0)
+        queue = np.append(queue, appendix)
 
     return ir
 
-
+@numba.njit()
 def _shoot(
     row_in,
     form_factors_tilde,
@@ -200,7 +206,6 @@ def _shoot(
 
     ir = _collect_receiver_from_queue(
         ir,
-        i_freq,
         eR[jj],
         dR,
         patch_receiver_energy[jj],
@@ -215,26 +220,25 @@ def _shoot(
     queue_out[:, 2] = ej[jj]
     queue_out[:, 3] = d + patch_distances[i, jj]
 
-    return queue_out, ir
+    return queue_out.reshape(jj.shape[0]*4,), ir
 
-#@numba.njit()
+@numba.njit()
 def _collect_receiver_from_queue(
     ir,
-    i_freq,
     energy,
     distance,
     patch_receiver_energy,
     speed_of_sound,
     histogram_time_resolution,
 ):
-    samples_delay = np.zeros(distance.shape[0],dtype=int)
+    samples_delay = np.zeros_like(distance,dtype=numba.int64)
 
     for i in range(distance.shape[0]):
-        samples_delay[i] = int(distance[i] / speed_of_sound / histogram_time_resolution)
+        samples_delay[i] = numba.int64(distance[i] / speed_of_sound / histogram_time_resolution)
 
     sampleIDs = np.nonzero(samples_delay < ir.shape[0])[0]
 
     for sample in sampleIDs:
-        ir[samples_delay[sample], i_freq] += energy[sample] * patch_receiver_energy[sample]
+        ir[samples_delay[sample]] += energy[sample] * patch_receiver_energy[sample]
 
     return ir
