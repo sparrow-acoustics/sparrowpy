@@ -55,7 +55,7 @@ sofa_path = os.path.join(os.getcwd(), 'test.sofa')
 sf.write_sofa(sofa_path, sofa)
 
 n_max = 2
-repeat = 1
+repeat = 2
 steps_names = [
     'create patches', 'init energy', 'form factor',
     'energy exchange', 'collect energy',
@@ -98,7 +98,7 @@ for method in ['queue']:
         start_loop = datetime.now()
         print(f'{datetime.now()} run({i+1}/{n_max}): {max_size}')
         # run fast two times
-        for j in [0]:
+        for j in range(repeat):
             # create patches and add material
             print("initializing radiosity....",end="")
             radiosity = DRadiosityFast.from_polygon(sample_walls, max_size)

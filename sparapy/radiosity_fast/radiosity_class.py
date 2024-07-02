@@ -240,7 +240,7 @@ class DRadiosityFast():
             ir = ee_recursive._calculate_energy_exchange_second_order(
                 ir, energy_0, distance_0, energy_1, distance_1,
                 patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
-                histogram_time_resolution, n_patches, n_bins, threshold)
+                histogram_time_resolution, n_patches, n_bins, thres=threshold)
             # add remaining energy
             ir = ee_recursive._calculate_energy_exchange_recursive(
                 ir, energy_1, distance_1, distance_i_j, self._form_factors_tilde,

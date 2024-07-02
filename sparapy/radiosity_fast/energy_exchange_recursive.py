@@ -89,7 +89,7 @@ def _init_energy_1(
 
 
 
-@numba.njit()
+#@numba.njit()
 def _energy_exchange(
         ir, i_freq, h, i, energy, distance, form_factors_tilde, distance_1,
         patch_receiver_distance, patch_receiver_energy, speed_of_sound,
@@ -113,7 +113,7 @@ def _energy_exchange(
                     threshold, max_distance, current_depth+1, max_depth)
 
 
-@numba.njit()
+#@numba.njit()
 def _collect_receiver_energy(
         ir, i_freq,energy, distance, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution):
@@ -128,7 +128,7 @@ def _collect_receiver_energy(
 
 
 
-@numba.njit()
+#@numba.njit()
 def _calculate_energy_exchange_second_order(
         ir, energy_0, distance_0, energy_1, distance_1,
         patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
