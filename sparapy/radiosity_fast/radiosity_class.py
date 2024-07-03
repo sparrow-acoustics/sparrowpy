@@ -267,19 +267,20 @@ class DRadiosityFast():
             patches_center = self.patches_center
             distance_i_j = np.empty((n_patches, n_patches))
             for i in range(n_patches):
-                for j in range(n_patches):
+                for j in range(n_patches-1):
                     distance_i_j[i, j] = np.linalg.norm(
                         patches_center[i, :]-patches_center[j, :])
+                    distance_i_j[j, i] = distance_i_j[i, j]
 
             patch_receiver_energy = receiver_energy._universal(
                 receiver_pos, patch_points, patch_area, patch_receiver_distance,
                 air_attenuation)
             # add first 2 order energy exchange
             ir = ee_queue._calculate_energy_exchange_first_order(
-                    ir, energy_0, distance_0,
+                    ir, energy_0, distance_0, patch_receiver_distance,
                     patch_receiver_energy, speed_of_sound, histogram_time_resolution,
                     n_bins, thres=energy_threshold)
-            ee_queue._calculate_energy_exchange_queue(ir, indices, self.energy_1, self.distance_1,
+            ir = ee_queue._calculate_energy_exchange_queue(ir, indices, self.energy_1, self.distance_1,
                     distance_i_j, self._form_factors_tilde, self.visibility_matrix,
                     patch_receiver_distance, patch_receiver_energy, speed_of_sound,
                     histogram_time_resolution, threshold=energy_threshold)

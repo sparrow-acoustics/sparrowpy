@@ -89,11 +89,11 @@ def _init_energy_1(
 
 
 
-#@numba.njit()
+@numba.njit()
 def _energy_exchange(
         ir, i_freq, h, i, energy, distance, form_factors_tilde, distance_1,
         patch_receiver_distance, patch_receiver_energy, speed_of_sound,
-        histogram_time_resolution, threshold=1e-12,
+        histogram_time_resolution, threshold=1e-6,
         max_distance=0.1, current_depth=0, max_depth=-1):
     n_patches = form_factors_tilde.shape[0]
     energy_new = energy * form_factors_tilde[h, i, :]
@@ -111,9 +111,10 @@ def _energy_exchange(
                     distance_1, patch_receiver_distance, patch_receiver_energy,
                     speed_of_sound, histogram_time_resolution,
                     threshold, max_distance, current_depth+1, max_depth)
+    return ir
 
 
-#@numba.njit()
+@numba.njit()
 def _collect_receiver_energy(
         ir, i_freq,energy, distance, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution):
@@ -128,7 +129,7 @@ def _collect_receiver_energy(
 
 
 
-#@numba.njit()
+@numba.njit()
 def _calculate_energy_exchange_second_order(
         ir, energy_0, distance_0, energy_1, distance_1,
         patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
@@ -150,19 +151,20 @@ def _calculate_energy_exchange_second_order(
                         patch_receiver_distance[j],
                         patch_receiver_energy[j, i_freq],
                         speed_of_sound, histogram_time_resolution)
+    return ir
 
-@numba.njit(parallel=True)
+@numba.njit()
 def _calculate_energy_exchange_recursive(
         ir, energy_1, distance_1,distance_i_j, form_factors_tilde,
         n_patches, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution,
-        threshold=1e-12, max_time=0.1, max_depth=-1, thres=1e-6):
+        threshold=1e-6, max_time=0.1, max_depth=-1):
     max_distance = max_time*speed_of_sound
     for i_freq in numba.prange(energy_1.shape[-1]):
         for h in range(n_patches):
             for i in range(n_patches):
                 if energy_1[h, i, i_freq] > threshold:
-                    _energy_exchange(
+                    ir = _energy_exchange(
                         ir, i_freq, h, i, energy_1[h, i, i_freq], distance_1[h, i],
                         form_factors_tilde[..., i_freq], distance_i_j,
                         patch_receiver_distance,
@@ -170,4 +172,6 @@ def _calculate_energy_exchange_recursive(
                         histogram_time_resolution,
                         threshold=threshold, max_distance=max_distance,
                         current_depth=1, max_depth=max_depth)
+
+    return ir
 
