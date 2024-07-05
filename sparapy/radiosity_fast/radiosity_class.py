@@ -277,7 +277,7 @@ class DRadiosityFast():
                 air_attenuation)
             # add first 2 order energy exchange
             ir = ee_queue._calculate_energy_exchange_first_order(
-                    ir, energy_0, distance_0, patch_receiver_distance,
+                    ir, energy_0, distance_0, energy_1, distance_1, indices[1,:], patch_receiver_distance,
                     patch_receiver_energy, speed_of_sound, histogram_time_resolution,
                     n_bins, thres=energy_threshold)
             ir = ee_queue._calculate_energy_exchange_queue(ir, indices, self.energy_1, self.distance_1,

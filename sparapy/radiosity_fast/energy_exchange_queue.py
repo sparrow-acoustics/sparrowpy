@@ -70,6 +70,9 @@ def _calculate_energy_exchange_first_order(
     ir,
     energy_0,
     distance_0,
+    energy_1,
+    distance_1,
+    indices,
     patch_receiver_distance,
     patch_receiver_energy,
     speed_of_sound,
@@ -77,16 +80,32 @@ def _calculate_energy_exchange_first_order(
     n_bins,
     thres=1e-6,
 ):
-    energy_1 = energy_0*patch_receiver_energy
-    distance_1 = distance_0+patch_receiver_distance
+    energy_11   = np.empty((indices.shape[0],n_bins))
+    distance_11 = np.empty_like(indices)
+    
+    energy_01 = energy_0*patch_receiver_energy
+    distance_01 = distance_0+patch_receiver_distance
+    
+    for i in numba.prange(indices.shape[0]):
+        ii = numba.int64(indices[i])
+        energy_11[i] = energy_1[i]*patch_receiver_energy[ii]
+        distance_11[i] = distance_1[i]+patch_receiver_distance[ii]
 
     for i_freq in numba.prange(int(n_bins)):
 
-        i0 = np.nonzero(energy_1[:,i_freq] > thres)[0]
+        i0 = np.nonzero(energy_01[:,i_freq] > thres)[0]
         ir[:,i_freq] = _collect_receiver_from_queue(
             ir[:,i_freq],
-            energy_1[i0,i_freq],
-            distance_1[i0],
+            energy_01[i0,i_freq],
+            distance_01[i0],
+            speed_of_sound,
+            histogram_time_resolution,
+        )
+        i1 = np.nonzero(energy_11[:,i_freq] > thres)[0]
+        ir[:,i_freq] = _collect_receiver_from_queue(
+            ir[:,i_freq],
+            energy_11[i1,i_freq],
+            distance_11[i1],
             speed_of_sound,
             histogram_time_resolution,
         )
@@ -114,8 +133,8 @@ def _calculate_energy_exchange_queue(
     queue = np.empty((indices.shape[1], 4))
     queue[:,0:2] = np.transpose(indices)
 
-    for ii in numba.prange(indices.shape[1]):
-        queue[ii,-1] = distance_0[int(queue[ii,0])] + distance_i_j[int(queue[ii,0]),int(queue[ii,1])]  # noqa: E501
+    for ii in numba.prange(queue.shape[0]):
+        queue[ii,-1] = distance_0[int(queue[ii,0])]
 
     for i_freq in numba.prange(energy_0.shape[-1]):
         queue[:,2] = energy_0[:,i_freq]

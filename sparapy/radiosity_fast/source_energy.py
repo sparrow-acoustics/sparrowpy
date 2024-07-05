@@ -110,7 +110,7 @@ def _init_energy_universal(source_position: np.ndarray, patches_center: np.ndarr
                            patches_points: np.ndarray,  n_bins:int):
 
     n_patches = patches_points.shape[0]
-
+    #### ASSUMES ALL PATCHES ARE VISIBLE FROM THE SOURCE / VICE-VERSA
     energy = np.zeros((n_patches,n_bins))
     d = np.empty((n_patches))
 
