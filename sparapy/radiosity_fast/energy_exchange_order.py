@@ -100,7 +100,6 @@ def energy_exchange(
     for i in numba.prange(n_patches):
         n_delay_samples = int(
             distance_0[i]/speed_of_sound/histogram_time_resolution)
-        print(f'n = {n_delay_samples}')
         E_matrix[0, i, :, :, n_delay_samples] += energy_0_directivity[i]
     E_matrix_total = np.zeros((n_patches, n_directions, n_bins, n_samples))
     E_matrix_total += E_matrix[0]
@@ -119,8 +118,8 @@ def energy_exchange(
                     i = visible_patches[ii, 1]
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
-                E_matrix[current_index, j, :, :, :-n_delay_samples] += form_factors_tilde[
-                    i, j] * E_matrix[current_index-1, i, :, :, n_delay_samples:]
+                E_matrix[current_index, j, :, :, n_delay_samples:] += form_factors_tilde[
+                    i, j] * E_matrix[current_index-1, i, :, :, :-n_delay_samples]
         E_matrix_total += E_matrix[current_index]
     return E_matrix_total
 
