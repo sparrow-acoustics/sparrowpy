@@ -60,7 +60,7 @@ def _add_directional(
     return energy_0_directivity
 
 
-# @numba.njit()
+@numba.njit()
 def energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
         form_factors_tilde,
@@ -108,7 +108,7 @@ def energy_exchange(
     for k in range(max_order):
         current_index = (1+k) % 2
         E_matrix[current_index, :, :, :] = 0
-        for ii in numba.prange(visible_patches.shape[0]):
+        for ii in range(visible_patches.shape[0]):
             for jj in range(2):
                 if jj == 0:
                     i = visible_patches[ii, 0]
@@ -128,7 +128,7 @@ def energy_exchange(
     return E_matrix_total
 
 
-# @numba.njit()
+@numba.njit()
 def _collect_receiver_energy(
         ir, E_matrix_total, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution, receiver_idx):
