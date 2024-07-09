@@ -118,8 +118,12 @@ def energy_exchange(
                     i = visible_patches[ii, 1]
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
-                E_matrix[current_index, j, :, :, n_delay_samples:] += form_factors_tilde[
-                    i, j] * E_matrix[current_index-1, i, :, :, :-n_delay_samples]
+                if n_delay_samples > 0:
+                    E_matrix[current_index, j, :, :, n_delay_samples:] += form_factors_tilde[
+                        i, j] * E_matrix[current_index-1, i, :, :, :-n_delay_samples]
+                else:
+                    E_matrix[current_index, j, :, :, :] += form_factors_tilde[
+                        i, j] * E_matrix[current_index-1, i, :, :, :]
         E_matrix_total += E_matrix[current_index]
     return E_matrix_total
 
