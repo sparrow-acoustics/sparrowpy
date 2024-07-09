@@ -101,11 +101,11 @@ def test_form_factors_directivity_for_diffuse(
     1,
     ])
 @pytest.mark.parametrize('source_pos', [
-    np.array([2, 2, 2]),
+    np.array([.2, .2, .2]),
     # np.array([20, 2, 2]),
     ])
 @pytest.mark.parametrize('receiver_pos', [
-    np.array([3, 4, 2]),
+    np.array([.3, .4, .5]),
     # np.array([3, 40, 2]),
     ])
 @pytest.mark.parametrize('max_order_k', [
@@ -160,7 +160,7 @@ def test_order_vs_old_implementation(
     E_matrix_old = []
     for patch in radiosity_old.patch_list:
         E_matrix_old.append(patch.E_matrix)
-
+    E_matrix_old = np.array(E_matrix_old)
     # # test E_matrix
     # for i_bin in range(data.n_bins):
     #     i_dir = 0
@@ -168,6 +168,15 @@ def test_order_vs_old_implementation(
     #     npt.assert_allclose(
     #         radiosity.E_matrix_total[0, i_dir, i_bin],
     #         E_matrix_old[0][0, 0, 0, :])
+
+    radiosity.E_matrix_total  # n_patches, n_directions, n_bins, n_samples
+    E_matrix_old  # n_patches, n_bins, max_order_k+1, n_patches,n_samples
+    npt.assert_allclose(
+        radiosity.E_matrix_total[0, 0, 0, :],
+        E_matrix_old[0, 0, 0, 0, :])
+    npt.assert_allclose(
+        radiosity.E_matrix_total[1, 0, 0, :],
+        E_matrix_old[0, 0, 1, 0, :])
 
     # compare histogram
     for i in range(4):
