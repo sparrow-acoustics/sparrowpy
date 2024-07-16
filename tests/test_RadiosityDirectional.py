@@ -298,11 +298,16 @@ def test_PatchDirectional_to_from_dict(sample_walls):
     reconstructed_patch = radiosity.PatchesDirectional.from_dict(
         patch_1.to_dict())
     assert reconstructed_patch.directivity_data == patch_1.directivity_data
-    assert all(reconstructed_patch.directivity_sources == patch_1.directivity_sources)
-    assert all(reconstructed_patch.directivity_receivers == patch_1.directivity_receivers)
+    assert all(
+        reconstructed_patch.directivity_sources == patch_1.directivity_sources)
+    assert all(
+        reconstructed_patch.directivity_receivers \
+            == patch_1.directivity_receivers)
     npt.assert_array_equal(reconstructed_patch.E_matrix, patch_1.E_matrix)
-    npt.assert_array_equal(reconstructed_patch.E_n_samples, patch_1.E_n_samples)
-    npt.assert_array_equal(reconstructed_patch.form_factors, patch_1.form_factors)
+    npt.assert_array_equal(
+        reconstructed_patch.E_n_samples, patch_1.E_n_samples)
+    npt.assert_array_equal(
+        reconstructed_patch.form_factors, patch_1.form_factors)
     npt.assert_array_equal(reconstructed_patch.pts, patch_1.pts)
     npt.assert_array_equal(reconstructed_patch.up_vector, patch_1.up_vector)
     npt.assert_array_equal(reconstructed_patch.normal, patch_1.normal)

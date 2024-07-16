@@ -250,7 +250,8 @@ class Patches(Polygon):
                             i_frequency, k-1, i_source, :]
 
                         # delay IR by delay_samples
-                        A_k_minus1_delay = add_delay(A_k_minus_1, delay_samples)
+                        A_k_minus1_delay = add_delay(
+                            A_k_minus_1, delay_samples)
 
                         # find form factor of source and receiver patches
                         form_factor = wall.get_form_factor(
@@ -506,7 +507,8 @@ class Patches(Polygon):
 
                     # Equation 20
                     factor = cos_xi * (np.exp(
-                        -self.sound_attenuation_factor[i_frequency]*R)) / (np.pi * R**2)
+                        -self.sound_attenuation_factor[i_frequency]*R)) / (
+                            np.pi * R**2)
                     receiver_energy = delayed_energy * factor
                     if factor <0:
                         print(factor)
@@ -552,7 +554,8 @@ class PatchesDirectional(Patches):
         sound_attenuation_factor : _type_, optional
             Air attenuation factor for each frequncy bin, by default None
         already_converted : bool, optional
-            is ``sources`` and ``receivers`` already converted, by default False
+            is ``sources`` and ``receivers`` already converted, by default
+            False.
         E_matrix : np.ndarray, optional
             Energy exchange results, if already calcualted , by default None
 
@@ -576,7 +579,8 @@ class PatchesDirectional(Patches):
             dA_receivers = receivers.weights.reshape((receivers.csize, 1))
             dA_receivers = dA_receivers / np.sum(dA_receivers)*2*np.pi
             solution = np.sum(
-                self.directivity_data.freq * dA_receivers, axis=-2, keepdims=True)
+                self.directivity_data.freq * dA_receivers,
+                axis=-2, keepdims=True)
             self.directivity_data.freq *= solution / (2*np.pi)
             o1 = pf.Orientations.from_view_up(
                 polygon.normal, polygon.up_vector)
@@ -600,7 +604,8 @@ class PatchesDirectional(Patches):
         sources.weights = sofa.SourceWeights
         receivers.weights = sofa.ReceiverWeights
         assert sources.weights is not None, "No source weights in sofa file"
-        assert receivers.weights is not None, "No receiver weights in sofa file"
+        assert receivers.weights is not None, \
+            "No receiver weights in sofa file"
         return cls(
             polygon, max_size, other_wall_ids, wall_id,
             data, sources, receivers, absorption=absorption,
@@ -615,7 +620,7 @@ class PatchesDirectional(Patches):
             'directivity_sources': self.directivity_sources.cartesian,
             'directivity_receivers': self.directivity_receivers.cartesian,
             'directivity_sources_weights': self.directivity_sources.weights,
-            'directivity_receivers_weights': self.directivity_receivers.weights,
+            'directivity_receivers_weights': self.directivity_receivers.weights,  # noqa: E501
         }
 
     @classmethod
@@ -745,7 +750,8 @@ class PatchesDirectional(Patches):
                                     * distance)
 
                         # find directional scattering coefficient
-                        difference = source_patch.center - receiver_patch.center
+                        difference = source_patch.center - \
+                            receiver_patch.center
                         difference = pf.Coordinates(
                             difference.T[0], difference.T[1], difference.T[2])
                         source_idx = self.directivity_sources.find_nearest(
@@ -758,7 +764,8 @@ class PatchesDirectional(Patches):
                         energy *= scattering
 
                         # add energy to energy matrix of self
-                        self.E_matrix[i_frequency, k, i_receiver, :, :] += energy
+                        self.E_matrix[
+                            i_frequency, k, i_receiver, :, :] += energy
                         # energy[3]
                         # 0.00120904
 
@@ -815,7 +822,8 @@ class PatchesDirectional(Patches):
 
             for k in range(max_order+1):
                 for i_frequency in range(self.n_bins):
-                    energy = self.E_matrix[i_frequency, k, i_source, :, i_patch]
+                    energy = self.E_matrix[
+                        i_frequency, k, i_source, :, i_patch]
                     delayed_energy = add_delay(energy, delay, axis=-1)
 
                     # Equation 20
@@ -893,7 +901,8 @@ def add_delay(ir, delay_samples, axis=-1):
     ## add delay
     if delay_samples > ir.shape[axis]:
         raise ValueError(
-            f'length of ir is longer then ir delay is {delay_samples} > {ir.shape[-1]}')
+            'length of ir is longer then ir delay is '
+            f'{delay_samples} > {ir.shape[-1]}')
     ir_delayed = np.roll(ir, delay_samples, axis=axis)
     # if np.sum(ir_delayed[:delay_samples, ...]) != 0:
     #     raise ValueError('length of ir is to short, ')
@@ -953,7 +962,8 @@ class Radiosity():
 
     def __init__(
             self, walls, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=346.18, sampling_rate=1000, absorption=0.1, source=None):
+            speed_of_sound=346.18, sampling_rate=1000, absorption=0.1,
+            source=None):
         """Create Radiosity Object for simulation.
 
         Parameters
@@ -1022,7 +1032,8 @@ class Radiosity():
                 dict['source_position'],
                 dict['source_view'], dict['source_up'])
         obj = cls(
-            patch_list, dict['patch_size'], dict['max_order_k'], dict['ir_length_s'],
+            patch_list, dict['patch_size'], dict['max_order_k'],
+            dict['ir_length_s'],
             dict['speed_of_sound'], dict['sampling_rate'], source=source)
         return obj
 
@@ -1048,7 +1059,8 @@ class Radiosity():
                         self.patch_list, k, speed_of_sound=self.speed_of_sound,
                         E_sampling_rate=self.sampling_rate)
 
-    def energy_at_receiver(self, receiver, max_order_k=None, ignore_direct=False):
+    def energy_at_receiver(
+            self, receiver, max_order_k=None, ignore_direct=False):
         """Return the energetic impulse response at the receiver."""
         ir = 0
         if max_order_k is None:
@@ -1120,7 +1132,8 @@ class DirectionalRadiosity():
             index_list = [j for j in range(n_points) if j != i]
             path = sofa_path[i] if isinstance(sofa_path, list) else sofa_path
             patches = polygon_list[i] if isinstance(
-                polygon_list[i], PatchesDirectional) else PatchesDirectional.from_sofa(
+                polygon_list[i], PatchesDirectional) else \
+                    PatchesDirectional.from_sofa(
                     polygon_list[i], self.patch_size, index_list, i, path)
             patch_list.append(patches)
 
