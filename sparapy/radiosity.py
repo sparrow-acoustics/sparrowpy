@@ -15,7 +15,7 @@ class Patches(Polygon):
     other_wall_ids: list[int]  # ids of the patches
     form_factors: np.ndarray
     E_matrix: np.ndarray
-    wall_id : int
+    wall_id: int
     scattering: np.ndarray
     absorption: np.ndarray
     n_bins: int
@@ -452,7 +452,7 @@ class Patches(Polygon):
                 i_receiver_ff = receiver_patch_id
                 break
             wall = patches_list[other_wall]
-            #wall = patches_list[idx]
+            # wall = patches_list[idx]
             i_receiver_offset += len(wall.patches)
 
         return self.form_factors[
@@ -573,6 +573,11 @@ class PatchesDirectional(Patches):
         self.directivity_sources = sources
         self.directivity_receivers = receivers
         if not already_converted:
+            dA_receivers = receivers.weights.reshape((receivers.csize, 1))
+            dA_receivers = dA_receivers / np.sum(dA_receivers)*2*np.pi
+            solution = np.sum(
+                self.directivity_data.freq * dA_receivers, axis=-2, keepdims=True)
+            self.directivity_data.freq *= solution / (2*np.pi)
             o1 = pf.Orientations.from_view_up(
                 polygon.normal, polygon.up_vector)
             o2 = pf.Orientations.from_view_up([0, 0, 1], [1, 0, 0])
@@ -582,7 +587,7 @@ class PatchesDirectional(Patches):
             self.directivity_receivers.radius = 1
             self.directivity_sources.rotate('xyz', euler)
             self.directivity_sources.radius = 1
-            # to make same with just ones in diffsue case
+            # to make same with just ones in diffuse case
             self.directivity_data.freq *= receivers.csize
 
     @classmethod
@@ -592,6 +597,10 @@ class PatchesDirectional(Patches):
         """Create object with directional data from sofa."""
         sofa = sf.read_sofa(wall_directivity_path, True, False)
         data, sources, receivers = pf.io.convert_sofa(sofa)
+        sources.weights = sofa.SourceWeights
+        receivers.weights = sofa.ReceiverWeights
+        assert sources.weights is not None, "No source weights in sofa file"
+        assert receivers.weights is not None, "No receiver weights in sofa file"
         return cls(
             polygon, max_size, other_wall_ids, wall_id,
             data, sources, receivers, absorption=absorption,
@@ -605,6 +614,8 @@ class PatchesDirectional(Patches):
             'directivity_data_frequencies': self.directivity_data.frequencies,
             'directivity_sources': self.directivity_sources.cartesian,
             'directivity_receivers': self.directivity_receivers.cartesian,
+            'directivity_sources_weights': self.directivity_sources.weights,
+            'directivity_receivers_weights': self.directivity_receivers.weights,
         }
 
     @classmethod
@@ -615,11 +626,13 @@ class PatchesDirectional(Patches):
         sources = pf.Coordinates(
             np.array(dict['directivity_sources']).T[0],
             np.array(dict['directivity_sources']).T[1],
-            np.array(dict['directivity_sources']).T[2])
+            np.array(dict['directivity_sources']).T[2],
+            weights=dict['directivity_sources_weights'])
         receivers = pf.Coordinates(
             np.array(dict['directivity_receivers']).T[0],
             np.array(dict['directivity_receivers']).T[1],
-            np.array(dict['directivity_receivers']).T[2])
+            np.array(dict['directivity_receivers']).T[2],
+            weights=dict['directivity_receivers_weights'])
         return cls(
             Polygon.from_dict(dict),
             max_size=dict['max_size'],
