@@ -135,7 +135,8 @@ def test_form_factors_directivity_for_diffuse(
         npt.assert_almost_equal(
             radiosity.form_factors[:4, 4:], form_factors_from_tilde[:4, 4:, i])
         npt.assert_almost_equal(
-            radiosity.form_factors[:4, 4:].T, form_factors_from_tilde[4:, :4, i])
+            radiosity.form_factors[:4, 4:].T,
+            form_factors_from_tilde[4:, :4, i])
 
     for i in range(8):
         npt.assert_almost_equal(radiosity._form_factors_tilde[i, i, :, :], 0)
@@ -257,7 +258,8 @@ def test_recursive_vs_old_implementation(
     radiosity_old.run(
         sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
     histogram_old = radiosity_old.energy_at_receiver(
-        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
+        ignore_direct=True)
 
     radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
@@ -292,14 +294,17 @@ def test_recursive_vs_old_implementation(
     n_patches = patches_center.shape[0]
 
     # test form factors
-    form_factors = np.array(form_factors).reshape((n_patches, int(n_patches/2)))
+    form_factors = np.array(form_factors).reshape(
+        (n_patches, int(n_patches/2)))
     for i in range(int(n_patches/2)):
         for j in range(int(n_patches/2)):
             if (i < j) and (i!=j):
                 npt.assert_almost_equal(
-                    radiosity.form_factors[i, int(j+n_patches/2)], form_factors[i, j])
+                    radiosity.form_factors[i, int(j+n_patches/2)],
+                    form_factors[i, j])
                 npt.assert_almost_equal(
-                    radiosity.form_factors[i, int(j+n_patches/2)], form_factors[j, i])
+                    radiosity.form_factors[i, int(j+n_patches/2)],
+                    form_factors[j, i])
     npt.assert_almost_equal(
         patches_center, radiosity.patches_center)
     npt.assert_almost_equal(
@@ -395,7 +400,8 @@ def test_room_recursive_vs_old_implementation(
             np.sum(histogram[i, :]), np.sum(histogram_old[0, :]),
             err_msg=f'histogram i_bin={i}', rtol=0.0005)
         # npt.assert_almost_equal(
-        # histogram[0, histogram[0,:]>0], histogram_old[0, histogram_old[0,:]>0])
+        # histogram[0, histogram[0,:]>0],
+        # histogram_old[0, histogram_old[0,:]>0])
 
 
 @pytest.mark.parametrize('patch_size', [1, 0.5])

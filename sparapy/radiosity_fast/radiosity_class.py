@@ -42,7 +42,7 @@ class DRadiosityFast():
             self, walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids):
-        """Create a Radiosity object for directional scattering coefficients."""
+        """Create a Radiosity object for directional implementation."""
         self._walls_points = walls_points
         self._walls_normal = walls_normal
         self._walls_up_vector = walls_up_vector
@@ -249,7 +249,8 @@ class DRadiosityFast():
                 histogram_time_resolution, n_patches, n_bins)
             # add remaining energy
             ee_recursive._calculate_energy_exchange_recursive(
-                ir, energy_1, distance_1, distance_i_j, self._form_factors_tilde,
+                ir, energy_1, distance_1, distance_i_j,
+                self._form_factors_tilde,
                 self.n_patches, patch_receiver_distance, patch_receiver_energy,
                 speed_of_sound, histogram_time_resolution,
                 threshold=threshold, max_time=max_time, max_depth=max_depth)
