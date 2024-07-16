@@ -299,7 +299,8 @@ def test_PatchDirectional_to_from_dict(sample_walls):
         patch_1.to_dict())
     assert reconstructed_patch.directivity_data == patch_1.directivity_data
     assert all(
-        reconstructed_patch.directivity_sources == patch_1.directivity_sources)
+        reconstructed_patch.directivity_sources == \
+            patch_1.directivity_sources)
     assert all(
         reconstructed_patch.directivity_receivers \
             == patch_1.directivity_receivers)
