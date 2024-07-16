@@ -130,7 +130,8 @@ def test_small_room_and_rotate():
 
         E_matrix.append(np.concatenate([
             radi.patch_list[i].E_matrix for i in range(6)], axis=-2))
-        E_matrix_sum.append([radi.patch_list[i].E_matrix.sum() for i in range(6)])
+        E_matrix_sum.append(
+            [radi.patch_list[i].E_matrix.sum() for i in range(6)])
         # test energy at receiver
         receiver = sp.geometry.Receiver(receiver_pos, [0, 1, 0], [0, 0, 1])
         irs_new.append(radi.energy_at_receiver(receiver, ignore_direct=True))
@@ -185,7 +186,8 @@ def test_small_room_and_rotate_init_energy():
 
         E_matrix.append(np.concatenate([
             radi.patch_list[i].E_matrix for i in range(6)], axis=-2))
-        E_matrix_sum.append([radi.patch_list[i].E_matrix.sum() for i in range(6)])
+        E_matrix_sum.append(
+            [radi.patch_list[i].E_matrix.sum() for i in range(6)])
 
     # rotate all walls
     E_matrix_sum = np.array(E_matrix_sum)
@@ -193,10 +195,6 @@ def test_small_room_and_rotate_init_energy():
     reference_energy = E_matrix_sum[:, 2] # formula was given for the ground
     for i, ref in enumerate(reference_energy):
         matrix[np.abs(E_matrix_sum-ref)<1e-10] = i+1
-    # print(matrix)
-    # for i in range(6):
-    #     print(i)
-    #     npt.assert_array_equal(np.sort(E_matrix_sum[i,:]), np.sort(reference_energy))
     E_matrix = np.array(E_matrix)
     E_matrix = np.sum(E_matrix[:, 0, 0, :, 0], axis=-1)
     npt.assert_array_almost_equal(E_matrix, E_matrix[0], decimal=4)
@@ -401,7 +399,8 @@ def test_calc_form_factor_perpendicular(
     idx_sort = [0, 0] if patch_size == 1 else perpendicular_walls
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data',
-        f'reference_form_factor_perpendicular_{idx_sort[0]}_{idx_sort[1]}_size{patch_size}.far')
+        f'reference_form_factor_perpendicular_{idx_sort[0]}_{idx_sort[1]}'
+        f'_size{patch_size}.far')
     patch_1 = radiosity.Patches(wall_source, patch_size, [1], 0)
     patch_2 = radiosity.Patches(wall_receiver, patch_size, [0], 1)
     patches = [patch_1, patch_2]
@@ -502,7 +501,8 @@ def test_Patch_to_from_dict(sample_walls):
     reconstructed_patch = radiosity.Patches.from_dict(
         patch_1.to_dict())
     npt.assert_array_equal(reconstructed_patch.E_matrix, patch_1.E_matrix)
-    npt.assert_array_equal(reconstructed_patch.form_factors, patch_1.form_factors)
+    npt.assert_array_equal(
+        reconstructed_patch.form_factors, patch_1.form_factors)
     npt.assert_array_equal(reconstructed_patch.pts, patch_1.pts)
     npt.assert_array_equal(reconstructed_patch.up_vector, patch_1.up_vector)
     npt.assert_array_equal(reconstructed_patch.normal, patch_1.normal)

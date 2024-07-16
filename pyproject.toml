@@ -4,6 +4,7 @@ exclude = [
     'docs',
     'setup.py',
 ]
+line-length = 79
 lint.ignore = [
     "D213",
     "D203",
