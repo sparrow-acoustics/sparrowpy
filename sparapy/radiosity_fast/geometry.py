@@ -37,7 +37,8 @@ def get_scattering_data_receiver_index(
         difference_receiver /= np.linalg.norm(
             difference_receiver)
         receiver_idx[i] = np.argmin(np.sum(
-            (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1), axis=-1)
+            (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
+            axis=-1)
         # scattering_idx[i] = scattering_index[wall_id_i[i]]
 
     return receiver_idx

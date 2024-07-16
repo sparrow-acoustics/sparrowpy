@@ -136,7 +136,8 @@ def test_order_vs_old_implementation(
     radiosity_old.run(
         sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
     histogram_old = radiosity_old.energy_at_receiver(
-        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]), ignore_direct=True)
+        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
+        ignore_direct=True)
 
     radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
@@ -258,7 +259,8 @@ def test_room_recursive_vs_old_implementation(
             np.sum(histogram[i, :]), np.sum(histogram_old[0, :]),
             err_msg=f'histogram i_bin={i}', rtol=0.0005)
         # npt.assert_almost_equal(
-        # histogram[0, histogram[0,:]>0], histogram_old[0, histogram_old[0,:]>0])
+        # histogram[0, histogram[0,:]>0],
+        # histogram_old[0, histogram_old[0,:]>0])
 
 
 @pytest.mark.parametrize('patch_size', [1, 0.5])

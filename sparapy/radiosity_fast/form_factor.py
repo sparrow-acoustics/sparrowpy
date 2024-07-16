@@ -208,7 +208,8 @@ def _form_factors_with_directivity(
 
 @numba.njit(parallel=True)
 def _form_factors_with_directivity_dim(
-        visibility_matrix, form_factors, n_bins, patches_center, air_attenuation,
+        visibility_matrix, form_factors, n_bins, patches_center,
+        air_attenuation,
         absorption, absorption_index, patch_to_wall_ids,
         scattering, scattering_index, sources, receivers):
     """Calculate the form factors with directivity."""

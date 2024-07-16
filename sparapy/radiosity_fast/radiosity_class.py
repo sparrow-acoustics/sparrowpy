@@ -153,7 +153,8 @@ class DRadiosityFast():
         n_bins = 1 if self._n_bins is None else self._n_bins
 
         if algorithm == 'recursive':
-            self._form_factors_tilde = form_factor._form_factors_with_directivity(
+            self._form_factors_tilde = \
+                form_factor._form_factors_with_directivity(
                 self.visibility_matrix, self.form_factors, n_bins,
                 self.patches_center,
                 self._air_attenuation, absorption,
@@ -162,7 +163,8 @@ class DRadiosityFast():
                 scattering_index,
                 sources_array, receivers_array)
         elif algorithm == 'order':
-            self._form_factors_tilde = form_factor._form_factors_with_directivity_dim(
+            self._form_factors_tilde = \
+                form_factor._form_factors_with_directivity_dim(
                 self.visibility_matrix, self.form_factors, n_bins,
                 self.patches_center,
                 self._air_attenuation, absorption,

@@ -85,6 +85,8 @@ def energy_exchange(
         time resolution of the histogram in s.
     max_order : int
         maximum order of reflections.
+    visible_patches : np.ndarray
+        indexes of all visible patches of shape (n_visible, 2)
 
     Returns
     -------
@@ -139,7 +141,8 @@ def _collect_receiver_energy(
     ir : np.ndarray
         impulse response of shape (n_samples, n_bins)
     E_matrix_total : np.ndarray
-        energy of all patches of shape (n_patches, n_directions, n_bins, n_samples)
+        energy of all patches of shape
+        (n_patches, n_directions, n_bins, n_samples)
     patch_receiver_distance : np.ndarray
         distance from the patch to the receiver of shape (n_patches)
     patch_receiver_energy : np.ndarray
