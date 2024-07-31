@@ -8,7 +8,7 @@ from tqdm import tqdm
 from sparapy.geometry import Polygon, SoundSource
 
 
-class Patches(Polygon):
+class Patches(Polygon)
     """Class representing patches of a polygon."""
 
     patches: list[Polygon]

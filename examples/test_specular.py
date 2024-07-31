@@ -56,4 +56,4 @@ soll.time[:, int(delta_d/speed_of_sound/time_resolution)] = 1 / (4*np.pi*delta_d
 delta_d = 1 # todo
 soll.time[:, int(delta_d/speed_of_sound/time_resolution)] = 1 / (4*np.pi*delta_d**2)
 
-# %%
+# %% this was a copy from chatgpt
