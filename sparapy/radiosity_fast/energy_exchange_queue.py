@@ -4,7 +4,7 @@ import numba
 import numpy as np
 from . import geometry
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _init_energy_1(
     energy_0,
     distance_0,
@@ -65,7 +65,7 @@ def _init_energy_1(
     return (indices, energy_1, distance_1)
 
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _calculate_energy_exchange_first_order(
     ir,
     energy_0,
@@ -80,19 +80,18 @@ def _calculate_energy_exchange_first_order(
     n_bins,
     thres=1e-6,
 ):
-    energy_11   = np.zeros((indices.shape[0],n_bins))
-    distance_11 = np.zeros((indices.shape[0],))
+    energy_11   = np.zeros((indices.shape[1],n_bins))
+    distance_11 = np.zeros((indices.shape[1],))
 
     energy_01 = energy_0*patch_receiver_energy
     distance_01 = distance_0+patch_receiver_distance
 
-    for i in numba.prange(indices.shape[0]):
+    for i in numba.prange(indices.shape[1]):
         ii = numba.int64(indices[0,i])
         energy_11[i] = energy_1[i]*patch_receiver_energy[ii]
         distance_11[i] = distance_1[i]+patch_receiver_distance[ii]
 
     for i_freq in numba.prange(int(n_bins)):
-
         i0 = np.nonzero(energy_01[:,i_freq] > thres)[0]
         ir[:,i_freq] = _collect_receiver_from_queue(
             ir[:,i_freq],
@@ -113,7 +112,7 @@ def _calculate_energy_exchange_first_order(
     return ir
 
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _calculate_energy_exchange_queue(
     ir,
     indices,
@@ -154,7 +153,7 @@ def _calculate_energy_exchange_queue(
 
     return ir
 
-#@numba.njit()
+@numba.njit()
 def _energy_exchange(
     ir,
     queue,
@@ -194,7 +193,7 @@ def _energy_exchange(
 
     return ir
 
-#@numba.njit()
+@numba.njit()
 def _shoot(
     row_in,
     form_factors_tilde,
@@ -223,23 +222,22 @@ def _shoot(
     dR = dj + patch_receiver_distance[j]
 
     jj = np.nonzero(eR > thres)[0]
-    jjj = np.nonzero(j)[0][jj]
-
-
+    
     ir = _collect_receiver_from_queue(
         ir,
         eR[jj],
-        dR,
+        dR[jj],
         speed_of_sound,
         histogram_time_resolution,
     )
 
+    jjj = np.nonzero(j)[0][jj]
     queue_out = np.empty((jj.shape[0], 4))
 
     queue_out[:, 0] = i * np.ones_like(jjj)
     queue_out[:, 1] = jjj
-    queue_out[:, 2] = ej[jjj]
-    queue_out[:, 3] = dj[jjj]
+    queue_out[:, 2] = ej[jj]
+    queue_out[:, 3] = dj[jj]
 
     return queue_out.reshape(jjj.shape[0]*4,), ir
 

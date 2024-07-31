@@ -97,16 +97,16 @@ def _energy_exchange(
         max_distance=0.1, current_depth=0, max_depth=-1):
     n_patches = form_factors_tilde.shape[0]
     energy_new = energy * form_factors_tilde[h, i, :]
-    if current_depth<max_depth:
+    if True:#current_depth<max_depth:
         for j in range(n_patches):
             distance_new = distance + distance_1[i, j]
             if (energy_new[j] > threshold):# and (distance_new < max_distance):
-                # energy_new += energy * form_factors_tilde[h, i, j]
+                
                 ir = _collect_receiver_energy(
                     ir, i_freq, energy_new[j], distance_new, patch_receiver_distance[j],
                     patch_receiver_energy[j],
                     speed_of_sound, histogram_time_resolution)
-                _energy_exchange(
+                ir = _energy_exchange(
                     ir, i_freq, i, j, energy_new[j], distance_new, form_factors_tilde,
                     distance_1, patch_receiver_distance, patch_receiver_energy,
                     speed_of_sound, histogram_time_resolution,
