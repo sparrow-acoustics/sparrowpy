@@ -100,7 +100,7 @@ def _energy_exchange(
     if True:#current_depth<max_depth:
         for j in range(n_patches):
             distance_new = distance + distance_1[i, j]
-            if (energy_new[j] > threshold):# and (distance_new < max_distance):
+            if (energy_new[j]*patch_receiver_energy[j] > threshold):# and (distance_new < max_distance):
                 
                 ir = _collect_receiver_energy(
                     ir, i_freq, energy_new[j], distance_new, patch_receiver_distance[j],

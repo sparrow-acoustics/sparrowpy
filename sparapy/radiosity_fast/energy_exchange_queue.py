@@ -252,7 +252,7 @@ def _collect_receiver_from_queue(
     samples_delay = np.zeros_like(distance,dtype=np.int64)
 
     for i in range(distance.shape[0]):
-        samples_delay[i] = np.floor(distance[i] / speed_of_sound / histogram_time_resolution)
+        samples_delay[i] = int(distance[i] / speed_of_sound / histogram_time_resolution)
 
     sampleIDs = np.nonzero(samples_delay < ir.shape[0])[0]
 
