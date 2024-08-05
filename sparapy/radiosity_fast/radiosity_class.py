@@ -197,7 +197,7 @@ class DRadiosityFast():
                 self.n_bins)
             indices, energy_1, distance_1 = ee_queue._init_energy_1(energy_0,
                 distance_0, source_position, self.patches_center,
-                self._visible_patches, self.patches_area, self.n_bins,
+                self._visible_patches, self.patches_area, self._air_attenuation, self.n_bins,
                 patch_to_wall_ids, absorption, absorption_index, form_factors,
                 sources, receivers, scattering, scattering_index)
             self.energy_0 = energy_0

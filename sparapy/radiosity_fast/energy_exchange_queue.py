@@ -12,6 +12,7 @@ def _init_energy_1(
     patches_center: np.ndarray,
     visible_patches: np.ndarray,
     patches_areas: np.ndarray,
+    air_attenuation:np.ndarray,
     n_bins: int,
     patch_to_wall_ids: np.ndarray,
     absorption: np.ndarray,
@@ -59,7 +60,11 @@ def _init_energy_1(
             )
 
             absorption_factor = 1 - absorption[absorption_index[wall_id_i], :]
-            energy_1[2*ii+jj,:] = energy_0[i, :] * ff * absorption_factor * scattering_factor
+            if air_attenuation is not None:
+                energy_1[2*ii+jj,:] = energy_0[i, :] * ff * np.exp(-air_attenuation * distance) * absorption_factor * scattering_factor
+            else:
+                energy_1[2*ii+jj,:] = energy_0[i, :] * ff  * absorption_factor * scattering_factor
+                
             distance_1[2*ii+jj] = distance_0[i] + distance
 
     return (indices, energy_1, distance_1)
@@ -112,7 +117,7 @@ def _calculate_energy_exchange_first_order(
     return ir
 
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def _calculate_energy_exchange_queue(
     ir,
     indices,
