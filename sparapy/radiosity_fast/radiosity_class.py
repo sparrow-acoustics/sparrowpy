@@ -177,9 +177,9 @@ class DRadiosityFast():
         scattering_index = self._scattering_index
         form_factors = self.form_factors
         if algorithm == 'recursive':
-            energy_0, distance_0 = source_energy._init_energy_kang(
-                source_position, self.patches_center, self.patches_normal,
-                self._air_attenuation, self.patches_size, self.n_bins)
+            energy_0, distance_0 = source_energy._init_energy_universal(
+                source_position, self.patches_center, self.patches_points,
+                self._air_attenuation, self.n_bins)
             energy_1, distance_1 = ee_recursive._init_energy_1(
                 energy_0, distance_0, source_position,
                 self.patches_center, self._visible_patches,
@@ -194,7 +194,7 @@ class DRadiosityFast():
         elif algorithm == 'queue':
             energy_0, distance_0 = source_energy._init_energy_universal(
                 source_position, self.patches_center, self.patches_points,
-                self.n_bins)
+                self._air_attenuation, self.n_bins)
             indices, energy_1, distance_1 = ee_queue._init_energy_1(energy_0,
                 distance_0, source_position, self.patches_center,
                 self._visible_patches, self.patches_area, self._air_attenuation, self.n_bins,
@@ -221,6 +221,8 @@ class DRadiosityFast():
             patch_receiver_distance = self.patches_center - receiver_pos
             air_attenuation = self._air_attenuation
             patches_normal = self._patches_normal
+            patch_points = self._patches_points
+            patch_area = self.patches_area
             energy_0 = self.energy_0
             distance_0 = self.distance_0
             energy_1 = self.energy_1
@@ -234,8 +236,9 @@ class DRadiosityFast():
                     distance_i_j[i, j] = np.linalg.norm(
                         patches_center[i, :]-patches_center[j, :])
 
-            patch_receiver_energy = receiver_energy._kang(
-                patch_receiver_distance, patches_normal, air_attenuation)
+            patch_receiver_energy = receiver_energy._universal(
+                receiver_pos, patch_points, patch_area, np.linalg.norm(patch_receiver_distance,axis=1),
+                air_attenuation)
             # add first 2 order energy exchange
             ir = ee_recursive._calculate_energy_exchange_second_order(
                 ir, energy_0, distance_0, energy_1, distance_1,

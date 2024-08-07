@@ -129,7 +129,7 @@ def _collect_receiver_energy(
 
 
 
-@numba.njit()
+#@numba.njit()
 def _calculate_energy_exchange_second_order(
         ir, energy_0, distance_0, energy_1, distance_1,
         patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
