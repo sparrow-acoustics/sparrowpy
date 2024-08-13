@@ -3,7 +3,8 @@
 import numpy as np
 
 class ISObj:
-    def __init__(self, position=None, walls=None):
+
+    def __init__(self, position=None, walls=None, order=None):
         if position is None:
             self.Position = np.array([0.00, 0.00, 0.00], dtype=float)
         else:
@@ -11,10 +12,16 @@ class ISObj:
 
         if walls is None:
             self.Walls = []
+        else:
+            self.Walls = walls
+
+        
+        if order is None:
             self.Order = -1
         else:
-            self.Walls = list(map(int, walls))
-            self.Order = len(walls)
+            self.Order = order
+
+        
 
     def find_image_sources_with_same_position(self, ISList):
         IndexList = []
