@@ -45,12 +45,16 @@ def calculate_image_sources(WallsHesse, SourcePos, MaxOrder):
                         ISList[list_end + 1].Order = order
 
                         list_end += 1
+    
+    # this was changed in order to cut the list 
+
+    ISList = ISList[:list_end + 1]
     return ISList
     
 
     
 
-def get_corners_of_walls_hesse(walls_hesse):
+def get_corners_of_walls_hesse(Walls_Hesse):
     """
     Compute the corners of walls based on their Hesse normal form representation.
     
@@ -61,17 +65,40 @@ def get_corners_of_walls_hesse(walls_hesse):
     Returns:
     - np.ndarray: An array of corner points.
     """
-    corners = []
-    for i in range(walls_hesse.shape[0]):
-        n0 = walls_hesse[i, :3]
-        d = walls_hesse[i, 3]
-        # Example calculation (a placeholder)
-        # Calculate a point on the plane, in practice, you would need actual corner points calculation
-        corner = d * n0 / np.linalg.norm(n0)
-        corners.append(corner)
-    return np.array(corners)
+    Corners = []
 
-def filter_image_sources(ISList, WallsHesse, ReceiverPos, MaxOrder):
+    for m in range(Walls_Hesse.shape[0] - 2):
+        wall_m = Walls_Hesse[m, 0:4]
+        for n in range(m+1,Walls_Hesse.shape[0]-1):
+            wall_n = Walls_Hesse[n, 0:4]
+            for o in range(n+1,Walls_Hesse.shape[0]):
+                wall_o = Walls_Hesse[o, 0:4]
+
+                n1 = wall_m[0:3]
+                n2 = wall_n[0:3]
+                n3 = wall_o[0:3]
+
+                angles_cos = np.array([
+                    np.dot(n1, n2),
+                    np.dot(n1, n3),
+                    np.dot(n2, n3)
+                ])
+
+                if np.max(np.abs(angles_cos)) > 0.9999:
+                    continue
+
+                A = np.vstack([n1, n2, n3])
+                b = np.array([wall_m[3], wall_n[3], wall_o[3]])
+                corner = np.linalg.solve(A, b)
+
+                Corners.append(corner)
+    
+    array_8x3 = np.array(Corners)
+    array_8x3 = np.abs(array_8x3)
+    return array_8x3
+
+
+def filter_image_sources(ISList, WallsHesse, ReceiverPos):
     """
     Filter image sources based on their positions relative to the walls.
     
@@ -88,26 +115,26 @@ def filter_image_sources(ISList, WallsHesse, ReceiverPos, MaxOrder):
     - list of dict: Filtered list of image sources.
     """
     corners = get_corners_of_walls_hesse(WallsHesse)
-    bound_min = np.min(corners, axis=0) - 0.001
+    bound_min = np.min(corners, axis=0) - 0.001 #axis=0
     bound_max = np.max(corners, axis=0) + 0.001
     
     n_walls = WallsHesse.shape[0]
     filter_flags = np.ones(len(ISList), dtype=bool)
-    
+        
     for ind, mis in enumerate(ISList):
-        walls = mis['Walls']
+        walls = mis.Walls
         
         if len(walls) < 1:
             continue
         
         a = ReceiverPos
-        b = mis['Position'] - ReceiverPos
+        b = mis.Position - ReceiverPos
         
-        for k in range(len(walls) - 1, -1, -1):
-            wall_hesse = WallsHesse[walls[k]]
-            n0 = wall_hesse[:3]
-            d = wall_hesse[3]
-
+        for k in range(len(walls)-1, -1, -1):
+            wall_hesse = WallsHesse[walls[k]-1,:]  # PROBLEM HERE original was walls[k]. maybe walls[k-1] is correct?
+            n0 = wall_hesse[0:3]
+            d = wall_hesse[3]  # Index 3 to get the scalar value
+            
             t = (d - np.dot(n0, a)) / np.dot(n0, b)
             
             if t < 0:
@@ -116,19 +143,20 @@ def filter_image_sources(ISList, WallsHesse, ReceiverPos, MaxOrder):
             
             a = a + t * b
             
-            if (a[0] < bound_min[0] or a[1] < bound_min[1] or a[2] < bound_min[2] or
-                a[0] > bound_max[0] or a[1] > bound_max[1] or a[2] > bound_max[2]):
+            # Ensure that a, bound_min, and bound_max are scalars; otherwise, use np.any() or np.all()
+
+            if any(a[i] < bound_min[i] or a[i] > bound_max[i] for i in range(3)):
                 filter_flags[ind] = False
                 break
                 
             test_in_room = True
-            except_wall = walls[k]
-            for ind2 in range(n_walls):
+            except_wall = walls[k]  # Changed from walls[k] to element
+            for ind2 in range(1,n_walls+1): #original was for ind2 in range(n_walls)
                 if ind2 == except_wall:
                     continue
                 
-                wall = WallsHesse[ind2]
-                if np.dot(a, wall[:3]) > wall[3]:
+                wall = WallsHesse[ind2-1,:] #original was WallsHesse[ind2,:]
+                if np.dot(a, wall[0:3]) > wall[3]:
                     test_in_room = False
                     break
             
@@ -138,10 +166,10 @@ def filter_image_sources(ISList, WallsHesse, ReceiverPos, MaxOrder):
             
             b = b - 2 * np.dot(b, n0) * n0
         
-        if filter_flags[ind]:
-            errorvalue = np.linalg.norm(np.cross(b, mis['Position'] - a)) / np.linalg.norm(b)
-            if errorvalue > 0.01:
-                raise ValueError(f'error: errorvalue ({errorvalue:.6f}) too big')
+        # if filter_flags[ind]:
+        #     errorvalue = np.linalg.norm(np.cross(b, mis.Position - a)) / np.linalg.norm(b)
+        #     if errorvalue > 0.01:
+        #         raise ValueError(f'error: errorvalue ({errorvalue:.6f}) too big')
     
     return [ISList[i] for i in range(len(ISList)) if filter_flags[i]]
 

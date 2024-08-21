@@ -13,6 +13,8 @@ MaxOrder = 3
 
 ISList_valid = ims.calculate_image_sources(WallsHesse, SourcePos, MaxOrder)
 
-a = 230 + 250
+ReceiverPos = [0.25, 0.25, 0.25]
+ISList_audible = ims.filter_image_sources(ISList_valid, WallsHesse, ReceiverPos)
 
+a = 230 + 250
 # %%
