@@ -18,3 +18,18 @@ ISList_audible = ims.filter_image_sources(ISList_valid, WallsHesse, ReceiverPos)
 
 a = 230 + 250
 # %%
+print(ISList_valid[89].Position)
+
+
+# %%
+print(ISList_valid[89].Walls)
+
+# %%
+print(ISList_valid[89].Order)
+
+
+# %%
+if np.array_equal(ISList_valid[89].Position, np.array([0.5, -2.5, 0.5])):
+    print(True)
+# %%
+print()
