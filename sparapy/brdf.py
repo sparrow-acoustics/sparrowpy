@@ -1,63 +1,95 @@
-import pyfar as pf
+"""Contain functions to create BRDFs from scattering coefficients."""
 import numpy as np
-import os
 import sofar as sf
+import pyfar as pf
+import sparapy
 
 
 
 def create_from_scattering(
-        file_path, scattering_coefficient=1, sh_order=1, frequencies=[1000]):
-    """Create a SOFA file from a scattering coefficient.
+        file_path,
+        source_directions,
+        receiver_directions,
+        scattering_coefficient,
+        absorption_coefficient=None,
+        ):
+    r"""Create the BRDF from a scattering coefficient and write to SOFA file.
+
+    The scattering coefficient is assumed to be anisotropic and based on [#]_.
+
+    .. math::
+        \rho(\Omega_i, \Omega_e) = \frac{(1-s)(1-\alpha)}{\Omega_i \cdot
+        \mathbf{n}_i} \delta(\Omega_i-M(\Omega_e)) + \frac{s(1-\alpha)}{\pi}
+
+    where:
+        - :math:`\Omega_i` and :math:`\Omega_e` are the incident and exitant
+          directions, respectively.
+        - :math:`s` is the scattering coefficient.
+        - :math:`\alpha` is the absorption coefficient.
+        - :math:`\mathbf{n}_i` is the normal vector.
+        - :math:`\delta` is the Dirac delta function.
+        - :math:`M` s the mirror reflection transformation
+          :math:`M(\theta, \phi)=M(\theta, \pi-\phi)`.
 
     Parameters
     ----------
     file_path : string, path
         path where sofa file should be saved
-    scattering_coefficient : int, optional
-        broadcastable to , by default 1
-    sh_order : int, optional
-        sh order of the gaussian sampling of the sources and receivers
-        coordinates, by default 1
-    frequencies : list, optional
-        frequency bins for the directivity, by default [1000]
+    source_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
+        source directions for the BRDF, should contain weights.
+    receiver_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
+        receiver directions for the BRDF, should contain weights.
+    scattering_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
+        frequency dependent scattering coefficient data.
+    absorption_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
+        frequency dependent absorption coefficient data, by default
+        no absorption.
+
+    References
+    ----------
+    .. [#]  S. Siltanen, T. Lokki, S. Kiminki, and L. Savioja, “The room
+            acoustic rendering equation,” The Journal of the Acoustical
+            Society of America, vol. 122, no. 3, pp. 1624-1635, 2007.
 
     """
-    shape = np.broadcast_shapes(
-        np.asarray(scattering_coefficient).shape,
-        np.asarray(frequencies).shape,
-        (1,))
-    if len(shape) == 1:
-        raise TypeError('scattering_coefficient and frequencies must '\
-        'be broadcastable to a 1D array')
-    scattering_coefficient = np.broadcast_to(scattering_coefficient, shape)
-    frequencies = np.broadcast_to(frequencies, shape)
+    if (
+            not isinstance(scattering_coefficient, pf.FrequencyData) or \
+            not scattering_coefficient.cshape == (1,)):
+        raise TypeError(
+            'scattering_coefficient must be a pf.FrequencyData object'
+            'with shape (1,)')
+    if not isinstance(source_directions, pf.Coordinates):
+        raise TypeError(
+            'source_directions must be a pf.Coordinates object')
+    if not isinstance(receiver_directions, pf.Coordinates):
+        raise TypeError(
+            'receiver_directions must be a pf.Coordinates object')
+    if absorption_coefficient is None:
+        absorption_coefficient = pf.FrequencyData(
+            np.zeros_like(scattering_coefficient.frequencies),
+            scattering_coefficient.frequencies)
 
+    data_out = np.zeros((
+        source_directions.csize, receiver_directions.csize,
+        scattering_coefficient.n_bins))
 
-    sources = pf.samplings.sph_gaussian(sh_order=sh_order)
-    sources = sources[sources.z > 0]
-    receivers = pf.samplings.sph_gaussian(sh_order=sh_order)
-    receivers = receivers[receivers.z > 0]
-    data_out = np.zeros((sources.csize, receivers.csize, frequencies.size))
-
-    speed_of_sound = 343
-    for i_source in range(sources.csize):
-        source = sources[i_source]
+    scattering_flattened = scattering_coefficient.freq.flatten()
+    for i_source in range(source_directions.csize):
+        source = source_directions[i_source]
         image_source = source.copy()
         image_source.azimuth += np.pi
-        i_receiver = receivers.find_nearest(image_source)[0][0]
+        i_receiver = receiver_directions.find_nearest(image_source)[0][0]
         data_out[i_source, :, :] = (
-            scattering_coefficient) / np.pi
+            scattering_flattened) / np.pi
         data_out[i_source, i_receiver, :] += (
-            1 - scattering_coefficient) / np.cos(source.elevation)
+            1 - scattering_flattened) / np.cos(source.elevation)
 
-
+    data_out *= (1 - absorption_coefficient.freq.flatten())
     sofa = _create_sofa(
-        pf.FrequencyData(data_out, frequencies),
-        sources,
-        receivers,
-        speed_of_sound=speed_of_sound,
-        density_of_medium=1.2,
-        Mesh2HRTF_version='0.1',
+        pf.FrequencyData(data_out, scattering_coefficient.frequencies),
+        source_directions,
+        receiver_directions,
+        history='constructed brdf based on scattering coefficients',
     )
 
     sf.write_sofa(file_path, sofa)
@@ -68,26 +100,24 @@ def _create_sofa(
     data,
     sources,
     receivers,
-    speed_of_sound,
-    density_of_medium,
-    Mesh2HRTF_version,
+    history,
 ):
     """Write complex pressure to a SOFA object.
+
+    Note that it will also write down the weights for the sources and
+    the receivers.
 
     Parameters
     ----------
     data : numpy array
         The data as an array of shape (MRE)
-    sources : _type_
-        _description_
-    receivers : _type_
-        _description_
-    speed_of_sound : _type_
-        _description_
-    density_of_medium : _type_
-        _description_
-    Mesh2HRTF_version : _type_
-        _description_
+    sources : pf.Coordinates
+        source positions containing weights.
+    receivers : pf.Coordinates
+        receiver positions containing weights.
+    history : string
+        GLOBAL_History tag in the SOFA file.
+
 
     Returns
     -------
@@ -103,9 +133,9 @@ def _create_sofa(
     sofa = sf.Sofa(convention)
 
     # write meta data
-    sofa.GLOBAL_ApplicationName = 'Mesh2scattering'
-    sofa.GLOBAL_ApplicationVersion = Mesh2HRTF_version
-    sofa.GLOBAL_History = 'numerically simulated data'
+    sofa.GLOBAL_ApplicationName = 'sparapy'
+    sofa.GLOBAL_ApplicationVersion = sparapy.__version__
+    sofa.GLOBAL_History = history
 
     # Source and receiver data
     sofa.EmitterPosition = sources.cartesian
@@ -135,8 +165,6 @@ def _create_sofa(
         sofa.Data_SamplingRate = data.sampling_rate
         sofa.Data_Delay = np.zeros((1, receivers.csize))
 
-    sofa.add_variable('SpeedOfSound', speed_of_sound, 'double', 'I')
-    sofa.add_variable('DensityOfMedium', density_of_medium, 'double', 'I')
     sofa.add_variable('ReceiverWeights', receivers.weights, 'double', 'R')
     sofa.add_variable('SourceWeights', sources.weights, 'double', 'E')
 

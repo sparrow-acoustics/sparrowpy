@@ -1,8 +1,6 @@
 """Fixtures for the tests in the tests/ directory."""
 import sparapy as sp
 import pytest
-import numpy as np
-import sofar as sf
 
 
 @pytest.fixture
