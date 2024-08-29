@@ -7,7 +7,8 @@ def test_brdf_s_0(brdf_s_0):
     sofa = sf.read_sofa(brdf_s_0)
     for i in range(4):
         npt.assert_almost_equal(sofa.Data_Real[i - 2, i], 1.224744871391589)
-        npt.assert_almost_equal(np.sum(sofa.Data_Real[i - 2]), 1.224744871391589)
+        npt.assert_almost_equal(
+            np.sum(sofa.Data_Real[i - 2]), 1.224744871391589)
 
 
 def test_brdf_s_1(brdf_s_1):
