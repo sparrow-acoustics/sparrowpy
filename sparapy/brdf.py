@@ -5,7 +5,6 @@ import pyfar as pf
 import sparapy
 
 
-
 def create_from_scattering(
         file_path,
         source_directions,
@@ -53,7 +52,7 @@ def create_from_scattering(
 
     """
     if (
-            not isinstance(scattering_coefficient, pf.FrequencyData) or \
+            not isinstance(scattering_coefficient, pf.FrequencyData) or
             not scattering_coefficient.cshape == (1,)):
         raise TypeError(
             'scattering_coefficient must be a pf.FrequencyData object'
@@ -93,7 +92,6 @@ def create_from_scattering(
     )
 
     sf.write_sofa(file_path, sofa)
-
 
 
 def _create_sofa(

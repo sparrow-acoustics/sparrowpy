@@ -58,7 +58,7 @@ def test_create_from_scattering_1(tmpdir):
     assert data.freq.shape == (4, 4, 3)
     assert data.freq.shape == (s.csize, r.csize, 3)
     # test
-    npt.assert_almost_equal(data.freq, 1/np.pi)
+    npt.assert_almost_equal(data.freq, 1 / np.pi)
 
 
 def test_create_from_scattering_0(tmpdir):
@@ -80,7 +80,7 @@ def test_create_from_scattering_0(tmpdir):
     assert data.freq.shape == (4, 4, 3)
     assert data.freq.shape == (s.csize, r.csize, 3)
     # test
-    npt.assert_almost_equal(data.freq[0, 2], 1/np.cos(s.elevation[0]))
+    npt.assert_almost_equal(data.freq[0, 2], 1 / np.cos(s.elevation[0]))
     npt.assert_almost_equal(data.freq[0, not 2], 0)
 
 
@@ -95,18 +95,18 @@ def test_create_from_scattering_0_3(tmpdir):
     # Call the function
     sp.brdf.create_from_scattering(
         file_path, coords, coords,
-        pf.FrequencyData(scattering_data+np.zeros((3, )), frequency_data),
+        pf.FrequencyData(scattering_data + np.zeros((3, )), frequency_data),
         )
     data, s, r = pf.io.read_sofa(file_path)
 
     # Assert the expected outcome
     assert data.freq.shape == (4, 4, 3)
     assert data.freq.shape == (s.csize, r.csize, 3)
-    desired_scat = scattering_data/np.pi
-    desired_spec = (1 - scattering_data)/np.cos(s.elevation)
+    desired_scat = scattering_data / np.pi
+    desired_spec = (1 - scattering_data) / np.cos(s.elevation)
 
     # test
-    npt.assert_almost_equal(data.freq[0, 2], desired_spec[0]+desired_scat)
+    npt.assert_almost_equal(data.freq[0, 2], desired_spec[0] + desired_scat)
     npt.assert_almost_equal(data.freq[0, not 2], desired_scat)
 
 
@@ -122,19 +122,20 @@ def test_create_from_scattering_0_3_with_absorption(tmpdir):
     # Call the function
     sp.brdf.create_from_scattering(
         file_path, coords, coords,
-        pf.FrequencyData(scattering_data+np.zeros((3, )), frequency_data),
-        pf.FrequencyData(absorption_data+np.zeros((3, )), frequency_data),
+        pf.FrequencyData(scattering_data + np.zeros((3, )), frequency_data),
+        pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
         )
     data, s, r = pf.io.read_sofa(file_path)
 
     # Assert the expected outcome
     assert data.freq.shape == (4, 4, 3)
     assert data.freq.shape == (s.csize, r.csize, 3)
-    desired_scat = scattering_data/np.pi*(1-absorption_data)
-    desired_spec = (1-scattering_data)/np.cos(s.elevation)*(1-absorption_data)
+    desired_scat = scattering_data / np.pi * (1 - absorption_data)
+    desired_spec = (1 - scattering_data) / np.cos(s.elevation) * (
+        1 - absorption_data)
 
     # test
-    npt.assert_almost_equal(data.freq[0, 2], desired_spec[0]+desired_scat)
+    npt.assert_almost_equal(data.freq[0, 2], desired_spec[0] + desired_scat)
     npt.assert_almost_equal(data.freq[0, not 2], desired_scat)
 
 
