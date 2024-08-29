@@ -11,6 +11,7 @@ from . import geometry
 from . import radiosity
 from . import sound_object
 from . import testing
+from . import brdf
 
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     'radiosity',
     'sound_object',
     'testing',
+    'brdf',
 ]
 
