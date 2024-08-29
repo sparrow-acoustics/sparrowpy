@@ -1,11 +1,12 @@
 """SoundObject class for spatial audio reproduction."""
+
 import matplotlib
 import numpy as np
 import pyfar as pf
 import sofar as sf
 
 
-class DirectivityMS():
+class DirectivityMS:
     """Directivity class for FreeFieldDirectivityTF convention."""
 
     data: pf.FrequencyData
@@ -23,22 +24,29 @@ class DirectivityMS():
 
         """
         sofa = sf.read_sofa(file_path)
-        if sofa.GLOBAL_SOFAConventions != 'FreeFieldDirectivityTF':
-            raise ValueError('convention need to be FreeFieldDirectivityTF')
+        if sofa.GLOBAL_SOFAConventions != "FreeFieldDirectivityTF":
+            raise ValueError("convention need to be FreeFieldDirectivityTF")
         sofa = sf.read_sofa(file_path)
         self.data = pf.FrequencyData(
-            sofa.Data_Real[source_index, :] + 1j * sofa.Data_Imag[
-                source_index, :], sofa.N)
-        if sofa.ReceiverPosition_Type == 'spherical':
+            sofa.Data_Real[source_index, :]
+            + 1j * sofa.Data_Imag[source_index, :],
+            sofa.N,
+        )
+        if sofa.ReceiverPosition_Type == "spherical":
             pos = sofa.ReceiverPosition.squeeze().T
             pos[0] = (pos[0] + 360) % 360
             self.receivers = pf.Coordinates(
-                pos[0], pos[1], pos[2], 'sph', 'top_elev', 'deg')
+                pos[0], pos[1], pos[2], "sph", "top_elev", "deg"
+            )
 
     def get_directivity(
-            self, source_pos: np.ndarray, source_view: np.ndarray,
-            source_up: np.ndarray, target_position: np.ndarray,
-            i_freq: int) -> float:
+        self,
+        source_pos: np.ndarray,
+        source_view: np.ndarray,
+        source_up: np.ndarray,
+        target_position: np.ndarray,
+        i_freq: int,
+    ) -> float:
         """Get Directivity for certain position.
 
         Parameters
@@ -61,10 +69,17 @@ class DirectivityMS():
 
         """
         (azimuth_deg, elevation_deg) = _get_metrics(
-            source_pos, source_view, source_up, target_position)
+            source_pos, source_view, source_up, target_position
+        )
         index, _ = self.receivers.find_nearest_k(
-            (azimuth_deg+360) % 360, elevation_deg, 1, k=1,
-            domain='sph', convention='top_elev', unit='deg')
+            (azimuth_deg + 360) % 360,
+            elevation_deg,
+            1,
+            k=1,
+            domain="sph",
+            convention="top_elev",
+            unit="deg",
+        )
         return self.data.freq[index, i_freq]
 
 
@@ -91,7 +106,7 @@ def _get_metrics(pos_G, view_G, up_G, target_pos_G):
     return (azimuth_deg, elevation_deg)
 
 
-class SoundObject():
+class SoundObject:
     """A class holding the common properties for Source and Receiver."""
 
     position: np.ndarray
@@ -99,8 +114,8 @@ class SoundObject():
     up: np.ndarray
 
     def __init__(
-            self, position: np.ndarray, view: np.ndarray,
-            up: np.ndarray) -> None:
+        self, position: np.ndarray, view: np.ndarray, up: np.ndarray
+    ) -> None:
         """Init a sound object.
 
         Parameters
@@ -139,7 +154,6 @@ class SoundObject():
         ax.scatter(xyz[0], xyz[1], xyz[2], kwargs)
 
 
-
 class SoundSource(SoundObject):
     """Acoustic sound source inhered from SoundObject."""
 
@@ -147,9 +161,13 @@ class SoundSource(SoundObject):
     sound_power: float
 
     def __init__(
-            self, position: np.ndarray, view: np.ndarray,
-            up: np.ndarray, directivity: DirectivityMS = None,
-            sound_power: float = 1) -> None:
+        self,
+        position: np.ndarray,
+        view: np.ndarray,
+        up: np.ndarray,
+        directivity: DirectivityMS = None,
+        sound_power: float = 1,
+    ) -> None:
         """Init sound source.
 
         Parameters
@@ -184,15 +202,15 @@ class SoundSource(SoundObject):
             ``matplotlib.pyplot.scatter()``.
 
         """
-        super(SoundSource, self).plot(ax, color='r', label='Source', **kwargs)
+        super(SoundSource, self).plot(ax, color="r", label="Source", **kwargs)
 
 
 class Receiver(SoundObject):
     """Receiver object inhered from SoundObject."""
 
     def __init__(
-            self, position: np.ndarray, view: np.ndarray,
-            up: np.ndarray) -> None:
+        self, position: np.ndarray, view: np.ndarray, up: np.ndarray
+    ) -> None:
         """Init sound receiver.
 
         Parameters
@@ -219,4 +237,4 @@ class Receiver(SoundObject):
             ``matplotlib.pyplot.scatter()``.
 
         """
-        super(Receiver, self).plot(ax, color='b', label='Receiver', **kwargs)
+        super(Receiver, self).plot(ax, color="b", label="Receiver", **kwargs)

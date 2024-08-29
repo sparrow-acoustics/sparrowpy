@@ -1,6 +1,8 @@
 """Fixtures for the tests in the tests/ directory."""
+
 import sparapy as sp
 import pytest
+
 
 @pytest.fixture()
 def sample_walls():
