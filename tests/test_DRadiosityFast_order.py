@@ -191,88 +191,8 @@ def test_order_vs_old_implementation(
         #     histogram_old[0, histogram_old[0, :]>0])
 
 
-@pytest.mark.parametrize('patch_size', [
-    3
-    ])
-@pytest.mark.parametrize('source_pos', [
-    np.array([2, 2, 2]),
-    ])
-@pytest.mark.parametrize('receiver_pos', [
-    np.array([3, 4, 2]),
-    ])
-@pytest.mark.parametrize('max_order_k', [0, 1, 2, 3])
-def test_room_order_vs_old_implementation_order_by_order(
-        patch_size, source_pos, receiver_pos, max_order_k,
-        sofa_data_diffuse):
-    # note that order k=0 means one reflection and k=1 means two reflections
-    # (2nd order)
-    data, sources, receivers = sofa_data_diffuse
-    data = pf.FrequencyData(data.freq[..., :2], data.frequencies[:2])
-
-    # source_pos = np.array([0.3, 0.5, 0.5])
-    # receiver_pos = np.array([0.5, 0.5, 0.5])
-    length_histogram = 0.2
-    time_resolution = 1e-3
-    speed_of_sound = 346.18
-    walls = sp.testing.shoebox_room_stub(5, 6, 4)
-
-    radiosity_old = sp.radiosity.Radiosity(
-        walls, patch_size, max_order_k, length_histogram,
-        speed_of_sound=speed_of_sound,
-        sampling_rate=1/time_resolution, absorption=0)
-
-    radiosity_old.run(
-        sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
-    histogram_old_all = radiosity_old.energy_at_receiver(
-        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
-        ignore_direct=True)
-    if max_order_k > 0:
-        histogram_old_1 = radiosity_old.energy_at_receiver(
-            sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
-            ignore_direct=True, max_order_k=max_order_k-1)
-        histogram_old = histogram_old_all-histogram_old_1
-    else:
-        histogram_old = histogram_old_all
-
-
-    radiosity = sp.DRadiosityFast.from_polygon(
-        walls, patch_size)
-
-    radiosity.set_wall_scattering(
-        np.arange(len(walls)), data, sources, receivers)
-    radiosity.set_air_attenuation(
-        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.set_wall_absorption(
-        np.arange(len(walls)),
-        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.bake_geometry(algorithm='order')
-
-    radiosity.init_source_energy(source_pos, algorithm='order')
-    histogram_all = radiosity.calculate_energy_exchange_receiver(
-        receiver_pos, speed_of_sound, time_resolution, length_histogram,
-        max_depth=max_order_k, algorithm='order', recalculate=True)
-    if max_order_k > 0:
-        histogram_1 = radiosity.calculate_energy_exchange_receiver(
-            receiver_pos, speed_of_sound, time_resolution, length_histogram,
-            max_depth=max_order_k-1, algorithm='order', recalculate=True)
-        histogram = histogram_all-histogram_1
-    else:
-        histogram = histogram_all
-
-    # compare histogram
-    for i in range(histogram.shape[0]):
-        assert np.sum(histogram[i, :])>0
-        npt.assert_allclose(
-            10*np.log10(np.sum(histogram[i, :])),
-            10*np.log10(np.sum(histogram_old[0, :])),
-            err_msg=f'histogram i_bin={i}', atol=0.1)
-        # npt.assert_almost_equal(
-        # histogram[0, histogram[0,:]>0],
-        # histogram_old[0, histogram_old[0,:]>0])
-
-
 @pytest.mark.parametrize('patch_size', [1, 0.5])
-def test_recursive_reference(
+def test_order_reference(
         patch_size, sample_walls, sofa_data_diffuse):
     """Test if the results changes."""
     # note that order k=0 means one reflection and k=1 means two reflections
@@ -321,3 +241,81 @@ def test_recursive_reference(
             result['signal'].time[0, ...], signal.time[i_frequency, ...],
             decimal=4)
     npt.assert_almost_equal(result['signal'].times, signal.times)
+
+
+@pytest.mark.parametrize('patch_size', [1])
+def test_order_vs_analytic(patch_size):
+    """Test vs a perfect diffuse room, after Kuttruff."""
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
+    X = 5
+    Y = 6
+    Z = 4
+    length_histogram = 0.2
+    time_resolution = 1e-3
+    max_order_k = 3
+    speed_of_sound = 346.18
+    receiver_pos = np.array([3, 4, 2])
+    source_pos = np.array([2, 2, 2])
+
+    absorption = 0.1
+
+    sources = pf.Coordinates(0, 0, 1)
+    receivers = pf.Coordinates(0, 0, 1)
+    frequencies = np.array([500])
+    data_scattering = pf.FrequencyData(
+        np.ones((sources.csize, receivers.csize, frequencies.size)),
+        frequencies)
+    walls = sp.testing.shoebox_room_stub(X, Y, Z)
+
+    radiosity = sp.DRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity.set_wall_scattering(
+        np.arange(len(walls)), data_scattering, sources, receivers)
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(
+            np.zeros_like(data_scattering.frequencies),
+            data_scattering.frequencies))
+    radiosity.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(
+            np.zeros_like(data_scattering.frequencies)+absorption,
+            data_scattering.frequencies))
+    radiosity.bake_geometry(algorithm='order')
+
+
+    radiosity.init_source_energy(source_pos, algorithm='order')
+    histogram = radiosity.calculate_energy_exchange_receiver(
+        receiver_pos, speed_of_sound=speed_of_sound,
+        histogram_time_resolution=time_resolution,
+        histogram_length=length_histogram,
+        algorithm='order', max_depth=max_order_k, recalculate=True)
+
+    reverberation_order = pf.Signal(histogram, sampling_rate=1/time_resolution)
+    # desired
+    S = (2*X*Y) + (2*X*Z) + (2*Y*Z)
+    A = S*absorption
+    alpha_dash = A/S
+    V = X*Y*Z
+    E_reverb_analytical = 4 / A
+    w_0 = E_reverb_analytical/ V # Kuttruff Eq 4.7
+    t_0 = 0.03
+    t = reverberation_order.times
+    # Kuttruff Eq 4.10
+    reverberation_analytic = w_0 * np.exp(+(
+        speed_of_sound*S*np.log(1-alpha_dash)/(4*V))*(t-t_0))
+
+    # compare histogram
+    for i in range(histogram.shape[0]):
+        assert np.sum(histogram[i, :])>0
+        samples_reverb_start = int(0.025/time_resolution)
+        samples_reverb_end = int(0.035/time_resolution)
+        npt.assert_allclose(
+            10*np.log10(histogram[0, samples_reverb_start:samples_reverb_end]),
+            10*np.log10(reverberation_analytic[samples_reverb_start:samples_reverb_end]),
+            atol=0.3)
+        # npt.assert_almost_equal(
+        # histogram[0, histogram[0,:]>0],
+        # histogram_old[0, histogram_old[0,:]>0])
+
