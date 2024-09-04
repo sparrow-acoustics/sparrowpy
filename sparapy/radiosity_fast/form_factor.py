@@ -236,9 +236,9 @@ def _form_factors_with_directivity_dim(
                     i, j, :, :] * np.exp(-air_attenuation * distance)
 
             if scattering is not None:
-                scattering_factor = geometry.get_scattering_data(
-                    patches_center[i], patches_center[j], None,
-                    sources, receivers, wall_id_i,
+                scattering_factor = geometry.get_scattering_data_source(
+                    patches_center[i], patches_center[j],
+                    sources, wall_id_i,
                     scattering, scattering_index)
                 form_factors_tilde[i, j, :, :] = form_factors_tilde[
                     i, j, :, :] * scattering_factor

@@ -147,7 +147,7 @@ class DRadiosityFast():
             absorption = None
             absorption_index = None
         else:
-            absorption = np.atleast_2d(np.array(self._absorption)),
+            absorption = np.atleast_2d(np.array(self._absorption))
             absorption_index = np.array(self._absorption_index)
 
         n_bins = 1 if self._n_bins is None else self._n_bins
@@ -222,6 +222,7 @@ class DRadiosityFast():
         """Calculate the energy exchange."""
         n_samples = int(histogram_length/histogram_time_resolution)
         ir = np.array([np.zeros((n_samples)) for _ in range(self.n_bins)])
+        receiver_pos = np.array(receiver_pos)
         patches_center = self.patches_center
         patch_receiver_distance = patches_center - receiver_pos
         air_attenuation = self._air_attenuation
@@ -268,11 +269,10 @@ class DRadiosityFast():
                     self._visible_patches)
 
             receivers_array = np.array([s.cartesian for s in self._receivers])
-            scattering_index = np.array(self._scattering_index)
+            # scattering_index = np.array(self._scattering_index)
             receiver_idx = geometry.get_scattering_data_receiver_index(
                 patches_center, receiver_pos, receivers_array,
-                self._patch_to_wall_ids,
-                scattering_index)
+                self._patch_to_wall_ids)
             assert receiver_idx.shape[0] == self.n_patches
             assert len(receiver_idx.shape) == 1
 

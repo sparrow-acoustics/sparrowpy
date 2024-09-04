@@ -3,11 +3,11 @@ import numba
 import numpy as np
 
 
-# @numba.njit()
+@numba.njit()
 def get_scattering_data_receiver_index(
         pos_i:np.ndarray, pos_j:np.ndarray,
         receivers:np.ndarray, wall_id_i:np.ndarray,
-        scattering_index:np.ndarray):
+        ):
     """Get scattering data depending on previous, current and next position.
 
     Parameters
@@ -20,8 +20,6 @@ def get_scattering_data_receiver_index(
         receiver directions of all walls of shape (n_walls, n_receivers, 3)
     wall_id_i : np.ndarray
         current wall id to get write directional data
-    scattering_index : np.ndarray
-        index of the scattering data of shape (n_walls)
 
     Returns
     -------
@@ -78,19 +76,52 @@ def get_scattering_data(
 
     """
     difference_source = pos_h-pos_i
+    difference_receiver = pos_i-pos_j
+    # wall_id_i = int(patch_to_wall_ids[i])
+    difference_source /= np.linalg.norm(difference_source)
+    difference_receiver /= np.linalg.norm(difference_receiver)
+    source_idx = np.argmin(np.sum(
+        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+    receiver_idx = np.argmin(np.sum(
+        (receivers[wall_id_i, :]-difference_receiver)**2, axis=-1))
+    return scattering[scattering_index[wall_id_i],
+        source_idx, receiver_idx, :]
+
+
+
+@numba.njit()
+def get_scattering_data_source(
+        pos_h:np.ndarray, pos_i:np.ndarray,
+        sources:np.ndarray, wall_id_i:np.ndarray,
+        scattering:np.ndarray, scattering_index:np.ndarray):
+    """Get scattering data depending on previous, current position.
+
+    Parameters
+    ----------
+    pos_h : np.ndarray
+        previous position of shape (3)
+    pos_i : np.ndarray
+        current position of shape (3)
+    sources : np.ndarray
+        source directions of all walls of shape (n_walls, n_sources, 3)
+    wall_id_i : np.ndarray
+        current wall id to get write directional data
+    scattering : np.ndarray
+        scattering data of shape (n_scattering, n_sources, n_receivers, n_bins)
+    scattering_index : np.ndarray
+        index of the scattering data of shape (n_walls)
+
+    Returns
+    -------
+    scattering_factor: float
+        scattering factor from directivity
+
+    """
+    difference_source = pos_h-pos_i
     difference_source /= np.linalg.norm(difference_source)
     source_idx = np.argmin(np.sum(
         (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
-    if pos_j is not None:
-        difference_receiver = pos_i-pos_j
-        difference_receiver /= np.linalg.norm(difference_receiver)
-        receiver_idx = np.argmin(np.sum(
-            (receivers[wall_id_i, :]-difference_receiver)**2, axis=-1))
-        return scattering[scattering_index[wall_id_i],
-            source_idx, receiver_idx, :]
-    else:
-        return scattering[scattering_index[wall_id_i],
-            source_idx, :, :]
+    return scattering[scattering_index[wall_id_i], source_idx]
 
 
 
