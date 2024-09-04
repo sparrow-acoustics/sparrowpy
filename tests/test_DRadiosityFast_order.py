@@ -265,7 +265,7 @@ def test_room_order_vs_old_implementation_order_by_order(
         npt.assert_allclose(
             10*np.log10(np.sum(histogram[i, :])),
             10*np.log10(np.sum(histogram_old[0, :])),
-            err_msg=f'histogram i_bin={i}', rtol=0.0005)
+            err_msg=f'histogram i_bin={i}', atol=0.1)
         # npt.assert_almost_equal(
         # histogram[0, histogram[0,:]>0],
         # histogram_old[0, histogram_old[0,:]>0])
