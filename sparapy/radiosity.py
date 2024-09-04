@@ -576,12 +576,6 @@ class PatchesDirectional(Patches):
         self.directivity_sources = sources
         self.directivity_receivers = receivers
         if not already_converted:
-            dA_receivers = receivers.weights.reshape((receivers.csize, 1))
-            dA_receivers = dA_receivers / np.sum(dA_receivers)*2*np.pi
-            solution = np.sum(
-                self.directivity_data.freq * dA_receivers,
-                axis=-2, keepdims=True)
-            self.directivity_data.freq *= solution / (2*np.pi)
             o1 = pf.Orientations.from_view_up(
                 polygon.normal, polygon.up_vector)
             o2 = pf.Orientations.from_view_up([0, 0, 1], [1, 0, 0])
@@ -592,7 +586,8 @@ class PatchesDirectional(Patches):
             self.directivity_sources.rotate('xyz', euler)
             self.directivity_sources.radius = 1
             # to make same with just ones in diffuse case
-            self.directivity_data.freq *= receivers.csize
+            self.directivity_data.freq *= receivers.csize/4
+            # self.directivity_data.freq /= 0.0035044425720631204
 
     @classmethod
     def from_sofa(cls, polygon, max_size, other_wall_ids, wall_id,
@@ -620,7 +615,8 @@ class PatchesDirectional(Patches):
             'directivity_sources': self.directivity_sources.cartesian,
             'directivity_receivers': self.directivity_receivers.cartesian,
             'directivity_sources_weights': self.directivity_sources.weights,
-            'directivity_receivers_weights': self.directivity_receivers.weights,  # noqa: E501
+            'directivity_receivers_weights': \
+                self.directivity_receivers.weights,
         }
 
     @classmethod
