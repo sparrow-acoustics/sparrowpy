@@ -91,7 +91,8 @@ def energy_exchange(
     Returns
     -------
     E_matrix_total : np.ndarray
-        energy of all patches of shape (n_patches, n_directions, n_bins, n_samples)
+        energy of all patches of shape
+        (n_patches, n_directions, n_bins, n_samples)
 
     """
     n_patches = form_factors_tilde.shape[0]
@@ -121,8 +122,9 @@ def energy_exchange(
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
                 if n_delay_samples > 0:
-                    E_matrix[current_index, j, :, :, n_delay_samples:] += form_factors_tilde[
-                        i, j] * E_matrix[current_index-1, i, :, :, :-n_delay_samples]
+                    E_matrix[current_index, j, :, :, n_delay_samples:] += \
+                        form_factors_tilde[i, j] * E_matrix[
+                            current_index-1, i, :, :, :-n_delay_samples]
                 else:
                     E_matrix[current_index, j, :, :, :] += form_factors_tilde[
                         i, j] * E_matrix[current_index-1, i, :, :, :]
@@ -151,6 +153,9 @@ def _collect_receiver_energy(
         speed of sound in m/s.
     histogram_time_resolution : float
         time resolution of the histogram in s.
+    receiver_idx : np.ndarray
+        indexes of the direction from the patch towards the receiver,
+        of shape (n_patches)
 
     Returns
     -------
