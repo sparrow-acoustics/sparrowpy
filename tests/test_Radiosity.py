@@ -475,8 +475,10 @@ def test_energy_exchange(
     patch_2.init_energy_exchange(
         max_order_k, ir_length_s, source, 1000, 346.18)
     for k in range(1, max_order_k+1):
-        patch_1.calculate_energy_exchange(patches, k, 346.18, 10000)
-        patch_2.calculate_energy_exchange(patches, k, 346.18, 10000)
+        patch_1.calculate_energy_exchange(
+            patches, k, speed_of_sound=346.18, E_sampling_rate=1000)
+        patch_2.calculate_energy_exchange(
+            patches, k, speed_of_sound=346.18, E_sampling_rate=1000)
 
     if create_reference_files and (
             perpendicular_walls[0] == 0) and (perpendicular_walls[1] == 2):
@@ -485,7 +487,8 @@ def test_energy_exchange(
 
     assert np.sum(patch_1.E_matrix>0) > 0
     npt.assert_almost_equal(
-        data['E_matrix'], patch_1.E_matrix, decimal=4)
+        10*np.log10(data['E_matrix']),
+        10*np.log10(patch_1.E_matrix), decimal=1)
 
 
 def test_Patch_to_from_dict(sample_walls):

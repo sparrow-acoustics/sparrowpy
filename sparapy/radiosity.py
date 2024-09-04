@@ -665,8 +665,10 @@ class PatchesDirectional(Patches):
             length of the impulse response in seconds.
         source : SoundSource
             Sound source with ``sound_power`` and ``position``
-        sampling_rate : int, optional
+        sampling_rate : int
             Sample rate of histogram, by default 1000 -> 1ms
+        speed_of_sound : float,
+            speed of sound in m/s.
 
         """
         Patches.init_energy_exchange(
@@ -1202,8 +1204,8 @@ class DirectionalRadiosity():
         for patches in self.patch_list:
             patches.init_energy_exchange(
                 self.max_order_k, self.ir_length_s, source,
-                speed_of_sound=self.speed_of_sound,
-                sampling_rate=self.sampling_rate)
+                sampling_rate=self.sampling_rate,
+                speed_of_sound=self.speed_of_sound)
 
         # C. Form factors
         if len(self.patch_list) > 1:
