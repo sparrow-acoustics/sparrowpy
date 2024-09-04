@@ -131,7 +131,8 @@ def test_init_energy_exchange(sample_walls, i_wall):
     max_order_k = 3
     ir_length_s = 5
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
-    patches.init_energy_exchange(max_order_k, ir_length_s, source, 1000)
+    patches.init_energy_exchange(
+        max_order_k, ir_length_s, source, 1000, 346.18)
     normal = np.array(patches.normal)
     # check if the sources are in the right direction
     eps = 1e-10
@@ -172,13 +173,15 @@ def test_init_energy_exchange_directional_omni(
     max_order_k = 3
     ir_length_s = 5
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
-    patches.init_energy_exchange(max_order_k, ir_length_s, source, 1000)
+    patches.init_energy_exchange(
+        max_order_k, ir_length_s, source, 1000, 346.18)
     data = pf.io.read(reference_path)
     for i_frequency in range(patches.E_matrix.shape[0]):
         for i_rec in range(patches.E_matrix.shape[-1]):
             npt.assert_almost_equal(
                 data['E_matrix'][0, ...],
                 patches.E_matrix[i_frequency, ..., i_rec])
+
 
 @pytest.mark.parametrize('perpendicular_walls', [
     [0, 2], [2, 0]
@@ -189,9 +192,11 @@ def test_init_energy_exchange_directional_omni(
     ])
 def test_directional_energy_exchange(
         sample_walls, perpendicular_walls, patch_size):
-    """Test vs refernces for energy_exchange."""
+    """Test vs references for energy_exchange."""
     max_order_k=3
     ir_length_s=5
+    sampling_rate = 1000
+    speed_of_sound = 346.18
     wall_source = sample_walls[perpendicular_walls[0]]
     wall_receiver = sample_walls[perpendicular_walls[1]]
     path_reference = os.path.join(
@@ -209,13 +214,15 @@ def test_directional_energy_exchange(
     patches = [patch_1, patch_2]
     patch_1.calculate_form_factor(patches)
     patch_1.init_energy_exchange(
-        max_order_k, ir_length_s, source)
+        max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
     patch_2.calculate_form_factor(patches)
     patch_2.init_energy_exchange(
-        max_order_k, ir_length_s, source)
+        max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
     for k in range(1, max_order_k+1):
-        patch_1.calculate_energy_exchange(patches, k)
-        patch_2.calculate_energy_exchange(patches, k)
+        patch_1.calculate_energy_exchange(
+            patches, k, speed_of_sound, sampling_rate)
+        patch_2.calculate_energy_exchange
+        (patches, k, speed_of_sound, sampling_rate)
 
     data = pf.io.read(path_reference)
 
@@ -243,6 +250,8 @@ def test_directional_specular_reflections(
     """Test vs references for specular_reflections."""
     max_order_k=3
     ir_length_s=5
+    sampling_rate = 1000
+    speed_of_sound = 346.18
     wall_source = sample_walls[perpendicular_walls[0]]
     wall_receiver = sample_walls[perpendicular_walls[1]]
     path_reference = os.path.join(
@@ -258,13 +267,15 @@ def test_directional_specular_reflections(
     patches = [patch_1, patch_2]
     patch_1.calculate_form_factor(patches)
     patch_1.init_energy_exchange(
-        max_order_k, ir_length_s, source)
+        max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
     patch_2.calculate_form_factor(patches)
     patch_2.init_energy_exchange(
-        max_order_k, ir_length_s, source)
+        max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
     for k in range(1, max_order_k+1):
-        patch_1.calculate_energy_exchange(patches, k)
-        patch_2.calculate_energy_exchange(patches, k)
+        patch_1.calculate_energy_exchange(
+            patches, k, speed_of_sound, sampling_rate)
+        patch_2.calculate_energy_exchange(
+            patches, k, speed_of_sound, sampling_rate)
     receiver = Receiver([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
 
     ir = 0
@@ -288,13 +299,16 @@ def test_PatchDirectional_to_from_dict(sample_walls):
     """Test if the results are correct with from_dict."""
     perpendicular_walls = [0, 2]
     patch_size = 0.2
+    sampling_rate = 1000
+    speed_of_sound = 346.18
     wall_source = sample_walls[perpendicular_walls[0]]
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data', 'specular_gaussian5.sofa')
     patch_1 = radiosity.PatchesDirectional.from_sofa(
         wall_source, patch_size, [1], 0, path_sofa)
     patch_1.init_energy_exchange(
-        1, 1, SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1]))
+        1, 1, SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1]),
+        sampling_rate, speed_of_sound)
     reconstructed_patch = radiosity.PatchesDirectional.from_dict(
         patch_1.to_dict())
     assert reconstructed_patch.directivity_data == patch_1.directivity_data

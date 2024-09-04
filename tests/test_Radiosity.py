@@ -182,7 +182,8 @@ def test_small_room_and_rotate_init_energy():
             # print(patches.normal)
             patches.init_energy_exchange(
                 radi.max_order_k, radi.ir_length_s, source,
-                sampling_rate=radi.sampling_rate)
+                sampling_rate=radi.sampling_rate,
+                speed_of_sound=speed_of_sound)
 
         E_matrix.append(np.concatenate([
             radi.patch_list[i].E_matrix for i in range(6)], axis=-2))
@@ -223,7 +224,7 @@ def test_cube_and_rotate_init_energy(patch_size):
         print(patches.normal)
         patches.init_energy_exchange(
             radi.max_order_k, radi.ir_length_s, source,
-            sampling_rate=radi.sampling_rate)
+            sampling_rate=radi.sampling_rate, speed_of_sound=speed_of_sound)
 
     E_matrix= np.concatenate([
         radi.patch_list[i].E_matrix for i in range(6)], axis=-2)
@@ -346,7 +347,8 @@ def test_init_energy_exchange_normal(sample_walls, patch_size, i_wall):
     max_order_k = 3
     ir_length_s = 5
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
-    patches.init_energy_exchange(max_order_k, ir_length_s, source, 1000)
+    patches.init_energy_exchange(
+        max_order_k, ir_length_s, source, 1000, 346.18)
     if create_reference_files and sample_walls[i_wall] == sample_walls[0]:
         pf.io.write(path_sofa, E_matrix=patches.E_matrix)
     data = pf.io.read(path_sofa)
@@ -469,12 +471,12 @@ def test_energy_exchange(
     patch_1.calculate_form_factor(patches)
     patch_2.calculate_form_factor(patches)
     patch_1.init_energy_exchange(
-        max_order_k, ir_length_s, source)
+        max_order_k, ir_length_s, source, 1000, 346.18)
     patch_2.init_energy_exchange(
-        max_order_k, ir_length_s, source)
+        max_order_k, ir_length_s, source, 1000, 346.18)
     for k in range(1, max_order_k+1):
-        patch_1.calculate_energy_exchange(patches, k)
-        patch_2.calculate_energy_exchange(patches, k)
+        patch_1.calculate_energy_exchange(patches, k, 346.18, 10000)
+        patch_2.calculate_energy_exchange(patches, k, 346.18, 10000)
 
     if create_reference_files and (
             perpendicular_walls[0] == 0) and (perpendicular_walls[1] == 2):
@@ -497,7 +499,7 @@ def test_Patch_to_from_dict(sample_walls):
         wall_source, patch_size, [1], 0)
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
     patch_1.init_energy_exchange(
-        max_order_k, ir_length_s, source)
+        max_order_k, ir_length_s, source, 1000, 346.18)
     reconstructed_patch = radiosity.Patches.from_dict(
         patch_1.to_dict())
     npt.assert_array_equal(reconstructed_patch.E_matrix, patch_1.E_matrix)
@@ -652,7 +654,7 @@ def test_init_energy_larger_0(patch_size):
     for patches in radi.patch_list:
         patches.init_energy_exchange(
             radi.max_order_k, radi.ir_length_s, source,
-            sampling_rate=radi.sampling_rate)
+            sampling_rate=radi.sampling_rate, speed_of_sound=speed_of_sound)
 
     E_matrix= np.concatenate([
         radi.patch_list[i].E_matrix for i in range(6)], axis=-2)

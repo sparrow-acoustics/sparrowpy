@@ -200,8 +200,8 @@ def test_order_vs_old_implementation(
 @pytest.mark.parametrize('receiver_pos', [
     np.array([3, 4, 2]),
     ])
-@pytest.mark.parametrize('max_order_k', [1, 2, 3])
-def test_room_recursive_vs_old_implementation(
+@pytest.mark.parametrize('max_order_k', [0, 1, 2, 3])
+def test_room_order_vs_old_implementation_order_by_order(
         patch_size, source_pos, receiver_pos, max_order_k,
         sofa_data_diffuse):
     # note that order k=0 means one reflection and k=1 means two reflections
@@ -226,10 +226,14 @@ def test_room_recursive_vs_old_implementation(
     histogram_old_all = radiosity_old.energy_at_receiver(
         sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
         ignore_direct=True)
-    histogram_old_1 = radiosity_old.energy_at_receiver(
-        sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
-        ignore_direct=True, max_order_k=max_order_k-1)
-    histogram_old = histogram_old_all-histogram_old_1
+    if max_order_k > 0:
+        histogram_old_1 = radiosity_old.energy_at_receiver(
+            sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1]),
+            ignore_direct=True, max_order_k=max_order_k-1)
+        histogram_old = histogram_old_all-histogram_old_1
+    else:
+        histogram_old = histogram_old_all
+
 
     radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
@@ -247,16 +251,20 @@ def test_room_recursive_vs_old_implementation(
     histogram_all = radiosity.calculate_energy_exchange_receiver(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
         max_depth=max_order_k, algorithm='order', recalculate=True)
-    histogram_1 = radiosity.calculate_energy_exchange_receiver(
-        receiver_pos, speed_of_sound, time_resolution, length_histogram,
-        max_depth=max_order_k-1, algorithm='order', recalculate=True)
-    histogram = histogram_all-histogram_1
+    if max_order_k > 0:
+        histogram_1 = radiosity.calculate_energy_exchange_receiver(
+            receiver_pos, speed_of_sound, time_resolution, length_histogram,
+            max_depth=max_order_k-1, algorithm='order', recalculate=True)
+        histogram = histogram_all-histogram_1
+    else:
+        histogram = histogram_all
 
     # compare histogram
-    for i in range(4):
+    for i in range(histogram.shape[0]):
         assert np.sum(histogram[i, :])>0
         npt.assert_allclose(
-            np.sum(histogram[i, :]), np.sum(histogram_old[0, :]),
+            10*np.log10(np.sum(histogram[i, :])),
+            10*np.log10(np.sum(histogram_old[0, :])),
             err_msg=f'histogram i_bin={i}', rtol=0.0005)
         # npt.assert_almost_equal(
         # histogram[0, histogram[0,:]>0],
