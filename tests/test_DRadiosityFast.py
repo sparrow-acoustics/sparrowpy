@@ -85,6 +85,12 @@ def test_compute_form_factor_vals(sample_walls):
     plt.legend()
     plt.savefig(".\\tests\\test_data\\kang_vs_univ_ff_abs_values.png")
 
+    plt.figure()
+    plt.title("form factor difference")
+    plt.plot(diff, label="kang-univ")
+    plt.legend()
+    plt.savefig(".\\tests\\test_data\\kang_vs_univ_ff_abs_diff.png")
+
     maximo = np.max(diff)
     rms = np.sqrt(np.sum(np.square(diff)))/(diff.shape[0]**2)
     mmean = np.mean(diff)
