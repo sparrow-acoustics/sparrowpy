@@ -23,3 +23,4 @@ sphinx-reredirects
 numba
 ipykernel
 ipympl
+watermark
