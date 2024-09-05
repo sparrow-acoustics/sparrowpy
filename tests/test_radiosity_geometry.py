@@ -88,7 +88,7 @@ def test_environment_defaults():
     source = SoundSource([0, 0, 0], [1, 0, 0], [0, 0, 1])
     receiver = Receiver([0, 0, 0], [1, 0, 0], [0, 0, 1])
     # test all parameter
-    env = geo.Environment([polygon], source, receiver)
+    env = geo.Environment([polygon], source, receiver, speed_of_sound=346.18)
     assert env.polygons == [polygon]
     assert env.speed_of_sound == 346.18
     assert env.receiver == receiver
