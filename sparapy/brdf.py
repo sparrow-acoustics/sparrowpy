@@ -15,10 +15,12 @@ def create_from_scattering(
     r"""Create the BRDF from a scattering coefficient and write to SOFA file.
 
     The scattering coefficient is assumed to be anisotropic and based on [#]_.
+    The BRDF is discretized as follows:
 
     .. math::
         \rho(\Omega_i, \Omega_e) = \frac{(1-s)(1-\alpha)}{\Omega_i \cdot
-        \mathbf{n}_i} \delta(\Omega_i-M(\Omega_e)) + \frac{s(1-\alpha)}{\pi}
+        \mathbf{n}_i} \frac{1}{w_r} \delta(\Omega_i-M(\Omega_e)) +
+        \frac{s(1-\alpha)}{\pi}
 
     where:
         - :math:`\Omega_i` and :math:`\Omega_e` are the incident and exitant
@@ -27,6 +29,7 @@ def create_from_scattering(
         - :math:`\alpha` is the absorption coefficient.
         - :math:`\mathbf{n}_i` is the normal vector.
         - :math:`\delta` is the Dirac delta function.
+        - :math:`w_r` is weighting factor of the angular sector (unit sphere).
         - :math:`M` s the mirror reflection transformation
           :math:`M(\theta, \phi)=M(\theta, \pi-\phi)`.
 
@@ -72,6 +75,8 @@ def create_from_scattering(
         source_directions.csize, receiver_directions.csize,
         scattering_coefficient.n_bins))
 
+    receiver_weights = receiver_directions.weights
+    receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
     scattering_flattened = scattering_coefficient.freq.flatten()
     for i_source in range(source_directions.csize):
         source = source_directions[i_source]
@@ -81,7 +86,9 @@ def create_from_scattering(
         data_out[i_source, :, :] = (
             scattering_flattened) / np.pi
         data_out[i_source, i_receiver, :] += (
-            1 - scattering_flattened) / np.cos(source.elevation)
+            1 - scattering_flattened) / (np.cos(
+                source_directions.colatitude[
+                    i_source]) * receiver_weights[i_receiver])
 
     data_out *= (1 - absorption_coefficient.freq.flatten())
     sofa = _create_sofa(
