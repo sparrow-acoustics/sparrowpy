@@ -33,6 +33,9 @@ def create_from_scattering(
         - :math:`M` s the mirror reflection transformation
           :math:`M(\theta, \phi)=M(\theta, \pi-\phi)`.
 
+    Note that the weights doesn't need to be normalized,
+    they get scaled as required.
+
     Parameters
     ----------
     file_path : string, path
