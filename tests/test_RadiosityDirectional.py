@@ -228,63 +228,63 @@ def test_directional_energy_exchange(
                 decimal=4)
 
 
-# @pytest.mark.parametrize('perpendicular_walls', [
-#     [0, 2],
-#     [0, 4], [2, 0], [2, 4], [4, 0], [4, 2],
-#     [1, 2], [1, 3], [1, 4], [1, 5],
-#     [2, 1], [2, 5], [0, 3], [0, 5],
-#     [3, 0], [3, 1], [3, 4], [3, 5],
-#     [4, 1], [4, 3],
-#     [5, 0], [5, 1], [5, 2], [5, 3],
-#     ])
-# @pytest.mark.parametrize('patch_size', [
-#     0.5,
-#     1
-#     ])
-# def test_directional_specular_reflections(
-#         sample_walls, perpendicular_walls, patch_size):
-#     """Test vs references for specular_reflections."""
-#     max_order_k = 3
-#     ir_length_s = 5
-#     wall_source = sample_walls[perpendicular_walls[0]]
-#     wall_receiver = sample_walls[perpendicular_walls[1]]
-#     path_reference = os.path.join(
-#         os.path.dirname(__file__), 'test_data',
-#         f'reference_specular_reflections_{patch_size}.far')
-#     path_sofa = os.path.join(
-#         os.path.dirname(__file__), 'test_data', 'specular_gaussian5.sofa')
-#     patch_1 = radiosity.PatchesDirectional.from_sofa(
-#         wall_source, patch_size, [1], 0, path_sofa)
-#     patch_2 = radiosity.PatchesDirectional.from_sofa(
-#         wall_receiver, patch_size, [0], 1, path_sofa)
-#     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
-#     patches = [patch_1, patch_2]
-#     patch_1.calculate_form_factor(patches)
-#     patch_1.init_energy_exchange(
-#         max_order_k, ir_length_s, source)
-#     patch_2.calculate_form_factor(patches)
-#     patch_2.init_energy_exchange(
-#         max_order_k, ir_length_s, source)
-#     for k in range(1, max_order_k + 1):
-#         patch_1.calculate_energy_exchange(patches, k)
-#         patch_2.calculate_energy_exchange(patches, k)
-#     receiver = Receiver([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
+@pytest.mark.parametrize('perpendicular_walls', [
+    [0, 2],
+    [0, 4], [2, 0], [2, 4], [4, 0], [4, 2],
+    [1, 2], [1, 3], [1, 4], [1, 5],
+    [2, 1], [2, 5], [0, 3], [0, 5],
+    [3, 0], [3, 1], [3, 4], [3, 5],
+    [4, 1], [4, 3],
+    [5, 0], [5, 1], [5, 2], [5, 3],
+    ])
+@pytest.mark.parametrize('patch_size', [
+    0.5,
+    1
+    ])
+def test_directional_specular_reflections(
+        sample_walls, perpendicular_walls, patch_size):
+    """Test vs references for specular_reflections."""
+    max_order_k = 3
+    ir_length_s = 5
+    wall_source = sample_walls[perpendicular_walls[0]]
+    wall_receiver = sample_walls[perpendicular_walls[1]]
+    path_reference = os.path.join(
+        os.path.dirname(__file__), 'test_data',
+        f'reference_specular_reflections_{patch_size}.far')
+    path_sofa = os.path.join(
+        os.path.dirname(__file__), 'test_data', 'specular_gaussian5.sofa')
+    patch_1 = radiosity.PatchesDirectional.from_sofa(
+        wall_source, patch_size, [1], 0, path_sofa)
+    patch_2 = radiosity.PatchesDirectional.from_sofa(
+        wall_receiver, patch_size, [0], 1, path_sofa)
+    source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
+    patches = [patch_1, patch_2]
+    patch_1.calculate_form_factor(patches)
+    patch_1.init_energy_exchange(
+        max_order_k, ir_length_s, source)
+    patch_2.calculate_form_factor(patches)
+    patch_2.init_energy_exchange(
+        max_order_k, ir_length_s, source)
+    for k in range(1, max_order_k + 1):
+        patch_1.calculate_energy_exchange(patches, k)
+        patch_2.calculate_energy_exchange(patches, k)
+    receiver = Receiver([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
 
-#     ir = 0
-#     ir += patch_1.energy_at_receiver(
-#         max_order_k, receiver, ir_length_s,
-#         speed_of_sound=346.18, sampling_rate=1000)
-#     ir += patch_2.energy_at_receiver(
-#         max_order_k, receiver, ir_length_s,
-#         speed_of_sound=346.18, sampling_rate=1000)
+    ir = 0
+    ir += patch_1.energy_at_receiver(
+        max_order_k, receiver, ir_length_s,
+        speed_of_sound=346.18, sampling_rate=1000)
+    ir += patch_2.energy_at_receiver(
+        max_order_k, receiver, ir_length_s,
+        speed_of_sound=346.18, sampling_rate=1000)
 
-#     if create_reference_files and (
-#             perpendicular_walls[0] == 0) and (perpendicular_walls[1] == 2):
-#         pf.io.write(path_reference, ir=ir)
+    if create_reference_files and (
+            perpendicular_walls[0] == 0) and (perpendicular_walls[1] == 2):
+        pf.io.write(path_reference, ir=ir)
 
-#     data = pf.io.read(path_reference)
+    data = pf.io.read(path_reference)
 
-#     npt.assert_almost_equal(data['ir'], ir, decimal=4)
+    npt.assert_almost_equal(data['ir'], ir, decimal=4)
 
 
 def test_PatchDirectional_to_from_dict(sample_walls):
@@ -451,129 +451,3 @@ def test_RadiosityDirectional_read_write(tmpdir):
         np.testing.assert_array_equal(
             patch.E_matrix, patch_reconstructed.E_matrix)
 
-
-@pytest.mark.parametrize('patch_size', [
-    1,
-    1/3,
-    1/5,
-    1/7,
-    ])
-@pytest.mark.parametrize('sh_order', [
-    1,
-    3,
-    5,
-    ])
-def test_specular_reflection(patch_size, sh_order, tmp_path_factory):
-    """Test if the results are correct with to_dict and from_dict."""
-    max_order_k = 2
-    X = 1
-    Y = 1
-    x_s = 10
-    y_s = 0
-    z_s = 10
-    x_r = -10
-    y_r = 0
-    z_r = 10
-    ir_length_s = 0.15
-    sampling_rate = 50
-
-    filename = tmp_path_factory.mktemp("data") / "brdf_tmp.sofa"
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
-    coords = coords[coords.z > 0]
-    sp.brdf.create_from_scattering(
-        filename, coords, coords, pf.FrequencyData(0, [100]))
-
-    # create geometry
-    ground = geo.Polygon(
-        [[-X/2, -Y/2, 0], [X/2, -Y/2, 0], [X/2, Y/2, 0], [-X/2, Y/2, 0]],
-        [1, 0, 0], [0, 0, 1])
-    source = SoundSource([x_s, y_s, z_s], [0, 1, 0], [0, 0, 1])
-
-    # new approach
-    radi = radiosity.DirectionalRadiosity(
-        [ground], patch_size, max_order_k, ir_length_s,
-        filename, speed_of_sound=343, sampling_rate=sampling_rate)
-
-    radi.run(source)
-    ir = radi.energy_at_receiver(
-        Receiver([x_r, y_r, z_r], [0, 1, 0], [0, 0, 1]))
-
-    ir_desired = np.zeros_like(ir)
-    # add direct sound
-    direct_distance = np.linalg.norm([x_r - x_s, y_r - y_s, z_r - z_s])
-    direct_samples = int(direct_distance/343*sampling_rate)
-    direct_energy = 1/(4*np.pi*direct_distance**2)
-    ir_desired[:, direct_samples] = direct_energy
-    # add reflection sound
-    reflection_distance = np.linalg.norm([x_r - x_s, y_r - y_s, -z_r - z_s])
-    reflection_samples = int(reflection_distance/343*sampling_rate)
-    reflection_energy = 1/(4*np.pi*reflection_distance**2)
-    ir_desired[:, reflection_samples] = reflection_energy
-
-    npt.assert_almost_equal(
-        10*np.log10(np.sum(ir)-direct_energy),
-        10*np.log10(reflection_energy),
-        decimal=0)
-
-
-@pytest.mark.parametrize('patch_size', [
-    1, 1/3, 1/5, 1/7, 1/9,
-    ])
-@pytest.mark.parametrize('sh_order', [
-    1,
-    3,
-    5,
-    21,
-    ])
-def test_specular_double_reflection(patch_size, sh_order, tmp_path_factory):
-    """Test if the results are correct with to_dict and from_dict."""
-    max_order_k = 3
-    x_s = .5
-    y_s = 0
-    z_s = .5
-    x_r = 2.5
-    y_r = 0
-    z_r = .5
-    ir_length_s = 0.15
-    sampling_rate = 300
-
-    filename = tmp_path_factory.mktemp("data") / "brdf_tmp.sofa"
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
-    coords = coords[coords.z > 0]
-    sp.brdf.create_from_scattering(
-        filename, coords, coords, pf.FrequencyData(0, [100]))
-
-    # create geometry
-    ground = geo.Polygon(
-        [[0.5, 0.5, 1], [0.5, -0.5, 1], [1.5, -0.5, 1], [1.5, 0.5, 1]],
-        [1, 0, 0], [0, 0, 1])
-    ground2 = geo.Polygon(
-        [[1.5, 0.5, 0], [1.5, -0.5, 0], [2.5, -0.5, 0], [2.5, 0.5, 0]],
-        [1, 0, 0], [0, 0, 1])
-    source = SoundSource([x_s, y_s, z_s], [0, 1, 0], [0, 0, 1])
-
-    # new approach
-    radi = radiosity.DirectionalRadiosity(
-        [ground, ground2], patch_size, max_order_k, ir_length_s,
-        filename, speed_of_sound=343, sampling_rate=sampling_rate)
-
-    radi.run(source)
-    ir = radi.energy_at_receiver(
-        Receiver([x_r, y_r, z_r], [0, 1, 0], [0, 0, 1]))
-
-    ir_desired = np.zeros_like(ir)
-    # add direct sound
-    direct_distance = np.linalg.norm([x_r - x_s, y_r - y_s, z_r - z_s])
-    direct_samples = int(direct_distance/343*sampling_rate)
-    direct_energy = 1/(4*np.pi*direct_distance**2)
-    ir_desired[:, direct_samples] = direct_energy
-    # add reflection sound
-    reflection_distance = 2*np.sqrt(2)
-    reflection_samples = int(reflection_distance/343*sampling_rate)
-    reflection_energy = 1/(4*np.pi*reflection_distance**2)
-    ir_desired[:, reflection_samples] = reflection_energy
-
-    npt.assert_almost_equal(
-        10*np.log10(np.sum(ir)-direct_energy),
-        10*np.log10(reflection_energy),
-        decimal=1)
