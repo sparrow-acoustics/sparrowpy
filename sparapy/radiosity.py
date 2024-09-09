@@ -576,6 +576,7 @@ class PatchesDirectional(Patches):
         self.directivity_sources = sources
         self.directivity_receivers = receivers
         if not already_converted:
+            self.directivity_data.freq *= np.pi
             o1 = pf.Orientations.from_view_up(
                 polygon.normal, polygon.up_vector)
             o2 = pf.Orientations.from_view_up([0, 0, 1], [1, 0, 0])
@@ -585,9 +586,6 @@ class PatchesDirectional(Patches):
             self.directivity_receivers.radius = 1
             self.directivity_sources.rotate('xyz', euler)
             self.directivity_sources.radius = 1
-            # to make same with just ones in diffuse case
-            self.directivity_data.freq *= receivers.csize/4
-            # self.directivity_data.freq /= 0.0035044425720631204
 
     @classmethod
     def from_sofa(cls, polygon, max_size, other_wall_ids, wall_id,
@@ -683,7 +681,8 @@ class PatchesDirectional(Patches):
             scattering = self.directivity_data.freq[source_idx, :, i_frequency]
             # assert all(np.sum(np.real(scattering), axis=-1)-1 < 1e-5)
             if len(self.patches) == 1:
-                self.E_matrix[i_frequency, 0, 0, :, :] *= np.abs(scattering)
+                self.E_matrix[i_frequency, 0, 0, :, :] *= np.abs(
+                    scattering)
             else:
                 for i_patch in range(len(self.patches)):
                     self.E_matrix[i_frequency, 0, i_patch, :, :] *= np.abs(
