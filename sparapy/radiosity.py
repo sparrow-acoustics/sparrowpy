@@ -15,7 +15,7 @@ class Patches(Polygon):
     other_wall_ids: list[int]  # ids of the patches
     form_factors: np.ndarray
     E_matrix: np.ndarray
-    wall_id : int
+    wall_id: int
     scattering: np.ndarray
     absorption: np.ndarray
     n_bins: int
@@ -138,8 +138,8 @@ class Patches(Polygon):
         self.plot_view_up(ax, color)
 
     def init_energy_exchange(
-            self, max_order_k, ir_length_s, source, sampling_rate=1000,
-            speed_of_sound=346.18):
+            self, max_order_k, ir_length_s, source, sampling_rate,
+            speed_of_sound):
         """Initialize the energy exchange Matrix with source energy.
 
         It init the matrix self.E_matrix and add source energy after (6).
@@ -153,9 +153,9 @@ class Patches(Polygon):
         source : SoundSource
             sound source with ``sound_power`` and ``position``
         sampling_rate : int, optional
-            Sampling rate of impulse response, by default 1000 Hz.
+            Sampling rate of impulse response.
         speed_of_sound : float, optional
-            speed of sound in m/s, by default 346.18 m/s.
+            speed of sound in m/s.
 
         """
         self.E_sampling_rate = sampling_rate
@@ -210,8 +210,8 @@ class Patches(Polygon):
 
 
     def calculate_energy_exchange(
-            self, patches_list, current_order_k, speed_of_sound=346.18,
-            E_sampling_rate=1000):
+            self, patches_list, current_order_k, speed_of_sound,
+            E_sampling_rate):
         """Calculate the energy exchange for a given order.
 
         It implements formula 18 and save the result in self.E_matrix.
@@ -223,9 +223,9 @@ class Patches(Polygon):
         current_order_k : int
             Order k
         speed_of_sound : int, optional
-            speed of sound in m/s, by default 346.18 m/s.
+            speed of sound in m/s.
         E_sampling_rate : int, optional
-            Sampling rate of histogram, by default 1000 Hz -> 1ms.
+            Sampling rate of histogram.
 
         """
         k = current_order_k # real k 1 .. max_k
@@ -250,7 +250,8 @@ class Patches(Polygon):
                             i_frequency, k-1, i_source, :]
 
                         # delay IR by delay_samples
-                        A_k_minus1_delay = add_delay(A_k_minus_1, delay_samples)
+                        A_k_minus1_delay = add_delay(
+                            A_k_minus_1, delay_samples)
 
                         # find form factor of source and receiver patches
                         form_factor = wall.get_form_factor(
@@ -452,7 +453,7 @@ class Patches(Polygon):
                 i_receiver_ff = receiver_patch_id
                 break
             wall = patches_list[other_wall]
-            #wall = patches_list[idx]
+            # wall = patches_list[idx]
             i_receiver_offset += len(wall.patches)
 
         return self.form_factors[
@@ -460,7 +461,7 @@ class Patches(Polygon):
 
     def energy_at_receiver(
             self, max_order, receiver, ir_length_s,
-            speed_of_sound=346.18, sampling_rate=1000):
+            speed_of_sound, sampling_rate):
         """Calculate the energy at the receiver.
 
         this is supposed to be from just one wall
@@ -476,9 +477,9 @@ class Patches(Polygon):
         ir_length_s : _type_
             _description_
         speed_of_sound : float, optional
-            _description_, by default 346.18
+            _description_
         sampling_rate : int, optional
-            _description_, by default 1000
+            _description_
 
         Returns
         -------
@@ -506,7 +507,8 @@ class Patches(Polygon):
 
                     # Equation 20
                     factor = cos_xi * (np.exp(
-                        -self.sound_attenuation_factor[i_frequency]*R)) / (np.pi * R**2)
+                        -self.sound_attenuation_factor[i_frequency]*R)) / (
+                            np.pi * R**2)
                     receiver_energy = delayed_energy * factor
                     if factor <0:
                         print(factor)
@@ -552,7 +554,8 @@ class PatchesDirectional(Patches):
         sound_attenuation_factor : _type_, optional
             Air attenuation factor for each frequncy bin, by default None
         already_converted : bool, optional
-            is ``sources`` and ``receivers`` already converted, by default False
+            is ``sources`` and ``receivers`` already converted, by default
+            False.
         E_matrix : np.ndarray, optional
             Energy exchange results, if already calcualted , by default None
 
@@ -573,6 +576,12 @@ class PatchesDirectional(Patches):
         self.directivity_sources = sources
         self.directivity_receivers = receivers
         if not already_converted:
+            dA_receivers = receivers.weights.reshape((receivers.csize, 1))
+            dA_receivers = dA_receivers / np.sum(dA_receivers)*2*np.pi
+            solution = np.sum(
+                self.directivity_data.freq * dA_receivers,
+                axis=-2, keepdims=True)
+            self.directivity_data.freq *= solution / (2*np.pi)
             o1 = pf.Orientations.from_view_up(
                 polygon.normal, polygon.up_vector)
             o2 = pf.Orientations.from_view_up([0, 0, 1], [1, 0, 0])
@@ -582,7 +591,7 @@ class PatchesDirectional(Patches):
             self.directivity_receivers.radius = 1
             self.directivity_sources.rotate('xyz', euler)
             self.directivity_sources.radius = 1
-            # to make same with just ones in diffsue case
+            # to make same with just ones in diffuse case
             self.directivity_data.freq *= receivers.csize
 
     @classmethod
@@ -592,6 +601,11 @@ class PatchesDirectional(Patches):
         """Create object with directional data from sofa."""
         sofa = sf.read_sofa(wall_directivity_path, True, False)
         data, sources, receivers = pf.io.convert_sofa(sofa)
+        sources.weights = sofa.SourceWeights
+        receivers.weights = sofa.ReceiverWeights
+        assert sources.weights is not None, "No source weights in sofa file"
+        assert receivers.weights is not None, \
+            "No receiver weights in sofa file"
         return cls(
             polygon, max_size, other_wall_ids, wall_id,
             data, sources, receivers, absorption=absorption,
@@ -605,6 +619,8 @@ class PatchesDirectional(Patches):
             'directivity_data_frequencies': self.directivity_data.frequencies,
             'directivity_sources': self.directivity_sources.cartesian,
             'directivity_receivers': self.directivity_receivers.cartesian,
+            'directivity_sources_weights': self.directivity_sources.weights,
+            'directivity_receivers_weights': self.directivity_receivers.weights,  # noqa: E501
         }
 
     @classmethod
@@ -615,11 +631,13 @@ class PatchesDirectional(Patches):
         sources = pf.Coordinates(
             np.array(dict['directivity_sources']).T[0],
             np.array(dict['directivity_sources']).T[1],
-            np.array(dict['directivity_sources']).T[2])
+            np.array(dict['directivity_sources']).T[2],
+            weights=dict['directivity_sources_weights'])
         receivers = pf.Coordinates(
             np.array(dict['directivity_receivers']).T[0],
             np.array(dict['directivity_receivers']).T[1],
-            np.array(dict['directivity_receivers']).T[2])
+            np.array(dict['directivity_receivers']).T[2],
+            weights=dict['directivity_receivers_weights'])
         return cls(
             Polygon.from_dict(dict),
             max_size=dict['max_size'],
@@ -636,7 +654,7 @@ class PatchesDirectional(Patches):
 
     def init_energy_exchange(
             self, max_order_k, ir_length_s, source,
-            sampling_rate=1000):
+            sampling_rate, speed_of_sound):
         """Initialize the energy exchange Matrix with source energy.
 
         Parameters
@@ -647,12 +665,15 @@ class PatchesDirectional(Patches):
             length of the impulse response in seconds.
         source : SoundSource
             Sound source with ``sound_power`` and ``position``
-        sampling_rate : int, optional
+        sampling_rate : int
             Sample rate of histogram, by default 1000 -> 1ms
+        speed_of_sound : float,
+            speed of sound in m/s.
 
         """
         Patches.init_energy_exchange(
-            self, max_order_k, ir_length_s, source, sampling_rate)
+            self, max_order_k, ir_length_s, source, sampling_rate,
+            speed_of_sound=speed_of_sound)
         test = self.E_matrix.copy()
         self.E_matrix = self.E_matrix[..., np.newaxis]
         self.E_matrix = np.tile(
@@ -676,8 +697,8 @@ class PatchesDirectional(Patches):
                         scattering[i_patch, :])
 
     def calculate_energy_exchange(
-            self, patches_list, current_order_k, speed_of_sound=346.18,
-            E_sampling_rate=1000):
+            self, patches_list, current_order_k, speed_of_sound,
+            E_sampling_rate):
         """Calculate the energy exchange for a given order.
 
         It implements formula 18 and save the result in self.E_matrix.
@@ -689,9 +710,9 @@ class PatchesDirectional(Patches):
         current_order_k : int
             Order k
         speed_of_sound : int, optional
-            speed of sound in m/s, by default 346.18 m/s.
+            speed of sound in m/s.
         E_sampling_rate : int, optional
-            Sampling rate of histogram, by default 1000 Hz -> 1ms.
+            Sampling rate of histogram, e.g. 1000 Hz -> 1ms.
 
         """
         k = current_order_k # real k 1 .. max_k
@@ -732,7 +753,8 @@ class PatchesDirectional(Patches):
                                     * distance)
 
                         # find directional scattering coefficient
-                        difference = source_patch.center - receiver_patch.center
+                        difference = source_patch.center - \
+                            receiver_patch.center
                         difference = pf.Coordinates(
                             difference.T[0], difference.T[1], difference.T[2])
                         source_idx = self.directivity_sources.find_nearest(
@@ -745,13 +767,14 @@ class PatchesDirectional(Patches):
                         energy *= scattering
 
                         # add energy to energy matrix of self
-                        self.E_matrix[i_frequency, k, i_receiver, :, :] += energy
+                        self.E_matrix[
+                            i_frequency, k, i_receiver, :, :] += energy
                         # energy[3]
                         # 0.00120904
 
     def energy_at_receiver(
             self, max_order, receiver, ir_length_s,
-            speed_of_sound=346.18, sampling_rate=1000, M=0):
+            speed_of_sound, sampling_rate, M=0):
         """Calculate the energy at the receiver.
 
         this is supposed to be from just one wall
@@ -767,7 +790,7 @@ class PatchesDirectional(Patches):
         ir_length_s : float
             useless
         speed_of_sound : float, optional
-            Speed of sound in m/s, by default 346.18 m/s.
+            Speed of sound in m/s.
         sampling_rate : int, optional
             _description_, by default 1000
         M : float, optional
@@ -802,7 +825,8 @@ class PatchesDirectional(Patches):
 
             for k in range(max_order+1):
                 for i_frequency in range(self.n_bins):
-                    energy = self.E_matrix[i_frequency, k, i_source, :, i_patch]
+                    energy = self.E_matrix[
+                        i_frequency, k, i_source, :, i_patch]
                     delayed_energy = add_delay(energy, delay, axis=-1)
 
                     # Equation 20
@@ -880,7 +904,8 @@ def add_delay(ir, delay_samples, axis=-1):
     ## add delay
     if delay_samples > ir.shape[axis]:
         raise ValueError(
-            f'length of ir is longer then ir delay is {delay_samples} > {ir.shape[-1]}')
+            'length of ir is longer then ir delay is '
+            f'{delay_samples} > {ir.shape[-1]}')
     ir_delayed = np.roll(ir, delay_samples, axis=axis)
     # if np.sum(ir_delayed[:delay_samples, ...]) != 0:
     #     raise ValueError('length of ir is to short, ')
@@ -940,7 +965,8 @@ class Radiosity():
 
     def __init__(
             self, walls, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=346.18, sampling_rate=1000, absorption=0.1, source=None):
+            speed_of_sound=346.18, sampling_rate=1000, absorption=0.1,
+            source=None):
         """Create Radiosity Object for simulation.
 
         Parameters
@@ -956,7 +982,7 @@ class Radiosity():
         speed_of_sound : float, optional
             Speed of sound in m/s, by default 346.18 m/s
         sampling_rate : int, optional
-            samplingrate of the Energy histogram, by default 1000 -> 1ms
+            sampling rate of the Energy histogram, by default 1000 -> 1ms
         absorption: np.ndarray
             Absorption coefficient of this wall for each frequency bin
         source : SoundSource, optional
@@ -1009,7 +1035,8 @@ class Radiosity():
                 dict['source_position'],
                 dict['source_view'], dict['source_up'])
         obj = cls(
-            patch_list, dict['patch_size'], dict['max_order_k'], dict['ir_length_s'],
+            patch_list, dict['patch_size'], dict['max_order_k'],
+            dict['ir_length_s'],
             dict['speed_of_sound'], dict['sampling_rate'], source=source)
         return obj
 
@@ -1020,7 +1047,8 @@ class Radiosity():
         for patches in self.patch_list:
             patches.init_energy_exchange(
                 self.max_order_k, self.ir_length_s, source,
-                sampling_rate=self.sampling_rate)
+                sampling_rate=self.sampling_rate,
+                speed_of_sound=self.speed_of_sound)
 
         # C. Form factors
         if len(self.patch_list) > 1:
@@ -1035,7 +1063,8 @@ class Radiosity():
                         self.patch_list, k, speed_of_sound=self.speed_of_sound,
                         E_sampling_rate=self.sampling_rate)
 
-    def energy_at_receiver(self, receiver, max_order_k=None, ignore_direct=False):
+    def energy_at_receiver(
+            self, receiver, max_order_k=None, ignore_direct=False):
         """Return the energetic impulse response at the receiver."""
         ir = 0
         if max_order_k is None:
@@ -1089,7 +1118,7 @@ class DirectionalRadiosity():
         speed_of_sound : float, optional
             Speed of sound in m/s, by default 346.18 m/s
         sampling_rate : int, optional
-            samplingrate of the Energy histogram, by default 1000 -> 1ms
+            sampling rate of the Energy histogram, by default 1000 -> 1ms
         source : SoundSource, optional
             Source object, by default None, can be added later.
 
@@ -1107,7 +1136,8 @@ class DirectionalRadiosity():
             index_list = [j for j in range(n_points) if j != i]
             path = sofa_path[i] if isinstance(sofa_path, list) else sofa_path
             patches = polygon_list[i] if isinstance(
-                polygon_list[i], PatchesDirectional) else PatchesDirectional.from_sofa(
+                polygon_list[i], PatchesDirectional) else \
+                    PatchesDirectional.from_sofa(
                     polygon_list[i], self.patch_size, index_list, i, path)
             patch_list.append(patches)
 
@@ -1174,7 +1204,8 @@ class DirectionalRadiosity():
         for patches in self.patch_list:
             patches.init_energy_exchange(
                 self.max_order_k, self.ir_length_s, source,
-                sampling_rate=self.sampling_rate)
+                sampling_rate=self.sampling_rate,
+                speed_of_sound=self.speed_of_sound)
 
         # C. Form factors
         if len(self.patch_list) > 1:

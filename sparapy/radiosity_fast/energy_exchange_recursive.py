@@ -103,11 +103,13 @@ def _energy_exchange(
             if (energy_new[j] > 0) and (distance_new < max_distance):
                 # energy_new += energy * form_factors_tilde[h, i, j]
                 ir = _collect_receiver_energy(
-                    ir, i_freq, energy_new[j], distance_new, patch_receiver_distance[j],
+                    ir, i_freq, energy_new[j], distance_new,
+                    patch_receiver_distance[j],
                     patch_receiver_energy[j],
                     speed_of_sound, histogram_time_resolution)
                 _energy_exchange(
-                    ir, i_freq, i, j, energy_new[j], distance_new, form_factors_tilde,
+                    ir, i_freq, i, j, energy_new[j], distance_new,
+                    form_factors_tilde,
                     distance_1, patch_receiver_distance, patch_receiver_energy,
                     speed_of_sound, histogram_time_resolution,
                     threshold, max_distance, current_depth+1, max_depth)
@@ -115,7 +117,8 @@ def _energy_exchange(
 
 @numba.njit()
 def _collect_receiver_energy(
-        ir, i_freq,energy, distance, patch_receiver_distance, patch_receiver_energy,
+        ir, i_freq,energy, distance, patch_receiver_distance,
+        patch_receiver_energy,
         speed_of_sound, histogram_time_resolution):
 
     R = np.linalg.norm(patch_receiver_distance)
@@ -163,7 +166,8 @@ def _calculate_energy_exchange_recursive(
             for i in range(n_patches):
                 if energy_1[h, i, i_freq] > 0:
                     _energy_exchange(
-                        ir, i_freq, h, i, energy_1[h, i, i_freq], distance_1[h, i],
+                        ir, i_freq, h, i, energy_1[h, i, i_freq],
+                        distance_1[h, i],
                         form_factors_tilde[..., i_freq], distance_i_j,
                         patch_receiver_distance,
                         patch_receiver_energy[..., i_freq], speed_of_sound,
