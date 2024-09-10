@@ -93,7 +93,7 @@ def get_scattering_data(
 def get_scattering_data_dist(
         pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,
         sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
-        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor"):
+        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", threshold=0.0001):
     """Get scattering data depending on previous, current and next position.
 
     Parameters
@@ -122,7 +122,7 @@ def get_scattering_data_dist(
 
     """
     difference_source = pos_h-pos_i
-    difference_receiver = pos_i-pos_j
+    difference_receiver = pos_j-pos_i 
     # wall_id_i = int(patch_to_wall_ids[i])
     difference_source /= np.linalg.norm(difference_source)
     difference_receiver /= np.linalg.norm(difference_receiver)
@@ -139,24 +139,36 @@ def get_scattering_data_dist(
             source_idx, receiver_idx, :]
         
     elif mode == "inv_dist":
-        source_idx = np.argpartition(s_dist,-3)[-3:]
-        receiver_idx = np.argpartition(r_dist,-3)[-3:]
+
+        if (s_dist < threshold).any():
+            source_idx = np.array([np.argmin(s_dist)])
+            w_s = [1.]
+        else:
+            source_idx = np.argpartition(-s_dist,-3)[-3:]
+            w_s = 1/s_dist[source_idx]
+
+        if (r_dist < threshold).any():
+            receiver_idx = np.array([np.argmin(r_dist)])
+            w_r = [1.]
+        else:
+            receiver_idx = np.argpartition(-r_dist,-3)[-3:]
+            w_r = 1/r_dist[receiver_idx]
         
-        w_s = 1/s_dist[source_idx]
-        w_r = 1/r_dist[receiver_idx]
+        
+        
 
         out = np.zeros([scattering[0].shape[-1]])
         den = 0
 
-        for i in range(3):
-            for j in range(3):
+        for i in range(source_idx.shape[0]):
+            for j in range(receiver_idx.shape[0]):
                 out += w_s[i]*w_r[j] * scattering[scattering_index[wall_id_i]][source_idx[i],receiver_idx[j]][:]
                 den += w_s[i]*w_r[j]
 
         out /= den
 
     else:
-        out=[0]
+        out=np.array([0.])
         
     return out
 
