@@ -42,13 +42,17 @@ def create_from_scattering(
         path where sofa file should be saved
     source_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
         source directions for the BRDF, should contain weights.
+        cshape of data should be (n_sources)
     receiver_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
         receiver directions for the BRDF, should contain weights.
+        cshape of data should be (n_receivers)
     scattering_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
         frequency dependent scattering coefficient data.
+        cshape of data should be (1, ).
     absorption_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
         frequency dependent absorption coefficient data, by default
         no absorption.
+        cshape of data should be (1, ).
 
     References
     ----------
@@ -99,6 +103,109 @@ def create_from_scattering(
         source_directions,
         receiver_directions,
         history='constructed brdf based on scattering coefficients',
+    )
+
+    sf.write_sofa(file_path, sofa)
+
+
+
+def create_from_directional_scattering(
+        file_path,
+        source_directions,
+        receiver_directions,
+        directional_scattering,
+        absorption_coefficient=None,
+        ):
+    r"""Create the BRDF from a scattering coefficient and write to SOFA file.
+
+    The directional scattering coefficient is assumed to be anisotropic.
+    The BRDF is discretized as follows:
+
+    .. math::
+        \rho(\Omega_i, \Omega_e) = \frac{(1-s)(1-\alpha)}{\Omega_i \cdot
+        \mathbf{n}_i} \frac{1}{w_r} \delta(\Omega_i-M(\Omega_e)) +
+        \frac{s(1-\alpha)}{\pi}
+
+    where:
+        - :math:`\Omega_i` and :math:`\Omega_e` are the incident and exitant
+          directions, respectively.
+        - :math:`s` is the scattering coefficient.
+        - :math:`\alpha` is the absorption coefficient.
+        - :math:`\mathbf{n}_i` is the normal vector.
+        - :math:`\delta` is the Dirac delta function.
+        - :math:`w_r` is weighting factor of the angular sector (unit sphere).
+        - :math:`M` s the mirror reflection transformation
+          :math:`M(\theta, \phi)=M(\theta, \pi-\phi)`.
+
+    Note that the weights doesn't need to be normalized,
+    they get scaled as required.
+
+    Parameters
+    ----------
+    file_path : string, path
+        path where sofa file should be saved
+    source_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
+        source directions for the BRDF, should contain weights.
+        cshape of data should be (n_sources)
+    receiver_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
+        receiver directions for the BRDF, should contain weights.
+        cshape of data should be (n_receivers)
+    directional_scattering : :py:class:`~pyfar.classes.audio.FrequencyData`
+        frequency dependent directional scattering coefficient data from [#]_.
+        cshape of data should be (n_sources, n_receivers).
+    absorption_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
+        frequency dependent absorption coefficient data, by default
+        no absorption.
+        cshape of data should be (1, ).
+
+    References
+    ----------
+    .. [#]  A. Heimes and M. Vorländer, “A new scattering metric for
+            auralization in urban environments,” in Fortschritte der
+            Akustik - DAGA 2024, Hamburg: Deutsche Gesellschaft für Akustik
+            e.V. (DEGA), Berlin, 2023, 2024, pp. 1660–1661. [Online].
+            Available:
+            https://pub.dega-akustik.de/DAGA_2024/files/upload/paper/531.pdf
+
+
+    """
+    if not isinstance(source_directions, pf.Coordinates):
+        raise TypeError(
+            'source_directions must be a pf.Coordinates object')
+    if not isinstance(receiver_directions, pf.Coordinates):
+        raise TypeError(
+            'receiver_directions must be a pf.Coordinates object')
+    if (
+            not isinstance(directional_scattering, pf.FrequencyData) or
+            not directional_scattering.cshape == (
+                source_directions.csize, receiver_directions.csize)):
+        raise TypeError(
+            'directional_scattering must be a pf.FrequencyData object with'
+            f' cshape ({source_directions.csize, receiver_directions.csize})')
+    if absorption_coefficient is None:
+        absorption_coefficient = pf.FrequencyData(
+            np.zeros_like(directional_scattering.frequencies),
+            directional_scattering.frequencies)
+
+    data_out = np.zeros((
+        source_directions.csize, receiver_directions.csize,
+        directional_scattering.n_bins))
+
+    receiver_weights = receiver_directions.weights
+    receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
+    for i_source in range(source_directions.csize):
+        for i_receiver in range(receiver_directions.csize):
+            data_out[i_source, i_receiver, :] += (
+                directional_scattering.freq[i_source, i_receiver]) / (np.cos(
+                    source_directions.colatitude[
+                        i_source]) * receiver_weights[i_receiver])
+
+    data_out *= (1 - absorption_coefficient.freq.flatten())
+    sofa = _create_sofa(
+        pf.FrequencyData(data_out, directional_scattering.frequencies),
+        source_directions,
+        receiver_directions,
+        history='constructed brdf based on directional scattering',
     )
 
     sf.write_sofa(file_path, sofa)
