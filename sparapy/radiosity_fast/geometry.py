@@ -154,8 +154,6 @@ def get_scattering_data_dist(
             receiver_idx = np.argpartition(-r_dist,-3)[-3:]
             w_r = 1/r_dist[receiver_idx]
         
-        
-        
 
         out = np.zeros([scattering[0].shape[-1]])
         den = 0
