@@ -103,7 +103,8 @@ def create_from_scattering(
     scattering_factor = 1 - scattering_flattened[np.newaxis, ...]
     data_out[:, :, :] += (
         scattering_flattened) / np.pi
-    data_out[np.arange(source_directions.csize), i_receiver, :] += scattering_factor / cos_factor
+    i_sources = np.arange(source_directions.csize)
+    data_out[i_sources, i_receiver, :] += scattering_factor / cos_factor
 
     data_out *= (1 - absorption_coefficient.freq.flatten())
     sofa = _create_sofa(
