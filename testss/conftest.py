@@ -3,6 +3,7 @@ import sparapy as sp
 import pyfar as pf
 import numpy as np
 import pytest
+import os
 
 @pytest.fixture()
 def sample_walls():
@@ -33,3 +34,22 @@ def pytest_generate_tests(metafunc):
         r = pf.samplings.sph_equal_angle(30)
         r = r[r.z>0]
         metafunc.parametrize("posj",r.cartesian.tolist())
+        
+    
+    if "mdist" in metafunc.fixturenames:
+        
+        li=[]
+        
+        for file in os.listdir('testss\\brdf_examples\\'):
+            
+            a = float(file.split("_")[-1].split(".sofa")[0])
+            
+            if a > 5:
+                
+                s=float(file.split("brdf_s")[1].split("_")[0])
+                
+                dist = pf.io.read_sofa('testss\\brdf_examples\\'+file)
+                
+                li.append((dist,a,s))
+        
+        metafunc.parametrize("mdist",li)
