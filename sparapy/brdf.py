@@ -81,17 +81,16 @@ def create_from_scattering(
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
     scattering_flattened = scattering_coefficient.freq.flatten()
-    for i_source in range(source_directions.csize):
-        source = source_directions[i_source]
-        image_source = source.copy()
-        image_source.azimuth += np.pi
-        i_receiver = receiver_directions.find_nearest(image_source)[0][0]
-        data_out[i_source, :, :] = (
-            scattering_flattened) / np.pi
-        data_out[i_source, i_receiver, :] += (
-            1 - scattering_flattened) / (np.cos(
-                source_directions.colatitude[
-                    i_source]) * receiver_weights[i_receiver])
+    image_source = source_directions.copy()
+    image_source.azimuth += np.pi
+    i_receiver = receiver_directions.find_nearest(image_source)[0][0]
+    cos_factor = (np.cos(
+            source_directions.colatitude) * receiver_weights)
+    cos_factor = cos_factor[..., np.newaxis]
+    scattering_factor = 1 - scattering_flattened[np.newaxis, ...]
+    data_out[:, :, :] += (
+        scattering_flattened) / np.pi
+    data_out[np.arange(source_directions.csize), i_receiver, :] += scattering_factor / cos_factor
 
     data_out *= (1 - absorption_coefficient.freq.flatten())
     sofa = _create_sofa(
