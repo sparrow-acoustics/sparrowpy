@@ -56,6 +56,19 @@ def create_from_scattering(
             acoustic rendering equation,” The Journal of the Acoustical
             Society of America, vol. 122, no. 3, pp. 1624-1635, 2007.
 
+    Examples
+    --------
+    >>> import pyfar as pf
+    >>> import sparapy as sp
+    >>> import numpy as np
+    >>> file_path = 'brdf.sofa'
+    >>> scattering_coefficient = pf.FrequencyData(0.5, [100])
+    >>> directions = pf.samplings.sph_gaussian(sh_order=3)
+    >>> directions = directions[directions.z > 0]
+    >>> sp.brdf.create_from_scattering(
+    ...     file_path, directions, directions,
+    ...     scattering_coefficient)
+
     """
     if (
             not isinstance(scattering_coefficient, pf.FrequencyData) or
