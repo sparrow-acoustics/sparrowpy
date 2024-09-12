@@ -192,11 +192,9 @@ def test_init_energy_exchange_directional_omni(
     ])
 def test_directional_energy_exchange(
         sample_walls, perpendicular_walls, patch_size):
-    """Test vs references for energy_exchange."""
-    max_order_k=3
-    ir_length_s=5
-    sampling_rate = 1000
-    speed_of_sound = 346.18
+    """Test vs refernces for energy_exchange."""
+    max_order_k = 3
+    ir_length_s = 5
     wall_source = sample_walls[perpendicular_walls[0]]
     wall_receiver = sample_walls[perpendicular_walls[1]]
     path_reference = os.path.join(
@@ -217,12 +215,10 @@ def test_directional_energy_exchange(
         max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
     patch_2.calculate_form_factor(patches)
     patch_2.init_energy_exchange(
-        max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
-    for k in range(1, max_order_k+1):
-        patch_1.calculate_energy_exchange(
-            patches, k, speed_of_sound, sampling_rate)
-        patch_2.calculate_energy_exchange(
-            patches, k, speed_of_sound, sampling_rate)
+        max_order_k, ir_length_s, source)
+    for k in range(1, max_order_k + 1):
+        patch_1.calculate_energy_exchange(patches, k)
+        patch_2.calculate_energy_exchange(patches, k)
 
     data = pf.io.read(path_reference)
 
@@ -231,6 +227,7 @@ def test_directional_energy_exchange(
             npt.assert_almost_equal(
                 10*np.log10(data['E_matrix'][0, ...]),
                 10*np.log10(patch_1.E_matrix[i_freq, ..., i_rec]), decimal=1)
+
 
 @pytest.mark.parametrize('perpendicular_walls', [
     [0, 2],
@@ -248,10 +245,8 @@ def test_directional_energy_exchange(
 def test_directional_specular_reflections(
         sample_walls, perpendicular_walls, patch_size):
     """Test vs references for specular_reflections."""
-    max_order_k=3
-    ir_length_s=5
-    sampling_rate = 1000
-    speed_of_sound = 346.18
+    max_order_k = 3
+    ir_length_s = 5
     wall_source = sample_walls[perpendicular_walls[0]]
     wall_receiver = sample_walls[perpendicular_walls[1]]
     path_reference = os.path.join(
@@ -270,12 +265,10 @@ def test_directional_specular_reflections(
         max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
     patch_2.calculate_form_factor(patches)
     patch_2.init_energy_exchange(
-        max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
-    for k in range(1, max_order_k+1):
-        patch_1.calculate_energy_exchange(
-            patches, k, speed_of_sound, sampling_rate)
-        patch_2.calculate_energy_exchange(
-            patches, k, speed_of_sound, sampling_rate)
+        max_order_k, ir_length_s, source)
+    for k in range(1, max_order_k + 1):
+        patch_1.calculate_energy_exchange(patches, k)
+        patch_2.calculate_energy_exchange(patches, k)
     receiver = Receiver([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
 
     ir = 0
@@ -313,10 +306,10 @@ def test_PatchDirectional_to_from_dict(sample_walls):
         patch_1.to_dict())
     assert reconstructed_patch.directivity_data == patch_1.directivity_data
     assert all(
-        reconstructed_patch.directivity_sources == \
+        reconstructed_patch.directivity_sources ==
             patch_1.directivity_sources)
     assert all(
-        reconstructed_patch.directivity_receivers \
+        reconstructed_patch.directivity_receivers
             == patch_1.directivity_receivers)
     npt.assert_array_equal(reconstructed_patch.E_matrix, patch_1.E_matrix)
     npt.assert_array_equal(
@@ -336,7 +329,6 @@ def test_PatchDirectional_to_from_dict(sample_walls):
         patch_1.sound_attenuation_factor)
 
 
-
 def test_RadiosityDirectional_to_from_dict():
     """Test if the results are correct with to_dict and from_dict."""
     max_order_k = 3
@@ -349,7 +341,7 @@ def test_RadiosityDirectional_to_from_dict():
     ir_length_s = 5
     sampling_rate = 50
 
-    ## create geometry
+    # create geometry
     ground = geo.Polygon(
         [[0, 0, 0], [X, 0, 0], [X, Y, 0], [0, Y, 0]], [1, 0, 0], [0, 0, 1])
     A_wall = geo.Polygon(
@@ -358,7 +350,7 @@ def test_RadiosityDirectional_to_from_dict():
         [[0, Y, 0], [X, Y, 0], [X, Y, Z], [0, Y, Z]], [1, 0, 0], [0, -1, 0])
     source = SoundSource([10, 6, 1], [0, 1, 0], [0, 0, 1])
 
-    ## new approach
+    # new approach
     radi = radiosity.DirectionalRadiosity(
         [ground, A_wall, B_wall], patch_size, max_order_k, ir_length_s,
         path_sofa, speed_of_sound=343, sampling_rate=sampling_rate)
@@ -400,7 +392,6 @@ def test_RadiosityDirectional_to_from_dict():
             patch.E_matrix, patch_reconstructed.E_matrix)
 
 
-
 def test_RadiosityDirectional_read_write(tmpdir):
     """Test if the results are correct with read and write."""
     max_order_k = 3
@@ -413,7 +404,7 @@ def test_RadiosityDirectional_read_write(tmpdir):
     ir_length_s = 5
     sampling_rate = 50
 
-    ## create geometry
+    # create geometry
     ground = geo.Polygon(
         [[0, 0, 0], [X, 0, 0], [X, Y, 0], [0, Y, 0]], [1, 0, 0], [0, 0, 1])
     A_wall = geo.Polygon(
@@ -422,7 +413,7 @@ def test_RadiosityDirectional_read_write(tmpdir):
         [[0, Y, 0], [X, Y, 0], [X, Y, Z], [0, Y, Z]], [1, 0, 0], [0, -1, 0])
     source = SoundSource([10, 6, 1], [0, 1, 0], [0, 0, 1])
 
-    ## new approach
+    # new approach
     radi = radiosity.DirectionalRadiosity(
         [ground, A_wall, B_wall], patch_size, max_order_k, ir_length_s,
         path_sofa, speed_of_sound=343, sampling_rate=sampling_rate)
@@ -463,3 +454,4 @@ def test_RadiosityDirectional_read_write(tmpdir):
             patch_reconstructed.sound_attenuation_factor)
         np.testing.assert_array_equal(
             patch.E_matrix, patch_reconstructed.E_matrix)
+
