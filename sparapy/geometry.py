@@ -2,7 +2,6 @@
 import matplotlib.axes
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry import Polygon as pol
 
 from sparapy.sound_object import Receiver, SoundSource
 
@@ -84,38 +83,8 @@ class Polygon():
 
     @property
     def center(self) -> np.ndarray:
-        """Return the center coordinates of the polygon / center of area."""
-        
-        ref = np.tile(self.pts[0], (self.pts.shape[0],1))
-        polygon = self.pts - ref
-        polygon2 = np.roll(polygon, -1, axis=0)
-        
-        if self.pts.shape[0] == 4:
-            
-            polygon3 = np.roll(polygon,-2, axis=0)
-            side_vecs = (polygon-polygon2)/np.transpose(np.tile(np.linalg.norm(polygon-polygon2,axis=-1),(3,1)))
-            diag_vecs = (polygon-polygon3)/np.transpose(np.tile(np.linalg.norm(polygon-polygon3,axis=-1),(3,1)))
-            
-            irregular = (abs(np.inner(diag_vecs[0],diag_vecs[1]) > 10**-10)) and (abs(np.inner(side_vecs[0],side_vecs[2])) < 1-10**-10) and (abs(np.inner(side_vecs[1],side_vecs[3])) < 1-10**-10)
-        
-        elif self.pts.shape[0]>4:
-            irregular=True 
-        else:
-            irregular=False
-            
-        if irregular:
-            
-            # Compute signed area of each triangle
-            signed_areas = 0.5 * np.cross(polygon, polygon2)
-
-            # Compute centroid of each triangle
-            centroids = (polygon + polygon2) / 3.0
-
-            # Get average of those centroids, weighted by the signed areas.
-            return np.average(centroids, axis=0, weights=np.linalg.norm(signed_areas, axis=-1))+self.pts[0]
-        
-        else:
-            return np.sum(self.pts, axis=0) / self.n_points
+        """Return the center coordinates of the polygon."""
+        return np.sum(self.pts, axis=0) / self.n_points
 
     @property
     def n_points(self) -> int:
