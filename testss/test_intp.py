@@ -68,7 +68,14 @@ def test_brdf_intp_measured(sample_walls, mdist):
     radi.set_wall_scattering(
     np.arange(len(sample_walls)), data, sources, receivers)
 
-    true_factors, tsour, trec = pf.io.read_sofa("testss\\brdf_examples\\brdf_s"+str(sigma)+"_10.sofa")
+    if sigma == 0:
+        sig = "0"
+    elif sigma ==1:
+        sig = "1"
+    else:
+        sig = str(sigma)
+
+    true_factors, tsour, trec = pf.io.read_sofa("testss\\brdf_examples\\brdf_s"+sig+"_5.sofa")
 
     if np.iscomplexobj(true_factors):
         true_factors = true_factors.freq.real.astype(np.float64)
@@ -94,6 +101,28 @@ def test_brdf_intp_measured(sample_walls, mdist):
     rms_err = np.sqrt(np.mean(err**2))
     max_err = max(err)
     min_err = min(err)
+    
+    fig,ax = plt.subplots(1,3)
+    im=ax[0].imshow(tf, cmap='jet', interpolation='nearest')
+   # plt.colorbar()
+    ax[0].set_title("true factors")
+    im=ax[1].imshow(sc_factors, cmap='jet', interpolation='nearest')
+   # plt.colorbar()
+    ax[1].set_title("estimation")
+    im=ax[2].imshow( abs(sc_factors-tf), cmap='jet', interpolation='nearest')
+    #plt.colorbar()
+    ax[2].set_title("error")
+    ax[0].set_xlim([0,250])
+    ax[0].set_ylim([0,250])
+    ax[1].set_xlim([0,250])
+    ax[1].set_ylim([0,250])
+    ax[2].set_xlim([0,250])
+    ax[2].set_ylim([0,250])
+    
+    fig.colorbar(im, ax=ax.ravel().tolist())
+    
+    plt.savefig(str(sigma)+"_"+str(ang)+".png")
+    plt.show()
 
     assert mean_err < 0.01
     assert rms_err < 0.01
