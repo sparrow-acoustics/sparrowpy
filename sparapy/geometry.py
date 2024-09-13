@@ -2,7 +2,6 @@
 import matplotlib.axes
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry import Polygon as pol
 
 from sparapy.sound_object import Receiver, SoundSource
 
