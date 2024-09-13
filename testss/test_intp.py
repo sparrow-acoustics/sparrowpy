@@ -7,6 +7,7 @@ import pyfar as pf
 import sparapy as sp
 
 import matplotlib.pyplot as plt
+import sparapy.radiosity_fast.geometry as geo
 
 
 from sparapy.radiosity_fast import geometry as geom
@@ -58,6 +59,8 @@ def test_brdf_intp_theoretical(sample_walls, posh, posj, dist):
 def test_brdf_intp_measured(sample_walls, mdist):
     radi = sp.DRadiosityFast.from_polygon(sample_walls, 1)
 
+    wallid=2
+
     dist, ang, sigma = mdist
 
     data, sources, receivers = dist
@@ -80,7 +83,7 @@ def test_brdf_intp_measured(sample_walls, mdist):
     if np.iscomplexobj(true_factors):
         true_factors = true_factors.freq.real.astype(np.float64)
 
-    posi=radi.walls_center[2]
+    posi=radi.walls_center[wallid]
 
     sc_factors = np.zeros([tsour.x.shape[0],trec.x.shape[0],data.freq.shape[-1]])
     tf = np.zeros([tsour.x.shape[0],trec.x.shape[0],data.freq.shape[-1]])
@@ -91,6 +94,7 @@ def test_brdf_intp_measured(sample_walls, mdist):
             posj = posj / np.linalg.norm(posj, axis=-1) + posi
 
             sc_factors[i,j,:]=geom.get_scattering_data_dist(pos_h=posh, pos_i=posi, pos_j=posj, 
+                                                    i_normal=radi.walls_normal[wallid], i_view=radi.walls_up_vector[wallid],
                                                     sources=radi._sources, receivers=radi._receivers, 
                                                     wall_id_i=2, scattering=radi._scattering, 
                                                     scattering_index=radi._scattering_index, mode="inv_dist")
@@ -130,6 +134,21 @@ def test_brdf_intp_measured(sample_walls, mdist):
     assert min_err < 10**-6
            
            
+@pytest.mark.parametrize('elev', [
+    0,np.pi/3,np.pi/2,29*np.pi/60
+    ])     
+@pytest.mark.parametrize('azi', [
+    0,np.pi/4, np.pi/2, np.pi, 5*np.pi/3
+    ])   
+def test_angle_from_point(elev, azi):    
+           
+    pt = np.array([np.cos(azi)*np.cos(elev), np.sin(azi)*np.cos(elev), np.sin(elev)])
+    
+    angs = geo.get_relative_angles(point=pt, origin=np.array([0.,0.,0.]), normal=np.array([0.,0.,1.]), up=np.array([1.,0.,0.]))
+    
+    npt.assert_almost_equal(azi, angs[0])
+    npt.assert_almost_equal(elev, angs[1])
+
            
 # if i%round(sources.csize/5):
 # fig= plt.figure(figsize=plt.figaspect(0.5))

@@ -31,11 +31,11 @@ def get_scattering_data_receiver_index(
     receiver_idx = np.empty((n_patches), dtype=np.int64)
     # scattering_idx = np.empty((n_patches), dtype=np.int64)
     for i in range(n_patches):
-        difference_receiver = pos_i[i]-pos_j
-        difference_receiver /= np.linalg.norm(
-            difference_receiver)
+        diff_receiver = pos_i[i]-pos_j
+        diff_receiver /= np.linalg.norm(
+            diff_receiver)
         receiver_idx[i] = np.argmin(np.sum(
-            (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
+            (receivers[wall_id_i[i], :]-diff_receiver)**2, axis=-1),
             axis=-1)
         # scattering_idx[i] = scattering_index[wall_id_i[i]]
 
@@ -75,15 +75,15 @@ def get_scattering_data(
         scattering factor from directivity
 
     """
-    difference_source = pos_h-pos_i
-    difference_receiver = pos_i-pos_j
+    diff_source = pos_h-pos_i
+    diff_receiver = pos_i-pos_j
     # wall_id_i = int(patch_to_wall_ids[i])
-    difference_source /= np.linalg.norm(difference_source)
-    difference_receiver /= np.linalg.norm(difference_receiver)
+    diff_source /= np.linalg.norm(diff_source)
+    diff_receiver /= np.linalg.norm(diff_receiver)
     source_idx = np.argmin(np.sum(
-        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+        (sources[wall_id_i, :, :]-diff_source)**2, axis=-1))
     receiver_idx = np.argmin(np.sum(
-        (receivers[wall_id_i, :]-difference_receiver)**2, axis=-1))
+        (receivers[wall_id_i, :]-diff_receiver)**2, axis=-1))
     out = scattering[scattering_index[wall_id_i],
         source_idx, receiver_idx, :]
     
@@ -91,7 +91,7 @@ def get_scattering_data(
 
 #@numba.njit()
 def get_scattering_data_dist(
-        pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,
+        pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray, i_normal:np.ndarray, i_view: np.ndarray,
         sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
         scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", threshold=0.0001):
     """Get scattering data depending on previous, current and next position.
@@ -105,9 +105,9 @@ def get_scattering_data_dist(
     pos_j : np.ndarray
         next position of shape (3)
     sources : np.ndarray
-        source directions of all walls of shape (n_walls, n_sources, 3)
+        source angular directions of all walls of shape (n_walls, n_sources, 2)
     receivers : np.ndarray
-        receiver directions of all walls of shape (n_walls, n_receivers, 3)
+        receiver angular directions of all walls of shape (n_walls, n_receivers, 2)
     wall_id_i : np.ndarray
         current wall id to get write directional data
     scattering : np.ndarray
@@ -121,16 +121,17 @@ def get_scattering_data_dist(
         scattering factor from directivity
 
     """
-    difference_source = pos_h-pos_i
-    difference_receiver = pos_j-pos_i 
-    # wall_id_i = int(patch_to_wall_ids[i])
-    difference_source /= np.linalg.norm(difference_source)
-    difference_receiver /= np.linalg.norm(difference_receiver)
+    diff_source = pos_h-pos_i
+    diff_receiver = pos_j-pos_i 
+    diff_source /= np.linalg.norm(diff_source)
+    diff_receiver /= np.linalg.norm(diff_receiver)
+    
+    
 
     s_dist = np.sum(
-            (sources[wall_id_i].cartesian[:,:]-difference_source)**2, axis=-1)
+            (sources[wall_id_i].cartesian[:,:]-diff_source)**2, axis=-1)
     r_dist = np.sum(
-            (receivers[wall_id_i].cartesian[:,:]-difference_receiver)**2, axis=-1)
+            (receivers[wall_id_i].cartesian[:,:]-diff_receiver)**2, axis=-1)
 
     if mode == "nneighbor": 
         source_idx = np.argmin(s_dist)
@@ -199,13 +200,55 @@ def get_scattering_data_source(
         scattering factor from directivity
 
     """
-    difference_source = pos_h-pos_i
-    difference_source /= np.linalg.norm(difference_source)
+    diff_source = pos_h-pos_i
+    diff_source /= np.linalg.norm(diff_source)
     source_idx = np.argmin(np.sum(
-        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+        (sources[wall_id_i, :, :]-diff_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
 
+def get_relative_angles(point:np.ndarray, origin:np.ndarray, normal:np.ndarray, up:np.ndarray):
+    """Get scattering data depending on previous, current position.
 
+    Parameters
+    ----------
+    point : np.ndarray
+        cartesian point in space (3)
+    origin : np.ndarray
+        referential origin (global cartesian coordinates) (3)
+    normal : np.ndarray
+        referential normal vector (3)
+    up : np.ndarray
+        referential up vector(3)
+    
+
+    Returns
+    -------
+    angles: np.ndarray
+        azimuth and elevation angles of point relative to referential
+
+    """
+    pt = point-origin / np.linalg.norm(point-origin)
+    
+    proj_pt = pt - np.inner(pt,normal)/np.inner(normal,normal)*normal
+    
+    proj_pt/=np.linalg.norm(proj_pt)
+    
+    elevation = np.arcsin(np.inner(pt,normal))
+    
+    a = np.linalg.det(np.outer(up,proj_pt))
+    
+    if np.linalg.norm(proj_pt)==0:
+        azimuth = 0
+    else:
+        azimuth = np.arccos(np.inner(proj_pt,up)) 
+        if a!=0:
+            azimuth *= np.sign(a) 
+            
+        if np.sign(a) < 0:
+            azimuth += 2*np.pi
+        
+    return np.array([azimuth,elevation])
+    
 
 @numba.njit(parallel=True)
 def check_visibility(
