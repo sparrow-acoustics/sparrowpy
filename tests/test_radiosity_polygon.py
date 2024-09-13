@@ -90,3 +90,24 @@ def test_init_energy_matrix():
     assert ground_patches.E_sampling_rate == sampling_rate
     npt.assert_array_equal(
         ground_patches.E_matrix.shape, (1, max_order_k+1, 8, 1000))
+
+def test_centroid():
+    a=np.cos(np.pi/4)
+    square = geo.Polygon(points=[[-a,-1,-a],[-a,1,-a],[a,1,a],[a,-1,a]],up_vector=[0,1,0], normal=np.array([-1,0,1]))
+    
+    npt.assert_almost_equal(square.center[0],0) 
+    npt.assert_almost_equal(square.center[1],0)
+    npt.assert_almost_equal(square.center[2],0)
+    
+    triangle =  geo.Polygon(points=np.array([[0,2,0],[0,0,0],[1,0,0]]),up_vector=np.array([1,0,0]), normal=np.array([0,0,1]))
+    
+    npt.assert_almost_equal(triangle.center[0],1./3.) 
+    npt.assert_almost_equal(triangle.center[1],2./3.)
+    npt.assert_almost_equal(triangle.center[2],0)
+    
+    
+    irregular = geo.Polygon(points=[[-2,-1,0],[-2,1,1],[2,1,1],[2,-1,0]],up_vector=[0,1,0], normal=np.array([0,-.5,1]))
+    
+    npt.assert_almost_equal(irregular.center[0],0) 
+    npt.assert_almost_equal(irregular.center[1],0)
+    npt.assert_almost_equal(irregular.center[2],.5)
