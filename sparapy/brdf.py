@@ -200,18 +200,18 @@ def create_from_directional_scattering(
             np.zeros_like(directional_scattering.frequencies),
             directional_scattering.frequencies)
 
+
+
     data_out = np.zeros((
         source_directions.csize, receiver_directions.csize,
         directional_scattering.n_bins))
 
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
-    for i_source in range(source_directions.csize):
-        for i_receiver in range(receiver_directions.csize):
-            data_out[i_source, i_receiver, :] += (
-                directional_scattering.freq[i_source, i_receiver]) / (np.cos(
-                    source_directions.colatitude[
-                        i_source]) * receiver_weights[i_receiver])
+    cos_factor = (np.cos(
+            source_directions.colatitude) * receiver_weights)
+    cos_factor = np.sum(directional_scattering.freq * cos_factor[..., np.newaxis], axis=1, keepdims=True)
+    data_out[:, :, :] += directional_scattering[:].freq / cos_factor
 
     data_out *= (1 - absorption_coefficient.freq.flatten())
     sofa = _create_sofa(
