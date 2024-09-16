@@ -129,10 +129,19 @@ def create_from_directional_scattering(
         directional_scattering,
         absorption_coefficient=None,
         ):
-    r"""Create the BRDF from a scattering coefficient and write to SOFA file.
+    r"""Create the BRDF from the directional scattering and write to SOFA file.
 
     The directional scattering coefficient is assumed to be anisotropic.
-    The BRDF is discretized as follows:
+    The sum of the directional scattering coefficient has be equal to 1.
+
+    .. math::
+        \sum_{\forall \Omega_e}
+        s_{directional}(\Omega_i, \Omega_e) = 1
+
+    The BRDF is defined by the integral over the directional scattering to be :math:`2\pi`:
+
+    .. math::
+        \sum_{\forall \Omega_e} \rho(\Omega_i, \Omega_e) \cdot (\Omega_i \cdot \mathbf{n}_i) \cdot w_e = 1
 
     .. math::
         \rho(\Omega_i, \Omega_e) = \frac{(1-s)(1-\alpha)}{\Omega_i \cdot
@@ -207,7 +216,7 @@ def create_from_directional_scattering(
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
     cos_factor = (np.cos(
-            source_directions.colatitude) * receiver_weights)
+        receiver_directions.colatitude) * receiver_weights)
     cos_factor = np.sum(
         directional_scattering.freq * cos_factor[..., np.newaxis],
         axis=1, keepdims=True)
