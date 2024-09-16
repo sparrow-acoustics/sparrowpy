@@ -134,7 +134,7 @@ def test_brdf_intp_measured(sample_walls, mdist):
     assert min_err < 10**-6
  
  
- @pytest.mark.parametrize('method', [
+@pytest.mark.parametrize('method', [
     ["nneighbor",0],
     ["inv_dist",1],
     ["inv_dist",2],
