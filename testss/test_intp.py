@@ -132,7 +132,69 @@ def test_brdf_intp_measured(sample_walls, mdist):
     assert rms_err < 0.01
     assert max_err < 0.05
     assert min_err < 10**-6
-           
+ 
+ 
+ @pytest.mark.parametrize('method', [
+    ["nneighbor",0],
+    ["inv_dist",1],
+    ["inv_dist",2],
+    ["inv_dist",3],
+    ["inv_dist",4],
+    ["inv_dist",5],    
+    ])    
+        
+def test_bdrf_energy_conservation(sample_walls, mdist, method):
+    radi = sp.DRadiosityFast.from_polygon(sample_walls, 1)
+
+    wallid=2
+
+    dist, ang, sigma = mdist
+
+    data, sources, receivers = dist
+    
+    if np.iscomplexobj(data.freq):
+        data.freq = data.freq.real.astype(np.float64)
+    
+    radi.set_wall_scattering(
+    np.arange(len(sample_walls)), data, sources, receivers)
+
+    if sigma == 0:
+        sig = "0"
+    elif sigma ==1:
+        sig = "1"
+    else:
+        sig = str(sigma)
+
+    tsour = pf.samplings.sph_equal_angle(delta_angles=9)
+    tsour= tsour[tsour.z>0]
+    trec = tsour
+
+    posi=radi.walls_center[wallid]
+
+    sc_factors = np.zeros([tsour.x.shape[0],trec.x.shape[0],data.freq.shape[-1]])
+
+    src = np.array([radi._sources[wallid].azimuth[:],radi._sources[wallid].elevation[:]]).transpose()
+    rec = np.array([radi._receivers[wallid].azimuth[:],radi._receivers[wallid].elevation[:]]).transpose()
+
+    for i,posh in enumerate(tsour.cartesian):
+        posh = posh / np.linalg.norm(posh, axis=-1) + posi
+        for j,posj in enumerate(trec.cartesian):
+            posj = posj / np.linalg.norm(posj, axis=-1) + posi
+
+            sc_factors[i,j,:]=geom.get_scattering_data_dist(pos_h=posh, pos_i=posi, pos_j=posj, 
+                                                    i_normal=radi.walls_normal[wallid], i_up=radi.walls_up_vector[wallid],
+                                                    sources=src, receivers=rec, 
+                                                    wall_id_i=2, scattering=radi._scattering, 
+                                                    scattering_index=radi._scattering_index, mode=method[0], order=method[1])
+
+
+    energy_in = np.mean(data.freq[:,:,:].real)
+    energy_out = np.mean(sc_factors)
+
+    rel=np.abs(energy_in-energy_out)/energy_in    
+    assert rel < .1 
+    assert rel < .05
+    assert rel < .01
            
 @pytest.mark.parametrize('elev', [
     0,np.pi/3,np.pi/2,29*np.pi/60
