@@ -21,7 +21,7 @@ IMPORTANT: IN THE REPOSITORY, BOTH `CREATE_BASELINE` AND `COMPARE_OUTPUT` NEED
 TO BE SET TO FALSE, SO THE CIRCLE-CI CHECKS DO NOT FAIL.
 """
 # global parameters -----------------------------------------------------------
-create_baseline = False
+create_baseline = True
 
 # file type used for saving the plots
 file_type = "png"
@@ -80,6 +80,36 @@ def test_brdf_with_source(function, brdf_s_0):
     filename = function.__name__ + '_source'
     create_figure()
     function(r, np.abs(data.freq[1, :, 0]), source_pos=s[1])
+    save_and_compare(
+        create_baseline, baseline_path, output_path, filename,
+        file_type, compare_output)
+
+
+def test_patches_one():
+    filename =  'patches_default'
+    create_figure()
+    sp.plot.patches(
+        np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]),
+        np.array([1]))
+
+    # initial plot
+    save_and_compare(
+        create_baseline, baseline_path, output_path, filename,
+        file_type, compare_output)
+
+
+
+def test_patches_2():
+    filename =  'patches_2_patches'
+    create_figure()
+    sp.plot.patches(
+        np.array([
+            [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+            [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
+             ]),
+        np.array([0, 1]))
+
+    # initial plot
     save_and_compare(
         create_baseline, baseline_path, output_path, filename,
         file_type, compare_output)

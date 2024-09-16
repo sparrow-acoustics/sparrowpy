@@ -154,3 +154,33 @@ def brdf_polar(
         norm=mpl.colors.Normalize(0, np.max(data_in)), cmap=cmap),
         ax=ax, orientation='vertical')
     return ax
+
+
+def patches(patches_points, energy, ax=None):
+    """Show the energy of the patches in 3d.
+
+    Parameters
+    ----------
+    patches_points : np.ndarray, list
+        The points of the patches of shape (#patches, #points, 3).
+    energy : _type_
+        energy for each patch of shape (#patches,).
+    ax : matplotlib.axes.Axes, optional
+        The axes to plot on., by default None
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes to plot on.
+
+    """
+    if ax is None:
+        ax = plt.axes(projection='3d')
+
+    cmap = cm.viridis
+    if len(patches_points.shape) == 2:
+        patches_points = np.array([patches_points])
+
+    for i in range(patches_points.shape[0]):
+        ax.add_collection3d(Poly3DCollection(
+            patches_points[i][np.newaxis, ...], color=cmap(energy[i])))
