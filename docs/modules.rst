@@ -11,3 +11,4 @@ according to their modules.
    modules/sparapy.geometry
    modules/sparapy.sound_object
    modules/sparapy.brdf
+   modules/sparapy.plot
