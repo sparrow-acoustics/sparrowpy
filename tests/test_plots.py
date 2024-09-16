@@ -18,13 +18,13 @@ updated and manually inspected and if the plot look changed.
 parameter `compare_output`. This function should only be activated if intended.
 
 IMPORTANT: IN THE REPOSITORY, BOTH `CREATE_BASELINE` AND `COMPARE_OUTPUT` NEED
-TO BE SET TO FALSE, SO THE TRAVIS-CI CHECKS DO NOT FAIL.
+TO BE SET TO FALSE, SO THE CIRCLE-CI CHECKS DO NOT FAIL.
 """
 # global parameters -----------------------------------------------------------
 create_baseline = False
 
 # file type used for saving the plots
-file_type = "pgf"
+file_type = "png"
 
 # if true, the plots will be compared to the baseline and an error is raised
 # if there are any differences. In any case, differences are written to
