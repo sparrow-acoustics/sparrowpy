@@ -41,6 +41,7 @@ def get_scattering_data_receiver_index(
 
     return receiver_idx
 
+@numba.njit()
 def get_relative_angles(point:np.ndarray, origin:np.ndarray, normal:np.ndarray, up:np.ndarray):
     """Get scattering data depending on previous, current position.
 
@@ -64,20 +65,20 @@ def get_relative_angles(point:np.ndarray, origin:np.ndarray, normal:np.ndarray, 
     """
     pt = point-origin / np.linalg.norm(point-origin)
     
-    a = np.inner(normal,np.cross(up,pt))
+    a = np.dot(normal,np.cross(up,pt))
     
     if a==0:
         azimuth = 0
     else:
-        proj_pt = pt - np.inner(pt,normal)/np.inner(normal,normal)*normal
+        proj_pt = pt - np.dot(pt,normal)/np.dot(normal,normal)*normal
         proj_pt/=np.linalg.norm(proj_pt)
         
-        azimuth = np.sign(a)*np.arccos(np.inner(proj_pt,up)) 
+        azimuth = np.sign(a)*np.arccos(np.dot(proj_pt,up)) 
             
         if np.sign(a) < 0:
             azimuth += 2*np.pi
             
-    elevation = np.arcsin(np.inner(pt,normal))
+    elevation = np.arcsin(np.dot(pt,normal))
         
     return np.array([azimuth,elevation])
 
@@ -132,7 +133,7 @@ def get_scattering_data_dist(
         pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray, i_normal:np.ndarray, i_up
         : np.ndarray,
         sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
-        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", threshold=0.0001):
+        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", threshold=0.0001, order=1):
     """Get scattering data depending on previous, current and next position.
 
     Parameters
@@ -186,14 +187,14 @@ def get_scattering_data_dist(
             w_s = [1.]
         else:
             source_idx = np.argpartition(-s_dist,-3)[-3:]
-            w_s = 1/(s_dist[source_idx])
+            w_s = 1/(s_dist[source_idx]**order)
 
         if (r_dist < threshold).any():
             receiver_idx = np.array([np.argmin(r_dist)])
             w_r = [1.]
         else:
             receiver_idx = np.argpartition(-r_dist,-3)[-3:]
-            w_r = 1/(r_dist[receiver_idx])
+            w_r = 1/(r_dist[receiver_idx]**order)
         
             
         out = np.zeros([scattering[0].shape[-1]])
