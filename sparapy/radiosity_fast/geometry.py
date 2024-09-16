@@ -229,23 +229,20 @@ def get_relative_angles(point:np.ndarray, origin:np.ndarray, normal:np.ndarray, 
     """
     pt = point-origin / np.linalg.norm(point-origin)
     
-    proj_pt = pt - np.inner(pt,normal)/np.inner(normal,normal)*normal
+    a = np.inner(normal,np.cross(up,pt))
     
-    proj_pt/=np.linalg.norm(proj_pt)
-    
-    elevation = np.arcsin(np.inner(pt,normal))
-    
-    a = np.linalg.det(np.outer(up,proj_pt))
-    
-    if np.linalg.norm(proj_pt)==0:
+    if a==0:
         azimuth = 0
     else:
-        azimuth = np.arccos(np.inner(proj_pt,up)) 
-        if a!=0:
-            azimuth *= np.sign(a) 
+        proj_pt = pt - np.inner(pt,normal)/np.inner(normal,normal)*normal
+        proj_pt/=np.linalg.norm(proj_pt)
+        
+        azimuth = np.sign(a)*np.arccos(np.inner(proj_pt,up)) 
             
         if np.sign(a) < 0:
             azimuth += 2*np.pi
+            
+    elevation = np.arcsin(np.inner(pt,normal))
         
     return np.array([azimuth,elevation])
     
