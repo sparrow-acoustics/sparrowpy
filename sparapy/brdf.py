@@ -136,7 +136,7 @@ def create_from_directional_scattering(
 
     .. math::
         \sum_{\forall \Omega_r}
-        s_{directional}(\Omega_i, \Omega_r) = 1
+        s_{d}(\Omega_i, \Omega_r) = 1
 
     The BRDF is defined by the integral over the directional scattering
     to be equal to 1 [1]_.
@@ -149,20 +149,17 @@ def create_from_directional_scattering(
 
     .. math::
         \rho(\Omega_i, \Omega_r) = \frac{(1-\alpha) \cdot
-        s_{directional}(\Omega_i, \Omega_r)}{
-        \sum_{\forall \Omega_r} s_{directional}(\Omega_i, \Omega_r) \cdot
+        s_{d}(\Omega_i, \Omega_r)}{
+        \sum_{\forall \Omega_r} s_{d}(\Omega_i, \Omega_r) \cdot
         (\Omega_r \cdot \mathbf{n}_r) \cdot w_r}
 
     where:
         - :math:`\Omega_i` and :math:`\Omega_r` are the incident and exitant
           directions, respectively.
-        - :math:`s` is the scattering coefficient.
+        - :math:`s_{d}` is the directional scattering coefficient [1]_.
         - :math:`\alpha` is the absorption coefficient.
         - :math:`\mathbf{n}_i` is the normal vector.
-        - :math:`\delta` is the Dirac delta function.
         - :math:`w_r` is weighting factor of the angular sector (unit sphere).
-        - :math:`M` s the mirror reflection transformation
-          :math:`M(\theta, \phi)=M(\theta, \pi-\phi)`.
 
     Note that the weights doesn't need to be normalized,
     they get scaled as required.
