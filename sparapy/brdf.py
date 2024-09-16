@@ -135,21 +135,26 @@ def create_from_directional_scattering(
     The sum of the directional scattering coefficient has be equal to 1.
 
     .. math::
-        \sum_{\forall \Omega_e}
-        s_{directional}(\Omega_i, \Omega_e) = 1
+        \sum_{\forall \Omega_r}
+        s_{directional}(\Omega_i, \Omega_r) = 1
 
-    The BRDF is defined by the integral over the directional scattering to be :math:`2\pi`:
-
-    .. math::
-        \sum_{\forall \Omega_e} \rho(\Omega_i, \Omega_e) \cdot (\Omega_i \cdot \mathbf{n}_i) \cdot w_e = 1
+    The BRDF is defined by the integral over the directional scattering
+    to be equal to 1 [1]_.
 
     .. math::
-        \rho(\Omega_i, \Omega_e) = \frac{(1-s)(1-\alpha)}{\Omega_i \cdot
-        \mathbf{n}_i} \frac{1}{w_r} \delta(\Omega_i-M(\Omega_e)) +
-        \frac{s(1-\alpha)}{\pi}
+        \sum_{\forall \Omega_r} \rho(\Omega_i, \Omega_r) \cdot
+        (\Omega_r \cdot \mathbf{n}_r) \cdot w_r = 1
+
+    The BRDF is calculated as follows:
+
+    .. math::
+        \rho(\Omega_i, \Omega_r) = \frac{(1-\alpha) \cdot
+        s_{directional}(\Omega_i, \Omega_r)}{
+        \sum_{\forall \Omega_r} s_{directional}(\Omega_i, \Omega_r) \cdot
+        (\Omega_r \cdot \mathbf{n}_r) \cdot w_r}
 
     where:
-        - :math:`\Omega_i` and :math:`\Omega_e` are the incident and exitant
+        - :math:`\Omega_i` and :math:`\Omega_r` are the incident and exitant
           directions, respectively.
         - :math:`s` is the scattering coefficient.
         - :math:`\alpha` is the absorption coefficient.
@@ -173,7 +178,7 @@ def create_from_directional_scattering(
         receiver directions for the BRDF, should contain weights.
         cshape of data should be (n_receivers)
     directional_scattering : :py:class:`~pyfar.classes.audio.FrequencyData`
-        frequency dependent directional scattering coefficient data from [#]_.
+        frequency dependent directional scattering coefficient data from [1]_.
         cshape of data should be (n_sources, n_receivers).
     absorption_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
         frequency dependent absorption coefficient data, by default
@@ -182,7 +187,7 @@ def create_from_directional_scattering(
 
     References
     ----------
-    .. [#]  A. Heimes and M. Vorländer, “A new scattering metric for
+    .. [1]  A. Heimes and M. Vorländer, “A new scattering metric for
             auralization in urban environments,” in Fortschritte der
             Akustik - DAGA 2024, Hamburg: Deutsche Gesellschaft für Akustik
             e.V. (DEGA), Berlin, 2023, 2024, pp. 1660–1661. [Online].
