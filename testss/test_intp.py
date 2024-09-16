@@ -34,19 +34,19 @@ def special_scattering(sampling):
     ])
 def test_brdf_intp_theoretical(sample_walls, posh, posj, dist):
     radi = sp.DRadiosityFast.from_polygon(sample_walls, 1)
-
+    wallid=2
     data, sources, receivers = dist
     radi.set_wall_scattering(
     np.arange(len(sample_walls)), data, sources, receivers)
 
-    posi=radi.walls_center[2]
+    posi=radi.walls_center[wallid]
 
     posh = posh / np.linalg.norm(posh, axis=-1) + posi
     posj = posj / np.linalg.norm(posj, axis=-1) + posi
 
-    sc_factor=geom.get_scattering_data_dist(pos_h=posh, pos_i=posi, pos_j=posj, 
-                                            sources=radi._sources, receivers=radi._receivers, 
-                                            wall_id_i=2, scattering=radi._scattering, 
+    sc_factor=geom.get_scattering_data_dist(pos_h=posh, pos_i=posi, pos_j=posj, i_normal=radi.walls_normal[wallid],
+                                            i_up=radi.walls_up_vector[wallid], sources=radi._sources, receivers=radi._receivers, 
+                                            wall_id_i=wallid, scattering=radi._scattering, 
                                             scattering_index=radi._scattering_index, mode="inv_dist")
 
     true_factor = np.sqrt((posj-posi)[1]**2 + (posh-posi)[0]**2)
@@ -94,7 +94,7 @@ def test_brdf_intp_measured(sample_walls, mdist):
             posj = posj / np.linalg.norm(posj, axis=-1) + posi
 
             sc_factors[i,j,:]=geom.get_scattering_data_dist(pos_h=posh, pos_i=posi, pos_j=posj, 
-                                                    i_normal=radi.walls_normal[wallid], i_view=radi.walls_up_vector[wallid],
+                                                    i_normal=radi.walls_normal[wallid], i_up=radi.walls_up_vector[wallid],
                                                     sources=radi._sources, receivers=radi._receivers, 
                                                     wall_id_i=2, scattering=radi._scattering, 
                                                     scattering_index=radi._scattering_index, mode="inv_dist")
