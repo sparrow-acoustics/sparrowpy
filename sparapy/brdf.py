@@ -121,7 +121,6 @@ def create_from_scattering(
     sf.write_sofa(file_path, sofa)
 
 
-
 def create_from_directional_scattering(
         file_path,
         source_directions,
@@ -252,7 +251,7 @@ def _create_sofa(
     """
     # create empty SOFA object
     convention = (
-        'GeneralTF' if type(data) == pf.FrequencyData else 'GeneralFIR'
+        'GeneralTF' if type(data) is pf.FrequencyData else 'GeneralFIR'
     )
 
     sofa = sf.Sofa(convention)
@@ -277,7 +276,7 @@ def _create_sofa(
     sofa.ReceiverPosition_Units = 'meter'
     sofa.ReceiverPosition_Type = 'cartesian'
 
-    if type(data) == pf.FrequencyData:
+    if type(data) is pf.FrequencyData:
         sofa.N = data.frequencies
 
         # HRTF/HRIR data

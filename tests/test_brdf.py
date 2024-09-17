@@ -13,14 +13,15 @@ import sofar as sf
 def check_energy_conservation(
         receivers, receiver_weights, data, absorption_data=0):
     integration_weights = receiver_weights
-    integration_weights *= 2*np.pi/np.sum(integration_weights)
-    integration_weights = integration_weights*np.cos(receivers.colatitude)
+    integration_weights *= 2 * np.pi / np.sum(integration_weights)
+    integration_weights = integration_weights * np.cos(receivers.colatitude)
     integration_weights = integration_weights[..., np.newaxis]
     for i_source in range(data.cshape[0]):
-        energy = np.sum(data.freq[i_source]*integration_weights, axis=0)
+        energy = np.sum(data.freq[i_source] * integration_weights, axis=0)
         npt.assert_almost_equal(
             energy, 1 - absorption_data, decimal=1,
             err_msg=f"source {i_source}")
+
 
 def check_reciprocity(data):
     for i_source in range(data.cshape[0]):
@@ -28,6 +29,7 @@ def check_reciprocity(data):
             npt.assert_almost_equal(
                 data.freq[i_source, i_receiver],
                 data.freq[i_receiver, i_source])
+
 
 def test_create_from_scattering_with_valid_data(tmpdir):
     # Prepare test data
@@ -120,7 +122,7 @@ def test_create_from_scattering_0_3(tmpdir):
     assert data.freq.shape == (4, 4, 3)
     assert data.freq.shape == (s.csize, r.csize, 3)
     desired_scat = scattering_data / np.pi
-    desired_spec = 0.86735342-desired_scat
+    desired_spec = 0.86735342 - desired_scat
 
     # test
     npt.assert_almost_equal(data.freq[0, 2], desired_spec + desired_scat)
@@ -200,11 +202,11 @@ def test_create_from_scattering_energy_conservation(
 
     # test energy conservation
     integration_weights = sofa.ReceiverWeights
-    integration_weights *= 2*np.pi/np.sum(integration_weights)
-    integration_weights = integration_weights*np.cos(r.colatitude)
+    integration_weights *= 2 * np.pi / np.sum(integration_weights)
+    integration_weights = integration_weights * np.cos(r.colatitude)
     integration_weights = integration_weights[..., np.newaxis]
     for i_source in range(s.csize):
-        energy = np.sum(data.freq[i_source]*integration_weights, axis=0)
+        energy = np.sum(data.freq[i_source] * integration_weights, axis=0)
         npt.assert_almost_equal(energy, 1 - absorption_data, decimal=1)
 
 
@@ -256,12 +258,13 @@ def test_directional_energy_conservation_specular(
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
         )
     sofa = sf.read_sofa(file_path)
-    data, s, r = pf.io.convert_sofa(sofa)
+    data, _s, r = pf.io.convert_sofa(sofa)
 
     # test energy conservation and reciprocity
     check_energy_conservation(
         r, sofa.ReceiverWeights, data, absorption_data)
     check_reciprocity(data)
+
 
 @pytest.mark.parametrize('absorption_data', [0])
 @pytest.mark.parametrize('sh_order', [5, 11])
@@ -284,14 +287,14 @@ def test_directional_energy_conservation_diffuse(
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
         )
     sofa = sf.read_sofa(file_path)
-    data, s, r = pf.io.convert_sofa(sofa)
+    data, _s, r = pf.io.convert_sofa(sofa)
 
     # test energy conservation and reciprocity
     check_energy_conservation(
         r, sofa.ReceiverWeights, data, absorption_data)
     check_reciprocity(data)
 
-    npt.assert_almost_equal(data.freq, 1/np.pi, decimal=2)
+    npt.assert_almost_equal(data.freq, 1 / np.pi, decimal=2)
 
 
 @pytest.mark.parametrize('absorption_data', [0, 0.3, 1])
@@ -314,7 +317,7 @@ def test_directional_reciprocal_principle_specular(
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
         )
     sofa = sf.read_sofa(file_path)
-    data, s, r = pf.io.convert_sofa(sofa)
+    data, _, r = pf.io.convert_sofa(sofa)
 
     # test energy conservation and reciprocity
     check_energy_conservation(
@@ -346,7 +349,7 @@ def test_directional_energy_conservation_two_directions(
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
         )
     sofa = sf.read_sofa(file_path)
-    data, s, r = pf.io.convert_sofa(sofa)
+    data, _s, r = pf.io.convert_sofa(sofa)
 
     # test energy conservation and reciprocity
     check_energy_conservation(
@@ -378,7 +381,7 @@ def test_directional_energy_conservation_two_directions_rand(
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
         )
     sofa = sf.read_sofa(file_path)
-    data, s, r = pf.io.convert_sofa(sofa)
+    data, _s, r = pf.io.convert_sofa(sofa)
 
     # test energy conservation and reciprocity
     check_energy_conservation(
@@ -395,7 +398,8 @@ def test_directional_random_directional_scattering(
     file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
-    scattering_data = np.random.rand(coords.csize, coords.csize, 3)
+    rng = np.random.default_rng(1337)
+    scattering_data = rng.random((coords.csize, coords.csize, 3))
     scattering_data /= np.sum(scattering_data, axis=1, keepdims=True)
     npt.assert_almost_equal(np.sum(scattering_data, axis=1), 1)
 
@@ -406,7 +410,7 @@ def test_directional_random_directional_scattering(
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
         )
     sofa = sf.read_sofa(file_path)
-    data, s, r = pf.io.convert_sofa(sofa)
+    data, _, r = pf.io.convert_sofa(sofa)
 
     # test energy conservation and reciprocity
     check_energy_conservation(
