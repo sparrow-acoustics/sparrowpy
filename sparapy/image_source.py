@@ -175,13 +175,16 @@ def filter_image_sources(ISList, WallsHesse, ReceiverPos):
 
 
 def calculate_impulse_response(ISList, WallsR, ReceiverPos):
-    c0 = 340.0
-    sampling_rate = 1000
+    c0 = 346.18
+    sampling_rate = 10000 #normally 44100
 
     longest_distance = 0.0
 
-    for mis in ISList:
-        dis = np.linalg.norm(mis['Position'] - ReceiverPos)
+    for ind, mis in enumerate(ISList):
+        
+        im_source = np.array(mis.Position)
+        receiver = np.array(ReceiverPos)
+        dis = np.linalg.norm(im_source - receiver)
         if dis > longest_distance:
             longest_distance = dis
 
@@ -189,11 +192,15 @@ def calculate_impulse_response(ISList, WallsR, ReceiverPos):
     T_rounded = np.ceil(20 * T) / 20
     IR = np.zeros(round(T_rounded * sampling_rate) + 1)
 
-    for mis in ISList:
+    for ind, mis in enumerate(ISList):
         imagesource = mis
-        order = float(imagesource['Order'])
-        distance = np.linalg.norm(imagesource['Position'] - ReceiverPos)
+        order = float(imagesource.Order)
+        im_source = np.array(mis.Position)
+        receiver = np.array(ReceiverPos)
+        distance = np.linalg.norm(im_source - receiver)
         t = distance / c0
-        t_index = round(t * sampling_rate) + 1
+        t_index = round(t * sampling_rate) #aslinya tadi +1
         pressure = (1 / distance) * (WallsR ** order)
         IR[t_index] = pressure
+    
+    return IR
