@@ -369,8 +369,11 @@ def test_directional_energy_conservation_two_directions_rand(
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
     scattering_data[
         np.arange(coords.csize), np.arange(coords.csize)] = 0.5
+    specular_coords = coords.copy()
+    specular_coords.azimuth += np.pi
+    idx = coords.find_nearest(specular_coords)[0]
     scattering_data[
-        np.arange(coords.csize), np.arange(coords.csize)[::-1]] += 0.5
+        np.arange(coords.csize), idx] += 0.5
     npt.assert_array_equal(np.sum(scattering_data, axis=1), 1)
 
     # Call the function
@@ -386,7 +389,7 @@ def test_directional_energy_conservation_two_directions_rand(
     # test energy conservation and reciprocity
     check_energy_conservation(
         r, sofa.ReceiverWeights, data, absorption_data)
-    # check_reciprocity(data)
+    check_reciprocity(data)
 
 
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
