@@ -102,7 +102,7 @@ def create_from_scattering(
     image_source.azimuth += np.pi
     i_receiver = receiver_directions.find_nearest(image_source)[0][0]
     cos_factor = (np.cos(
-            source_directions.colatitude) * receiver_weights)
+            receiver_directions.colatitude) * receiver_weights)
     cos_factor = cos_factor[..., np.newaxis]
     scattering_factor = 1 - scattering_flattened[np.newaxis, ...]
     data_out[:, :, :] += (
@@ -217,15 +217,8 @@ def create_from_directional_scattering(
 
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
-    source_weights = source_directions.weights
-    source_weights *= 2 * np.pi / np.sum(source_weights)
     cos_factor = (np.cos(
-        source_directions.colatitude[:, np.newaxis]) * receiver_weights[
-            np.newaxis, :])
-    cos_factor = np.cos(receiver_directions.colatitude) * receiver_weights
-    # cos_factor = np.sum(
-    #     directional_scattering.freq * cos_factor[..., np.newaxis],
-    #     axis=1, keepdims=True)
+            receiver_directions.colatitude) * receiver_weights)
     cos_factor = cos_factor[..., np.newaxis]
     data_out[:, :, :] += directional_scattering.freq / cos_factor
 
