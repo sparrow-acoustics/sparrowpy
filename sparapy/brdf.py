@@ -133,25 +133,11 @@ def create_from_directional_scattering(
 
     The directional scattering coefficient is assumed to be anisotropic.
     The sum of the directional scattering coefficient has be equal to 1.
+    Therefore the BRDF is calculated as follows:
 
     .. math::
-        \sum_{\forall \Omega_r}
-        s_{d}(\Omega_i, \Omega_r) = 1
-
-    The BRDF is defined by the integral over the directional scattering
-    to be equal to 1 [1]_.
-
-    .. math::
-        \sum_{\forall \Omega_r} \rho(\Omega_i, \Omega_r) \cdot
-        (\Omega_r \cdot \mathbf{n}_r) \cdot w_r = 1
-
-    The BRDF is calculated as follows:
-
-    .. math::
-        \rho(\Omega_i, \Omega_r) = \frac{(1-\alpha) \cdot
-        s_{d}(\Omega_i, \Omega_r)}{
-        \sum_{\forall \Omega_r} s_{d}(\Omega_i, \Omega_r) \cdot
-        (\Omega_r \cdot \mathbf{n}_r) \cdot w_r}
+        \rho(\Omega_i, \Omega_r) = \frac{(1-\alpha)}{
+        (\Omega_r \cdot \mathbf{n}_r) \cdot w_r} s_{d}(\Omega_i, \Omega_r)
 
     where:
         - :math:`\Omega_i` and :math:`\Omega_r` are the incident and exitant
@@ -187,7 +173,7 @@ def create_from_directional_scattering(
     .. [1]  A. Heimes and M. Vorländer, “A new scattering metric for
             auralization in urban environments,” in Fortschritte der
             Akustik - DAGA 2024, Hamburg: Deutsche Gesellschaft für Akustik
-            e.V. (DEGA), Berlin, 2023, 2024, pp. 1660–1661. [Online].
+            e.V. (DEGA), Berlin, 2023, 2024, pp. 1660-1661. [Online].
             Available:
             https://pub.dega-akustik.de/DAGA_2024/files/upload/paper/531.pdf
 
@@ -210,17 +196,19 @@ def create_from_directional_scattering(
         absorption_coefficient = pf.FrequencyData(
             np.zeros_like(directional_scattering.frequencies),
             directional_scattering.frequencies)
-
-    data_out = np.zeros((
-        source_directions.csize, receiver_directions.csize,
-        directional_scattering.n_bins))
-
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
-    cos_factor = (np.cos(
+    receiver_factor = (np.cos(
             receiver_directions.colatitude) * receiver_weights)
-    cos_factor = cos_factor[..., np.newaxis]
-    data_out[:, :, :] += directional_scattering.freq / cos_factor
+    receiver_factor = receiver_factor[..., np.newaxis]
+
+    source_weights = source_directions.weights
+    source_weights *= 2 * np.pi / np.sum(source_weights)
+    source_factor = (np.cos(
+            source_directions.colatitude)) * source_weights
+    source_factor = source_factor[..., np.newaxis, np.newaxis]
+
+    data_out = directional_scattering.freq / receiver_factor
 
     data_out *= (1 - absorption_coefficient.freq.flatten())
     sofa = _create_sofa(
