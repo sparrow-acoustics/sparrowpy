@@ -12,6 +12,24 @@ import sofar as sf
 
 create_reference_files = False
 
+def check_energy_conservation(
+        receivers, receiver_weights, data, absorption_data=0):
+    integration_weights = receiver_weights
+    integration_weights *= 2*np.pi/np.sum(integration_weights)
+    integration_weights = integration_weights*np.cos(receivers.colatitude)
+    integration_weights = integration_weights[..., np.newaxis]
+    for i_source in range(data.cshape[0]):
+        energy = np.sum(data.freq[i_source]*integration_weights, axis=0)
+        npt.assert_almost_equal(
+            energy, 1 - absorption_data, decimal=1,
+            err_msg=f"source {i_source}")
+
+def check_reciprocal(data):
+    for i_source in range(data.cshape[0]):
+        for i_receiver in range(data.cshape[1]):
+            npt.assert_almost_equal(
+                data.freq[i_source, i_receiver],
+                data.freq[i_receiver, i_source])
 
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
 @pytest.mark.parametrize('sh_order', [5, 11])
@@ -35,17 +53,10 @@ def test_energy_conservation_specular(
     sofa = sf.read_sofa(file_path)
     data, s, r = pf.io.convert_sofa(sofa)
 
-    # test energy conservation
-    integration_weights = sofa.ReceiverWeights
-    integration_weights *= 2*np.pi/np.sum(integration_weights)
-    integration_weights = integration_weights*np.cos(s.colatitude)
-    integration_weights = integration_weights[..., np.newaxis]
-    for i_source in range(s.csize):
-        energy = np.sum(data.freq[i_source]*integration_weights, axis=0)
-        npt.assert_almost_equal(
-            energy, 1 - absorption_data, decimal=1,
-            err_msg=f"source {i_source}")
-
+    # test energy conservation and reciprocity
+    check_energy_conservation(
+        r, sofa.ReceiverWeights, data, absorption_data)
+    check_reciprocal(data)
 
 @pytest.mark.parametrize('absorption_data', [0])
 @pytest.mark.parametrize('sh_order', [5, 11])
@@ -66,6 +77,11 @@ def test_energy_conservation_diffuse(
         )
     sofa = sf.read_sofa(file_path)
     data, s, r = pf.io.convert_sofa(sofa)
+
+    # test energy conservation and reciprocity
+    check_energy_conservation(
+        r, sofa.ReceiverWeights, data, absorption_data)
+    check_reciprocal(data)
 
     npt.assert_almost_equal(data.freq, 1/np.pi, decimal=2)
 
@@ -92,12 +108,10 @@ def test_reciprocal_principle_specular(
     sofa = sf.read_sofa(file_path)
     data, s, r = pf.io.convert_sofa(sofa)
 
-    # test energy conservation
-    for i_source in range(s.csize):
-        for i_receiver in range(r.csize):
-            npt.assert_almost_equal(
-                data.freq[i_source, i_receiver],
-                data.freq[i_receiver, i_source])
+    # test energy conservation and reciprocity
+    check_energy_conservation(
+        r, sofa.ReceiverWeights, data, absorption_data)
+    check_reciprocal(data)
 
 
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
@@ -126,16 +140,10 @@ def test_energy_conservation_two_directions(
     sofa = sf.read_sofa(file_path)
     data, s, r = pf.io.convert_sofa(sofa)
 
-    # test energy conservation
-    integration_weights = sofa.ReceiverWeights
-    integration_weights *= 2*np.pi/np.sum(integration_weights)
-    integration_weights = integration_weights*np.cos(s.colatitude)
-    integration_weights = integration_weights[..., np.newaxis]
-    for i_source in range(s.csize):
-        energy = np.sum(data.freq[i_source]*integration_weights, axis=0)
-        npt.assert_almost_equal(
-            energy, 1 - absorption_data, decimal=1,
-            err_msg=f"source {i_source}")
+    # test energy conservation and reciprocity
+    check_energy_conservation(
+        r, sofa.ReceiverWeights, data, absorption_data)
+    check_reciprocal(data)
 
 
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
@@ -163,16 +171,10 @@ def test_energy_conservation_two_directions_rand(
     sofa = sf.read_sofa(file_path)
     data, s, r = pf.io.convert_sofa(sofa)
 
-    # test energy conservation
-    integration_weights = sofa.ReceiverWeights
-    integration_weights *= 2*np.pi/np.sum(integration_weights)
-    integration_weights = integration_weights*np.cos(s.colatitude)
-    integration_weights = integration_weights[..., np.newaxis]
-    for i_source in range(s.csize):
-        energy = np.sum(data.freq[i_source]*integration_weights, axis=0)
-        npt.assert_almost_equal(
-            energy, 1 - absorption_data, decimal=1,
-            err_msg=f"source {i_source}")
+    # test energy conservation and reciprocity
+    check_energy_conservation(
+        r, sofa.ReceiverWeights, data, absorption_data)
+    check_reciprocal(data)
 
 
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
@@ -197,13 +199,6 @@ def test_random_directional_scattering(
     sofa = sf.read_sofa(file_path)
     data, s, r = pf.io.convert_sofa(sofa)
 
-    # test energy conservation
-    integration_weights = sofa.ReceiverWeights
-    integration_weights *= 2*np.pi/np.sum(integration_weights)
-    integration_weights = integration_weights*np.cos(s.colatitude)
-    integration_weights = integration_weights[..., np.newaxis]
-    for i_source in range(s.csize):
-        energy = np.sum(data.freq[i_source]*integration_weights, axis=0)
-        npt.assert_almost_equal(
-            energy, 1 - absorption_data, decimal=1,
-            err_msg=f"source {i_source}")
+    # test energy conservation and reciprocity
+    check_energy_conservation(
+        r, sofa.ReceiverWeights, data, absorption_data)
