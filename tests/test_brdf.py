@@ -33,7 +33,7 @@ def test_create_from_scattering_with_valid_data(tmpdir):
     # Prepare test data
     scattering_data = [0, 0.2, 1]
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
 
@@ -60,7 +60,7 @@ def test_create_from_scattering_1(tmpdir):
     # Prepare test data
     scattering_data = np.ones((3, ))
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
 
@@ -82,7 +82,7 @@ def test_create_from_scattering_0(tmpdir):
     # Prepare test data
     scattering_data = np.zeros((3, ))
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
 
@@ -105,7 +105,7 @@ def test_create_from_scattering_0_3(tmpdir):
     # Prepare test data
     scattering_data = 0.3
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
 
@@ -132,7 +132,7 @@ def test_create_from_scattering_0_3_with_absorption(tmpdir):
     scattering_data = 0.3
     absorption_data = 0.3
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
 
@@ -185,7 +185,7 @@ def test_create_from_scattering_energy_conservation(
         tmpdir, scattering_data, absorption_data, sh_order):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
 
@@ -215,7 +215,7 @@ def test_create_from_scattering_reciprocal_principle(
         tmpdir, scattering_data, absorption_data, sh_order):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
 
@@ -242,7 +242,7 @@ def test_directional_energy_conservation_specular(
         tmpdir, absorption_data, sh_order):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
@@ -269,7 +269,7 @@ def test_directional_energy_conservation_diffuse(
         tmpdir, absorption_data, sh_order):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
     cos_factor = (np.cos(
@@ -300,7 +300,7 @@ def test_directional_reciprocal_principle_specular(
         tmpdir, absorption_data, sh_order):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
@@ -328,7 +328,7 @@ def test_directional_energy_conservation_two_directions(
         tmpdir, absorption_data, sh_order):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
@@ -360,7 +360,7 @@ def test_directional_energy_conservation_two_directions_rand(
         tmpdir, absorption_data, sh_order):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
@@ -392,7 +392,7 @@ def test_directional_random_directional_scattering(
         tmpdir, absorption_data, sh_order):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    file_path = os.path.join(tmpdir, "test_brdf.sofa",)
+    file_path = os.path.join(tmpdir, "test_brdf.sofa")
     coords = pf.samplings.sph_gaussian(sh_order=sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.random.rand(coords.csize, coords.csize, 3)
