@@ -21,7 +21,7 @@ IMPORTANT: IN THE REPOSITORY, BOTH `CREATE_BASELINE` AND `COMPARE_OUTPUT` NEED
 TO BE SET TO FALSE, SO THE CIRCLE-CI CHECKS DO NOT FAIL.
 """
 # global parameters -----------------------------------------------------------
-create_baseline = True
+create_baseline = True # this was True before
 
 # file type used for saving the plots
 file_type = "png"
@@ -29,7 +29,7 @@ file_type = "png"
 # if true, the plots will be compared to the baseline and an error is raised
 # if there are any differences. In any case, differences are written to
 # output_path as images
-compare_output = True
+compare_output = True # this was True before. where in the repository should this be false? here?
 
 # path handling
 base_path = os.path.join('tests', 'test_plot_data')
@@ -108,6 +108,22 @@ def test_patches_2():
             [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
              ]),
         np.array([0, 1]))
+
+    # initial plot
+    save_and_compare(
+        create_baseline, baseline_path, output_path, filename,
+        file_type, compare_output)
+
+def test_patches_3():
+    filename =  'patches_3_patches'
+    create_figure()
+    sp.plot.patches(
+        np.array([
+            [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+            [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
+            [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]],
+             ]),
+        np.array([20,10,0]))
 
     # initial plot
     save_and_compare(

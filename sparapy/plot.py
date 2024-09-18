@@ -178,9 +178,17 @@ def patches(patches_points, energy, ax=None):
         ax = plt.axes(projection='3d')
 
     cmap = cm.viridis
+    energy_normalized = energy / np.max(energy)
+
     if len(patches_points.shape) == 2:
         patches_points = np.array([patches_points])
 
     for i in range(patches_points.shape[0]):
         ax.add_collection3d(Poly3DCollection(
-            patches_points[i][np.newaxis, ...], color=cmap(energy[i])))
+            patches_points[i][np.newaxis, ...], color=cmap(energy_normalized[i])))
+
+    
+    plt.colorbar(mpl.cm.ScalarMappable(
+        norm=mpl.colors.Normalize(0, np.max(energy)), cmap=cmap),
+        ax=ax, orientation='vertical')
+    return ax
