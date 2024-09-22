@@ -175,7 +175,7 @@ class Polygon():
         # plot wall
         self.plot_point(ax, color)
         # plot view
-        self.plot_view_up(ax, color)
+        #self.plot_view_up(ax, color)
 
     def plot_point(self, ax: matplotlib.axes.Axes = None, color=None):
         """Plot the polygon points."""

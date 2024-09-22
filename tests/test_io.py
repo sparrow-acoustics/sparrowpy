@@ -5,6 +5,9 @@ import numpy as np
 import trimesh
 from sparapy import geometry as geo
 import matplotlib.pyplot as plt
+import pyfar as pf
+
+%matplotlib ipympl
 
 # %%
 # load stl file
@@ -104,32 +107,29 @@ for i, face in enumerate(faces):
 # %%
 # create polygon
 
-face0 = geo.Polygon(rectangles[0],[0, 1, 0], [0, 0, 1])
-face1 = geo.Polygon(rectangles[1],[0, 1, 0], [0, 0, 1])
-face2 = geo.Polygon(rectangles[2],[0, 1, 0], [0, 0, 1])
-face3 = geo.Polygon(rectangles[3],[0, 1, 0], [0, 0, 1])
-face4 = geo.Polygon(rectangles[4],[0, 1, 0], [0, 0, 1])
-face5 = geo.Polygon(rectangles[5],[0, 1, 0], [0, 0, 1])
+# normals are not automatic 
+face0 = geo.Polygon(faces[0],[0, 0, 1], [0, 0, 1])
+face1 = geo.Polygon(faces[1],[0, 0, 1], [0, 0, 1])
+face2 = geo.Polygon(faces[2],[0, 0, 1], [1, 0, 0])
+face3 = geo.Polygon(faces[3],[0, 0, 1], [0, 1, 0])
+face4 = geo.Polygon(faces[4],[0, 0, 1], [1, 0, 0])
+face5 = geo.Polygon(faces[5],[0, 0, 1], [0, 1, 0])
 
 list_polygon = [face0, face1, face2, face3, face4, face5]
 
 # %%
 # plot polygon
-source = [0.5, 0.5, 0.5]
-receiver = [0.25, 0.25, 0.25]
-speed_of_sound = 343
-env = geo.Environment(
-    list_polygon,
-    source, receiver, speed_of_sound)
-fig = plt.figure(figsize=(8, 8))
+
+pf.plot.use()
 ax = plt.axes(projection='3d')
-plt.tick_params(axis='both',which='both', labelsize=8)
-env.plot(ax)
-ax.set_aspect('equal', adjustable='box')
-ax.locator_params(axis='x', nbins=8)
-ax.locator_params(axis='y', nbins=4)
-ax.locator_params(axis='z', nbins=4)
-ax.legend()
+
+# Loop through each face in list_polygon and plot it
+for face in list_polygon:
+    face.plot(ax)  # Assuming plot method accepts ax and color
+
+# Show the plot
+plt.show()
+# %%
 
 
 # %%
