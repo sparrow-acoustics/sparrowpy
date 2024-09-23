@@ -6,8 +6,28 @@ import trimesh
 from sparapy import geometry as geo
 import matplotlib.pyplot as plt
 import pyfar as pf
+from sparapy import io
 
 %matplotlib ipympl
+
+# %%
+# try using io function 
+
+list_polygon = io.read_geometry('models/custom_shoebox.stl')
+
+# %%
+# try plotting from io function 
+
+plt.figure()
+pf.plot.use()
+ax = plt.axes(projection='3d')
+
+# Loop through each face in list_polygon and plot it
+for face in list_polygon:
+    face.plot(ax)  # Assuming plot method accepts ax and color
+
+# Show the plot
+plt.show()
 
 # %%
 # load stl file
@@ -98,22 +118,49 @@ def load_cube_faces_as_squares(stl_file):
     return square_faces
 
 # Usage example
-stl_file = 'models/shoebox.stl'  # Replace with the correct path to your STL file
+stl_file = 'models/custom_shoebox.stl'  # Replace with the correct path to your STL file
 faces = load_cube_faces_as_squares(stl_file)
 
 for i, face in enumerate(faces):
     print(f"Face {i}: {face}")
 
 # %%
+# find normals of faces automatically 
+
+def calculate_face_normals(square_faces):
+    normals = []
+
+    for face in square_faces:
+        # Choose two edges from the face
+        edge1 = face[1] - face[0]  # Vector from vertex 0 to vertex 1
+        edge2 = face[2] - face[0]  # Vector from vertex 0 to vertex 2
+
+        # Compute the normal as the cross product of edge1 and edge2
+        normal = np.cross(edge1, edge2)
+
+        # Normalize the normal vector
+        normal = normal / np.linalg.norm(normal)
+
+        # Append the normal to the list
+        normals.append(normal)
+
+    return np.array(normals)
+
+face_normals = calculate_face_normals(faces)
+
+for i, normal in enumerate(face_normals):
+    print(f"Normal of Face {i}: {normal}")
+
+# %%
 # create polygon
 
 # normals are not automatic 
-face0 = geo.Polygon(faces[0],[0, 0, 1], [0, 0, 1])
-face1 = geo.Polygon(faces[1],[0, 0, 1], [0, 0, 1])
-face2 = geo.Polygon(faces[2],[0, 0, 1], [1, 0, 0])
-face3 = geo.Polygon(faces[3],[0, 0, 1], [0, 1, 0])
-face4 = geo.Polygon(faces[4],[0, 0, 1], [1, 0, 0])
-face5 = geo.Polygon(faces[5],[0, 0, 1], [0, 1, 0])
+face0 = geo.Polygon(faces[0],[0, 0, 1], face_normals[0])
+face1 = geo.Polygon(faces[1],[0, 0, 1], face_normals[1])
+face2 = geo.Polygon(faces[2],[0, 0, 1], face_normals[2])
+face3 = geo.Polygon(faces[3],[0, 0, 1], face_normals[3])
+face4 = geo.Polygon(faces[4],[0, 0, 1], face_normals[4])
+face5 = geo.Polygon(faces[5],[0, 0, 1], face_normals[5])
 
 list_polygon = [face0, face1, face2, face3, face4, face5]
 
