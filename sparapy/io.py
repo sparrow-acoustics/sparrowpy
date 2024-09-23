@@ -2,6 +2,8 @@ import sparapy as sp
 import numpy as np
 import trimesh
 from sparapy import geometry as geo
+from scipy.spatial import ConvexHull
+import matplotlib.tri as mtri
 
 def read_geometry(path):
     """Read geometry from a file.
@@ -17,7 +19,7 @@ def read_geometry(path):
         The polygon.
 
     """
-    faces = load_rectangular_prism_faces_as_rectangles(path)
+    faces = load_and_merge_coplanar_faces(path)
     face_normals = calculate_face_normals(faces)
 
     list_polygon = []
@@ -27,6 +29,196 @@ def read_geometry(path):
         list_polygon.append(polygon)
 
     return list_polygon
+
+def load_and_merge_coplanar_faces(stl_file):
+    """
+    Load the STL file, merge coplanar faces into polygons, and return the ordered polygonal faces.
+    """
+
+    def is_coplanar(face1, face2, vertices, tolerance=1e-6):
+        """
+        Check if two triangles (faces) are coplanar based on their normals.
+        """
+        # Get the vertices of the two faces
+        v1, v2, v3 = vertices[face1]
+        v4, v5, v6 = vertices[face2]
+
+        # Calculate the normal vectors for each triangle
+        normal1 = np.cross(v2 - v1, v3 - v1)
+        normal2 = np.cross(v5 - v4, v6 - v4)
+
+        # Normalize the normal vectors
+        normal1 /= np.linalg.norm(normal1)
+        normal2 /= np.linalg.norm(normal2)
+
+        # Check if the normals are nearly the same (within tolerance)
+        return np.allclose(normal1, normal2, atol=tolerance)
+
+    def order_polygon_vertices(vertices):
+        """
+        Order the vertices of a polygon to avoid criss-crossing lines.
+        """
+        # Ensure there are at least 3 vertices
+        if len(vertices) < 3:
+            raise ValueError("A polygon must have at least 3 vertices.")
+
+        # Step 1: Find the centroid of the vertices
+        centroid = np.mean(vertices, axis=0)
+
+        # Step 2: Project vertices to 2D based on the dominant axis (plane)
+        axis_variation = np.ptp(vertices, axis=0)  # Range of variation along each axis
+        dominant_axis = np.argmin(axis_variation)  # The axis with the least variation
+
+        if dominant_axis == 0:  # X is constant, project onto the YZ plane
+            projected_vertices = vertices[:, 1:]
+            projected_centroid = centroid[1:]
+        elif dominant_axis == 1:  # Y is constant, project onto the XZ plane
+            projected_vertices = vertices[:, [0, 2]]
+            projected_centroid = centroid[[0, 2]]
+        else:  # Z is constant, project onto the XY plane
+            projected_vertices = vertices[:, :2]
+            projected_centroid = centroid[:2]
+
+        # Step 3: Compute the angle of each vertex relative to the centroid
+        angles = np.arctan2(projected_vertices[:, 1] - projected_centroid[1],
+                            projected_vertices[:, 0] - projected_centroid[0])
+
+        # Step 4: Sort vertices based on these angles to ensure proper ordering
+        ordered_indices = np.argsort(angles)
+        ordered_vertices = vertices[ordered_indices]
+
+        return ordered_vertices
+
+    # Load the STL file
+    mesh = trimesh.load(stl_file)
+
+    # Print mesh info for debugging
+    print(f"Number of vertices: {len(mesh.vertices)}")
+    print(f"Number of triangular faces: {len(mesh.faces)}")
+
+    # Get the triangular faces and vertices
+    faces = mesh.faces
+    vertices = mesh.vertices
+
+    # To store the polygonal faces
+    polygon_faces = []
+    used_faces = set()
+
+    # Loop through each triangle to find and merge coplanar triangles
+    for i, tri1 in enumerate(faces):
+        if i in used_faces:
+            continue
+
+        # Start with the current face and initialize a list for the merged polygon
+        merged_vertices = set(tri1)
+
+        # Check for coplanar faces and merge them
+        for j, tri2 in enumerate(faces):
+            if i != j and j not in used_faces and is_coplanar(tri1, tri2, vertices):
+                # If coplanar, merge the vertices
+                merged_vertices.update(tri2)
+                used_faces.add(j)
+
+        # Convert the set of vertices to a list and get their 3D coordinates
+        merged_vertices = list(merged_vertices)
+        polygon_face = np.array([vertices[v] for v in merged_vertices])
+
+        # Order the vertices to form a proper polygon
+        ordered_polygon_face = order_polygon_vertices(polygon_face)
+
+        # Add the ordered polygon to the list
+        polygon_faces.append(ordered_polygon_face)
+
+        # Mark the current face as used
+        used_faces.add(i)
+
+    # If no polygonal faces were detected, notify the user
+    if not polygon_faces:
+        print("No polygonal faces were detected! Please check the STL file.")
+
+    return polygon_faces
+
+def order_polygon_vertices(vertices):
+    # Ensure there are at least 3 vertices
+    if len(vertices) < 3:
+        raise ValueError("A polygon must have at least 3 vertices.")
+
+    # Step 1: Find the centroid of the vertices
+    centroid = np.mean(vertices, axis=0)
+
+    # Step 2: Project vertices to 2D based on the dominant axis (plane)
+    axis_variation = np.ptp(vertices, axis=0)  # Range of variation along each axis
+    dominant_axis = np.argmin(axis_variation)  # The axis with the least variation
+
+    if dominant_axis == 0:  # X is constant, project onto the YZ plane
+        projected_vertices = vertices[:, 1:]
+        projected_centroid = centroid[1:]
+    elif dominant_axis == 1:  # Y is constant, project onto the XZ plane
+        projected_vertices = vertices[:, [0, 2]]
+        projected_centroid = centroid[[0, 2]]
+    else:  # Z is constant, project onto the XY plane
+        projected_vertices = vertices[:, :2]
+        projected_centroid = centroid[:2]
+
+    # Step 3: Compute the angle of each vertex relative to the centroid
+    angles = np.arctan2(projected_vertices[:, 1] - projected_centroid[1],
+                        projected_vertices[:, 0] - projected_centroid[0])
+
+    # Step 4: Sort vertices based on these angles to ensure proper ordering
+    ordered_indices = np.argsort(angles)
+    ordered_vertices = vertices[ordered_indices]
+
+    return ordered_vertices
+
+def load_polygon_faces_as_ordered(stl_file):
+    # Load the STL file
+    mesh = trimesh.load(stl_file)
+
+    # Print mesh info for debugging
+    print(f"Number of vertices: {len(mesh.vertices)}")
+    print(f"Number of triangular faces: {len(mesh.faces)}")
+
+    # Get the triangular faces and vertices
+    faces = mesh.faces
+    vertices = mesh.vertices
+
+    # To store the polygonal faces
+    polygon_faces = []
+    used_faces = set()
+
+    # Function to check if two triangles share two vertices
+    def share_two_vertices(tri1, tri2):
+        return len(set(tri1) & set(tri2)) == 2
+
+    # Loop through each pair of triangles to find polygons
+    for i, tri1 in enumerate(faces):
+        if i in used_faces:
+            continue
+        for j, tri2 in enumerate(faces):
+            if i != j and j not in used_faces and share_two_vertices(tri1, tri2):
+                # Combine the two triangles
+                combined_vertices = list(set(tri1) | set(tri2))
+
+                # Ensure we have at least 3 unique vertices
+                if len(combined_vertices) >= 3:
+                    # Get the 3D coordinates of the vertices
+                    polygon_face = np.array([vertices[v] for v in combined_vertices])
+
+                    # Order the vertices to form a proper polygon without diagonals
+                    ordered_polygon_face = order_polygon_vertices(polygon_face)
+
+                    # Append the ordered polygon face to the result list
+                    polygon_faces.append(ordered_polygon_face)
+
+                    # Mark both triangles as used
+                    used_faces.add(i)
+                    used_faces.add(j)
+                    break
+
+    if not polygon_faces:
+        print("No polygonal faces were detected! Please check the STL file.")
+
+    return polygon_faces
 
 def load_rectangular_prism_faces_as_rectangles(stl_file):
     # Load the STL file

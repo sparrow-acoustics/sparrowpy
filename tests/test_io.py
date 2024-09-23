@@ -11,9 +11,14 @@ from sparapy import io
 %matplotlib ipympl
 
 # %%
+# see if trimesh is loading IHTA park correctly
+
+mesh = trimesh.load_mesh('models/openL.stl')
+mesh.show()
+# %%
 # try using io function 
 
-list_polygon = io.read_geometry('models/custom_shoebox.stl')
+list_polygon = io.read_geometry('models/shape_L.stl')
 
 # %%
 # try plotting from io function 
