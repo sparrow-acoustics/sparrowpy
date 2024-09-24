@@ -68,14 +68,17 @@ def get_relative_angles(point:np.ndarray, origin:np.ndarray, normal:np.ndarray, 
     a = np.dot(normal,np.cross(up,pt))
     
     if a==0:
-        azimuth = 0
+        if np.dot(up,pt)>=0.:
+            azimuth = 0.
+        else:
+            azimuth = np.pi
     else:
         proj_pt = pt - np.dot(pt,normal)/np.dot(normal,normal)*normal
         proj_pt/=np.linalg.norm(proj_pt)
         
         azimuth = np.sign(a)*np.arccos(np.dot(proj_pt,up)) 
             
-        if np.sign(a) < 0:
+        if np.sign(a) < 0.:
             azimuth += 2*np.pi
             
     elevation = np.arcsin(np.dot(pt,normal))
@@ -128,11 +131,11 @@ def get_scattering_data(
     
     return out
 
-#@numba.njit()
+@numba.njit()
 def get_scattering_data_dist(
         pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray, i_normal:np.ndarray, i_up: np.ndarray,
         sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
-        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", threshold=0.0001, order=1):
+        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", threshold=10**-7, order=1):
     """Get scattering data depending on previous, current and next position.
 
     Parameters
@@ -190,14 +193,30 @@ def get_scattering_data_dist(
             source_idx = np.array([np.argmin(s_dist)])
             w_s = np.array([1.])
         else:
-            source_idx = np.argpartition(-s_dist,-3)[-3:]
+            k = 3
+            sss = np.argpartition(s_dist,k)
+
+            while ((s_dist[sss[k:]]-min(s_dist[sss[:k]]))<threshold).any():
+                k += 1
+                sss = np.argpartition(s_dist,k)
+
+            source_idx=sss[k:]
+
             w_s = 1/(s_dist[source_idx]**order)
 
         if (r_dist < threshold).any():
             receiver_idx = np.array([np.argmin(r_dist)])
             w_r = np.array([1.])
         else:
-            receiver_idx = np.argpartition(-r_dist,-3)[-3:]
+            k = 3
+            rrr = np.argpartition(r_dist,k)
+
+            while ((r_dist[rrr[k:]]-min(r_dist[rrr[:k]]))<threshold).any():
+                k += 1
+                rrr = np.argpartition(r_dist,k)
+
+            receiver_idx=rrr[k:]
+
             w_r = 1/(r_dist[receiver_idx]**order)
         
             

@@ -42,13 +42,17 @@ def create_from_scattering(
         path where sofa file should be saved
     source_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
         source directions for the BRDF, should contain weights.
+        cshape of data should be (n_sources)
     receiver_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
         receiver directions for the BRDF, should contain weights.
+        cshape of data should be (n_receivers)
     scattering_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
         frequency dependent scattering coefficient data.
+        cshape of data should be (1, ).
     absorption_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
         frequency dependent absorption coefficient data, by default
         no absorption.
+        cshape of data should be (1, ).
 
     References
     ----------
@@ -98,7 +102,7 @@ def create_from_scattering(
     image_source.azimuth += np.pi
     i_receiver = receiver_directions.find_nearest(image_source)[0][0]
     cos_factor = (np.cos(
-            source_directions.colatitude) * receiver_weights)
+            receiver_directions.colatitude) * receiver_weights)
     cos_factor = cos_factor[..., np.newaxis]
     scattering_factor = 1 - scattering_flattened[np.newaxis, ...]
     data_out[:, :, :] += (
@@ -112,6 +116,105 @@ def create_from_scattering(
         source_directions,
         receiver_directions,
         history='constructed brdf based on scattering coefficients',
+    )
+
+    sf.write_sofa(file_path, sofa)
+
+
+def create_from_directional_scattering(
+        file_path,
+        source_directions,
+        receiver_directions,
+        directional_scattering,
+        absorption_coefficient=None,
+        ):
+    r"""Create the BRDF from the directional scattering and write to SOFA file.
+
+    The directional scattering coefficient is assumed to be anisotropic.
+    The sum of the directional scattering coefficient has be equal to 1.
+    Therefore the BRDF is calculated as follows:
+
+    .. math::
+        \rho(\Omega_i, \Omega_r) = \frac{(1-\alpha)}{
+        (\Omega_r \cdot \mathbf{n}_r) \cdot w_r} s_{d}(\Omega_i, \Omega_r)
+
+    where:
+        - :math:`\Omega_i` and :math:`\Omega_r` are the incident and exitant
+          directions, respectively.
+        - :math:`s_{d}` is the directional scattering coefficient [1]_.
+        - :math:`\alpha` is the absorption coefficient.
+        - :math:`\mathbf{n}_i` is the normal vector.
+        - :math:`w_r` is weighting factor of the angular sector (unit sphere).
+
+    Note that the weights doesn't need to be normalized,
+    they get scaled as required.
+
+    Parameters
+    ----------
+    file_path : string, path
+        path where sofa file should be saved
+    source_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
+        source directions for the BRDF, should contain weights.
+        cshape of data should be (n_sources)
+    receiver_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
+        receiver directions for the BRDF, should contain weights.
+        cshape of data should be (n_receivers)
+    directional_scattering : :py:class:`~pyfar.classes.audio.FrequencyData`
+        frequency dependent directional scattering coefficient data from [1]_.
+        cshape of data should be (n_sources, n_receivers).
+    absorption_coefficient : :py:class:`~pyfar.classes.audio.FrequencyData`
+        frequency dependent absorption coefficient data, by default
+        no absorption.
+        cshape of data should be (1, ).
+
+    References
+    ----------
+    .. [1]  A. Heimes and M. Vorländer, “A new scattering metric for
+            auralization in urban environments,” in Fortschritte der
+            Akustik - DAGA 2024, Hamburg: Deutsche Gesellschaft für Akustik
+            e.V. (DEGA), Berlin, 2023, 2024, pp. 1660-1661. [Online].
+            Available:
+            https://pub.dega-akustik.de/DAGA_2024/files/upload/paper/531.pdf
+
+
+    """
+    if not isinstance(source_directions, pf.Coordinates):
+        raise TypeError(
+            'source_directions must be a pf.Coordinates object')
+    if not isinstance(receiver_directions, pf.Coordinates):
+        raise TypeError(
+            'receiver_directions must be a pf.Coordinates object')
+    if (
+            not isinstance(directional_scattering, pf.FrequencyData) or
+            not directional_scattering.cshape == (
+                source_directions.csize, receiver_directions.csize)):
+        raise TypeError(
+            'directional_scattering must be a pf.FrequencyData object with'
+            f' cshape ({source_directions.csize, receiver_directions.csize})')
+    if absorption_coefficient is None:
+        absorption_coefficient = pf.FrequencyData(
+            np.zeros_like(directional_scattering.frequencies),
+            directional_scattering.frequencies)
+    receiver_weights = receiver_directions.weights
+    receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
+    receiver_factor = (np.cos(
+            receiver_directions.colatitude) * receiver_weights)
+    receiver_factor = receiver_factor[..., np.newaxis]
+
+    source_weights = source_directions.weights
+    source_weights *= 2 * np.pi / np.sum(source_weights)
+    source_factor = (np.cos(
+            source_directions.colatitude)) * source_weights
+    source_factor = source_factor[..., np.newaxis, np.newaxis]
+
+    data_out = directional_scattering.freq / receiver_factor
+
+    data_out *= (1 - absorption_coefficient.freq.flatten())
+    sofa = _create_sofa(
+        pf.FrequencyData(data_out, directional_scattering.frequencies),
+        source_directions,
+        receiver_directions,
+        history='constructed brdf based on directional scattering',
     )
 
     sf.write_sofa(file_path, sofa)
@@ -148,7 +251,7 @@ def _create_sofa(
     """
     # create empty SOFA object
     convention = (
-        'GeneralTF' if type(data) == pf.FrequencyData else 'GeneralFIR'
+        'GeneralTF' if type(data) is pf.FrequencyData else 'GeneralFIR'
     )
 
     sofa = sf.Sofa(convention)
@@ -173,7 +276,7 @@ def _create_sofa(
     sofa.ReceiverPosition_Units = 'meter'
     sofa.ReceiverPosition_Type = 'cartesian'
 
-    if type(data) == pf.FrequencyData:
+    if type(data) is pf.FrequencyData:
         sofa.N = data.frequencies
 
         # HRTF/HRIR data
