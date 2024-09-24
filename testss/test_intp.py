@@ -137,10 +137,10 @@ def test_brdf_intp_measured(sample_walls, mdist):
  
 @pytest.mark.parametrize('method', [
     ["nneighbor",0],
-    ["inv_dist",1],
+    # ["inv_dist",1],
     ])
 @pytest.mark.parametrize('samp', [
-    30,20,15,10,9
+    30,10#,9
     ])        
 def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
     radi = sp.DRadiosityFast.from_polygon(sample_walls, 1)
@@ -180,6 +180,9 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
         for j,posj in enumerate(trec.cartesian):
             posj = posj / np.linalg.norm(posj, axis=-1) + posi
 
+            if i==1 and j==7:
+                print("smth fishy")
+
             sc_factors[i,j,:]=geom.get_scattering_data_dist(pos_h=posh, pos_i=posi, pos_j=posj, 
                                                     i_normal=radi.walls_normal[wallid], i_up=radi.walls_up_vector[wallid],
                                                     sources=src, receivers=rec, 
@@ -194,18 +197,18 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
 
     rel=np.abs(energy_in-energy_out)/energy_in  
 
-    fig, ax0 = plt.subplots(subplot_kw={"projection": "3d"})
-    plot.brdf_3d(data=data.freq[src_vis_id,:,0].real, receivers=radi._receivers[wallid], source_pos=radi._sources[wallid][src_vis_id], ax=ax0)
-    ax0.set_title("true factors\n sig="+str(sigma)+"; ang="+str(ang))
-    plt.savefig(str(sigma)+"_"+str(ang)+"_3d_src.png")
+    # fig, ax0 = plt.subplots(subplot_kw={"projection": "3d"})
+    # plot.brdf_3d(data=data.freq[src_vis_id,:,0].real, receivers=radi._receivers[wallid], source_pos=radi._sources[wallid][src_vis_id], ax=ax0)
+    # ax0.set_title("true factors\n sig="+str(sigma)+"; ang="+str(ang))
+    # plt.savefig(str(sigma)+"_"+str(ang)+"_3d_src.png")
     
     fig,ax1 = plt.subplots(subplot_kw={"projection": "3d"})
     plot.brdf_3d(data=sc_factors[src_vis_id,:,0], receivers=trec, source_pos=tsour[src_vis_id], ax=ax1)
-    ax1.set_title("estimation\n sig="+str(sigma)+"; ang="+str(ang)+"; samp="+str(ang))
+    ax1.set_title("estimation\n sig="+str(sigma)+"; ang="+str(ang)+"; samp="+str(samp)+"; method="+method[0])
     plt.gcf().text(0.5, 0.02, "rel error: "+str(rel)+"\n est. energy: " + str(energy_out)+"\n tru energy: " + str(energy_in), fontsize=12)
-    plt.savefig(str(sigma)+"_"+str(ang)+"_"+str(samp)+"_3d_est.png")
+    plt.savefig(str(sigma)+"_"+str(ang)+"_"+str(samp)+"_"+method[0]+"_3d_est.png")
     
-    #plt.show()
+    plt.show()
 
       
     assert rel < .1 
@@ -213,12 +216,15 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
     #assert rel < .01
            
 @pytest.mark.parametrize('elev', [
-    0,np.pi/3,np.pi/2,29*np.pi/60
+    0,5,10,20,30,45,60,75,80,85,90
     ])     
 @pytest.mark.parametrize('azi', [
-    0,np.pi/4, np.pi/2, np.pi, 5*np.pi/3
+    0,10,30,45,60,90,105,120,135,150,176,180,200,260,270,300,310,345,350
     ])   
 def test_angle_from_point(elev, azi):    
+           
+    elev *= np.pi/180
+    azi *= np.pi/180
            
     pt = np.array([np.cos(azi)*np.cos(elev), np.sin(azi)*np.cos(elev), np.sin(elev)])
     

@@ -44,7 +44,7 @@ def pytest_generate_tests(metafunc):
             
             a = float(file.split("_")[-1].split(".sofa")[0])
             
-            if a > 5:
+            if a > 10:
                 
                 s=float(file.split("brdf_s")[1].split("_")[0])
                 

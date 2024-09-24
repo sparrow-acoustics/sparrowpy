@@ -128,7 +128,7 @@ def get_scattering_data(
     
     return out
 
-@numba.njit()
+#@numba.njit()
 def get_scattering_data_dist(
         pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray, i_normal:np.ndarray, i_up: np.ndarray,
         sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
@@ -160,12 +160,12 @@ def get_scattering_data_dist(
         scattering factor from directivity
 
     """
-    source=get_relative_angles(point=pos_h, origin=pos_i, normal=i_normal, up=i_up)
-    receiver=get_relative_angles(point=pos_j, origin=pos_i, normal=i_normal, up=i_up)   
+    h=get_relative_angles(point=pos_h, origin=pos_i, normal=i_normal, up=i_up)
+    j=get_relative_angles(point=pos_j, origin=pos_i, normal=i_normal, up=i_up)   
     
 
-    s_d = sources-source
-    r_d = receivers-receiver
+    s_d = np.abs(sources-h)
+    r_d = np.abs(receivers-j)
 
     s_d[s_d[:,0]>np.pi,0]=s_d[s_d[:,0]>np.pi,0]-np.pi
     r_d[r_d[:,0]>np.pi,0]=r_d[r_d[:,0]>np.pi,0]-np.pi
