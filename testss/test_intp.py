@@ -136,8 +136,8 @@ def test_brdf_intp_measured(sample_walls, mdist):
  
  
 @pytest.mark.parametrize('method', [
-    ["nneighbor",0],
-    # ["inv_dist",1],
+    #["nneighbor",0],
+    ["inv_dist",1],
     ])
 @pytest.mark.parametrize('samp', [
     30,10#,9
@@ -176,12 +176,9 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
     rec = np.array([radi._receivers[wallid].azimuth[:],radi._receivers[wallid].elevation[:]]).transpose()
 
     for i,posh in enumerate(tsour.cartesian):
-        posh = posh / np.linalg.norm(posh, axis=-1) + posi
+        posh = (posh + posi)
         for j,posj in enumerate(trec.cartesian):
-            posj = posj / np.linalg.norm(posj, axis=-1) + posi
-
-            if i==1 and j==7:
-                print("smth fishy")
+            posj = (posj + posi)
 
             sc_factors[i,j,:]=geom.get_scattering_data_dist(pos_h=posh, pos_i=posi, pos_j=posj, 
                                                     i_normal=radi.walls_normal[wallid], i_up=radi.walls_up_vector[wallid],
@@ -192,7 +189,7 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
 
     src_vis_id = 0
     
-    energy_in = np.mean(data.freq[:,:,:].real)
+    energy_in = np.mean(data.freq)
     energy_out = np.mean(sc_factors)
 
     rel=np.abs(energy_in-energy_out)/energy_in  
@@ -210,10 +207,7 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
     
     plt.show()
 
-      
-    assert rel < .1 
-    assert rel < .05
-    #assert rel < .01
+    assert rel < .01
            
 @pytest.mark.parametrize('elev', [
     0,5,10,20,30,45,60,75,80,85,90

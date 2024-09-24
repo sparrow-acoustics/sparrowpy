@@ -44,12 +44,13 @@ def pytest_generate_tests(metafunc):
             
             a = float(file.split("_")[-1].split(".sofa")[0])
             
-            if a > 10:
+            if a > 5:
                 
                 s=float(file.split("brdf_s")[1].split("_")[0])
                 
-                dist = pf.io.read_sofa('testss\\brdf_examples\\'+file)
-                
-                li.append((dist,a,s))
+                if True:
+                    dist = pf.io.read_sofa('testss\\brdf_examples\\'+file)
+                    
+                    li.append((dist,a,s))
         
         metafunc.parametrize("mdist",li)
