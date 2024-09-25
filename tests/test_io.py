@@ -13,12 +13,12 @@ from sparapy import io
 # %%
 # see if trimesh is loading IHTA park correctly
 
-mesh = trimesh.load_mesh('models/openL.stl')
+mesh = trimesh.load_mesh('models/IHTApark.stl')
 mesh.show()
 # %%
 # try using io function 
 
-list_polygon = io.read_geometry('models/shape_L.stl')
+list_polygon = io.read_geometry('models/IHTApark.stl')
 
 # %%
 # try plotting from io function 
@@ -34,6 +34,23 @@ for face in list_polygon:
 # Show the plot
 plt.show()
 
+# %%
+# plot separately 
+
+# Loop through each face in the list of triangular faces and plot each one in a separate figure
+for i, face in enumerate(list_polygon):
+    # Create a new figure for each triangular face
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plot the triangular face
+    face.plot(ax)  # Assuming `face` has a `plot` method that accepts ax as an argument
+    
+    # Set title for the figure
+    plt.title(f"Triangular Face {i+1}")
+
+    # Show the individual plot
+    plt.show()
 # %%
 # load stl file
 

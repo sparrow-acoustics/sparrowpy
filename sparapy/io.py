@@ -19,7 +19,7 @@ def read_geometry(path):
         The polygon.
 
     """
-    faces = load_and_merge_coplanar_faces(path)
+    faces = load_triangular_faces(path)
     face_normals = calculate_face_normals(faces)
 
     list_polygon = []
@@ -386,3 +386,35 @@ def calculate_face_normals(square_faces):
         normals.append(normal)
 
     return np.array(normals)
+
+def load_triangular_faces(stl_file):
+    # Load the STL file
+    mesh = trimesh.load(stl_file)
+
+    # Print mesh info for debugging
+    print(f"Number of vertices: {len(mesh.vertices)}")
+    print(f"Number of triangular faces: {len(mesh.faces)}")
+    
+    # Get the triangular faces and vertices
+    faces = mesh.faces
+    vertices = mesh.vertices
+
+    # To store the triangular faces
+    triangular_faces = []
+
+    # Loop through each triangular face
+    for i, tri in enumerate(faces):
+        # Get the 3D coordinates of the vertices that make up the triangle
+        triangle_face = np.array([vertices[v] for v in tri])
+        
+        # Optionally, you can compute any additional data such as centroid or normals
+        # Example: Centroid of the triangular face
+        centroid = np.mean(triangle_face, axis=0)
+        
+        # Append the triangle face to the list
+        triangular_faces.append(triangle_face)
+
+    if not triangular_faces:
+        print("No triangular faces were detected! Please check the STL file.")
+    
+    return triangular_faces
