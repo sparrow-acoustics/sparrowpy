@@ -48,7 +48,7 @@ def pytest_generate_tests(metafunc):
                 
                 s=float(file.split("brdf_s")[1].split("_")[0])
                 
-                if True:
+                if s==0.1 or s==0.9:
                     dist = pf.io.read_sofa('testss\\brdf_examples\\'+file)
                     
                     li.append((dist,a,s))

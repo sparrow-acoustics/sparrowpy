@@ -1,6 +1,7 @@
 """Geometry functions for the radiosity fast solver."""
 import numba
 import numpy as np
+import math
 
 
 @numba.njit()
@@ -41,49 +42,7 @@ def get_scattering_data_receiver_index(
 
     return receiver_idx
 
-@numba.njit()
-def get_relative_angles(point:np.ndarray, origin:np.ndarray, normal:np.ndarray, up:np.ndarray):
-    """Get scattering data depending on previous, current position.
 
-    Parameters
-    ----------
-    point : np.ndarray
-        cartesian point in space (3)
-    origin : np.ndarray
-        referential origin (global cartesian coordinates) (3)
-    normal : np.ndarray
-        referential normal vector (3)
-    up : np.ndarray
-        referential up vector(3)
-    
-
-    Returns
-    -------
-    angles: np.ndarray
-        azimuth and elevation angles of point relative to referential
-
-    """
-    pt = point-origin / np.linalg.norm(point-origin)
-    
-    a = np.dot(normal,np.cross(up,pt))
-    
-    if a==0:
-        if np.dot(up,pt)>=0.:
-            azimuth = 0.
-        else:
-            azimuth = np.pi
-    else:
-        proj_pt = pt - np.dot(pt,normal)/np.dot(normal,normal)*normal
-        proj_pt/=np.linalg.norm(proj_pt)
-        
-        azimuth = np.sign(a)*np.arccos(np.dot(proj_pt,up)) 
-            
-        if np.sign(a) < 0.:
-            azimuth += 2*np.pi
-            
-    elevation = np.arcsin(np.dot(pt,normal))
-        
-    return np.array([azimuth,elevation])
 
 @numba.njit()
 def get_scattering_data(
@@ -133,9 +92,9 @@ def get_scattering_data(
 
 @numba.njit()
 def get_scattering_data_dist(
-        pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray, i_normal:np.ndarray, i_up: np.ndarray,
-        sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
-        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", threshold=10**-7, order=1):
+        pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,wall_id_i: int,
+        sources:np.ndarray, receivers:np.ndarray,
+        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", order=1, threshold=10**-7):
     """Get scattering data depending on previous, current and next position.
 
     Parameters
@@ -163,23 +122,26 @@ def get_scattering_data_dist(
         scattering factor from directivity
 
     """
-    h=get_relative_angles(point=pos_h, origin=pos_i, normal=i_normal, up=i_up)
-    j=get_relative_angles(point=pos_j, origin=pos_i, normal=i_normal, up=i_up)   
+    diff_source = pos_h-pos_i
+    diff_receiver = pos_j-pos_i 
+    diff_source /= np.linalg.norm(diff_source)
+    diff_receiver /= np.linalg.norm(diff_receiver)
     
+    s_dist = np.empty((sources.shape[0],))
+    r_dist = np.empty((receivers.shape[0],))
+    for i in numba.prange(sources.shape[0]):
+        do = np.dot(sources[i,:], diff_source)
+        if do**2>1:
+            do=1*np.sign(do)
 
-    s_d = np.abs(sources-h)
-    r_d = np.abs(receivers-j)
+        s_dist[i] = np.arccos(do)
 
-    s_d[s_d[:,0]>np.pi,0]=s_d[s_d[:,0]>np.pi,0]-np.pi
-    r_d[r_d[:,0]>np.pi,0]=r_d[r_d[:,0]>np.pi,0]-np.pi
-
-    s_dist = np.empty(s_d.shape[0])
-    r_dist = np.empty(r_d.shape[0])
+    for i in numba.prange(sources.shape[0]):
+        do = np.dot(receivers[i,:], diff_receiver)
+        if do**2>1:
+            do=1*np.sign(do)
+        r_dist[i] = np.arccos(do)
     
-    for i in numba.prange(s_d.shape[0]):
-        s_dist[i] = np.linalg.norm(s_d[i,:])
-    for i in numba.prange(r_d.shape[0]):
-        r_dist[i] = np.linalg.norm(r_d[i,:])
 
     if mode == "nneighbor": 
         source_idx = np.argmin(s_dist)
@@ -200,7 +162,7 @@ def get_scattering_data_dist(
                 k += 1
                 sss = np.argpartition(s_dist,k)
 
-            source_idx=sss[k:]
+            source_idx=sss[:k]
 
             w_s = 1/(s_dist[source_idx]**order)
 
@@ -215,7 +177,7 @@ def get_scattering_data_dist(
                 k += 1
                 rrr = np.argpartition(r_dist,k)
 
-            receiver_idx=rrr[k:]
+            receiver_idx=rrr[:k]
 
             w_r = 1/(r_dist[receiver_idx]**order)
         
@@ -232,7 +194,7 @@ def get_scattering_data_dist(
 
     else:
         out=np.array([0.])
-        
+
     return out
 
 
@@ -269,6 +231,46 @@ def get_scattering_data_source(
     source_idx = np.argmin(np.sum(
         (sources[wall_id_i, :, :]-diff_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
+
+def get_relative_angles(point:np.ndarray, origin:np.ndarray, normal:np.ndarray, up:np.ndarray):
+    """Get scattering data depending on previous, current position.
+
+    Parameters
+    ----------
+    point : np.ndarray
+        cartesian point in space (3)
+    origin : np.ndarray
+        referential origin (global cartesian coordinates) (3)
+    normal : np.ndarray
+        referential normal vector (3)
+    up : np.ndarray
+        referential up vector(3)
+    
+
+    Returns
+    -------
+    angles: np.ndarray
+        azimuth and elevation angles of point relative to referential
+
+    """
+    pt = point-origin / np.linalg.norm(point-origin)
+    
+    a = np.inner(normal,np.cross(up,pt))
+    
+    if a==0:
+        azimuth = 0
+    else:
+        proj_pt = pt - np.inner(pt,normal)/np.inner(normal,normal)*normal
+        proj_pt/=np.linalg.norm(proj_pt)
+        
+        azimuth = np.sign(a)*np.arccos(np.inner(proj_pt,up)) 
+            
+        if np.sign(a) < 0:
+            azimuth += 2*np.pi
+            
+    elevation = np.arcsin(np.inner(pt,normal))
+        
+    return np.array([azimuth,elevation])
     
 
 @numba.njit(parallel=True)
