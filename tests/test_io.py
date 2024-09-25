@@ -19,7 +19,7 @@ mesh.show()
 # try using io function 
 
 list_polygon = io.read_geometry('models/IHTApark.stl')
-
+# now something is working
 # %%
 # try plotting from io function 
 
