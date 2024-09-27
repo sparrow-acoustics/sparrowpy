@@ -136,13 +136,13 @@ def test_brdf_intp_measured(sample_walls, mdist):
  
  
 @pytest.mark.parametrize('method', [
-    #["nneighbor",0],
-    ["inv_dist",1.],
-    ["inv_dist",2.],
-    ["inv_dist",.5],
+    ["nneighbor",0.],
+    ["inv_dist", 1.],
+    ["inv_dist", 2.],
+    ["inv_dist", 80.],
     ])
 @pytest.mark.parametrize('samp', [
-    20,18,12,10
+    10
     ])        
 def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
     radi = sp.DRadiosityFast.from_polygon(sample_walls, 1)
@@ -170,24 +170,21 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
     tsour= tsour[tsour.z>0]
     trec = tsour
 
+    trec.azimuth+=5*np.pi/180
+
     posi=radi.walls_center[wallid]
 
-    sc_factors = np.zeros([tsour.x.shape[0],trec.x.shape[0],data.freq.shape[-1]])
-    weights = np.zeros([tsour.x.shape[0],trec.x.shape[0]])
-
-    wweights = np.dstack([1/np.sin(radi._receivers[wallid].elevation)]*radi._sources[wallid].cartesian.shape[0])
-
-    wweights = wweights.reshape([radi._sources[wallid].cartesian.shape[0],radi._sources[wallid].cartesian.shape[0],1])
-    wweights = wweights[:,:,0].transpose()
+    sc_factors = np.zeros([radi._sources[wallid].cartesian.shape[0],trec.x.shape[0],data.freq.shape[-1]])
+    weights = pf.samplings.calculate_sph_voronoi_weights(trec)
 
     src = radi._sources[wallid].cartesian
     rec = radi._receivers[wallid].cartesian
 
-    for i,posh in enumerate(tsour.cartesian):
-        posh = (posh + posi)
-        for j,posj in enumerate(trec.cartesian):
+    wweights = pf.samplings.calculate_sph_voronoi_weights(radi._receivers[wallid])
 
-            weights[i,j] = 1/np.dot(radi.walls_normal[wallid],posj)
+    for i,posh in enumerate(src):
+        posh = posh+posi
+        for j,posj in enumerate(trec.cartesian):
 
             posj = (posj + posi)
 
@@ -196,10 +193,10 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
                                                     scattering=radi._scattering, 
                                                     scattering_index=radi._scattering_index, mode=method[0], order=method[1])
 
-    src_vis_id = 0
+    src_vis_id = 4
     
-    energy_in = np.mean(data.freq[:,:,0])#*wweights)
-    energy_out = np.mean(sc_factors[:,:,0])#*weights)
+    energy_in = np.sum(data.freq[src_vis_id,:,0]*wweights)*np.pi
+    energy_out = np.sum(sc_factors[src_vis_id,:,0]*weights)*np.pi
 
     rel=np.abs(energy_in-energy_out)/energy_in  
 
@@ -209,7 +206,7 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
     # plt.savefig(str(sigma)+"_"+str(ang)+"_3d_src.png")
     
     fig,ax1 = plt.subplots(subplot_kw={"projection": "3d"})
-    plot.brdf_3d(data=sc_factors[src_vis_id,:,0], receivers=trec, source_pos=tsour[src_vis_id], ax=ax1)
+    plot.brdf_3d(data=sc_factors[src_vis_id,:,0], receivers=trec, source_pos=radi._sources[wallid][src_vis_id], ax=ax1)
     ax1.set_title("estimation\n sig="+str(sigma)+"; ang="+str(ang)+"; samp="+str(samp)+"; method="+method[0])
     plt.gcf().text(0.5, 0.02, "rel error: "+str(rel)+"\n est. energy: " + str(energy_out)+"\n tru energy: " + str(energy_in), fontsize=12)
     plt.savefig(str(sigma)+"_"+str(ang)+"_"+str(samp)+"_"+method[0]+"_order"+str(method[1])+"_3d_est.png")

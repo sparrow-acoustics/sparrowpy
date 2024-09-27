@@ -179,7 +179,7 @@ def get_scattering_data_dist(
 
             receiver_idx=rrr[:k]
 
-            w_r = 1/(r_dist[receiver_idx]**order)
+            w_r = 1/(r_dist[receiver_idx]**order)    
         
             
         out = np.zeros((scattering[scattering_index[wall_id_i]].shape[-1],))
