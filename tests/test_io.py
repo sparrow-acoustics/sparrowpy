@@ -36,7 +36,7 @@ plt.show()
 
 # %%
 # plot separately 
-
+# check if all faces are not on diagonal planes. 
 # Loop through each face in the list of triangular faces and plot each one in a separate figure
 for i, face in enumerate(list_polygon):
     # Create a new figure for each triangular face
