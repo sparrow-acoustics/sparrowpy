@@ -10,6 +10,7 @@ from sparapy import io
 
 %matplotlib ipympl
 
+#testing something
 # %%
 # see if trimesh is loading IHTA park correctly
 
