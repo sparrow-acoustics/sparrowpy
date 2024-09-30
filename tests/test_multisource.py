@@ -39,9 +39,9 @@ def test_reciprocity_s2p_p2r(src,rec):
             src_ = sp.geometry.SoundSource(rec[0],rec[1], rec[2])
             rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
 
-        e = sp.form_factor.pt_solution(point=src_.position,patch_points=wall[0].pts)
+        e = sp.form_factor.pt_solution(point=src_.position,patch_points=wall[0].pts, mode="source")
 
-        e *= sp.form_factor.pt_solution(point=rec_.position,patch_points=wall[0].pts)
+        e *= sp.form_factor.pt_solution(point=rec_.position,patch_points=wall[0].pts, mode="receiver")
 
         energy.append(e)
 
