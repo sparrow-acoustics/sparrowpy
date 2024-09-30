@@ -94,7 +94,7 @@ def get_scattering_data(
 def get_scattering_data_dist(
         pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,wall_id_i: int,
         sources:np.ndarray, receivers:np.ndarray,
-        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", order=1, threshold=10**-7):
+        scattering:np.ndarray, scattering_index:np.ndarray, mode="nneighbor", order=1, threshold=10**-7,kk=3):
     """Get scattering data depending on previous, current and next position.
 
     Parameters
@@ -155,7 +155,7 @@ def get_scattering_data_dist(
             source_idx = np.array([np.argmin(s_dist)])
             w_s = np.array([1.])
         else:
-            k = 3
+            k = kk
             sss = np.argpartition(s_dist,k)
 
             while ((s_dist[sss[k:]]-min(s_dist[sss[:k]]))<threshold).any():
@@ -170,7 +170,7 @@ def get_scattering_data_dist(
             receiver_idx = np.array([np.argmin(r_dist)])
             w_r = np.array([1.])
         else:
-            k = 3
+            k = kk
             rrr = np.argpartition(r_dist,k)
 
             while ((r_dist[rrr[k:]]-min(r_dist[rrr[:k]]))<threshold).any():

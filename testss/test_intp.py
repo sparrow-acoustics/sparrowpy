@@ -136,15 +136,18 @@ def test_brdf_intp_measured(sample_walls, mdist):
  
  
 @pytest.mark.parametrize('method', [
-    ["nneighbor",0.],
+    ["nneighbor",0],
     ["inv_dist", 1.],
     ["inv_dist", 2.],
     ["inv_dist", 80.],
     ])
 @pytest.mark.parametrize('samp', [
-    10
+    5
+    ])
+@pytest.mark.parametrize('k', [
+    9
     ])        
-def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
+def test_bdrf_energy_conservation(sample_walls, mdist, method,samp,k):
     radi = sp.DRadiosityFast.from_polygon(sample_walls, 1)
 
     wallid=2
@@ -191,7 +194,7 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
             sc_factors[i,j,:]=geom.get_scattering_data_dist(pos_h=posh, pos_i=posi, pos_j=posj, wall_id_i=wallid,
                                                     sources=src, receivers=rec, 
                                                     scattering=radi._scattering, 
-                                                    scattering_index=radi._scattering_index, mode=method[0], order=method[1])
+                                                    scattering_index=radi._scattering_index, mode=method[0], order=method[1], kk=k)
 
     src_vis_id = 4
     
@@ -207,9 +210,9 @@ def test_bdrf_energy_conservation(sample_walls, mdist, method,samp):
     
     fig,ax1 = plt.subplots(subplot_kw={"projection": "3d"})
     plot.brdf_3d(data=sc_factors[src_vis_id,:,0], receivers=trec, source_pos=radi._sources[wallid][src_vis_id], ax=ax1)
-    ax1.set_title("estimation\n sig="+str(sigma)+"; ang="+str(ang)+"; samp="+str(samp)+"; method="+method[0])
+    ax1.set_title("estimation\n sig="+str(sigma)+"; ang="+str(ang)+"; samp="+str(samp)+"; method="+method[0]+";k=" + str(k))
     plt.gcf().text(0.5, 0.02, "rel error: "+str(rel)+"\n est. energy: " + str(energy_out)+"\n tru energy: " + str(energy_in), fontsize=12)
-    plt.savefig(str(sigma)+"_"+str(ang)+"_"+str(samp)+"_"+method[0]+"_order"+str(method[1])+"_3d_est.png")
+    plt.savefig(str(sigma)+"_"+str(ang)+"_"+str(samp)+"_"+method[0]+"_order"+str(method[1])+"_k" + str(k)+"_3d_est.png")
     
     #plt.show()
 
