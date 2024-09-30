@@ -24,6 +24,8 @@ def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, so
     source_normal: np.ndarray
         source patch normal (3,)
 
+    Returns
+    --------
     out: float
         form factor
 
@@ -55,6 +57,10 @@ def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
         a point in space (3,)
         in the stokes integration of the form factor, a point on a different patch's boundary
 
+    Returns
+    --------
+    result: float
+        form function for points p1, p0
     """
 
     n = np.linalg.norm(p1-p0)
@@ -66,7 +72,7 @@ def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
 @numba.njit(parallel=True)
 def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
     """
-    calculates aall the stokes form function values between two patches 
+    calculates all the stokes form function values between two patches 
     and stores them in a matrix.
 
     Parameters
@@ -77,16 +83,18 @@ def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndar
     j_bpoints: np.ndarray
         list of points in patch j boundary (n_boundary_points_j , 3)
 
+    Returns
+    --------
     form_mat: np.ndarray
         matrix of form function values (n_boundary_points_i , n_boundary_points_j)
 
     """
 
-    form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)))
+    form_mat = np.zeros((i_bpoints.shape[0] , j_bpoints.shape[0]))
 
     for i in numba.prange(i_bpoints.shape[0]):
         for j in numba.prange(j_bpoints.shape[0]):
-            form_mat[i][j] = stokes_ffunction(i_bpoints[i],j_bpoints[j])
+            form_mat[i,j] = stokes_ffunction(i_bpoints[i],j_bpoints[j])
 
     return form_mat
 
@@ -113,6 +121,9 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
     approx_order: int
         polynomial order of the form function integration estimation
 
+    Returns
+    --------
+    form factor between patch_i and patch_j using Stokes' theorem for integration
     """
 
     i_bpoints, i_conn = helpers.sample_border(patch_i, npoints=approx_order+1)

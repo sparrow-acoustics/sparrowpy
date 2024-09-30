@@ -42,6 +42,11 @@ def polygon_area(pts: np.ndarray) -> float:
     ----------
     pts: np.ndarray
         list of 3D points which define the vertices of the polygon
+
+    Returns
+    ----------
+    area: float
+        area of polygon defined by pts
     """
 
     area = 0
@@ -63,6 +68,11 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
 
     order : int
         polynomial order of the curve
+
+    Returns
+    ----------
+    area: float
+        area under curve
     """
 
     order = min(order,len(ps)-1) # the order of the curve may be overwritten depending on the sample size
@@ -105,6 +115,11 @@ def sample_random(el: np.ndarray, npoints=100):
             
     npoints : int
         number of sample points to generate
+
+    Returns
+    ---------
+    ptlist: np.ndarray
+        list of sample points in patch el
     """
 
     # TO DO: check that patch satisfies conditions for proper sampling
@@ -145,6 +160,11 @@ def sample_regular(el: np.ndarray, npoints=10):
             
     npoints : int
         number of sample points to generate
+
+    Returns
+    ---------
+    out: np.ndarray
+        list of sample points in patch el
     """
     
     # TO DO: check that patch satisfies conditions for proper sampling
@@ -249,7 +269,23 @@ def sample_border(el: np.ndarray, npoints=3):
 # geometry
 @numba.njit()
 def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
+    """
+    Computes the inner product between a matrix and a vector to please numba.njit
 
+
+    Parameters
+    ----------
+    matrix : numpy.ndarray(n,n) 
+        input matrix
+            
+    vector : numpy.ndarray(n,)
+        vector
+
+    Returns
+    ---------
+    out: np.ndarray(n,)
+        matrix*vector inner product
+    """
     out = np.empty(matrix.shape[0])
 
     for i in numba.prange(matrix.shape[0]):
@@ -271,6 +307,11 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
             
     n_out : numpy.ndarray(3,)
         direction to which n_in is to be rotated
+
+    Returns
+    ---------
+    matrix: np.ndarray
+        rotation matrix
     """
 
     if n_out.shape[0] == 0:
@@ -316,7 +357,22 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
 
 @numba.njit()
 def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
-    
+    """
+    Compute a vector tangent to a spherical surface on a given point on said sphere, pointing in the direction of another point on sphere
+
+    Parameters
+    ----------
+    v0 : numpy.ndarray(3,) 
+        point on which to calculate tangent vector
+            
+    v1 : numpy.ndarray(3,)
+        point on sphere to which tangent vector poinst
+
+    Returns
+    ---------
+    vout: np.ndarray
+        vector tangent to spherical surface
+    """
     if np.dot(v0,v1)!=0:
         scale = np.sqrt( np.square( np.linalg.norm(np.cross(v0,v1))/np.dot(v0,v1) ) + np.square( np.linalg.norm(v0) ) )
 
@@ -334,6 +390,19 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
 def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
     """
     returns true if two patches have any common points
+
+    Parameters
+    ----------
+    p0 : numpy.ndarray(# vertices, 3) 
+        patch
+            
+    v1 : numpy.ndarray(# vertices, 3)
+        another patch
+
+    Returns
+    ---------
+    flag: bool
+        flag of coincident points on both patches
     """
     
     flag = False

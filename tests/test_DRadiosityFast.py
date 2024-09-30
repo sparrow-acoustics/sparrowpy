@@ -68,28 +68,10 @@ def test_compute_form_factor_vals(sample_walls):
     kang = radiosity.form_factors
 
     diff = np.abs(kang-univ)
-
-    plt.figure()
-    plt.imshow(diff/kang * 100)
-    plt.colorbar()
-    plt.savefig(".\\tests\\test_data\\kang_vs_univ_ff_rel_diff.png")
     
     diff = diff[kang!=0]
     univ = univ[kang!=0]
     kang = kang[kang!=0]
-
-    plt.figure()
-    plt.title("form factor values")
-    plt.plot(kang.flatten(), label="kang")
-    plt.plot(univ.flatten(), label="univ")
-    plt.legend()
-    plt.savefig(".\\tests\\test_data\\kang_vs_univ_ff_abs_values.png")
-
-    plt.figure()
-    plt.title("form factor difference")
-    plt.plot(diff, label="kang-univ")
-    plt.legend()
-    plt.savefig(".\\tests\\test_data\\kang_vs_univ_ff_abs_diff.png")
 
     maximo = np.max(diff)
     rms = np.sqrt(np.sum(np.square(diff)))/(diff.shape[0]**2)
