@@ -1239,7 +1239,7 @@ class DirectionalRadiosity():
         # C. Form factors
         if len(self.patch_list) > 1:
             for patches in self.patch_list:
-                patches.calculate_univ_form_factor(self.patch_list)
+                patches.calculate_form_factor(self.patch_list)
 
         # D. Energy exchange between patches
         if len(self.patch_list) > 1:
