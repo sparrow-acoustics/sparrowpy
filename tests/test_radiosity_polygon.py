@@ -85,7 +85,8 @@ def test_init_energy_matrix():
     sampling_rate = 1000
     source = SoundSource([2, 2, 1], [0, 1, 0], [0, 0, 1])
     ground_patches.init_energy_exchange(
-        max_order_k, ir_length_s, source, sampling_rate=sampling_rate)
+        max_order_k, ir_length_s, source, sampling_rate=sampling_rate,
+        speed_of_sound=343)
     assert ground_patches.E_n_samples == 1000
     assert ground_patches.E_sampling_rate == sampling_rate
     npt.assert_array_equal(

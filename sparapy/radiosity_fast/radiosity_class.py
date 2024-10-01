@@ -3,6 +3,7 @@ import numpy as np
 import pyfar as pf
 from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_recursive as ee_recursive
+from . import energy_exchange_order as ee_order
 
 
 class DRadiosityFast():
@@ -41,7 +42,7 @@ class DRadiosityFast():
             self, walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids):
-        """Create a Radiosity object for directional scattering coefficients."""
+        """Create a Radiosity object for directional implementation."""
         self._walls_points = walls_points
         self._walls_normal = walls_normal
         self._walls_up_vector = walls_up_vector
@@ -95,13 +96,16 @@ class DRadiosityFast():
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
 
-    def bake_geometry(self, ff_method='kang'):
+    def bake_geometry(self, ff_method='kang', algorithm='recursive'):
         """Bake the geometry by calculating all the form factors.
 
         Parameters
         ----------
         ff_method : str, optional
             _description_, by default 'kang'
+        algorithm : str, optional
+            _description_, by default 'recursive'
+            can also be 'order'
 
         """
         # Check the visibility between patches.
@@ -147,19 +151,31 @@ class DRadiosityFast():
             absorption = None
             absorption_index = None
         else:
-            absorption = np.atleast_2d(np.array(self._absorption)),
+            absorption = np.atleast_2d(np.array(self._absorption))
             absorption_index = np.array(self._absorption_index)
 
         n_bins = 1 if self._n_bins is None else self._n_bins
 
-        self._form_factors_tilde = form_factor._form_factors_with_directivity(
-            self.visibility_matrix, self.form_factors, n_bins,
-            self.patches_center,
-            self._air_attenuation, absorption,
-            absorption_index,
-            self._patch_to_wall_ids, scattering,
-            scattering_index,
-            sources_array, receivers_array)
+        if algorithm == 'recursive':
+            self._form_factors_tilde = \
+                form_factor._form_factors_with_directivity(
+                self.visibility_matrix, self.form_factors, n_bins,
+                self.patches_center,
+                self._air_attenuation, absorption,
+                absorption_index,
+                self._patch_to_wall_ids, scattering,
+                scattering_index,
+                sources_array, receivers_array)
+        elif algorithm == 'order':
+            self._form_factors_tilde = \
+                form_factor._form_factors_with_directivity_dim(
+                self.visibility_matrix, self.form_factors, n_bins,
+                self.patches_center,
+                self._air_attenuation, absorption,
+                absorption_index,
+                self._patch_to_wall_ids, scattering,
+                scattering_index,
+                sources_array, receivers_array)
 
     def init_source_energy(
             self, source_position:np.ndarray, algorithm='recursive'):
@@ -173,13 +189,15 @@ class DRadiosityFast():
         scattering = np.array(self._scattering)
         scattering_index = self._scattering_index
         form_factors = self.form_factors
+        patches_center = self.patches_center
+        energy_0, distance_0 = source_energy._init_energy_kang(
+            source_position, patches_center, self.patches_normal,
+            self._air_attenuation, self.patches_size, self.n_bins)
+
         if algorithm == 'recursive':
-            energy_0, distance_0 = source_energy._init_energy_kang(
-                source_position, self.patches_center, self.patches_normal,
-                self._air_attenuation, self.patches_size, self.n_bins)
             energy_1, distance_1 = ee_recursive._init_energy_1(
                 energy_0, distance_0, source_position,
-                self.patches_center, self._visible_patches,
+                patches_center, self._visible_patches,
                 self._air_attenuation, self._n_bins, patch_to_wall_ids,
                 absorption, absorption_index,
                 form_factors, sources, receivers,
@@ -188,49 +206,85 @@ class DRadiosityFast():
             self.distance_0 = distance_0
             self.energy_1 = energy_1
             self.distance_1 = distance_1
+        elif algorithm == 'order':
+            energy_0_dir = ee_order._add_directional(
+                energy_0, source_position,
+                patches_center, self._n_bins, patch_to_wall_ids,
+                absorption, absorption_index,
+                sources, receivers,
+                scattering, scattering_index)
+            self.energy_0_dir = energy_0_dir
+            self.distance_0 = distance_0
         else:
             raise NotImplementedError()
 
     def calculate_energy_exchange_receiver(
             self, receiver_pos, speed_of_sound,
             histogram_time_resolution,
-            histogram_length, algorithm='recursive',
-            threshold=1e-6, max_time=np.inf, max_depth=-1):
+            histogram_length, ff_method='kang', algorithm='recursive',
+            threshold=1e-6, max_time=np.inf, max_depth=-1, recalculate=False):
         """Calculate the energy exchange."""
-        if algorithm == 'recursive':
-
-            n_samples = int(histogram_length/histogram_time_resolution)
-            ir = np.array([np.zeros((n_samples)) for _ in range(self.n_bins)]).T
-            patch_receiver_distance = self.patches_center - receiver_pos
-            air_attenuation = self._air_attenuation
-            patches_normal = self._patches_normal
-            energy_0 = self.energy_0
-            distance_0 = self.distance_0
-            energy_1 = self.energy_1
-            distance_1 = self.distance_1
-            n_patches = self.n_patches
-            n_bins = self.n_bins#
-            patches_center = self.patches_center
-            distance_i_j = np.empty((n_patches, n_patches))
-            for i in range(n_patches):
-                for j in range(n_patches):
-                    distance_i_j[i, j] = np.linalg.norm(
-                        patches_center[i, :]-patches_center[j, :])
-
+        n_samples = int(histogram_length/histogram_time_resolution)
+        ir = np.array([np.zeros((n_samples)) for _ in range(self.n_bins)])
+        receiver_pos = np.array(receiver_pos)
+        patches_center = self.patches_center
+        patch_receiver_distance = patches_center - receiver_pos
+        air_attenuation = self._air_attenuation
+        patches_normal = self._patches_normal
+        distance_0 = self.distance_0
+        n_patches = self.n_patches
+        n_bins = self.n_bins#
+        distance_i_j = np.empty((n_patches, n_patches))
+        for i in range(n_patches):
+            for j in range(n_patches):
+                distance_i_j[i, j] = np.linalg.norm(
+                    patches_center[i, :]-patches_center[j, :])
+        if ff_method == 'kang':
             patch_receiver_energy = receiver_energy._kang(
                 patch_receiver_distance, patches_normal, air_attenuation)
+        else:
+            raise NotImplementedError()
+        if algorithm == 'recursive':
             # add first 2 order energy exchange
+            ir = ir.T
+            energy_0 = self.energy_0
+            energy_1 = self.energy_1
+            distance_1 = self.distance_1
             ee_recursive._calculate_energy_exchange_second_order(
                 ir, energy_0, distance_0, energy_1, distance_1,
                 patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
                 histogram_time_resolution, n_patches, n_bins)
             # add remaining energy
             ee_recursive._calculate_energy_exchange_recursive(
-                ir, energy_1, distance_1, distance_i_j, self._form_factors_tilde,
+                ir, energy_1, distance_1, distance_i_j,
+                self._form_factors_tilde,
                 self.n_patches, patch_receiver_distance, patch_receiver_energy,
                 speed_of_sound, histogram_time_resolution,
                 threshold=threshold, max_time=max_time, max_depth=max_depth)
             return ir.T
+        elif algorithm == 'order':
+            energy_0_dir = self.energy_0_dir
+            # assert max_depth>=1, "max_depth must be larger than 1"
+            if not hasattr(self, 'E_matrix_total') or recalculate:
+                self.E_matrix_total = ee_order.energy_exchange(
+                    n_samples, energy_0_dir, distance_0, distance_i_j,
+                    self._form_factors_tilde,
+                    speed_of_sound, histogram_time_resolution, max_depth,
+                    self._visible_patches)
+
+            receivers_array = np.array([s.cartesian for s in self._receivers])
+            # scattering_index = np.array(self._scattering_index)
+            receiver_idx = geometry.get_scattering_data_receiver_index(
+                patches_center, receiver_pos, receivers_array,
+                self._patch_to_wall_ids)
+            assert receiver_idx.shape[0] == self.n_patches
+            assert len(receiver_idx.shape) == 1
+
+            return ee_order._collect_receiver_energy(
+                ir, self.E_matrix_total,
+                np.linalg.norm(patch_receiver_distance, axis=1),
+                patch_receiver_energy, speed_of_sound,
+                histogram_time_resolution,receiver_idx)
         else:
             raise NotImplementedError()
 

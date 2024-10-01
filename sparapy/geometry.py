@@ -232,7 +232,7 @@ class Environment():
 
     def __init__(
             self, polygons: list[Polygon], source: SoundSource,
-            receiver: Receiver, speed_of_sound: float = 346.18) -> None:
+            receiver: Receiver, speed_of_sound: float) -> None:
         """Define environment with acoustic Objects and speed of sound.
 
         Parameters
@@ -244,7 +244,7 @@ class Environment():
         receiver : Receiver
             receiver in the scene
         speed_of_sound : float, optional
-            speed of sound in m/s, by default 346.18
+            speed of sound in m/s
 
         """
         self.speed_of_sound = speed_of_sound

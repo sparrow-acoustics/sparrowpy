@@ -174,7 +174,8 @@ def universal(patches_points: np.ndarray, patches_normals: np.ndarray, patches_a
 
 @numba.njit(parallel=True)
 def _form_factors_with_directivity(
-        visibility_matrix, form_factors, n_bins, patches_center, air_attenuation,
+        visibility_matrix, form_factors, n_bins, patches_center,
+        air_attenuation,
         absorption, absorption_index, patch_to_wall_ids,
         scattering, scattering_index, sources, receivers):
     """Calculate the form factors with directivity."""
@@ -214,5 +215,50 @@ def _form_factors_with_directivity(
                 source_wall_idx = absorption_index[wall_id_i]
                 form_factors_tilde[h, i, j, :] = form_factors_tilde[
                     h, i, j, :] * (1-absorption[source_wall_idx])
+
+    return form_factors_tilde
+
+
+@numba.njit(parallel=True)
+def _form_factors_with_directivity_dim(
+        visibility_matrix, form_factors, n_bins, patches_center,
+        air_attenuation,
+        absorption, absorption_index, patch_to_wall_ids,
+        scattering, scattering_index, sources, receivers):
+    """Calculate the form factors with directivity."""
+    n_patches = patches_center.shape[0]
+    n_directions = receivers.shape[1] if receivers is not None else 1
+    form_factors_tilde = np.zeros((n_patches, n_patches, n_directions, n_bins))
+    # loop over previous patches, current and next patch
+
+    for ii in numba.prange(n_patches**2):
+        i = ii % n_patches
+        j = int(ii/n_patches) % n_patches
+        visible_ij = visibility_matrix[
+            i, j] if i < j else visibility_matrix[j, i]
+        if visible_ij:
+            difference_receiver = patches_center[i]-patches_center[j]
+            wall_id_i = int(patch_to_wall_ids[i])
+            difference_receiver /= np.linalg.norm(difference_receiver)
+            ff = form_factors[i, j] if i<j else form_factors[j, i]
+
+            distance = np.linalg.norm(difference_receiver)
+            form_factors_tilde[i, j, :, :] = ff
+            if air_attenuation is not None:
+                form_factors_tilde[i, j, :, :] = form_factors_tilde[
+                    i, j, :, :] * np.exp(-air_attenuation * distance)
+
+            if scattering is not None:
+                scattering_factor = geometry.get_scattering_data_source(
+                    patches_center[i], patches_center[j],
+                    sources, wall_id_i,
+                    scattering, scattering_index)
+                form_factors_tilde[i, j, :, :] = form_factors_tilde[
+                    i, j, :, :] * scattering_factor
+
+            if absorption is not None:
+                source_wall_idx = absorption_index[wall_id_i]
+                form_factors_tilde[i, j, :, :] = form_factors_tilde[
+                    i, j, :, :] * (1-absorption[source_wall_idx])
 
     return form_factors_tilde

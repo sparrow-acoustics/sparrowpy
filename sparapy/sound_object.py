@@ -130,7 +130,8 @@ class SoundObject():
         ax : matplotlib.axes.Axes
             Axes to plot on.
         **kwargs
-            Keyword arguments that are passed to ``matplotlib.pyplot.scatter()``.
+            Keyword arguments that are passed to
+            ``matplotlib.pyplot.scatter()``.
 
         """
         pf.plot.freq
@@ -179,7 +180,8 @@ class SoundSource(SoundObject):
         ax : matplotlib.axes.Axes
             Axes to plot on.
         **kwargs
-            Keyword arguments that are passed to ``matplotlib.pyplot.scatter()``.
+            Keyword arguments that are passed to
+            ``matplotlib.pyplot.scatter()``.
 
         """
         super(SoundSource, self).plot(ax, color='r', label='Source', **kwargs)
@@ -213,7 +215,8 @@ class Receiver(SoundObject):
         ax : matplotlib.axes.Axes
             Axes to plot on.
         **kwargs
-            Keyword arguments that are passed to ``matplotlib.pyplot.scatter()``.
+            Keyword arguments that are passed to
+            ``matplotlib.pyplot.scatter()``.
 
         """
         super(Receiver, self).plot(ax, color='b', label='Receiver', **kwargs)
