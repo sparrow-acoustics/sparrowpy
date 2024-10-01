@@ -7,6 +7,24 @@ import matplotlib.pyplot as plt
 ################# 1D , polynomial
 @numba.njit()
 def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """
+    estimates coefficients of a polynomial curve passing through points (x,y)
+    the order of the polynomial depends on the number of sample points input in the function.
+     ex. a polynomial P estimated with 4 sample points:
+        P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
+    Parameters
+    ----------
+    x: np.ndarray
+        sample x-values
+    y: np.ndarray
+        sample y-values
+
+    Returns
+    ----------
+    b: np.ndarray
+        polynomial coefficients
+    """
+
 
     xmat = np.empty((len(x),len(x)))
 
@@ -23,7 +41,24 @@ def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 @numba.njit()
 def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
+    """
+    integrates a polynomial curve defined between x[0] and x[-1]
+    with coefficients c
+        ex. for a quadratic curve f
+        f(x) = c[0]*x**2 + c[1]*x + c[2]
 
+    Parameters
+    ----------
+    c: np.ndarray
+        polynomial coefficients
+    x: np.ndarray
+        sample points
+
+    Returns
+    ----------
+    out: float
+        polynomial integral 
+    """
     out = 0
 
     for i in range(len(c)):
