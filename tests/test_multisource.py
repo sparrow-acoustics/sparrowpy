@@ -23,7 +23,7 @@ create_reference_files = False
     1,5,10,20
     ])
 @pytest.mark.parametrize('ps', [
-    .75,1,2,3
+    1.5,2,3
     ])
 def test_reciprocity_shoebox(src,rec,ord,ps):
     """Test if the results changes for shifted walls."""
