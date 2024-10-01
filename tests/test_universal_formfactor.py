@@ -155,17 +155,20 @@ def test_perpendicular_coincidentpoint_patches(width1, width2, length1, length2)
     ])
 def test_point_surface_interactions(l, source, receiver, patchsize):
 
+    sr=1000
+    c=343
+
     absor_factor = .1
 
     patch_pos = geo.Polygon(points=[[0,0,0],[l, 0, 0],[l, 0, l],[0,0,l]], normal=[0,1,0], up_vector=[1,0,0])
 
     patch = Patches(polygon=patch_pos, max_size=patchsize*l, other_wall_ids=[], wall_id=[0], absorption=absor_factor)
 
-    patch.init_energy_exchange( 0, .1, source)
+    patch.init_energy_exchange( 0, .1, source, sampling_rate=sr, speed_of_sound=c)
 
     patch = source_cast(src=source, rpatch=patch, absor=absor_factor)
 
-    receiver_cast(receiver, patch, absor_factor)
+    receiver_cast(receiver, patch, absor_factor, sr, c)
 
 
 def source_cast(src, rpatch, absor):
@@ -187,11 +190,11 @@ def source_cast(src, rpatch, absor):
     return rpatch
     
 
-def receiver_cast(rcv, patch, absor):
+def receiver_cast(rcv, patch, radi, sr, c):
     """Test final energy cast from a generalized patch in space to a point
     Nusselt-analog-based option"""
 
-    true_rec_energy = np.sum(patch.energy_at_receiver(receiver=rcv, max_order=0, ir_length_s=0.1))
+    true_rec_energy = np.sum(patch.energy_at_receiver(receiver=rcv, max_order=0, ir_length_s=0.1, speed_of_sound=c, sampling_rate=sr))
 
     patch_energy = np.sum(patch.E_matrix)
 
