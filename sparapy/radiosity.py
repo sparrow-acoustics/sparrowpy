@@ -4,7 +4,7 @@ import numpy as np
 import pyfar as pf
 import sofar as sf
 from tqdm import tqdm
-
+from sparapy.form_factor import calc_form_factor as universal_ffactor
 from sparapy.geometry import Polygon, SoundSource
 
 
@@ -138,8 +138,8 @@ class Patches(Polygon):
         self.plot_view_up(ax, color)
 
     def init_energy_exchange(
-            self, max_order_k, ir_length_s, source, sampling_rate=1000,
-            speed_of_sound=346.18):
+            self, max_order_k, ir_length_s, source, sampling_rate,
+            speed_of_sound):
         """Initialize the energy exchange Matrix with source energy.
 
         It init the matrix self.E_matrix and add source energy after (6).
@@ -153,9 +153,9 @@ class Patches(Polygon):
         source : SoundSource
             sound source with ``sound_power`` and ``position``
         sampling_rate : int, optional
-            Sampling rate of impulse response, by default 1000 Hz.
+            Sampling rate of impulse response.
         speed_of_sound : float, optional
-            speed of sound in m/s, by default 346.18 m/s.
+            speed of sound in m/s.
 
         """
         self.E_sampling_rate = sampling_rate
@@ -210,8 +210,8 @@ class Patches(Polygon):
 
 
     def calculate_energy_exchange(
-            self, patches_list, current_order_k, speed_of_sound=346.18,
-            E_sampling_rate=1000):
+            self, patches_list, current_order_k, speed_of_sound,
+            E_sampling_rate):
         """Calculate the energy exchange for a given order.
 
         It implements formula 18 and save the result in self.E_matrix.
@@ -223,9 +223,9 @@ class Patches(Polygon):
         current_order_k : int
             Order k
         speed_of_sound : int, optional
-            speed of sound in m/s, by default 346.18 m/s.
+            speed of sound in m/s.
         E_sampling_rate : int, optional
-            Sampling rate of histogram, by default 1000 Hz -> 1ms.
+            Sampling rate of histogram.
 
         """
         k = current_order_k # real k 1 .. max_k
@@ -425,6 +425,35 @@ class Patches(Polygon):
 
                 i_receiver_offset += len(receiver_wall.patches)
 
+    def calculate_univ_form_factor(self, patches_list) -> None:
+        """Calculate the form factors between patches using a universal method.
+
+        Parameters
+        ----------
+        patches_list : list of patches
+            List of patches.
+        M : float, optional
+            Air attenuation factor in Np/m, by default 0
+        alpha : float, optional
+            absorption coefficient of wall, by default 0.1
+
+        """
+        num_other_patches = np.sum([
+            len(patches_list[i].patches) for i in self.other_wall_ids])
+        self.form_factors = np.zeros((len(self.patches), num_other_patches))
+        for i_source, source_patch in enumerate(self.patches):
+            i_receiver_offset = 0
+            for receiver_wall_id in self.other_wall_ids:
+                receiver_wall = patches_list[receiver_wall_id]
+                for i_receiver, receiver_patch in enumerate(
+                        receiver_wall.patches):
+                    
+                    index_rec = i_receiver 
+                    self.form_factors[i_source, index_rec] = universal_ffactor(source_pts=source_patch.pts, receiving_pts=receiver_patch.pts, source_normal=source_patch.normal, receiving_normal=receiver_patch.normal)
+
+                i_receiver_offset += len(receiver_wall.patches)
+
+
     def get_form_factor(
             self, patches_list, source_path_id, receiver_wall_id,
             receiver_patch_id):
@@ -461,7 +490,7 @@ class Patches(Polygon):
 
     def energy_at_receiver(
             self, max_order, receiver, ir_length_s,
-            speed_of_sound=346.18, sampling_rate=1000):
+            speed_of_sound, sampling_rate):
         """Calculate the energy at the receiver.
 
         this is supposed to be from just one wall
@@ -477,9 +506,9 @@ class Patches(Polygon):
         ir_length_s : _type_
             _description_
         speed_of_sound : float, optional
-            _description_, by default 346.18
+            _description_
         sampling_rate : int, optional
-            _description_, by default 1000
+            _description_
 
         Returns
         -------
@@ -648,7 +677,7 @@ class PatchesDirectional(Patches):
 
     def init_energy_exchange(
             self, max_order_k, ir_length_s, source,
-            sampling_rate=1000):
+            sampling_rate, speed_of_sound):
         """Initialize the energy exchange Matrix with source energy.
 
         Parameters
@@ -659,12 +688,15 @@ class PatchesDirectional(Patches):
             length of the impulse response in seconds.
         source : SoundSource
             Sound source with ``sound_power`` and ``position``
-        sampling_rate : int, optional
+        sampling_rate : int
             Sample rate of histogram, by default 1000 -> 1ms
+        speed_of_sound : float,
+            speed of sound in m/s.
 
         """
         Patches.init_energy_exchange(
-            self, max_order_k, ir_length_s, source, sampling_rate)
+            self, max_order_k, ir_length_s, source, sampling_rate,
+            speed_of_sound=speed_of_sound)
         test = self.E_matrix.copy()
         self.E_matrix = self.E_matrix[..., np.newaxis]
         self.E_matrix = np.tile(
@@ -689,8 +721,8 @@ class PatchesDirectional(Patches):
                         scattering[i_patch, :])
 
     def calculate_energy_exchange(
-            self, patches_list, current_order_k, speed_of_sound=346.18,
-            E_sampling_rate=1000):
+            self, patches_list, current_order_k, speed_of_sound,
+            E_sampling_rate):
         """Calculate the energy exchange for a given order.
 
         It implements formula 18 and save the result in self.E_matrix.
@@ -702,9 +734,9 @@ class PatchesDirectional(Patches):
         current_order_k : int
             Order k
         speed_of_sound : int, optional
-            speed of sound in m/s, by default 346.18 m/s.
+            speed of sound in m/s.
         E_sampling_rate : int, optional
-            Sampling rate of histogram, by default 1000 Hz -> 1ms.
+            Sampling rate of histogram, e.g. 1000 Hz -> 1ms.
 
         """
         k = current_order_k # real k 1 .. max_k
@@ -766,7 +798,7 @@ class PatchesDirectional(Patches):
 
     def energy_at_receiver(
             self, max_order, receiver, ir_length_s,
-            speed_of_sound=346.18, sampling_rate=1000, M=0):
+            speed_of_sound, sampling_rate, M=0):
         """Calculate the energy at the receiver.
 
         this is supposed to be from just one wall
@@ -782,7 +814,7 @@ class PatchesDirectional(Patches):
         ir_length_s : float
             useless
         speed_of_sound : float, optional
-            Speed of sound in m/s, by default 346.18 m/s.
+            Speed of sound in m/s.
         sampling_rate : int, optional
             _description_, by default 1000
         M : float, optional
@@ -974,7 +1006,7 @@ class Radiosity():
         speed_of_sound : float, optional
             Speed of sound in m/s, by default 346.18 m/s
         sampling_rate : int, optional
-            samplingrate of the Energy histogram, by default 1000 -> 1ms
+            sampling rate of the Energy histogram, by default 1000 -> 1ms
         absorption: np.ndarray
             Absorption coefficient of this wall for each frequency bin
         source : SoundSource, optional
@@ -1039,7 +1071,8 @@ class Radiosity():
         for patches in self.patch_list:
             patches.init_energy_exchange(
                 self.max_order_k, self.ir_length_s, source,
-                sampling_rate=self.sampling_rate)
+                sampling_rate=self.sampling_rate,
+                speed_of_sound=self.speed_of_sound)
 
         # C. Form factors
         if len(self.patch_list) > 1:
@@ -1109,7 +1142,7 @@ class DirectionalRadiosity():
         speed_of_sound : float, optional
             Speed of sound in m/s, by default 346.18 m/s
         sampling_rate : int, optional
-            samplingrate of the Energy histogram, by default 1000 -> 1ms
+            sampling rate of the Energy histogram, by default 1000 -> 1ms
         source : SoundSource, optional
             Source object, by default None, can be added later.
 
@@ -1195,12 +1228,13 @@ class DirectionalRadiosity():
         for patches in self.patch_list:
             patches.init_energy_exchange(
                 self.max_order_k, self.ir_length_s, source,
-                sampling_rate=self.sampling_rate)
+                sampling_rate=self.sampling_rate,
+                speed_of_sound=self.speed_of_sound)
 
         # C. Form factors
         if len(self.patch_list) > 1:
             for patches in self.patch_list:
-                patches.calculate_form_factor(self.patch_list)
+                patches.calculate_univ_form_factor(self.patch_list)
 
         # D. Energy exchange between patches
         if len(self.patch_list) > 1:

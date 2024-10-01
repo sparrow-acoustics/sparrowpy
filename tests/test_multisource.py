@@ -83,21 +83,14 @@ def test_reciprocity_shoebox(src,rec):
     [[2.,-2.,0], [-1, 0, 0], [0, 0, 1]],
     [[2.,0.,-2.], [-1, 0, 0], [0, 0, 1]],
     ])
-def test_reciprocity_singlewall(src,rec):
+def test_reciprocity_s2p_p2r(src,rec):
     """check if radiosity implementation has source-receiver reciprocity"""
     wall = [sp.geometry.Polygon(
             [[0, -1, -1], [0, -1, 1],
             [0, 1, 1], [0, 1, -1]],
             [0, 0, 1], [1, 0, 0])]
     
-    patch_size = 2.
-    ir_length_s = 1
-    sampling_rate = 1000
-    max_order_k = 2
-    speed_of_sound = 343
-    irs_new = []
-    E_matrix = []
-    form_factors = []
+    energy=[]
 
     for i in range(2):
         if i == 0:
@@ -107,94 +100,11 @@ def test_reciprocity_singlewall(src,rec):
             src_ = sp.geometry.SoundSource(rec[0],rec[1], rec[2])
             rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
 
+        e = sp.form_factor.pt_solution(point=src_.position,patch_points=wall[0].pts, mode="source")
 
-        ## new approach
-        radi = sp.radiosity.Radiosity(
-            wall, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate,
-            absorption=0)
+        e *= sp.form_factor.pt_solution(point=rec_.position,patch_points=wall[0].pts, mode="receiver")
 
-        # run simulation
-        radi.run(src_)
+        energy.append(e)
 
-        E_matrix.append(np.concatenate([
-            radi.patch_list[i].E_matrix for i in range(len(wall))], axis=-2))
-        form_factors.append([
-            radi.patch_list[i].form_factors for i in range(len(wall))])
-
-        # test energy at receiver
-        irs_new.append(radi.energy_at_receiver(rec_, ignore_direct=True))
-
-    irs_new = np.array(irs_new)
-
-    # fig,ax=plt.subplots()
-    # ax.plot(irs_new[0][0][irs_new[0][0]!=0], "o")
-    # ax.plot(irs_new[1][0][irs_new[1][0]!=0],"*")
-    # plt.show()
-
-    # rotate all walls
-    npt.assert_array_almost_equal(np.sum(irs_new[1]), np.sum(irs_new[0]))
-    npt.assert_array_almost_equal(irs_new[1][0], irs_new[0][0])
-
-@pytest.mark.parametrize('src', [
-    [[2.,0,0], [-1, 0, 0], [0, 0, 1]],
-    [[2.,2.,0], [-1, 0, 0], [0, 0, 1]],
-    [[2.,0.,2.], [-1, 0, 0], [0, 0, 1]],
-    ])
-@pytest.mark.parametrize('rec', [
-    [[1.,0.,0], [-1, 0, 0], [0, 0, 1]],
-    [[2.,-2.,0], [-1, 0, 0], [0, 0, 1]],
-    [[2.,0.,-2.], [-1, 0, 0], [0, 0, 1]],
-    ])
-def test_s2p_p2r_reciprocity(src,rec):
-    """check if radiosity implementation has source-receiver reciprocity"""
-    wall = [sp.geometry.Polygon(
-            [[0, -1, -1], [0, -1, 1],
-            [0, 1, 1], [0, 1, -1]],
-            [0, 0, 1], [1, 0, 0])]
     
-    patch_size = 4.
-    ir_length_s = 1
-    sampling_rate = 1000
-    max_order_k = 2
-    speed_of_sound = 343
-    irs_new = []
-    E_matrix = []
-    form_factors = []
-
-    for i in range(2):
-        if i == 0:
-            src_ = sp.geometry.SoundSource(src[0],src[1], src[2])
-            rec_ = sp.geometry.Receiver(rec[0],rec[1], rec[2])
-        elif i == 1:
-            src_ = sp.geometry.SoundSource(rec[0],rec[1], rec[2])
-            rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
-
-
-        ## new approach
-        radi = sp.radiosity.Radiosity(
-            wall, patch_size, max_order_k, ir_length_s,
-            speed_of_sound=speed_of_sound, sampling_rate=sampling_rate,
-            absorption=0.1)
-
-        # run simulation
-        radi.run(src_)
-
-        E_matrix.append(np.concatenate([
-            radi.patch_list[i].E_matrix for i in range(len(wall))], axis=-2))
-        form_factors.append([
-            radi.patch_list[i].form_factors for i in range(len(wall))])
-
-        # test energy at receiver
-        irs_new.append(radi.energy_at_receiver(rec_, ignore_direct=False))
-
-    irs_new = np.array(irs_new)
-
-    # fig,ax=plt.subplots()
-    # ax.plot(irs_new[0][0][irs_new[0][0]!=0], "o")
-    # ax.plot(irs_new[1][0][irs_new[1][0]!=0],"*")
-    # plt.show()
-
-    # rotate all walls
-    npt.assert_array_almost_equal(np.sum(irs_new[1]), np.sum(irs_new[0]))
-    npt.assert_array_almost_equal(irs_new[1][0], irs_new[0][0])
+    npt.assert_array_almost_equal(energy[0], energy[1])

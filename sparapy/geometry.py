@@ -75,11 +75,36 @@ class Polygon():
 
     @property
     def size(self) -> np.ndarray:
-        """Return the size in m^2 of the polygon."""
+        """Return the size in (lxmxn) of the polygon."""
         vec1 = np.array(self.pts[0])-np.array(self.pts[1])
         vec2 = np.array(self.pts[1])-np.array(self.pts[2])
         size = np.abs(vec1-vec2)
         return size
+    
+    @property
+    def area(self) -> np.ndarray:
+        """Return the area in m^2 of the polygon.
+        supports all convex polygons and some concave polygons
+        """
+
+        area = 0
+
+        if len(self.pts) == 3:
+            area_pts = np.array([self.pts])
+
+        elif len(self.pts) == 4:
+            area_pts = np.array([self.pts[0:3],[self.pts[2],self.pts[3],self.pts[0]] ])
+
+        else:
+            area_pts = np.empty((self.pts.shape[0],3,3)) # slow, can be optimized
+
+            for i in range(area_pts.shape[0]):
+                area_pts[i] = np.array([self.pts[i%self.pts.shape[0]], self.pts[(i+1)%self.pts.shape[0]], self.center])
+
+        for tri in area_pts:
+            area  +=  .5*np.linalg.norm(np.cross(tri[1]-tri[0], tri[2]-tri[0]))
+        
+        return area
 
     @property
     def center(self) -> np.ndarray:
@@ -207,7 +232,7 @@ class Environment():
 
     def __init__(
             self, polygons: list[Polygon], source: SoundSource,
-            receiver: Receiver, speed_of_sound: float = 346.18) -> None:
+            receiver: Receiver, speed_of_sound: float) -> None:
         """Define environment with acoustic Objects and speed of sound.
 
         Parameters
@@ -219,7 +244,7 @@ class Environment():
         receiver : Receiver
             receiver in the scene
         speed_of_sound : float, optional
-            speed of sound in m/s, by default 346.18
+            speed of sound in m/s
 
         """
         self.speed_of_sound = speed_of_sound
