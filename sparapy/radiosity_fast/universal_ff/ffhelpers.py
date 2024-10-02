@@ -1,17 +1,20 @@
+"""universal form factor helper methods."""
 import numpy as np
 import numba
-import matplotlib.pyplot as plt
 
 ###################################################
 # integration
 ################# 1D , polynomial
 @numba.njit()
 def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """
-    estimates coefficients of a polynomial curve passing through points (x,y)
-    the order of the polynomial depends on the number of sample points input in the function.
-     ex. a polynomial P estimated with 4 sample points:
-        P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
+    """Estimate polynomial coefficients based on sample points.
+
+    Computes coefficients of a polynomial curve passing through points (x,y)
+    the order of the polynomial depends on the number of sample points
+    input in the function.
+        ex. a polynomial P estimated with 4 sample points:
+            P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
+
     Parameters
     ----------
     x: np.ndarray
@@ -20,12 +23,11 @@ def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
         sample y-values
 
     Returns
-    ----------
+    -------
     b: np.ndarray
         polynomial coefficients
+
     """
-
-
     xmat = np.empty((len(x),len(x)))
 
     if x[-1]-x[0]==0:
@@ -34,18 +36,19 @@ def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
         for i,xi in enumerate(x):
             for o in range(len(x)):
                 xmat[i,len(x)-1-o] = xi**o
-        
+
         b = inner(np.linalg.inv(xmat), y)
 
     return b
 
 @numba.njit()
 def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
-    """
-    integrates a polynomial curve defined between x[0] and x[-1]
+    """Integrate a polynomial curve.
+
+    polynomial defined defined between x[0] and x[-1]
     with coefficients c
-        ex. for a quadratic curve f
-        f(x) = c[0]*x**2 + c[1]*x + c[2]
+        ex. for a quadratic curve P2:
+            P2(x) = c[0]*x**2 + c[1]*x + c[2]
 
     Parameters
     ----------
@@ -55,9 +58,10 @@ def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
         sample points
 
     Returns
-    ----------
+    -------
     out: float
-        polynomial integral 
+        polynomial integral
+
     """
     out = 0
 
@@ -70,8 +74,7 @@ def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
 ################# surface areas
 @numba.njit()
 def polygon_area(pts: np.ndarray) -> float:
-    """
-    calculates the area of a convex n-sided polygon
+    """Calculate the area of a convex n-sided polygon.
 
     Parameters
     ----------
@@ -79,23 +82,25 @@ def polygon_area(pts: np.ndarray) -> float:
         list of 3D points which define the vertices of the polygon
 
     Returns
-    ----------
+    -------
     area: float
         area of polygon defined by pts
-    """
 
+    """
     area = 0
 
     for tri in range(pts.shape[0]-2):
-        area  +=  .5 * np.linalg.norm(np.cross(pts[tri+1] - pts[0], pts[tri+2]-pts[0]))
-    
+        area  +=  .5 * np.linalg.norm(
+                            np.cross(pts[tri+1] - pts[0], pts[tri+2]-pts[0]) )
+
     return area
 
 @numba.njit()
 def area_under_curve(ps: np.ndarray, order=2) -> float:
-    """
-    calculates the area under a polynomial curve sampled by a finite number of points (on a shared plane)
-    
+    """Calculate the area under a polynomial curve.
+
+    Curve sampled by a finite number of points ps on a common plane.
+
     Parameters
     ----------
     ps : np.ndarray
@@ -105,14 +110,16 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
         polynomial order of the curve
 
     Returns
-    ----------
+    -------
     area: float
         area under curve
+
     """
+    # the order of the curve may be overwritten depending on the sample size
+    order = min(order,len(ps)-1)
 
-    order = min(order,len(ps)-1) # the order of the curve may be overwritten depending on the sample size
-
-    f  = ps[-1] - ps[0] # the vector between first and last sample (y==0) (new space's x axis)
+    # the vector between first and last sample (y==0) (new space's x axis)
+    f  = ps[-1] - ps[0]
 
     rotation_matrix = np.array([[f[0],f[1]],[-f[1],f[0]]])/np.linalg.norm(f)
 
@@ -121,15 +128,17 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
 
     for k in range(1,order+1):
 
-        c = ps[k] - ps[0]                   # translate point towards new origin
-        cc = inner(matrix=rotation_matrix,vector=c)    # rotate point around origin to align with new axis
-        
+        c = ps[k] - ps[0]  # translate point towards new origin
+
+        # rotate point around origin to align with new axis
+        cc = inner(matrix=rotation_matrix,vector=c)
+
         x[k] = cc[0]
         y[k] = cc[1]
 
 
     coefs = poly_estimation(x,y)
-    area = poly_integration(coefs,x)        # area between curve and ps[-1] - ps[0]
+    area = poly_integration(coefs,x) # area between curve and ps[-1] - ps[0]
 
     return area
 
@@ -138,30 +147,30 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
 ################# surface
 @numba.njit()
 def sample_random(el: np.ndarray, npoints=100):
-    """
-    Randomly sample points on the surface of a patch using a uniform distribution
-    
+    """Randomly sample points on the surface of a patch.
+
     ! currently only supports triangular, rectangular, or parallelogram patches
 
     Parameters
     ----------
     el : geometry.Polygon object
         patch to sample
-            
+
     npoints : int
         number of sample points to generate
 
     Returns
-    ---------
+    -------
     ptlist: np.ndarray
         list of sample points in patch el
+
     """
-
     # TO DO: check that patch satisfies conditions for proper sampling
-    # TO DO: if patch has >4 sides, subdivide into triangular patches and process independently ?
+    # TO DO: if patch has >4 sides,
+    #           subdivide into triangular patches and process independently ?
 
-    ptlist=np.zeros((npoints,3)) 
-    
+    ptlist=np.zeros((npoints,3))
+
     u = el[1]-el[0]
     v = el[-1]-el[0]
 
@@ -171,50 +180,55 @@ def sample_random(el: np.ndarray, npoints=100):
 
         inside = s+t <= 1
 
-        if len(el)==3 and not inside: # if sample falls outside of triangular patch, it is "reflected" inside 
+        # if sample falls outside of triangular patch, it is "reflected" inside
+        if len(el)==3 and not inside:
             s = 1-s
             t = 1-t
-        
+
         ptlist[i] = s*u + t*v + el[0]
 
     return ptlist
 
 @numba.njit()
 def sample_regular(el: np.ndarray, npoints=10):
-    """
-    Sample points on the surface of a patch using a regular distribution 
+    """Sample points on the surface of a patch using a regular distribution.
+
     over the directions defined by the patches' sides
-    
+
     ! currently only supports triangular, rectangular, or parallelogram patches
-    ! may not return exact number of requested points -- depends on the divisibility of the patch
+    ! may not return exact number of requested points
+                -- depends on the divisibility of the patch
 
     Parameters
     ----------
     el : geometry.Polygon object
         patch to sample
-            
+
     npoints : int
         number of sample points to generate
 
     Returns
-    ---------
+    -------
     out: np.ndarray
         list of sample points in patch el
+
     """
-    
     # TO DO: check that patch satisfies conditions for proper sampling
-    # TO DO: if patch has >4 sides, subdivide into triangular patches and process independently ?
+    # TO DO: if patch has >4 sides,
+    #           subdivide into triangular patches and process independently ?
 
     u = el[1]-el[0]
-    v = el[-1]-el[0] 
+    v = el[-1]-el[0]
 
     if len(el)==3:
         a = 2
     else:
         a = 1
 
-    npointsx = int(round(np.linalg.norm(u)/np.linalg.norm(v)*np.sqrt(a*npoints)))
-    npointsz = int(round(np.linalg.norm(v)/np.linalg.norm(u)*np.sqrt(a*npoints)))
+    npointsx = int( round(np.linalg.norm(u) / np.linalg.norm(v) *
+                                                np.sqrt(a*npoints)) )
+    npointsz = int( round(np.linalg.norm(v) / np.linalg.norm(u) *
+                                                np.sqrt(a*npoints)) )
 
     if npointsz==0:
         npointsz = 1
@@ -235,13 +249,11 @@ def sample_regular(el: np.ndarray, npoints=10):
 
     jj = 0
 
-    # TO DO: find way to sample triangles more evenly 
-
     for i,s in enumerate(tt):
         if len(el)==3:
             jj = i
 
-        for t in tz[0:len(tz)-round(npointsz/npointsx*jj)]: 
+        for t in tz[0:len(tz)-round(npointsz/npointsx*jj)]:
 
             inside = s+t <= 1-thres
             if not(len(el)==3 and not inside):
@@ -253,34 +265,38 @@ def sample_regular(el: np.ndarray, npoints=10):
     for i in numba.prange(len(ptlist)):
         for j in numba.prange(len(ptlist[0])):
             out[i][j] = ptlist[i][j]
-    
-    # fig = plt.figure()
-    # ax = fig.add_subplot(projection='3d')
-    # ax.scatter(out[:,0],out[:,1],out[:,2])
-    # plt.show()
-
 
     return out
 
 ################# boundary
 @numba.njit()
 def sample_border(el: np.ndarray, npoints=3):
-    """
-    Sample points on the boundary of a patch at fractional intervals of each side
-    
-    returns an array of points on the patch boundary (pts) 
-            and a connectivity array (conn) which stores a list of ordered indices of the points (in spts) found on the same boundary segment
+    """Sample points on the boundary of a patch at fractional intervals.
+
+    returns an array of points on the patch boundary (pts)
+                                        and a connectivity array (conn)
+    which stores a list of ordered indices of the points
+    found on the same boundary segment.
 
     Parameters
     ----------
     el : geometry.Polygon object
         patch to sample
-            
+
     npoints : int
         number of sample points per boundary segment (minimum 2)
-    """
 
-    n_div = npoints - 1 # this function was written with a different logic in mind -- needs refactoring
+    Returns
+    -------
+    pts: np.ndarray
+        boundary sample points
+
+    conn: np.ndarray(int)
+        indices of pts corresponding to boundary segments
+        (each row corresponds to the points in a single segment)
+
+    """
+    n_div = npoints - 1
 
     pts  = np.empty((len(el)*(npoints-1),len(el[0])))
     conn = np.empty((len(el),npoints), dtype=np.int8)
@@ -304,22 +320,21 @@ def sample_border(el: np.ndarray, npoints=3):
 # geometry
 @numba.njit()
 def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
-    """
-    Computes the inner product between a matrix and a vector to please numba.njit
-
+    """Compute the inner product between a matrix and a vector to please njit.
 
     Parameters
     ----------
-    matrix : numpy.ndarray(n,n) 
+    matrix : numpy.ndarray(n,n)
         input matrix
-            
+
     vector : numpy.ndarray(n,)
         vector
 
     Returns
-    ---------
+    -------
     out: np.ndarray(n,)
         matrix*vector inner product
+
     """
     out = np.empty(matrix.shape[0])
 
@@ -330,25 +345,24 @@ def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
 
 @numba.njit()
 def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
-    """
-    Computes a rotation matrix from a given input vector and desired output direction
+    """Compute a rotation matrix from a given input and output directions.
 
     TO DO: expand to N-D arrays
 
     Parameters
     ----------
-    n_in : numpy.ndarray(3,) 
+    n_in : numpy.ndarray(3,)
         input vector
-            
+
     n_out : numpy.ndarray(3,)
         direction to which n_in is to be rotated
 
     Returns
-    ---------
+    -------
     matrix: np.ndarray
         rotation matrix
-    """
 
+    """
     if n_out.shape[0] == 0:
         n_out = np.zeros_like(n_in)
         n_out[-1] = 1.
@@ -363,12 +377,12 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
             counter+=1
         else:
             counter=counter
-        
 
-    if counter == n_in.shape[0]:               # if input vector is the same as output return identity matrix
+    # if input vector is the same as output return identity matrix
+    if counter == n_in.shape[0]:
 
         matrix = np.eye( len(n_in) , dtype=np.float64)
-        
+
     else:
 
         a = n_in / np.linalg.norm(n_in)
@@ -378,12 +392,17 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
         b = np.reshape(b, len(n_in) )
 
         c = np.dot(a,b)
-        
+
         if c!=-1:
             v = np.cross(a,b)
             s = np.linalg.norm(v)
-            kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-            matrix =  np.eye( len(n_in) ) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+            kmat = np.array([[0, -v[2], v[1]],
+                             [v[2], 0, -v[0]],
+                             [-v[1], v[0], 0]])
+
+            matrix =  ( np.eye( len(n_in) ) +
+                       kmat +
+                       kmat.dot(kmat) * ((1 - c) / (s ** 2)) )
 
         else: # in case the in and out vectors have symmetrical directions
             matrix = np.array([[-1.,0.,0.],[0.,1.,0.],[0.,0.,-1.]])
@@ -392,24 +411,29 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
 
 @numba.njit()
 def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
-    """
-    Compute a vector tangent to a spherical surface on a given point on said sphere, pointing in the direction of another point on sphere
+    """Compute a vector tangent to a spherical surface based on two points.
+
+    The tangent vector has is evaluated on point v0
+    and its tangent arc on the sphere joins points v0 and v1
 
     Parameters
     ----------
-    v0 : numpy.ndarray(3,) 
+    v0 : numpy.ndarray(3,)
         point on which to calculate tangent vector
-            
+
     v1 : numpy.ndarray(3,)
         point on sphere to which tangent vector poinst
 
     Returns
-    ---------
+    -------
     vout: np.ndarray
         vector tangent to spherical surface
+
     """
     if np.dot(v0,v1)!=0:
-        scale = np.sqrt( np.square( np.linalg.norm(np.cross(v0,v1))/np.dot(v0,v1) ) + np.square( np.linalg.norm(v0) ) )
+        scale = np.sqrt( np.square(
+                            np.linalg.norm(np.cross(v0,v1))/np.dot(v0,v1) ) +
+                         np.square( np.linalg.norm(v0) ) )
 
         vout = v1*scale - v0
         vout /= np.linalg.norm(vout)
@@ -423,25 +447,24 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
 # checks
 @numba.njit()
 def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
-    """
-    returns true if two patches have any common points
+    """Flag true if two patches have any common points.
 
     Parameters
     ----------
-    p0 : numpy.ndarray(# vertices, 3) 
+    p0 : numpy.ndarray(# vertices, 3)
         patch
-            
-    v1 : numpy.ndarray(# vertices, 3)
+
+    p1 : numpy.ndarray(# vertices, 3)
         another patch
 
     Returns
-    ---------
+    -------
     flag: bool
         flag of coincident points on both patches
+
     """
-    
     flag = False
-    
+
     for i in numba.prange(p0.shape[0]):
         for j in numba.prange(p1.shape[0]):
             count=0

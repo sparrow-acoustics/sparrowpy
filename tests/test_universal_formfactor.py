@@ -18,8 +18,7 @@ from sparapy.radiosity_fast import form_factor as FFac
 @pytest.mark.parametrize("height", [0.5, 1.0, 1.5, 3.])
 @pytest.mark.parametrize("distance", [0.5, 1.0, 1.5, 3.])
 def test_parallel_facing_patches(width, height, distance):
-    """Test universal form factor calculation for facing parallel patches of equal dimensions"""
-
+    """Test universal form factor for equal facing parallel patches."""
     exact = exact_solutions.parallel_patches(width, height, distance)
 
     patch_1 = geo.Polygon(
@@ -59,7 +58,7 @@ def test_parallel_facing_patches(width, height, distance):
 @pytest.mark.parametrize("height", [1.0, 2.0, 3.0])
 @pytest.mark.parametrize("length", [1.0, 2.0, 3.0])
 def test_perpendicular_coincidentline_patches(width, height, length):
-    """Test universal form factor calculation for perpendicular patches sharing a side"""
+    """Test universal form factor for perpendicular patches sharing a side."""
     exact = exact_solutions.perpendicular_patch_coincidentline(
         width, height, length
     )
@@ -97,7 +96,7 @@ def test_perpendicular_coincidentline_patches(width, height, length):
 def test_perpendicular_coincidentpoint_patches(
     width1, width2, length1, length2
 ):
-    """Test universal form factor calculation for perpendicular patches sharing a vertex"""
+    """Test form factor for perpendicular patches w/ common vertex."""
     exact = exact_solutions.perpendicular_patch_coincidentpoint(
         width1, length2, width2, length1
     )
@@ -133,7 +132,7 @@ def test_perpendicular_coincidentpoint_patches(
     assert 100 * abs(univ[0,1] - exact) / exact < 5
 
 
-@pytest.mark.parametrize("l", [0.1, 0.2, 0.5, 1, 2])
+@pytest.mark.parametrize("side", [0.1, 0.2, 0.5, 1, 2])
 @pytest.mark.parametrize(
     "source",
     [
@@ -155,21 +154,22 @@ def test_perpendicular_coincidentpoint_patches(
     ],
 )
 @pytest.mark.parametrize("patchsize", [0.1])
-def test_point_surface_interactions(l, source, receiver, patchsize):
+def test_point_surface_interactions(side, source, receiver, patchsize):
+    """Test source-to-patch and patch-to-receiver factor calculation."""
     sr = 1000
     c = 343
 
     absor_factor = 0.1
 
     patch_pos = geo.Polygon(
-        points=[[0, 0, 0], [l, 0, 0], [l, 0, l], [0, 0, l]],
+        points=[[0, 0, 0], [side, 0, 0], [side, 0, side], [0, 0, side]],
         normal=[0, 1, 0],
         up_vector=[1, 0, 0],
     )
 
     patch = Patches(
         polygon=patch_pos,
-        max_size=patchsize * l,
+        max_size=patchsize * side,
         other_wall_ids=[],
         wall_id=[0],
         absorption=absor_factor,
@@ -185,7 +185,7 @@ def test_point_surface_interactions(l, source, receiver, patchsize):
 
 
 def source_cast(src, rpatch, absor):
-    """Test source-to-patch cast."""
+    """Cast and test source-to-patch factor calculation."""
     t0 = time.time()
     nuss = form_factor.pt_solution(point=src.position, patch_points=rpatch.pts)
     tf_nusselt = time.time() - t0
@@ -206,9 +206,7 @@ def source_cast(src, rpatch, absor):
 
 
 def receiver_cast(rcv, patch, radi, sr, c):
-    """Test final energy cast from a generalized patch in space to a point
-    Nusselt-analog-based option
-    """
+    """Cast and test patch-to-receiver factor calculation."""
     true_rec_energy = np.sum(
         patch.energy_at_receiver(
             receiver=rcv,
@@ -221,25 +219,13 @@ def receiver_cast(rcv, patch, radi, sr, c):
 
     patch_energy = np.sum(patch.E_matrix)
 
-    t0 = time.time()
-    nuss = (
-        form_factor.pt_solution(
+    nuss = form_factor.pt_solution(
             point=rcv.position, patch_points=patch.pts, mode="receiver"
-        )
-        * patch_energy
-    )
-    tf_nusselt = time.time() - t0
+            ) * patch_energy
 
     rel_error_nuss = abs(true_rec_energy - nuss) / true_rec_energy * 100
 
     assert rel_error_nuss < 1.0
-
-    print("nusselt approach error: " + str(rel_error_nuss) + "%")
-    print(
-        "nusselt approach runtime: "
-        + str(tf_nusselt * 1000)
-        + "ms \n #################################"
-    )
 
 
 @pytest.mark.parametrize(
@@ -257,7 +243,7 @@ def receiver_cast(rcv, patch, radi, sr, c):
     ],
 )
 def test_fast_ff_method_comparison(src, rec):
-    """Test if the results differ significanly between ff methods."""
+    """Test if the radiosity results differ significanly between ff methods."""
     X = 3
     Y = 3
     Z = 3
