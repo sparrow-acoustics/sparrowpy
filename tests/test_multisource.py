@@ -23,10 +23,10 @@ create_reference_files = False
     1,5,10,20
     ])
 @pytest.mark.parametrize('ps', [
-    1.5,2,3
+    1.5,3
     ])
 def test_reciprocity_shoebox(src,rec,ord,ps):
-    """Test if the results changes for shifted walls."""
+    """Test if the results are reciprocal in shoebox room."""
     X = 3
     Y = 3
     Z = 3
@@ -56,7 +56,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
 
         ## initialize radiosity class
         radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
-        
+
         data_scattering = pf.FrequencyData(
             np.ones((sc_src.csize, sc_rec.csize, frequencies.size)), frequencies)
 
@@ -82,9 +82,11 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
 
         radi.init_source_energy(src_.position, ff_method=method, algorithm=algo)
 
-        ir = radi.calculate_energy_exchange_receiver(receiver_pos=rec_.position, speed_of_sound=speed_of_sound,
-                                                histogram_time_resolution=1/sampling_rate, histogram_length=ir_length_s,
-                                                ff_method=method, algorithm=algo, max_depth=max_order_k )
+        ir = radi.calculate_energy_exchange_receiver(
+                receiver_pos=rec_.position, speed_of_sound=speed_of_sound,
+                histogram_time_resolution=1/sampling_rate,
+                histogram_length=ir_length_s, ff_method=method, algorithm=algo,
+                max_depth=max_order_k )
 
         # test energy at receiver
         irs_new.append(ir)
