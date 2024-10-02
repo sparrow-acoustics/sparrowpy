@@ -7,10 +7,72 @@ from sparapy import geometry as geo
 import matplotlib.pyplot as plt
 import pyfar as pf
 from sparapy import io
+from sparapy import brdf
+import sparapy as sp
 
 %matplotlib ipympl
 
 #testing something
+
+# %%
+# create BRDF using scattering coefficients and save as SOFA file
+
+tmpdir = 'sofa'
+scattering_data = [0, 0.2, 1]
+frequency_data = [100, 200, 400]
+file_path = os.path.join(tmpdir, "test_brdf.sofa",) # why is there a comm here? 
+coords = pf.samplings.sph_gaussian(sh_order=1)
+coords = coords[coords.z > 0]
+
+
+brdf.create_from_scattering(
+        file_path, coords, coords,
+        pf.FrequencyData(scattering_data, frequency_data),
+        )
+
+# %%
+# input geometry manually 
+
+walls = sp.testing.shoebox_room_stub(3,3,3)
+patch_size = 0.2
+source_pos = np.array([1.5, 1.5, 1.5])
+receiver_pos = np.array([0.2, 0.2, 0.2])
+
+length_histogram = 0.1
+time_resolution = 1e-4
+k = 5
+speed_of_sound = 346.18
+
+# can we use the same file_path naming? 
+file_path = os.path.join(tmpdir, "test_brdf.sofa")
+
+radiosity = sp.radiosity.DirectionalRadiosity(
+    walls, patch_size, k, length_histogram, file_path, 
+    speed_of_sound=speed_of_sound,
+    sampling_rate=1/time_resolution
+)
+
+histogram = radiosity.energy_at_receiver(
+    sp.geometry.SoundSource(source_pos, [1,0,0], [0,0,1])
+)
+
+pf.plot.use()
+plt.figure()
+signal = pf.Signal(histogram, 10000)
+ax = pf.plot.time(signal, dB=True)
+ax.set_xlim((0,0.01))
+plt.show()
+
+# %%
+# trimesh rectangular faces
+
+
+# %%
+# trimesh triangular faces
+
+
+
+
 # %%
 # see if trimesh is loading IHTA park correctly
 
