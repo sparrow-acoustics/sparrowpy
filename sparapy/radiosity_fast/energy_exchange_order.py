@@ -163,12 +163,13 @@ def _collect_receiver_energy(
         impulse response of shape (n_samples, n_bins)
 
     """
-    n_patches = patch_receiver_energy.shape[0]
+    n_patches = patch_receiver_energy.shape[1]
     patch_receiver_energy = patch_receiver_energy[..., np.newaxis]
-    for i in range(n_patches):
-        n_delay_samples = int(np.ceil(
-            patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
-        ir += np.roll(
-            E_matrix_total[i, receiver_idx[i]] * patch_receiver_energy[i],
-            n_delay_samples)
+    for k in range(patch_receiver_energy.shape[1]):
+        for i in range(n_patches):
+            n_delay_samples = int(np.ceil(
+                patch_receiver_distance[k,i]/speed_of_sound/histogram_time_resolution))
+            ir[k] += np.roll(
+                E_matrix_total[i, receiver_idx[i]] * patch_receiver_energy[k,i],
+                n_delay_samples)
     return ir

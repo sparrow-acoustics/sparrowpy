@@ -22,11 +22,12 @@ def _kang(
 @numba.njit(parallel=True)
 def _universal(
         receiver_pos,patches_center, patches_points, air_attenuation):
-    receiver_factor = np.empty((
+    receiver_factor = np.empty((receiver_pos.shape[0],
         patches_center.shape[0], air_attenuation.size))
-    for i in numba.prange(patches_center.shape[0]):
-        R = np.sqrt(np.sum((receiver_pos - patches_center[i, :])**2))
+    for k in numba.prange(receiver_pos.shape[0]):
+        for i in numba.prange(patches_center.shape[0]):
+            R = np.sqrt(np.sum((receiver_pos[k] - patches_center[i, :])**2))
 
-        receiver_factor[i, :] = np.exp(-air_attenuation*R) * patch2point(point=receiver_pos, patch_points=patches_points[i,:], mode="receiver")
+            receiver_factor[k, i, :] = np.exp(-air_attenuation*R) * patch2point(point=receiver_pos, patch_points=patches_points[i,:], mode="receiver")
 
     return receiver_factor
