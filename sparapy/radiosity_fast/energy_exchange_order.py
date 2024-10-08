@@ -132,7 +132,7 @@ def energy_exchange(
     return E_matrix_total
 
 
-@numba.njit()
+#@numba.njit()
 def _collect_receiver_energy(
         ir, E_matrix_total, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution, receiver_idx):
@@ -170,6 +170,6 @@ def _collect_receiver_energy(
             n_delay_samples = int(np.ceil(
                 patch_receiver_distance[k,i]/speed_of_sound/histogram_time_resolution))
             ir[k] += np.roll(
-                E_matrix_total[i, receiver_idx[i]] * patch_receiver_energy[k,i],
+                E_matrix_total[i, receiver_idx[i]]*patch_receiver_energy[k,i],
                 n_delay_samples)
     return ir

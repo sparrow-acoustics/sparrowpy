@@ -1,7 +1,7 @@
 """Implementation of the receiver energy calculation."""
 import numba
 import numpy as np
-from sparapy.radiosity_fast.universal_ff.univ_form_factor import pt_solution as patch2point
+from sparapy.radiosity_fast.universal_ff.univ_form_factor import pt_solution
 
 @numba.njit()
 def _kang(
@@ -19,15 +19,17 @@ def _kang(
             np.pi * R**2)
     return receiver_factor
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def _universal(
         receiver_pos,patches_center, patches_points, air_attenuation):
     receiver_factor = np.empty((receiver_pos.shape[0],
         patches_center.shape[0], air_attenuation.size))
-    for k in numba.prange(receiver_pos.shape[0]):
+    for k in range(receiver_pos.shape[0]):
         for i in numba.prange(patches_center.shape[0]):
             R = np.sqrt(np.sum((receiver_pos[k] - patches_center[i, :])**2))
 
-            receiver_factor[k, i, :] = np.exp(-air_attenuation*R) * patch2point(point=receiver_pos, patch_points=patches_points[i,:], mode="receiver")
+            receiver_factor[k, i, :] = (np.exp(-air_attenuation*R) *
+                            pt_solution(point=receiver_pos[k],
+                            patch_points=patches_points[i,:], mode="receiver"))
 
     return receiver_factor

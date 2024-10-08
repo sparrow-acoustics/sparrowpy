@@ -232,12 +232,14 @@ class DRadiosityFast():
             threshold=1e-6, max_time=np.inf, max_depth=-1, recalculate=False):
         """Calculate the energy exchange."""
         n_samples = int(histogram_length/histogram_time_resolution)
-        ir = np.array([np.zeros((n_samples)) for _ in range(self.n_bins)for _ in range(receiver_pos.shape[0])])
+        ir = np.array([[np.zeros((n_samples)) for _ in range(self.n_bins)]
+                                    for _ in range(receiver_pos.shape[0])])
         receiver_pos = np.array(receiver_pos)
         if receiver_pos.ndim==1:
             receiver_pos=receiver_pos[np.newaxis,:]
         patches_center = self.patches_center
-        patch_receiver_distance = np.empty([receiver_pos.shape[0],self.n_patches,patches_center.shape[-1]])
+        patch_receiver_distance = np.empty([receiver_pos.shape[0],
+                                            self.n_patches,patches_center.shape[-1]])
         for i in range(receiver_pos.shape[0]):
             patch_receiver_distance[i] = patches_center - receiver_pos[i]
         air_attenuation = self._air_attenuation

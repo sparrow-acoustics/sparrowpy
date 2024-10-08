@@ -35,7 +35,7 @@ def test_multi_receiver_init():
     rec2 = np.array([.25,.75,.25])
     rec3 = np.array([.25,.5,.75])
 
-    rec_traj = np.array([rec0,rec1,rec2, rec3])
+    rec_traj = np.array([rec0, rec1, rec2, rec3])
 
     ## initialize radiosity class
     radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
@@ -70,9 +70,10 @@ def test_multi_receiver_init():
             histogram_time_resolution=1/sampling_rate,
             histogram_length=ir_length_s, ff_method=method, algorithm=algo,
             max_depth=max_order_k )
-    
+
     npt.assert_almost_equal(ir[0], ir[2])
     npt.assert_almost_equal(ir[1], ir[3])
+
 
 @pytest.mark.parametrize('src', [
     [[2.,1.,1.], [0, 1, 0], [0, 0, 1]],
