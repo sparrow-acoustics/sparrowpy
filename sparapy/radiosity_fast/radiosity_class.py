@@ -177,8 +177,8 @@ class DRadiosityFast():
                 scattering_index,
                 sources_array, receivers_array)
 
-    def init_source_energy(
-            self, source_position:np.ndarray, ff_method="kang", algorithm='recursive'):
+    def init_source_energy(self, source_position:np.ndarray,
+                           ff_method="kang", algorithm='recursive'):
         """Initialize the source energy."""
         source_position = np.array(source_position)
         patch_to_wall_ids = self._patch_to_wall_ids
