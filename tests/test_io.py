@@ -81,7 +81,7 @@ mesh.show()
 # %%
 # try using io function 
 
-list_polygon = io.read_geometry('models/IHTApark.stl')
+list_polygon = io.read_geometry('models/shoebox_3.stl')
 # now something is working
 # %%
 # try plotting from io function 
