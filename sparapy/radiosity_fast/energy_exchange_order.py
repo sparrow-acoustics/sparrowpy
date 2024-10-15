@@ -132,10 +132,10 @@ def energy_exchange(
     return E_matrix_total
 
 
-#@numba.njit()
+@numba.njit()
 def _collect_receiver_energy(
-        ir, E_matrix_total, patch_receiver_distance, patch_receiver_energy,
-        speed_of_sound, histogram_time_resolution, receiver_idx):
+        E_matrix_total, patch_receiver_distance,
+        speed_of_sound, histogram_time_resolution, air_attenuation):
     """Collect the energy at the receiver.
 
     Parameters
@@ -163,13 +163,14 @@ def _collect_receiver_energy(
         impulse response of shape (n_samples, n_bins)
 
     """
-    n_patches = patch_receiver_energy.shape[1]
-    patch_receiver_energy = patch_receiver_energy[..., np.newaxis]
-    for k in range(patch_receiver_energy.shape[1]):
-        for i in range(n_patches):
-            n_delay_samples = int(np.ceil(
-                patch_receiver_distance[k,i]/speed_of_sound/histogram_time_resolution))
-            ir[k] += np.roll(
-                E_matrix_total[i, receiver_idx[i]]*patch_receiver_energy[k,i],
-                n_delay_samples)
-    return ir
+    E_mat_out = np.zeros_like(E_matrix_total)
+    n_patches = E_matrix_total.shape[0]
+
+    for i in range(n_patches):
+        n_delay_samples = int(np.ceil(
+            patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
+        E_mat_out[i] = np.roll(
+            E_matrix_total[i]*np.exp(-air_attenuation*patch_receiver_distance[i]),
+            n_delay_samples)
+        
+    return E_mat_out

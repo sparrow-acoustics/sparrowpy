@@ -225,7 +225,7 @@ class DRadiosityFast():
         else:
             raise NotImplementedError()
 
-    def calculate_energy_exchange_receiver(
+    def calculate_energy_exchange(
             self, receiver_pos, speed_of_sound,
             histogram_time_resolution,
             histogram_length, ff_method='kang', algorithm='recursive',
@@ -247,7 +247,7 @@ class DRadiosityFast():
         patches_points = self._patches_points
         distance_0 = self.distance_0
         n_patches = self.n_patches
-        n_bins = self.n_bins#
+        n_bins = self.n_bins
         distance_i_j = np.empty((n_patches, n_patches))
         for i in range(n_patches):
             for j in range(n_patches):
@@ -257,8 +257,7 @@ class DRadiosityFast():
             patch_receiver_energy = receiver_energy._kang(
                 patch_receiver_distance, patches_normal, air_attenuation)
         elif ff_method == 'universal':
-            patch_receiver_energy = receiver_energy._universal(
-                receiver_pos, patches_center, patches_points, air_attenuation)
+            pass
         else:
             raise NotImplementedError()
         if algorithm == 'recursive':
@@ -288,22 +287,57 @@ class DRadiosityFast():
                     self._form_factors_tilde,
                     speed_of_sound, histogram_time_resolution, max_depth,
                     self._visible_patches)
+        else:
+            raise NotImplementedError()
+        
+    def collect_receiver_energy(self, receiver_pos,
+            speed_of_sound, histogram_time_resolution, propagation_fx=False):
 
+        air_attenuation = self._air_attenuation
+        patches_points = self._patches_points
+        n_patches = self.n_patches
+        n_bins = self.n_bins
+
+        if receiver_pos.ndim==1:
+            receiver_pos=receiver_pos[np.newaxis,:]
+
+        n_receivers = receiver_pos.shape[0]
+
+        patches_center = self.patches_center
+        patch_receiver_distance = np.empty([n_receivers,
+                                            self.n_patches,patches_center.shape[-1]])
+        
+        E_matrix = np.zeros((n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]))
+
+        for i in range(n_receivers):
+            patch_receiver_distance[i] = patches_center - receiver_pos[i]
+        
+            # geometrical weighting
+            patch_receiver_energy = receiver_energy._universal(
+                    receiver_pos[i], patches_points, n_bins)
+            
+            # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
-            # scattering_index = np.array(self._scattering_index)
+                # scattering_index = np.array(self._scattering_index)
             receiver_idx = geometry.get_scattering_data_receiver_index(
-                patches_center, receiver_pos, receivers_array,
+                patches_center, receiver_pos[i], receivers_array,
                 self._patch_to_wall_ids)
+        
             assert receiver_idx.shape[0] == self.n_patches
             assert len(receiver_idx.shape) == 1
 
-            return ee_order._collect_receiver_energy(
-                ir, self.E_matrix_total,
-                np.linalg.norm(patch_receiver_distance, axis=1),
-                patch_receiver_energy, speed_of_sound,
-                histogram_time_resolution,receiver_idx)
-        else:
-            raise NotImplementedError()
+            for k in range(n_patches):
+                E_matrix[i,k]= self.E_matrix_total[k,receiver_idx[k]] * patch_receiver_energy[k]
+
+            if propagation_fx:
+                # accumulate the patch energies towards the receiver 
+                # with atmospheric effects (delay, atmospheric attenuation)
+                E_matrix[i] = ee_order._collect_receiver_energy(
+                        E_matrix,
+                        np.linalg.norm(patch_receiver_distance[i], axis=1), speed_of_sound,
+                        histogram_time_resolution, air_attenuation=air_attenuation)
+                
+        return E_matrix
 
     def set_wall_absorption(self, wall_indexes, absorption:pf.FrequencyData):
         """Set the wall absorption.
