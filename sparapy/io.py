@@ -5,7 +5,7 @@ from sparapy import geometry as geo
 from scipy.spatial import ConvexHull
 import matplotlib.tri as mtri
 
-def read_geometry(path):
+def read_geometry(path, shape):
     """Read geometry from a file.
 
     Parameters
@@ -19,7 +19,14 @@ def read_geometry(path):
         The polygon.
 
     """
-    faces = load_triangular_faces(path)
+
+    if shape == 'triangle':
+        faces = load_triangular_faces(path)
+    elif shape == 'rectangle':
+        faces = load_rectangular_prism_faces_as_rectangles(path)
+    else:
+        print("Shape not recognized!")
+
     face_normals = calculate_face_normals(faces)
 
     list_polygon = []
