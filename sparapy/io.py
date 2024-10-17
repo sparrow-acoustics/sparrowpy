@@ -5,6 +5,45 @@ from sparapy import geometry as geo
 from scipy.spatial import ConvexHull
 import matplotlib.tri as mtri
 
+def mod_read_geometry(path, shape):
+    """Read geometry from a file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the file.
+
+    Returns
+    -------
+    geometry : sparapy.geometry.Polygons
+        The polygon.
+
+    """
+
+    if shape == 'triangle':
+        faces = load_triangular_faces(path)
+    elif shape == 'rectangle':
+        faces = load_rectangular_prism_faces_as_rectangles(path)
+    else:
+        print("Shape not recognized!")
+
+    face_normals = calculate_face_normals(faces)
+
+    list_polygon = []
+
+    for i, object in enumerate(faces):
+
+        if np.all(face_normals[i] == np.abs([1, 0, 0])):
+            up_vector = [0, 0, 1]
+        else:
+            up_vector = [1, 0, 0]
+
+        polygon = geo.Polygon(faces[i], up_vector, face_normals[i])
+        list_polygon.append(polygon)
+
+    return list_polygon
+
+
 def read_geometry(path, shape):
     """Read geometry from a file.
 
