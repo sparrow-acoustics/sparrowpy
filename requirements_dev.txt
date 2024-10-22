@@ -15,6 +15,7 @@ numpy<2
 scipy
 matplotlib
 pyfar>0.6
+mplstereonet
 autodocsumm
 pydata-sphinx-theme
 sphinx-design
