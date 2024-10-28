@@ -6,19 +6,6 @@ from scipy.spatial import ConvexHull
 import matplotlib.tri as mtri
 
 def mod_read_geometry(path, shape):
-    """Read geometry from a file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the file.
-
-    Returns
-    -------
-    geometry : sparapy.geometry.Polygons
-        The polygon.
-
-    """
 
     if shape == 'triangle':
         faces = load_triangular_faces(path)
@@ -45,19 +32,6 @@ def mod_read_geometry(path, shape):
 
 
 def read_geometry(path, shape):
-    """Read geometry from a file.
-
-    Parameters
-    ----------
-    path : str
-        Path to the file.
-
-    Returns
-    -------
-    geometry : sparapy.geometry.Polygons
-        The polygon.
-
-    """
 
     if shape == 'triangle':
         faces = load_triangular_faces(path)
@@ -77,14 +51,9 @@ def read_geometry(path, shape):
     return list_polygon
 
 def load_and_merge_coplanar_faces(stl_file):
-    """
-    Load the STL file, merge coplanar faces into polygons, and return the ordered polygonal faces.
-    """
 
     def is_coplanar(face1, face2, vertices, tolerance=1e-6):
-        """
-        Check if two triangles (faces) are coplanar based on their normals.
-        """
+        
         # Get the vertices of the two faces
         v1, v2, v3 = vertices[face1]
         v4, v5, v6 = vertices[face2]
@@ -101,9 +70,7 @@ def load_and_merge_coplanar_faces(stl_file):
         return np.allclose(normal1, normal2, atol=tolerance)
 
     def order_polygon_vertices(vertices):
-        """
-        Order the vertices of a polygon to avoid criss-crossing lines.
-        """
+       
         # Ensure there are at least 3 vertices
         if len(vertices) < 3:
             raise ValueError("A polygon must have at least 3 vertices.")
@@ -185,6 +152,7 @@ def load_and_merge_coplanar_faces(stl_file):
     return polygon_faces
 
 def order_polygon_vertices(vertices):
+
     # Ensure there are at least 3 vertices
     if len(vertices) < 3:
         raise ValueError("A polygon must have at least 3 vertices.")
@@ -217,6 +185,7 @@ def order_polygon_vertices(vertices):
     return ordered_vertices
 
 def load_polygon_faces_as_ordered(stl_file):
+   
     # Load the STL file
     mesh = trimesh.load(stl_file)
 
@@ -267,6 +236,7 @@ def load_polygon_faces_as_ordered(stl_file):
     return polygon_faces
 
 def load_rectangular_prism_faces_as_rectangles(stl_file):
+    
     # Load the STL file
     mesh = trimesh.load(stl_file)
 
@@ -415,6 +385,7 @@ def load_cube_faces_as_squares(stl_file):
     return square_faces
 
 def calculate_face_normals(square_faces):
+    
     normals = []
 
     for face in square_faces:
@@ -434,6 +405,7 @@ def calculate_face_normals(square_faces):
     return np.array(normals)
 
 def load_triangular_faces(stl_file):
+    
     # Load the STL file
     mesh = trimesh.load(stl_file)
 

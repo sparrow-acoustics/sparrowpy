@@ -13,7 +13,7 @@ import sparapy as sp
 def test_loadread_stl():
 
     # Read STL file that includes a 3x3x3 shoebox room. 6 faces in total.
-    list_polygon = io.read_geometry('tests/shoebox_3.stl','rectangle')
+    list_polygon = io.mod_read_geometry('shoebox_3.stl','rectangle')
 
     # Test if function actually returns list of polygons
     assert all(isinstance(polygon, geo.Polygon) for polygon in list_polygon), \

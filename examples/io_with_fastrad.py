@@ -25,7 +25,7 @@ absorption = 0.1
 # create geometry
 
 path = 'shoebox_3.stl'
-walls = io.mod_read_geometry(path,'rectangle')
+walls = io.mod_read_geometry(path,'triangle')
 #walls = sp.testing.shoebox_room_stub(X, Y, Z)
 
 
