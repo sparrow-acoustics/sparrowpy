@@ -127,11 +127,14 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
 
         radi.init_source_energy(src_.position,ff_method=method,algorithm=algo)
 
-        ir = radi.calculate_energy_exchange_receiver(
+        radi.calculate_energy_exchange(
                 receiver_pos=rec_.position, speed_of_sound=speed_of_sound,
                 histogram_time_resolution=1/sampling_rate,
                 histogram_length=ir_length_s, ff_method=method, algorithm=algo,
                 max_depth=max_order_k )
+
+        ir = np.sum(radi.collect_receiver_energy(receiver_pos=rec_.position,
+                speed_of_sound=speed_of_sound, histogram_time_resolution=1/sampling_rate, propagation_fx=True),axis=1)[0][0]
 
         # test energy at receiver
         irs_new.append(ir)
