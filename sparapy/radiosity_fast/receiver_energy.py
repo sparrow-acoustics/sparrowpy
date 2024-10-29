@@ -18,15 +18,15 @@ def _kang(
         receiver_factor[i, :] = cos_xi / (np.pi * R**2)
     return receiver_factor
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _universal(
-        receiver_pos, patches_points, n_bins):
+        receiver_pos, patches_points):
     
-    receiver_factor = np.empty((patches_points.shape[0], n_bins))
+    receiver_factor = np.empty((patches_points.shape[0]))
     
 
     for i in numba.prange(patches_points.shape[0]):
-        receiver_factor[i, :] = pt_solution(point=receiver_pos,
+        receiver_factor[i] = pt_solution(point=receiver_pos,
                         patch_points=patches_points[i,:], mode="receiver")
 
     return receiver_factor

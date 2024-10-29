@@ -232,11 +232,11 @@ class DRadiosityFast():
             threshold=1e-6, max_time=np.inf, max_depth=-1, recalculate=False):
         """Calculate the energy exchange."""
         n_samples = int(histogram_length/histogram_time_resolution)
-        ir = np.array([[np.zeros((n_samples)) for _ in range(self.n_bins)]
-                                    for _ in range(receiver_pos.shape[0])])
         receiver_pos = np.array(receiver_pos)
         if receiver_pos.ndim==1:
             receiver_pos=receiver_pos[np.newaxis,:]
+        ir = np.array([[np.zeros((n_samples)) for _ in range(self.n_bins)]
+                                for _ in range(receiver_pos.shape[0])])
         patches_center = self.patches_center
         patch_receiver_distance = np.empty([receiver_pos.shape[0],
                                             self.n_patches,patches_center.shape[-1]])
@@ -314,7 +314,7 @@ class DRadiosityFast():
         
             # geometrical weighting
             patch_receiver_energy = receiver_energy._universal(
-                    receiver_pos[i], patches_points, n_bins)
+                    receiver_pos[i], patches_points)
             
             # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
@@ -327,7 +327,7 @@ class DRadiosityFast():
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[i,k]= self.E_matrix_total[k,receiver_idx[k]] * patch_receiver_energy[k]
+                E_matrix[i,k,:]= self.E_matrix_total[k,receiver_idx[k],:] * patch_receiver_energy[k]
 
             if propagation_fx:
                 # accumulate the patch energies towards the receiver 

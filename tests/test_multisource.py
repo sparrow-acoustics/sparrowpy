@@ -8,71 +8,53 @@ import sparapy as sp
 create_reference_files = False
 
 
+@pytest.mark.parametrize('frequencies', [
+    np.array([1000]),
+    np.array([500,1000,2000])
+    ])
+@pytest.mark.parametrize('receivers', [
+    np.array([.25,.25,.25]),
+    np.array([ np.array([.25,.25,.25]),
+               np.array([.45,.45,.45]),
+               np.array([.75,.75,.75]) ])
+    ])
+def test_multi_receiver(basicscene, frequencies, receivers):
+    """checks validity of multiple receiver output."""
+    
 
-def test_multi_receiver_init():
-    """Test initialization of multiple receivers."""
-    X = 1
-    Y = 1
-    Z = 1
-    patch_size = 1
-    ir_length_s = 1.
-    sampling_rate = 100
-    max_order_k = 10
-    speed_of_sound = 343
-    irs_new = []
-    frequencies = np.array([1000])
-    absorption = 0.
-    walls = sp.testing.shoebox_room_stub(X, Y, Z)
     method= "universal"
     algo= "order"
 
-    sc_src = pf.Coordinates(0, 0, 1)
-    sc_rec = pf.Coordinates(0, 0, 1)
+    
 
     src = np.array([.5,.5, .5])
-    rec0 = np.array([.25,.25,.25])
-    rec1 = np.array([.25,.5,.25])
-    rec2 = np.array([.25,.75,.25])
-    rec3 = np.array([.25,.5,.75])
 
-    rec_traj = np.array([rec0, rec1, rec2, rec3])
+    radi = run_basicscene(basicscene, src_pos=src, freqs=frequencies, algorithm=algo, method=method)
 
-    ## initialize radiosity class
-    radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
+    big_histo = radi.collect_receiver_energy(receiver_pos=receivers,
+                                  speed_of_sound=basicscene["speed_of_sound"],
+                                   histogram_time_resolution=1/basicscene["sampling_rate"]
+                                   )
+    
+    # assert correct dimensions of output histogram
+    if receivers.ndim==1:
+        n_recs = 1
+    else:
+        n_recs = receivers.shape[0]
 
-    data_scattering = pf.FrequencyData(
-        np.ones((sc_src.csize,sc_rec.csize,frequencies.size)), frequencies)
+    assert big_histo.shape[0] == n_recs
+    assert big_histo.shape[1] == radi._n_patches
+    assert big_histo.shape[2] == frequencies.shape[0] 
 
-    # set directional scattering data
-    radi.set_wall_scattering(
-        np.arange(len(walls)), data_scattering, sc_src, sc_rec)
+    # assert big histogram entries same as histograms for individual receiver
+    if n_recs > 1:
+        for i in range(n_recs):
+            small_histo = radi.collect_receiver_energy(receiver_pos=receivers[i],
+                                  speed_of_sound=basicscene["speed_of_sound"],
+                                   histogram_time_resolution=1/basicscene["sampling_rate"]
+                                   )
+            npt.assert_array_almost_equal(big_histo[i], small_histo[0])
 
-    # set air absorption
-    radi.set_air_attenuation(
-        pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies),
-            data_scattering.frequencies))
-
-    # set absorption coefficient
-    radi.set_wall_absorption(
-        np.arange(len(walls)),
-        pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies)+absorption,
-            data_scattering.frequencies))
-
-    # run simulation
-    radi.bake_geometry(ff_method=method,algorithm=algo)
-
-    radi.init_source_energy(src,ff_method=method,algorithm=algo)
-
-    ir = radi.calculate_energy_exchange_receiver(
-            receiver_pos=rec_traj, speed_of_sound=speed_of_sound,
-            histogram_time_resolution=1/sampling_rate,
-            histogram_length=ir_length_s, ff_method=method, algorithm=algo,
-            max_depth=max_order_k )
-
-    npt.assert_almost_equal(ir[0], ir[2])
-    npt.assert_almost_equal(ir[1], ir[3])
 
 
 @pytest.mark.parametrize('src', [
@@ -198,3 +180,52 @@ def test_reciprocity_s2p_p2r(src,rec):
         energy.append(e)
 
     npt.assert_array_almost_equal(energy[0], energy[1])
+
+
+def run_basicscene(scene, src_pos, freqs, algorithm, method):
+    patch_size = scene["patch_size"]
+    ir_length_s = scene["ir_length_s"]
+    sampling_rate = scene["sampling_rate"]
+    max_order_k = scene["max_order_k"]
+    speed_of_sound = scene["speed_of_sound"]
+    absorption = scene["absorption"]
+    walls = scene["walls"]
+
+    sc_src = pf.Coordinates(0, 0, 1)
+    sc_rec = pf.Coordinates(0, 0, 1)
+
+    ## initialize radiosity class
+    radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
+
+    data_scattering = pf.FrequencyData(
+        np.ones((sc_src.csize,sc_rec.csize,freqs.size)), freqs)
+
+    # set directional scattering data
+    radi.set_wall_scattering(
+        np.arange(len(walls)), data_scattering, sc_src, sc_rec)
+
+    # set air absorption
+    radi.set_air_attenuation(
+        pf.FrequencyData(
+            np.zeros_like(data_scattering.frequencies),
+            data_scattering.frequencies))
+
+    # set absorption coefficient
+    radi.set_wall_absorption(
+        np.arange(len(walls)),
+        pf.FrequencyData(
+            np.zeros_like(data_scattering.frequencies)+absorption,
+            data_scattering.frequencies))
+
+    # run simulation
+    radi.bake_geometry(ff_method=method,algorithm=algorithm)
+
+    radi.init_source_energy(src_pos,ff_method=method,algorithm=algorithm)
+
+    radi.calculate_energy_exchange(
+            receiver_pos=[.5,.5,.5], speed_of_sound=speed_of_sound,
+            histogram_time_resolution=1/sampling_rate,
+            histogram_length=ir_length_s, ff_method=method, algorithm=algorithm,
+            max_depth=max_order_k )
+    
+    return radi
