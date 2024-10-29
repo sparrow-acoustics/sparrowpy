@@ -167,8 +167,8 @@ def _collect_receiver_energy(
     n_patches = E_matrix_total.shape[0]
 
     for i in range(n_patches):
-        n_delay_samples = int(np.ceil(
-            patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
+        n_delay_samples = int(
+            patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution)
         E_mat_out[i] = np.roll(
             E_matrix_total[i]*np.exp(-air_attenuation*patch_receiver_distance[i]),
             n_delay_samples)

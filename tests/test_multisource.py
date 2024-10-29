@@ -58,17 +58,16 @@ def test_multi_receiver(basicscene, frequencies, receivers):
 
 
 @pytest.mark.parametrize('src', [
-    [[2.,1.,1.], [0, 1, 0], [0, 0, 1]],
-    [[.5,0.5,.5], [-1, 1, 0], [0, 0, 1]],
+    [2.,1.5,1.5],
     ])
 @pytest.mark.parametrize('rec', [
-    [[1.,1.,.5], [-1, 1, 0], [0, 0, 1]],
+    [1,1,1.5],
     ])
 @pytest.mark.parametrize('ord', [
     10
     ])
 @pytest.mark.parametrize('ps', [
-    1.5
+    .5,1,3
     ])
 def test_reciprocity_shoebox(src,rec,ord,ps):
     """Test if radiosity results are reciprocal in shoebox room."""
@@ -76,8 +75,8 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
     Y = 3
     Z = 3
     patch_size = ps
-    ir_length_s = 1
-    sampling_rate = 100
+    ir_length_s = .1
+    sampling_rate = 200
     max_order_k = ord
     speed_of_sound = 343
     irs_new = []
@@ -92,11 +91,11 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
 
     for i in range(2):
         if i == 0:
-            src_ = sp.geometry.SoundSource(src[0],src[1], src[2])
-            rec_ = sp.geometry.Receiver(rec[0],rec[1], rec[2])
+            src_ = np.array(src)
+            rec_ = np.array(rec)
         elif i == 1:
-            src_ = sp.geometry.SoundSource(rec[0],rec[1], rec[2])
-            rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
+            src_ = np.array(rec)
+            rec_ = np.array(src)
 
 
         ## initialize radiosity class
@@ -125,15 +124,15 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
         # run simulation
         radi.bake_geometry(ff_method=method,algorithm=algo)
 
-        radi.init_source_energy(src_.position,ff_method=method,algorithm=algo)
+        radi.init_source_energy(src_,ff_method=method,algorithm=algo)
 
         radi.calculate_energy_exchange(
-                receiver_pos=rec_.position, speed_of_sound=speed_of_sound,
+                receiver_pos=[.1,.1,.1], speed_of_sound=speed_of_sound,
                 histogram_time_resolution=1/sampling_rate,
                 histogram_length=ir_length_s, ff_method=method, algorithm=algo,
                 max_depth=max_order_k )
 
-        ir = np.sum(radi.collect_receiver_energy(receiver_pos=rec_.position,
+        ir = np.sum(radi.collect_receiver_energy(receiver_pos=rec_,
                 speed_of_sound=speed_of_sound, histogram_time_resolution=1/sampling_rate, propagation_fx=True),axis=1)[0][0]
 
         # test energy at receiver
@@ -141,8 +140,17 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
 
     irs_new = np.array(irs_new)
 
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    plt.plot(irs_new[0],'o')
+    plt.plot(irs_new[1],'*')
+    plt.grid()
+
+    plt.show()
+
     npt.assert_array_almost_equal(np.sum(irs_new[1]), np.sum(irs_new[0]))
-    npt.assert_array_almost_equal(irs_new[1][0], irs_new[0][0])
+    npt.assert_array_almost_equal(irs_new[1], irs_new[0])
 
 
 @pytest.mark.parametrize('src', [
