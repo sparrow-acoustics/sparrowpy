@@ -57,7 +57,6 @@ class DRadiosityFast():
         self._receivers = None
         self._absorption = None
         self._air_attenuation = None
-
     @classmethod
     def from_polygon(
             cls, polygon_list, patch_size):
@@ -308,6 +307,7 @@ class DRadiosityFast():
                                             self.n_patches,patches_center.shape[-1]])
         
         E_matrix = np.zeros((n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]))
+        histogram_out = np.zeros((n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]))
 
         for i in range(n_receivers):
             patch_receiver_distance[i] = patches_center - receiver_pos[i]
@@ -332,12 +332,14 @@ class DRadiosityFast():
             if propagation_fx:
                 # accumulate the patch energies towards the receiver 
                 # with atmospheric effects (delay, atmospheric attenuation)
-                E_matrix[i] = ee_order._collect_receiver_energy(
-                        E_matrix,
+                histogram_out[i] = ee_order._collect_receiver_energy(
+                        E_matrix[i],
                         np.linalg.norm(patch_receiver_distance[i], axis=1), speed_of_sound,
                         histogram_time_resolution, air_attenuation=air_attenuation)
+            else:
+                histogram_out = E_matrix
                 
-        return E_matrix
+        return histogram_out
 
     def set_wall_absorption(self, wall_indexes, absorption:pf.FrequencyData):
         """Set the wall absorption.

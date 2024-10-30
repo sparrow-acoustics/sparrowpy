@@ -4,6 +4,7 @@ import numpy.testing as npt
 import pyfar as pf
 import pytest
 import sparapy as sp
+import matplotlib.pyplot as plt
 
 create_reference_files = False
 
@@ -21,11 +22,8 @@ create_reference_files = False
 def test_multi_receiver(basicscene, frequencies, receivers):
     """checks validity of multiple receiver output."""
     
-
     method= "universal"
     algo= "order"
-
-    
 
     src = np.array([.5,.5, .5])
 
@@ -53,6 +51,7 @@ def test_multi_receiver(basicscene, frequencies, receivers):
                                   speed_of_sound=basicscene["speed_of_sound"],
                                    histogram_time_resolution=1/basicscene["sampling_rate"]
                                    )
+            
             npt.assert_array_almost_equal(big_histo[i], small_histo[0])
 
 
@@ -61,13 +60,14 @@ def test_multi_receiver(basicscene, frequencies, receivers):
     [2.,1.5,1.5],
     ])
 @pytest.mark.parametrize('rec', [
-    [1,1,1.5],
+    [.5,1,2.5],
+    [1,2.5,1.5],
     ])
 @pytest.mark.parametrize('ord', [
-    10
+    10,20
     ])
 @pytest.mark.parametrize('ps', [
-    .5,1,3
+    .5,1.5
     ])
 def test_reciprocity_shoebox(src,rec,ord,ps):
     """Test if radiosity results are reciprocal in shoebox room."""
@@ -75,7 +75,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
     Y = 3
     Z = 3
     patch_size = ps
-    ir_length_s = .1
+    ir_length_s = .5
     sampling_rate = 200
     max_order_k = ord
     speed_of_sound = 343
@@ -127,7 +127,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
         radi.init_source_energy(src_,ff_method=method,algorithm=algo)
 
         radi.calculate_energy_exchange(
-                receiver_pos=[.1,.1,.1], speed_of_sound=speed_of_sound,
+                receiver_pos=rec_, speed_of_sound=speed_of_sound,
                 histogram_time_resolution=1/sampling_rate,
                 histogram_length=ir_length_s, ff_method=method, algorithm=algo,
                 max_depth=max_order_k )
@@ -139,15 +139,6 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
         irs_new.append(ir)
 
     irs_new = np.array(irs_new)
-
-    import matplotlib.pyplot as plt
-
-    plt.figure()
-    plt.plot(irs_new[0],'o')
-    plt.plot(irs_new[1],'*')
-    plt.grid()
-
-    plt.show()
 
     npt.assert_array_almost_equal(np.sum(irs_new[1]), np.sum(irs_new[0]))
     npt.assert_array_almost_equal(irs_new[1], irs_new[0])
