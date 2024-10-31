@@ -318,9 +318,16 @@ def test_recursive_vs_old_implementation(
     radiosity.bake_geometry()
 
     radiosity.init_source_energy(source_pos)
-    histogram = radiosity.calculate_energy_exchange_receiver(
+
+    radiosity.calculate_energy_exchange(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
         threshold=0, max_time=5, max_depth=max_order_k)
+    
+    patches_hist = radiosity.collect_receiver_energy(
+        receiver_pos, speed_of_sound, time_resolution, propagation_fx=True
+    )
+
+    histogram = np.sum(patches_hist[0],axis=0)
 
     patches_center = []
     patches_normal = []
@@ -476,9 +483,16 @@ def test_recursive_reference(
     radiosity.bake_geometry()
 
     radiosity.init_source_energy(source_pos)
-    histogram = radiosity.calculate_energy_exchange_receiver(
+    
+    radiosity.calculate_energy_exchange(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
         max_time=0.011)
+    
+    patches_hist = radiosity.collect_receiver_energy(
+        receiver_pos, speed_of_sound, time_resolution, propagation_fx=True
+    )
+
+    histogram = np.sum(patches_hist[0],axis=0)
 
     signal = pf.Signal(histogram, 1/time_resolution)
     signal.time /= np.max(np.abs(signal.time))
