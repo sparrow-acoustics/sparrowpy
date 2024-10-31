@@ -298,7 +298,7 @@ class DRadiosityFast():
             raise NotImplementedError()
         
     def collect_receiver_energy(self, receiver_pos,
-            speed_of_sound, histogram_time_resolution, method, propagation_fx=False):
+            speed_of_sound, histogram_time_resolution, method="kang", propagation_fx=False):
 
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
