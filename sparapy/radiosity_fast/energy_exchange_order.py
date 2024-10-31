@@ -165,12 +165,14 @@ def _collect_receiver_energy(
     """
     E_mat_out = np.zeros_like(E_matrix_total)
     n_patches = E_matrix_total.shape[0]
+    n_bins = E_matrix_total.shape[1]
 
-    for i in range(n_patches):
+    for i in numba.prange(n_patches):
         n_delay_samples = int(np.ceil(
             patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
-        E_mat_out[i] = np.roll(
-            E_matrix_total[i]*np.exp(-air_attenuation*patch_receiver_distance[i]),
-            n_delay_samples)
+        for j in range(n_bins):
+            E_mat_out[i,j] = np.roll(
+                E_matrix_total[i,j]*np.exp(-air_attenuation[j]*patch_receiver_distance[i]),
+                n_delay_samples)
         
     return E_mat_out
