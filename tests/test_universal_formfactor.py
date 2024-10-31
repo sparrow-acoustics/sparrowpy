@@ -302,15 +302,24 @@ def test_fast_ff_method_comparison(src, rec):
             src_.position, ff_method=method, algorithm=algo
         )
 
-        ir = radi.calculate_energy_exchange_receiver(
+        radi.calculate_energy_exchange(
             receiver_pos=rec_.position,
             speed_of_sound=speed_of_sound,
-            histogram_time_resolution=1 / sampling_rate,
+            histogram_time_resolution=1/sampling_rate,
             histogram_length=ir_length_s,
             ff_method=method,
             algorithm=algo,
-            max_depth=max_order_k,
+            max_depth=max_order_k
+            )
+    
+        patches_hist = radi.collect_receiver_energy(
+            receiver_pos=rec_.position,
+            speed_of_sound=speed_of_sound,
+            histogram_time_resolution=1/sampling_rate,
+            propagation_fx=True
         )
+
+        ir = np.sum(patches_hist[0],axis=0)
 
         # test energy at receiver
         irs_new.append(ir)
