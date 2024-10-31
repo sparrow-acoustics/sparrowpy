@@ -5,9 +5,9 @@ from sparapy.radiosity_fast.universal_ff.univ_form_factor import pt_solution
 
 @numba.njit()
 def _kang(
-        patch_receiver_distance, patches_normal, n_bins):
+        patch_receiver_distance, patches_normal):
     receiver_factor = np.empty((
-        patch_receiver_distance.shape[0], n_bins))
+        patch_receiver_distance.shape[0],))
     for i in range(patch_receiver_distance.shape[0]):
         R = np.sqrt(np.sum((patch_receiver_distance[i, :]**2)))
 
@@ -15,7 +15,8 @@ def _kang(
             patches_normal[i, :]*np.abs(patch_receiver_distance[i, :]))) / R
 
         # Equation 20
-        receiver_factor[i, :] = cos_xi / (np.pi * R**2)
+        receiver_factor[i] = cos_xi / (np.pi * R**2)
+        
     return receiver_factor
 
 @numba.njit(parallel=True)
