@@ -69,7 +69,10 @@ def test_multi_receiver(basicscene, frequencies, receivers):
 @pytest.mark.parametrize('ps', [
     .5,1.5
     ])
-def test_reciprocity_shoebox(src,rec,ord,ps):
+@pytest.mark.parametrize('method', [
+    "universal"
+    ])
+def test_reciprocity_shoebox(src,rec,ord,ps, method):
     """Test if radiosity results are reciprocal in shoebox room."""
     X = 3
     Y = 3
@@ -83,7 +86,6 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
     frequencies = np.array([1000])
     absorption = 0.
     walls = sp.testing.shoebox_room_stub(X, Y, Z)
-    method= "universal"
     algo= "order"
 
     sc_src = pf.Coordinates(0, 0, 1)
@@ -155,7 +157,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
     [[2.,0.,-2.], [-1, 0, 0], [0, 0, 1]],
     ])
 @pytest.mark.parametrize('method', [
-    "kang"
+    "universal","kang"
     ])
 def test_reciprocity_s2p_p2r(src,rec,method):
     """Check if radiosity implementation has source-receiver reciprocity."""
@@ -163,6 +165,12 @@ def test_reciprocity_s2p_p2r(src,rec,method):
             [[0, -1, -1], [0, -1, 1],
             [0, 1, 1], [0, 1, -1]],
             [0, 0, 1], [1, 0, 0])]
+
+    attenuation = pf.FrequencyData(
+                np.zeros((1,1,1)),
+                np.array([1000]))
+    
+    air_att = np.atleast_1d(attenuation.freq.squeeze())
 
     energy=[]
 
@@ -175,22 +183,23 @@ def test_reciprocity_s2p_p2r(src,rec,method):
             rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
 
         if method == "universal":
-            e_s = sp.form_factor.pt_solution(
-                point=src_.position,patch_points=wall[0].pts, mode="source"
-                )
-
-            e_r = sp.form_factor.pt_solution(
-                point=rec_.position,patch_points=wall[0].pts, mode="receiver"
-                )
+            e_s,_ = sp.radiosity_fast.source_energy._init_energy_universal(
+                                                        source_position=src_.position, patches_center=np.array([wall[0].center]),
+                                                        patches_points=np.array([wall[0].pts]), air_attenuation=air_att,
+                                                        n_bins=1)
             
+            e_r = sp.radiosity_fast.receiver_energy._universal(
+                                                        receiver_pos=rec_.position,patches_points=np.array([wall[0].pts]))
+            
+
         elif method == "kang":
             e_s,_ = sp.radiosity_fast.source_energy._init_energy_kang(source_position=src_.position, patches_center=np.array([wall[0].center]),
-                                                                    patches_normal=np.array([wall[0].normal]), air_attenuation=None,
-                                                                    patches_size=np.array([wall[0].size]), n_bins=1)
+                                                        patches_normal=np.array([wall[0].normal]), air_attenuation=air_att,
+                                                        patches_size=np.array([wall[0].size]), n_bins=1)
             
             e_r = sp.radiosity_fast.receiver_energy._kang(patch_receiver_distance=np.array([(rec_.position-wall[0].center)]),
-                                                         patches_normal=np.array([wall[0].normal]),
-                                                         n_bins=1)
+                                                        patches_normal=np.array([wall[0].normal]),
+                                                        n_bins=1)
 
         e = e_s*e_r
 
