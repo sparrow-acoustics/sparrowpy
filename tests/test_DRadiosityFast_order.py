@@ -152,9 +152,15 @@ def test_order_vs_old_implementation(
     radiosity.bake_geometry(algorithm='order')
 
     radiosity.init_source_energy(source_pos, algorithm='order')
-    histogram = radiosity.calculate_energy_exchange_receiver(
+    radiosity.calculate_energy_exchange(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
         max_depth=max_order_k, algorithm='order')
+    
+    patches_hist = radiosity.collect_receiver_energy(
+        receiver_pos, speed_of_sound, time_resolution, propagation_fx=True
+    )
+
+    histogram = np.sum(patches_hist[0],axis=0)
 
     # get E_matrix_old (n_bins, max_order_k+1, n_patches, n_samples)
     # E_matrix (n_patches, n_directions, n_bins, n_samples)
@@ -292,11 +298,17 @@ def test_order_vs_analytic(patch_size):
 
 
     radiosity.init_source_energy(source_pos, algorithm='order')
-    histogram = radiosity.calculate_energy_exchange_receiver(
+    radiosity.calculate_energy_exchange(
         receiver_pos, speed_of_sound=speed_of_sound,
         histogram_time_resolution=time_resolution,
         histogram_length=length_histogram,
         algorithm='order', max_depth=max_order_k, recalculate=True)
+    
+    patches_hist = radiosity.collect_receiver_energy(
+        receiver_pos, speed_of_sound, time_resolution, propagation_fx=True
+    )
+
+    histogram = np.sum(patches_hist[0],axis=0)
 
     reverberation_order = pf.Signal(histogram, sampling_rate=1/time_resolution)
     # desired
