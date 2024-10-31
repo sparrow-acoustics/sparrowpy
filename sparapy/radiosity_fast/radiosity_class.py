@@ -248,18 +248,26 @@ class DRadiosityFast():
         n_patches = self.n_patches
         n_bins = self.n_bins
         distance_i_j = np.empty((n_patches, n_patches))
+        
         for i in range(n_patches):
             for j in range(n_patches):
                 distance_i_j[i, j] = np.linalg.norm(
                     patches_center[i, :]-patches_center[j, :])
-        if ff_method == 'kang':
-            patch_receiver_energy = receiver_energy._kang(
-                patch_receiver_distance, patches_normal, air_attenuation)
-        elif ff_method == 'universal':
-            pass
-        else:
-            raise NotImplementedError()
+    
         if algorithm == 'recursive':
+
+            if ff_method == 'kang':
+                PendingDeprecationWarning("\"kang\" is a legacy method."+
+                                          "\nResults are non-reciprocal and likely generate large errors.")
+                patch_receiver_energy = receiver_energy._kang(
+                    patch_receiver_distance[0], patches_normal)
+                
+            elif ff_method == 'universal':
+                patch_receiver_energy = receiver_energy._universal(
+                        receiver_pos[0], patches_points)
+            else:
+                raise NotImplementedError()
+
             # add first 2 order energy exchange
             ir = ir.T
             energy_0 = self.energy_0
@@ -290,10 +298,11 @@ class DRadiosityFast():
             raise NotImplementedError()
         
     def collect_receiver_energy(self, receiver_pos,
-            speed_of_sound, histogram_time_resolution, propagation_fx=False):
+            speed_of_sound, histogram_time_resolution, method, propagation_fx=False):
 
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
+        patches_normal = self._patches_normal
         n_patches = self.n_patches
         n_bins = self.n_bins
 
@@ -303,18 +312,24 @@ class DRadiosityFast():
         n_receivers = receiver_pos.shape[0]
 
         patches_center = self.patches_center
-        patch_receiver_distance = np.empty([n_receivers,
+        patches_receiver_distance = np.empty([n_receivers,
                                             self.n_patches,patches_center.shape[-1]])
         
-        E_matrix = np.zeros((n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]))
-        histogram_out = np.zeros((n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]))
+        E_matrix = np.empty((n_patches, n_bins, self.E_matrix_total.shape[-1]))
+        histogram_out = np.empty((n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]))
 
         for i in range(n_receivers):
-            patch_receiver_distance[i] = patches_center - receiver_pos[i]
+            patches_receiver_distance = patches_center - receiver_pos[i]
         
-            # geometrical weighting
-            patch_receiver_energy = receiver_energy._universal(
-                    receiver_pos[i], patches_points)
+            if method == "universal":
+                # geometrical weighting
+                patch_receiver_energy = receiver_energy._universal(
+                        receiver_pos[i], patches_points)
+            elif method == "kang":
+                PendingDeprecationWarning("\"kang\" is a legacy method."+
+                                          "\nResults are non-reciprocal and likely generate large errors.")
+                patch_receiver_energy = receiver_energy._kang(
+                    patch_receiver_distance=patches_receiver_distance, patches_normal=patches_normal)
             
             # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
@@ -327,17 +342,17 @@ class DRadiosityFast():
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[i,k,:]= self.E_matrix_total[k,receiver_idx[k],:] * patch_receiver_energy[k]
+                E_matrix[k,:]= self.E_matrix_total[k,receiver_idx[k],:] * patch_receiver_energy[k]
 
             if propagation_fx:
                 # accumulate the patch energies towards the receiver 
                 # with atmospheric effects (delay, atmospheric attenuation)
                 histogram_out[i] = ee_order._collect_receiver_energy(
-                        E_matrix[i],
-                        np.linalg.norm(patch_receiver_distance[i], axis=1), speed_of_sound,
+                        E_matrix,
+                        np.linalg.norm(patches_receiver_distance, axis=1), speed_of_sound,
                         histogram_time_resolution, air_attenuation=air_attenuation)
             else:
-                histogram_out = E_matrix
+                histogram_out[i] = E_matrix
                 
         return histogram_out
 
