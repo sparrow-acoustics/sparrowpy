@@ -219,9 +219,15 @@ def test_order_reference(
     radiosity.bake_geometry(algorithm='order')
 
     radiosity.init_source_energy(source_pos, algorithm='order')
-    histogram = radiosity.calculate_energy_exchange_receiver(
+    radiosity.calculate_energy_exchange(
         receiver_pos, speed_of_sound, time_resolution, length_histogram,
-        max_depth=3, algorithm='order')
+        algorithm='order', max_depth=3)
+
+    patches_hist = radiosity.collect_receiver_energy(
+        receiver_pos, speed_of_sound, time_resolution, propagation_fx=True
+    )
+
+    histogram = np.sum(patches_hist[0],axis=0)
 
     signal = pf.Signal(histogram, 1/time_resolution)
     signal.time /= np.max(np.abs(signal.time))
