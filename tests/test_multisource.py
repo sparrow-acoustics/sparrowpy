@@ -19,10 +19,12 @@ create_reference_files = False
                np.array([.45,.45,.45]),
                np.array([.75,.75,.75]) ])
     ])
-def test_multi_receiver(basicscene, frequencies, receivers):
+@pytest.mark.parametrize('method', [
+    "universal","kang"
+    ])
+def test_multi_receiver(basicscene, frequencies, receivers, method):
     """checks validity of multiple receiver output."""
-    
-    method= "universal"
+
     algo= "order"
 
     src = np.array([.5,.5, .5])
@@ -31,7 +33,8 @@ def test_multi_receiver(basicscene, frequencies, receivers):
 
     big_histo = radi.collect_receiver_energy(receiver_pos=receivers,
                                   speed_of_sound=basicscene["speed_of_sound"],
-                                   histogram_time_resolution=1/basicscene["sampling_rate"]
+                                   histogram_time_resolution=1/basicscene["sampling_rate"],
+                                   method=method
                                    )
     
     # assert correct dimensions of output histogram
@@ -49,7 +52,8 @@ def test_multi_receiver(basicscene, frequencies, receivers):
         for i in range(n_recs):
             small_histo = radi.collect_receiver_energy(receiver_pos=receivers[i],
                                   speed_of_sound=basicscene["speed_of_sound"],
-                                   histogram_time_resolution=1/basicscene["sampling_rate"]
+                                   histogram_time_resolution=1/basicscene["sampling_rate"],
+                                   method=method
                                    )
             
             npt.assert_array_almost_equal(big_histo[i], small_histo[0])
@@ -70,7 +74,7 @@ def test_multi_receiver(basicscene, frequencies, receivers):
     .5,1.5
     ])
 @pytest.mark.parametrize('method', [
-    "universal"
+    "universal","kang"
     ])
 def test_reciprocity_shoebox(src,rec,ord,ps, method):
     """Test if radiosity results are reciprocal in shoebox room."""
@@ -135,7 +139,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method):
                 max_depth=max_order_k )
 
         ir = np.sum(radi.collect_receiver_energy(receiver_pos=rec_,
-                speed_of_sound=speed_of_sound, histogram_time_resolution=1/sampling_rate, propagation_fx=True),axis=1)[0][0]
+                speed_of_sound=speed_of_sound, histogram_time_resolution=1/sampling_rate, method=method, propagation_fx=True),axis=1)[0][0]
 
         # test energy at receiver
         irs_new.append(ir)
