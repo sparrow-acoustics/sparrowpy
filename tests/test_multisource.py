@@ -154,7 +154,10 @@ def test_reciprocity_shoebox(src,rec,ord,ps):
     [[2.,-2.,0], [-1, 0, 0], [0, 0, 1]],
     [[2.,0.,-2.], [-1, 0, 0], [0, 0, 1]],
     ])
-def test_reciprocity_s2p_p2r(src,rec):
+@pytest.mark.parametrize('method', [
+    "kang"
+    ])
+def test_reciprocity_s2p_p2r(src,rec,method):
     """Check if radiosity implementation has source-receiver reciprocity."""
     wall = [sp.geometry.Polygon(
             [[0, -1, -1], [0, -1, 1],
@@ -171,13 +174,25 @@ def test_reciprocity_s2p_p2r(src,rec):
             src_ = sp.geometry.SoundSource(rec[0],rec[1], rec[2])
             rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
 
-        e = sp.form_factor.pt_solution(
-            point=src_.position,patch_points=wall[0].pts, mode="source"
-            )
+        if method == "universal":
+            e_s = sp.form_factor.pt_solution(
+                point=src_.position,patch_points=wall[0].pts, mode="source"
+                )
 
-        e *= sp.form_factor.pt_solution(
-            point=rec_.position,patch_points=wall[0].pts, mode="receiver"
-            )
+            e_r = sp.form_factor.pt_solution(
+                point=rec_.position,patch_points=wall[0].pts, mode="receiver"
+                )
+            
+        elif method == "kang":
+            e_s,_ = sp.radiosity_fast.source_energy._init_energy_kang(source_position=src_.position, patches_center=np.array([wall[0].center]),
+                                                                    patches_normal=np.array([wall[0].normal]), air_attenuation=None,
+                                                                    patches_size=np.array([wall[0].size]), n_bins=1)
+            
+            e_r = sp.radiosity_fast.receiver_energy._kang(patch_receiver_distance=np.array([(rec_.position-wall[0].center)]),
+                                                         patches_normal=np.array([wall[0].normal]),
+                                                         n_bins=1)
+
+        e = e_s*e_r
 
         energy.append(e)
 
