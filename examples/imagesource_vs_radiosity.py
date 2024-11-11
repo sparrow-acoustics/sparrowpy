@@ -29,7 +29,7 @@ time_resolution = 1e-4
 speed_of_sound = 346.18
 
 path_sofa = os.path.join(
-    os.path.dirname(__file__), 'test_brdf_19.sofa')
+    os.path.dirname(__file__), 'brdf_19.sofa')
 
 # use DirectionDirectivity instead
 radiosity_old = sp.radiosity.DirectionalRadiosity(
