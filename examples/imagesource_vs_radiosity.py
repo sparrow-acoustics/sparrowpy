@@ -55,9 +55,50 @@ radiosity = pf.Signal(histogram_old, 10000)
 
 
 # %%
+# directional radiosity 17
+
+k = 10
+patch_size = 1
+
+walls = sp.testing.shoebox_room_stub(3, 3, 3)
+source_pos = np.array([0.5, 0.5, 0.5])
+receiver_pos = np.array([0.25, 0.25, 0.25])
+
+length_histogram = 0.1
+time_resolution = 1e-4
+
+speed_of_sound = 346.18
+
+path_sofa = os.path.join(
+    os.path.dirname(__file__), 'brdf_17.sofa')
+
+# use DirectionDirectivity instead
+radiosity_old = sp.radiosity.DirectionalRadiosity(
+    walls, patch_size, k, length_histogram,path_sofa,
+    speed_of_sound=speed_of_sound,
+    sampling_rate=1/time_resolution)
+radiosity_old.run(
+    sp.geometry.SoundSource(source_pos, [1, 0, 0], [0, 0, 1]))
+
+# problem starts here don't know why 
+histogram_old = radiosity_old.energy_at_receiver(
+    sp.geometry.Receiver(receiver_pos, [1, 0, 0], [0, 0, 1])) 
+
+radiosity17 = pf.Signal(histogram_old, 10000)
+
+
+# pf.plot.use()
+# plt.figure()
+
+# ax = pf.plot.time(radiosity,dB=True)
+# ax.set_xlim((0,0.01))
+# plt.show()
+
+
+# %%
 # image source method
 
-MaxOrder = 5
+MaxOrder = 6
 
 RoomSizes = (3, 3, 3) 
 WallsHesse = ims.get_walls_hesse(*RoomSizes)
@@ -87,7 +128,8 @@ image_source = pf.Signal(energy, 10000)
 
 pf.plot.use()
 plt.figure()
-ax = pf.plot.time(radiosity, dB=True, label="Radiosity")
+ax = pf.plot.time(radiosity, dB=True, label="Radiosity 19")
+ax = pf.plot.time(radiosity17, dB=True, label="Radiosity 17")
 ax = pf.plot.time(image_source, dB=True, label="Image Source Method")
 #ax.set_xlim((0,0.02))
 
