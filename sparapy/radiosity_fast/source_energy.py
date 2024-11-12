@@ -1,7 +1,7 @@
 """Calculate initial energy from the source to the patch."""
 import numba
 import numpy as np
-
+from sparapy.radiosity_fast.universal_ff.univ_form_factor import pt_solution as patch2point
 
 @numba.njit(parallel=True)
 def _init_energy_kang(
@@ -101,5 +101,48 @@ def _init_energy_kang(
         else:
             energy[j, :] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (
                 4*np.pi)
+
+    return (energy, distance_out)
+
+
+@numba.njit(parallel=True)
+def _init_energy_universal(
+        source_position: np.ndarray, patches_center: np.ndarray,
+        patches_points: np.ndarray, air_attenuation:np.ndarray,
+        n_bins:float):
+    """Calculate the initial energy from the source.
+
+    Parameters
+    ----------
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_points : np.ndarray
+        vertices of all patches of shape (n_patches, n_points,3)
+    air_attenuation : np.ndarray
+        air attenuation factor in Np/m (n_bins,)
+    n_bins : float
+        number of frequency bins.
+
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
+
+    """
+    n_patches = patches_center.shape[0]
+    energy = np.empty((n_patches, n_bins))
+    distance_out = np.empty((n_patches, ))
+    for j in numba.prange(n_patches):
+        source_pos = source_position.copy()
+        receiver_pos = patches_center[j, :].copy()
+        receiver_pts = patches_points[j, :, :].copy()
+        
+        distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
+
+        energy[j,:] = np.exp(-air_attenuation*distance_out[j]) * patch2point(point=source_pos, patch_points=receiver_pts, mode="source")
 
     return (energy, distance_out)
