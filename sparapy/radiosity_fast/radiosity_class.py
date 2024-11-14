@@ -94,7 +94,7 @@ class DRadiosityFast():
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
 
-    def bake_geometry(self, ff_method='universal', algorithm='recursive'):
+    def bake_geometry(self, ff_method='universal', algorithm='order'):
         """Bake the geometry by calculating all the form factors.
 
         Parameters
