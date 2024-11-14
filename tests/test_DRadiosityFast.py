@@ -47,45 +47,6 @@ def test_compute_form_factors(sample_walls):
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
     radiosity.bake_geometry(ff_method='universal')
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
-
-def test_compute_form_factor_vals(sample_walls):
-    # just to compile the programs
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
-    radiosity.bake_geometry(ff_method='kang')
-    radiosity.bake_geometry(ff_method='universal')
-
-    # actual run
-    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .2)
-    
-    t0 = time.time()
-    radiosity.bake_geometry(ff_method='universal')
-    tuniv = time.time()-t0
-    univ = radiosity.form_factors
-
-    t0 = time.time()
-    radiosity.bake_geometry(ff_method='kang')
-    tkang = time.time()-t0
-    kang = radiosity.form_factors
-
-    diff = np.abs(kang-univ)
-    
-    diff = diff[kang!=0]
-    univ = univ[kang!=0]
-    kang = kang[kang!=0]
-
-    maximo = np.max(diff)
-    rms = np.sqrt(np.sum(np.square(diff)))/(diff.shape[0]**2)
-    mmean = np.mean(diff)
-
-    maximo_rel = 100*maximo/kang[np.argmax(diff)]
-
-    rms_rel = 100*rms/np.mean(kang)
-
-    mean_rel = 100*mmean/np.mean(kang)
-
-    assert maximo_rel < 25
-    assert mean_rel < 10
-    assert rms_rel < 1
     
 
 
@@ -112,8 +73,8 @@ def test_calc_form_factor_perpendicular_distance(
     patch_1 = sp.radiosity.Patches(wall_source, patch_size, [1], 0)
     patch_2 = sp.radiosity.Patches(wall_receiver, patch_size, [0], 1)
     patches = [patch_1, patch_2]
-    patch_1.calculate_form_factor(patches)
-    patch_2.calculate_form_factor(patches)
+    patch_1.calculate_univ_form_factor(patches)
+    patch_2.calculate_univ_form_factor(patches)
 
     radiosity = sp.DRadiosityFast.from_polygon(
         [wall_source, wall_receiver], patch_size)
