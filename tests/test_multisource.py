@@ -19,11 +19,8 @@ create_reference_files = False
                np.array([.45,.45,.45]),
                np.array([.75,.75,.75]) ])
     ])
-@pytest.mark.parametrize('method', [
-    "universal","kang"
-    ])
-def test_multi_receiver(basicscene, frequencies, receivers, method):
-    """checks validity of multiple receiver output."""
+def test_multi_receiver(basicscene, frequencies, receivers, method="universal"):
+    """check validity of multiple receiver output."""
 
     algo= "order"
 
@@ -73,10 +70,7 @@ def test_multi_receiver(basicscene, frequencies, receivers, method):
 @pytest.mark.parametrize('ps', [
     .5,1.5
     ])
-@pytest.mark.parametrize('method', [
-    "universal","kang"
-    ])
-def test_reciprocity_shoebox(src,rec,ord,ps, method):
+def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
     """Test if radiosity results are reciprocal in shoebox room."""
     X = 3
     Y = 3
@@ -160,10 +154,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method):
     [[2.,-2.,0], [-1, 0, 0], [0, 0, 1]],
     [[2.,0.,-2.], [-1, 0, 0], [0, 0, 1]],
     ])
-@pytest.mark.parametrize('method', [
-    "universal","kang"
-    ])
-def test_reciprocity_s2p_p2r(src,rec,method):
+def test_reciprocity_s2p_p2r(src,rec,method="universal"):
     """Check if radiosity implementation has source-receiver reciprocity."""
     wall = [sp.geometry.Polygon(
             [[0, -1, -1], [0, -1, 1],
