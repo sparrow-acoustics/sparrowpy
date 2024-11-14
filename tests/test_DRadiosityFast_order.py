@@ -33,8 +33,8 @@ def test_calc_form_factor_perpendicular_distance(
     patch_1 = sp.radiosity.Patches(wall_source, patch_size, [1], 0)
     patch_2 = sp.radiosity.Patches(wall_receiver, patch_size, [0], 1)
     patches = [patch_1, patch_2]
-    patch_1.calculate_form_factor(patches)
-    patch_2.calculate_form_factor(patches)
+    patch_1.calculate_univ_form_factor(patches)
+    patch_2.calculate_univ_form_factor(patches)
 
     radiosity = sp.DRadiosityFast.from_polygon(
         [wall_source, wall_receiver], patch_size)
