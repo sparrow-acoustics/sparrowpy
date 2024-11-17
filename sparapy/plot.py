@@ -192,3 +192,24 @@ def patches(patches_points, energy, ax=None):
         norm=mpl.colors.Normalize(0, np.max(energy)), cmap=cmap),
         ax=ax, orientation='vertical')
     return ax
+
+def energy_patches(E_matrix):
+
+    n_bins = E_matrix.shape[0]
+    max_order = E_matrix.shape[1]
+    n_patches = E_matrix.shape[2]
+    time = E_matrix.shape[3]
+
+    energy_patches = np.zeros((n_bins, n_patches, time))
+
+    for patch in n_patches:
+
+        for k in range(max_order+1):
+
+            for i_frequency in range(n_bins):
+                    
+                energy = E_matrix[i_frequency, k, patch, :]
+                    
+                energy_patches[i_frequency, patch,:] += energy
+
+    return energy_patches
