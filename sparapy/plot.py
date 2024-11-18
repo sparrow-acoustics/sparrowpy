@@ -202,11 +202,11 @@ def energy_patches(E_matrix):
 
     energy_patches = np.zeros((n_bins, n_patches, time))
 
-    for patch in n_patches:
-
-        for k in range(max_order+1):
-
-            for i_frequency in range(n_bins):
+    for i_frequency in range(n_bins):
+        
+        for patch in range(n_patches):
+        
+            for k in range(max_order):
                     
                 energy = E_matrix[i_frequency, k, patch, :]
                     

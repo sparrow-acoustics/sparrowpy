@@ -129,3 +129,17 @@ def test_patches_3():
     save_and_compare(
         create_baseline, baseline_path, output_path, filename,
         file_type, compare_output)
+    
+
+def test_energy_patches():
+    E_matrix = np.array(
+    [[
+    [[2, 0, 1, 6], [0, 4, 8, 0]],
+    [[2, 2, 0, 8], [2, 0, 2, 8]],
+    [[2, 7, 7, 2], [2, 4, 3, 1]]], 
+    [[[9, 1, 3, 8], [2, 5, 2, 4]],
+    [[4, 9, 8, 7], [3, 3, 8, 0]],
+    [[3, 2, 3, 8], [8, 6, 6, 7]]
+    ]])
+
+    
