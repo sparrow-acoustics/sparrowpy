@@ -5,7 +5,7 @@ from pyfar.testing.plot_utils import create_figure, save_and_compare
 import numpy as np
 import sparapy as sp
 
-def test_energy_patches():
+def test_energy_matrix_patches():
     
     E_matrix = np.array([
         [

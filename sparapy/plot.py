@@ -193,14 +193,14 @@ def patches(patches_points, energy, ax=None):
         ax=ax, orientation='vertical')
     return ax
 
-def energy_patches(E_matrix):
-
+def energy_matrix_patches(E_matrix):
+    # adds up all the reflection orders in E_matrix, specific for each patch. 
     n_bins = E_matrix.shape[0]
     max_order = E_matrix.shape[1]
     n_patches = E_matrix.shape[2]
-    time = E_matrix.shape[3]
+    n_samples = E_matrix.shape[3]
 
-    energy_patches = np.zeros((n_bins, n_patches, time))
+    energy_patches = np.zeros((n_bins, n_patches, n_samples))
 
     for i_frequency in range(n_bins):
         
@@ -213,3 +213,27 @@ def energy_patches(E_matrix):
                 energy_patches[i_frequency, patch,:] += energy
 
     return energy_patches
+
+def energy_patches_time(energy_matrix_patches, time):
+    # returns energy array used in patches function (for every frequency bin)
+    # basically returns the energy at a specific time 
+
+    #sample = time * sampling_rate * time
+
+    n_bins = energy_matrix_patches.shape[0]
+    max_order = energy_matrix_patches[1]
+    n_patches = energy_matrix_patches[2]
+    n_samples = energy_matrix_patches[3]
+
+    energy_patches_time = np.zeros((n_bins, n_patches))
+
+    for i_frequency in range(n_bins):
+
+         energy_patches_time[i_frequency, :] = energy_matrix_patches[i_frequency, :, time]
+    
+    return energy_patches_time
+
+
+
+
+
