@@ -4,10 +4,8 @@ import numpy.testing as npt
 import pyfar as pf
 import pytest
 import sparapy as sp
-import matplotlib.pyplot as plt
 
 create_reference_files = False
-
 
 @pytest.mark.parametrize('frequencies', [
     np.array([1000]),
@@ -19,21 +17,22 @@ create_reference_files = False
                np.array([.45,.45,.45]),
                np.array([.75,.75,.75]) ])
     ])
-def test_multi_receiver(basicscene, frequencies, receivers, method="universal"):
-    """check validity of multiple receiver output."""
-
+def test_multi_receiver(basicscene, frequencies,
+                        receivers, method="universal"):
+    """Check validity of multiple receiver output."""
     algo= "order"
 
     src = np.array([.5,.5, .5])
 
-    radi = run_basicscene(basicscene, src_pos=src, freqs=frequencies, algorithm=algo, method=method)
+    radi = run_basicscene(basicscene, src_pos=src, freqs=frequencies,
+                          algorithm=algo, method=method)
 
     big_histo = radi.collect_receiver_energy(receiver_pos=receivers,
                                   speed_of_sound=basicscene["speed_of_sound"],
                                    histogram_time_resolution=1/basicscene["sampling_rate"],
                                    method=method
                                    )
-    
+
     # assert correct dimensions of output histogram
     if receivers.ndim==1:
         n_recs = 1
@@ -42,17 +41,18 @@ def test_multi_receiver(basicscene, frequencies, receivers, method="universal"):
 
     assert big_histo.shape[0] == n_recs
     assert big_histo.shape[1] == radi._n_patches
-    assert big_histo.shape[2] == frequencies.shape[0] 
+    assert big_histo.shape[2] == frequencies.shape[0]
 
     # assert big histogram entries same as histograms for individual receiver
     if n_recs > 1:
         for i in range(n_recs):
-            small_histo = radi.collect_receiver_energy(receiver_pos=receivers[i],
-                                  speed_of_sound=basicscene["speed_of_sound"],
-                                   histogram_time_resolution=1/basicscene["sampling_rate"],
-                                   method=method
-                                   )
-            
+            small_histo = radi.collect_receiver_energy(
+                                    receiver_pos=receivers[i],
+                                    speed_of_sound=basicscene["speed_of_sound"],
+                                    histogram_time_resolution=1/basicscene["sampling_rate"],
+                                    method=method
+                                    )
+
             npt.assert_array_almost_equal(big_histo[i], small_histo[0])
 
 
@@ -127,13 +127,19 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
         radi.init_source_energy(src_,ff_method=method,algorithm=algo)
 
         radi.calculate_energy_exchange(
-                receiver_pos=rec_, speed_of_sound=speed_of_sound,
-                histogram_time_resolution=1/sampling_rate,
-                histogram_length=ir_length_s, algorithm=algo,
-                max_depth=max_order_k )
+                            receiver_pos=rec_, speed_of_sound=speed_of_sound,
+                            histogram_time_resolution=1/sampling_rate,
+                            histogram_length=ir_length_s, algorithm=algo,
+                            max_depth=max_order_k
+                            )
 
-        ir = np.sum(radi.collect_receiver_energy(receiver_pos=rec_,
-                speed_of_sound=speed_of_sound, histogram_time_resolution=1/sampling_rate, method=method, propagation_fx=True),axis=1)[0][0]
+        ir = np.sum(
+            radi.collect_receiver_energy(receiver_pos=rec_,
+                                        speed_of_sound=speed_of_sound,
+                                        histogram_time_resolution=1/sampling_rate,
+                                        method=method, propagation_fx=True
+                                        ),
+                    axis=1)[0][0]
 
         # test energy at receiver
         irs_new.append(ir)
@@ -164,7 +170,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
     attenuation = pf.FrequencyData(
                 np.zeros((1,1,1)),
                 np.array([1000]))
-    
+
     air_att = np.atleast_1d(attenuation.freq.squeeze())
 
     energy=[]
@@ -179,22 +185,33 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
 
         if method == "universal":
             e_s,_ = sp.radiosity_fast.source_energy._init_energy_universal(
-                                                        source_position=src_.position, patches_center=np.array([wall[0].center]),
-                                                        patches_points=np.array([wall[0].pts]), air_attenuation=air_att,
-                                                        n_bins=1)
-            
+                                                    source_position=src_.position,
+                                                    patches_center=np.array([wall[0].center]),
+                                                    patches_points=np.array([wall[0].pts]),
+                                                    air_attenuation=air_att,
+                                                    n_bins=1
+                                                    )
+
             e_r = sp.radiosity_fast.receiver_energy._universal(
-                                                        receiver_pos=rec_.position,patches_points=np.array([wall[0].pts]))
-            
+                                                    receiver_pos=rec_.position,patches_points=np.array([wall[0].pts])
+                                                    )
+
 
         elif method == "kang":
-            e_s,_ = sp.radiosity_fast.source_energy._init_energy_kang(source_position=src_.position, patches_center=np.array([wall[0].center]),
-                                                        patches_normal=np.array([wall[0].normal]), air_attenuation=air_att,
-                                                        patches_size=np.array([wall[0].size]), n_bins=1)
-            
-            e_r = sp.radiosity_fast.receiver_energy._kang(patch_receiver_distance=np.array([(rec_.position-wall[0].center)]),
+            e_s,_ = sp.radiosity_fast.source_energy._init_energy_kang(
+                                                        source_position=src_.position,
+                                                        patches_center=np.array([wall[0].center]),
                                                         patches_normal=np.array([wall[0].normal]),
-                                                        n_bins=1)
+                                                        air_attenuation=air_att,
+                                                        patches_size=np.array([wall[0].size]),
+                                                        n_bins=1
+                                                        )
+
+            e_r = sp.radiosity_fast.receiver_energy._kang(
+                                                        patch_receiver_distance=np.array([(rec_.position-wall[0].center)]),
+                                                        patches_normal=np.array([wall[0].normal]),
+                                                        n_bins=1
+                                                        )
 
         e = e_s*e_r
 
@@ -248,5 +265,5 @@ def run_basicscene(scene, src_pos, freqs, algorithm, method):
             histogram_time_resolution=1/sampling_rate,
             histogram_length=ir_length_s, algorithm=algorithm,
             max_depth=max_order_k )
-    
+
     return radi
