@@ -2,7 +2,8 @@
 import numba
 import numpy as np
 from . import geometry
-from sparapy.radiosity_fast.universal_ff.univ_form_factor import calc_form_factor
+from sparapy.radiosity_fast.universal_ff.univ_form_factor import (
+                                                            calc_form_factor )
 
 
 @numba.njit(parallel=True)
@@ -160,16 +161,44 @@ def kang(
     return form_factors
 
 @numba.njit(parallel=True)
-def universal(patches_points: np.ndarray, patches_normals: np.ndarray, patches_areas: np.ndarray, visible_patches:np.ndarray):
+def universal(patches_points: np.ndarray, patches_normals: np.ndarray,
+              patches_areas: np.ndarray, visible_patches:np.ndarray):
+    """Calculate the form factors between patches (universal method).
 
+    This method computes form factors between polygonal patches via numerical
+    integration. Support is only guaranteed for convex polygons.
+    Because this function relies on numpy, all patches must have
+    the same number of sides.
+
+    Parameters
+    ----------
+    patches_points : np.ndarray
+        vertices of all patches of shape (n_patches, n_vertices, 3)
+    patches_normals : np.ndarray
+        normal vectors of all patches of shape (n_patches, 3)
+    patches_areas : np.ndarray
+        areas of all patches of shape (n_patches)
+    visible_patches : np.ndarray
+        index list of all visible patches combinations (n_combinations, 2)
+
+    Returns
+    -------
+    form_factors : np.ndarray
+        form factors between all patches of shape (n_patches, n_patches)
+        note that just i_source < i_receiver are calculated since
+        patches_areas[i] * ff[i, j] = patches_areas[j] * ff[j, i]
+
+    """
     n_patches = patches_areas.shape[0]
     form_factors = np.zeros((n_patches, n_patches))
 
     for visID in numba.prange(visible_patches.shape[0]):
         i = int(visible_patches[visID, 0])
         j = int(visible_patches[visID, 1])
-        form_factors[i,j] = calc_form_factor(patches_points[i], patches_normals[i], patches_areas[i], patches_points[j], patches_normals[j], patches_areas[j])
-    
+        form_factors[i,j] = calc_form_factor(
+                    patches_points[i], patches_normals[i], patches_areas[i],
+                    patches_points[j], patches_normals[j], patches_areas[j])
+
     return form_factors
 
 @numba.njit(parallel=True)
