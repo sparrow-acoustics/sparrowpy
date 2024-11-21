@@ -2,7 +2,7 @@
 import numba
 import numpy as np
 from . import geometry
-from sparapy.radiosity_fast.universal_ff.univ_form_factor import calc_form_factor as u_ff
+from sparapy.radiosity_fast.universal_ff.univ_form_factor import calc_form_factor
 
 
 @numba.njit(parallel=True)
@@ -168,7 +168,7 @@ def universal(patches_points: np.ndarray, patches_normals: np.ndarray, patches_a
     for visID in numba.prange(visible_patches.shape[0]):
         i = int(visible_patches[visID, 0])
         j = int(visible_patches[visID, 1])
-        form_factors[i,j] = u_ff(patches_points[i], patches_normals[i], patches_areas[i], patches_points[j], patches_normals[j], patches_areas[j])
+        form_factors[i,j] = calc_form_factor(patches_points[i], patches_normals[i], patches_areas[i], patches_points[j], patches_normals[j], patches_areas[j])
     
     return form_factors
 

@@ -224,11 +224,16 @@ def _calculate_size(points):
 def _calculate_area(points):
 
     area = np.zeros(points.shape[0])
-    
+
     for i in numba.prange(points.shape[0]):
         for tri in range(points.shape[1]-2):
-            area[i] +=  .5 * np.linalg.norm(np.cross(points[i, tri+1,:] - points[i, 0,:], points[i, tri+2,:]-points[i, 0,:]))
-    
+            area[i] +=  .5 * np.linalg.norm(
+                                np.cross(
+                                    points[i, tri+1,:] - points[i, 0,:],
+                                    points[i, tri+2,:]-points[i, 0,:]
+                                    )
+                                )
+
     return area
 
 @numba.njit()
