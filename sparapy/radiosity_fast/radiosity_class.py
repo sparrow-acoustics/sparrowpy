@@ -163,7 +163,8 @@ class DRadiosityFast():
             raise NotImplementedError()
 
     def init_source_energy(
-            self, source_position:np.ndarray, ff_method="universal", algorithm='order'):
+            self, source_position:np.ndarray,
+            ff_method="universal", algorithm='order'):
         """Initialize the source energy."""
         source_position = np.array(source_position)
         patch_to_wall_ids = self._patch_to_wall_ids
@@ -173,7 +174,6 @@ class DRadiosityFast():
         receivers = np.array([s.cartesian for s in self._receivers])
         scattering = np.array(self._scattering)
         scattering_index = self._scattering_index
-        form_factors = self.form_factors
         patches_center = self.patches_center
         if ff_method == "universal":
             energy_0, distance_0 = source_energy._init_energy_universal(
@@ -204,8 +204,6 @@ class DRadiosityFast():
         receiver_pos = np.array(receiver_pos)
         if receiver_pos.ndim==1:
             receiver_pos=receiver_pos[np.newaxis,:]
-        ir = np.array([[np.zeros((n_samples)) for _ in range(self.n_bins)]
-                                for _ in range(receiver_pos.shape[0])])
         patches_center = self.patches_center
         patch_receiver_distance = np.empty([receiver_pos.shape[0],
                                             self.n_patches,patches_center.shape[-1]])
@@ -215,12 +213,12 @@ class DRadiosityFast():
         distance_0 = self.distance_0
         n_patches = self.n_patches
         distance_i_j = np.empty((n_patches, n_patches))
-        
+
         for i in range(n_patches):
             for j in range(n_patches):
                 distance_i_j[i, j] = np.linalg.norm(
                     patches_center[i, :]-patches_center[j, :])
-    
+
         if algorithm == 'order':
             energy_0_dir = self.energy_0_dir
             # assert max_depth>=1, "max_depth must be larger than 1"
@@ -232,13 +230,13 @@ class DRadiosityFast():
                     self._visible_patches)
         else:
             raise NotImplementedError()
-        
-    def collect_receiver_energy(self, receiver_pos,
-            speed_of_sound, histogram_time_resolution, method="universal", propagation_fx=False):
 
+    def collect_receiver_energy(self, receiver_pos,
+            speed_of_sound, histogram_time_resolution,
+            method="universal", propagation_fx=False):
+        """Collect patch histograms as detected by receiver."""
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
-        patches_normal = self._patches_normal
         n_patches = self.n_patches
         n_bins = self.n_bins
 
@@ -250,43 +248,46 @@ class DRadiosityFast():
         patches_center = self.patches_center
         patches_receiver_distance = np.empty([n_receivers,
                                             self.n_patches,patches_center.shape[-1]])
-        
+
         E_matrix = np.empty((n_patches, n_bins, self.E_matrix_total.shape[-1]))
-        histogram_out = np.empty((n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]))
+        histogram_out = np.empty(
+            (n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]) )
 
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
-        
+
             if method == "universal":
                 # geometrical weighting
                 patch_receiver_energy = receiver_energy._universal(
                         receiver_pos[i], patches_points)
             else:
                 raise NotImplementedError()
-            
+
             # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
                 # scattering_index = np.array(self._scattering_index)
             receiver_idx = geometry.get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
                 self._patch_to_wall_ids)
-        
+
             assert receiver_idx.shape[0] == self.n_patches
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[k,:]= self.E_matrix_total[k,receiver_idx[k],:] * patch_receiver_energy[k]
+                E_matrix[k,:]= (self.E_matrix_total[k,receiver_idx[k],:]
+                                                    * patch_receiver_energy[k])
 
             if propagation_fx:
-                # accumulate the patch energies towards the receiver 
+                # accumulate the patch energies towards the receiver
                 # with atmospheric effects (delay, atmospheric attenuation)
                 histogram_out[i] = ee_order._collect_receiver_energy(
                         E_matrix,
-                        np.linalg.norm(patches_receiver_distance, axis=1), speed_of_sound,
-                        histogram_time_resolution, air_attenuation=air_attenuation)
+                        np.linalg.norm(patches_receiver_distance, axis=1),
+                                    speed_of_sound, histogram_time_resolution,
+                                    air_attenuation=air_attenuation)
             else:
                 histogram_out[i] = E_matrix
-                
+
         return histogram_out
 
     def set_wall_absorption(self, wall_indexes, absorption:pf.FrequencyData):
