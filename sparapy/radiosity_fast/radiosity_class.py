@@ -199,7 +199,7 @@ class DRadiosityFast():
             histogram_time_resolution,
             histogram_length, algorithm='order',
             threshold=1e-6, max_depth=-1, recalculate=False):
-        """Calculate the energy exchange."""
+        """Calculate the energy exchange between patches."""
         n_samples = int(histogram_length/histogram_time_resolution)
         receiver_pos = np.array(receiver_pos)
         if receiver_pos.ndim==1:
