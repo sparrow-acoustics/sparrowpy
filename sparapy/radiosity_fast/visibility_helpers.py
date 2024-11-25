@@ -15,7 +15,7 @@ def basic_visibility(vis_point: np.ndarray,
 
     if pt is not None:
         if np.linalg.norm(patch_center-vis_point)>np.linalg.norm(pt-vis_point):
-            if not point_in_polygon(point3d=pt,
+            if point_in_polygon(point3d=pt,
                                               polygon3d=surf_points,
                                               plane_normal=surf_normal):
                 is_visible = 0
