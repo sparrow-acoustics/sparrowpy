@@ -3,11 +3,25 @@ import numpy as np
 import numba
 from sparapy.radiosity_fast.universal_ff.ffhelpers import rotation_matrix,inner
 
+@numba.njit()
 def basic_visibility(vis_point: np.ndarray,
                      patch_center: np.ndarray,
                      surf_points: np.ndarray, surf_normal: np.ndarray):
     """Return visibility 1/0 based on patch centroid position."""
-    pt = project_to_plane()
+    is_visible = 1
+
+    pt = project_to_plane(origin=vis_point, point=patch_center,
+                            plane_pt=surf_points[0], plane_normal=surf_normal)
+
+    if pt is not None:
+        if np.linalg.norm(patch_center-vis_point)>np.linalg.norm(pt-vis_point):
+            if not point_in_polygon(point3d=pt,
+                                              polygon3d=surf_points,
+                                              plane_normal=surf_normal):
+                is_visible = 0
+
+    return is_visible
+
 
 
 @numba.njit()
