@@ -63,3 +63,20 @@ def test_basic_visibility(point, origin, plpt, pln):
         solution = 0
 
     assert solution==out
+
+
+@pytest.mark.parametrize("l1", [
+    np.array([[-1.,0.],[1.,0.]])
+    ])
+@pytest.mark.parametrize("l2", [
+    np.array([[0.,1.],[0.,-1.]])
+    ])
+@pytest.mark.parametrize("solution", [
+    np.array([0.,0.])
+    ])
+def test_line_intersection(l1,l2,solution):
+    """Test basic_visibility function."""
+    out = vh.line_line_int(l1[0],l1[1],l2[0],l2[1])
+
+    npt.assert_array_equal(out,solution)
+

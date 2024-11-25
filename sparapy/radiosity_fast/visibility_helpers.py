@@ -22,7 +22,36 @@ def basic_visibility(vis_point: np.ndarray,
 
     return is_visible
 
+def visible_projections(patch_points: np.ndarray, surf_points: np.ndarray):
+    """Union or anti-intersection of points in space."""
+    for i in numba.prange(patch_points.shape[0]):
+        a = patch_points[(i+1)%patch_points.shape[0]]
+        b = patch_points[i%patch_points.shape[0]]
 
+        intersection = interaction_point_list(a,b,surf_points)
+
+def interaction_point_list(start, end, surf_points):
+    for i in numba.prange(surf_points.shape[0]):
+        a = surf_points[(i+1)%surf_points.shape[0]]
+        b = surf_points[i%surf_points.shape[0]]
+
+        intersection = line_line_int()
+
+@numba.njit()
+def line_line_int(a,b,c,d):
+    """Calculate point of intersection between two lines in 2D."""
+    p=np.empty_like(a)
+
+    p[0]  = (a[0]*b[1]-a[1]*b[0])*(c[0]-d[0])-(a[0]-b[0])*(c[0]*d[1]-c[1]*d[0])
+    p[0] /=  (a[0]-b[0])*(c[1]-d[1]) - (a[1]-b[1])*((c[0]-d[0]))
+    p[1]  = (a[0]*b[1]-a[1]*b[0])*(c[1]-d[1])-(a[1]-b[1])*(c[0]*d[1]-c[1]*d[0])
+    p[1] /=  (a[0]-b[0])*(c[1]-d[1]) - (a[1]-b[1])*((c[0]-d[0]))
+
+    if not (np.linalg.norm(p-a)<np.linalg.norm(b-a) and
+        np.linalg.norm(p-c)<np.linalg.norm(d-a)):
+        p = None
+
+    return p
 
 @numba.njit()
 def project_to_plane(origin: np.ndarray, point: np.ndarray,
