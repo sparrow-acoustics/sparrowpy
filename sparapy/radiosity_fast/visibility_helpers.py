@@ -10,7 +10,7 @@ def basic_visibility(vis_point: np.ndarray,
     pt = project_to_plane()
 
 
-#@numba.njit()
+@numba.njit()
 def project_to_plane(origin: np.ndarray, point: np.ndarray,
                      plane_pt: np.ndarray, plane_normal: np.ndarray,
                      epsilon=1e-6, check_normal=True):
@@ -33,7 +33,7 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
 
     return int_point
 
-
+@numba.njit()
 def point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
                      eta=1e-6):
@@ -52,7 +52,7 @@ def point_in_polygon(point3d: np.ndarray,
         a0 = poly[i%poly.shape[0]]
 
         side = a1-a0
-        nl = [-side[1],side[0]]/np.linalg.norm(side)
+        nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
         b = project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
                              plane_pt=a1, plane_normal=nl,
                              check_normal=False)
