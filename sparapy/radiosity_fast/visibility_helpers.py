@@ -21,7 +21,43 @@ def basic_visibility(vis_point: np.ndarray,
 
     return is_visible
 
-#def find_all_intersections()
+def find_all_intersections(vis_point: np.ndarray,
+                           patch_points: np.ndarray, patch_normal: np.ndarray,
+                           surf_points: np.ndarray):
+    """Find and list all intersections between two polygons."""
+    int_points = np.array([[],[],[]])
+    int_conn = np.array([[],[]])
+
+    transf_surf = np.empty_like(surf_points)
+    verts_in = np.array([])
+
+    calculate = True
+
+    for i in numba.prange(surf_points.shape[0]):
+        transf_surf[i] = project_to_plane(vis_point, surf_points[i],
+                                          patch_points[0], patch_normal)
+        if transf_surf is None:
+            calculate = False
+            break
+
+        verts_in = np.append(verts_in, point_in_polygon(transf_surf[i],
+                                                        patch_points,
+                                                        patch_normal))
+
+    if calculate:
+
+        for i in numba.prange(patch_points.shape[0]):
+            p0 = patch_points[i]
+            p1 = patch_points[(i+1)%patch_points.shape[0]]
+            for j in numba.prange(transf_surf.shape[0]):
+                s0 = transf_surf[i]
+                s1 = transf_surf[(i+1)%transf_surf.shape[0]]
+                int_pt = line_line_int(p0,p1,s0,s1)
+                if int_pt is not None:
+                    int_conn = np.append(int_conn, np.array([i,j]))
+                    int_points = np.append(int_points, int_pt)
+
+    return verts_in, int_conn, int_points
 
 
 @numba.njit()
