@@ -25,17 +25,19 @@ def find_all_intersections(vis_point: np.ndarray,
                            patch_points: np.ndarray, patch_normal: np.ndarray,
                            surf_points: np.ndarray):
     """Find and list all intersections between two polygons."""
-    int_points = np.array([[],[],[]])
-    int_conn = np.array([[],[]])
+    int_points = np.array([])
+    int_conn = np.array([])
 
     transf_surf = np.empty_like(surf_points)
-    verts_in = np.array([])
+    verts_in = np.array([],dtype=bool)
 
     calculate = True
 
     for i in numba.prange(surf_points.shape[0]):
-        transf_surf[i] = project_to_plane(vis_point, surf_points[i],
-                                          patch_points[0], patch_normal)
+        transf_surf[i] = project_to_plane(origin=vis_point,
+                                          point=surf_points[i],
+                                          plane_pt=patch_points[0],
+                                          plane_normal=patch_normal)
         if transf_surf is None:
             calculate = False
             break
@@ -46,18 +48,20 @@ def find_all_intersections(vis_point: np.ndarray,
 
     if calculate:
 
+        interior_points = surf_points[verts_in]
+
         for i in numba.prange(patch_points.shape[0]):
             p0 = patch_points[i]
             p1 = patch_points[(i+1)%patch_points.shape[0]]
             for j in numba.prange(transf_surf.shape[0]):
-                s0 = transf_surf[i]
-                s1 = transf_surf[(i+1)%transf_surf.shape[0]]
+                s0 = transf_surf[j]
+                s1 = transf_surf[(j+1)%transf_surf.shape[0]]
                 int_pt = line_line_int(p0,p1,s0,s1)
                 if int_pt is not None:
                     int_conn = np.append(int_conn, np.array([i,j]))
                     int_points = np.append(int_points, int_pt)
 
-    return verts_in, int_conn, int_points
+    return interior_points, int_conn.reshape((-1,2)), int_points.reshape((-1,3))
 
 
 @numba.njit()
@@ -67,11 +71,30 @@ def line_line_int(a,b,c,d):
     k=np.empty((2,a.shape[0]))
     k[0] = b-a
     k[1] = c-d
-    if abs(np.dot(a-b,c-d))<1-1e-6:
-        t = np.linalg.solve(k.T, c-a)
+
+    if np.all((d-a)==0.):
+        temp=c
+        c=d
+        d=temp
+
+    norm = np.array([np.linalg.norm(k[0]),np.linalg.norm(k[1])])
+    normal = np.cross(b-a,d-a)/np.linalg.norm(np.cross(b-a,d-a))
+
+    rot_mat = rotation_matrix(n_in=normal)
+
+    k[0] = inner(matrix=rot_mat, vector=k[0])
+    k[1] = inner(matrix=rot_mat, vector=k[1])
+    bb   = inner(matrix=rot_mat, vector=c-a)[:2]
+
+    k = k[:,:2]
+
+    if abs(np.dot(k[0]/norm[0],k[1]/norm[1]))<1-1e-6:
+        t = np.linalg.solve(k.T, bb)
         p = (1-t[0])*a + t[0]*b
         if (np.linalg.norm(p-a)<np.linalg.norm(b-a) and
-            np.linalg.norm(p-c)<np.linalg.norm(d-a)):
+            np.linalg.norm(p-b)<np.linalg.norm(b-a) and
+            np.linalg.norm(p-c)<np.linalg.norm(d-c) and
+            np.linalg.norm(p-d)<np.linalg.norm(d-c)):
             out = p
 
     return out
@@ -82,16 +105,16 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
                      epsilon=1e-6, check_normal=True):
     """Project point onto plane following direction defined by origin."""
     v = point-origin
-    dot = np.dot(v,plane_normal)
+    dotprod = np.dot(v,plane_normal)
 
-    cond = dot < -epsilon
+    cond = dotprod < -epsilon
 
     if not check_normal:
-        cond = abs(dot) > epsilon
+        cond = abs(dotprod) > epsilon
 
     if cond:
         w = point-plane_pt
-        fac = -np.dot(plane_normal,w) / dot
+        fac = -np.dot(plane_normal,w) / dotprod
 
         int_point = w + plane_pt + fac*v
     else:
@@ -102,9 +125,9 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
 @numba.njit()
 def point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
-                     eta=1e-6):
+                     eta=1e-6) -> bool:
     """Check if point is inside given polygon."""
-    rotmat = rotation_matrix(n_in=plane_normal,n_out=np.array([0.,0.,1.]))
+    rotmat = rotation_matrix(n_in=plane_normal)
 
     pt = inner(matrix=rotmat,vector=point3d)[0:point3d.shape[0]-1]
 
