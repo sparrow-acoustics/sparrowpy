@@ -2,6 +2,7 @@ import numpy.testing as npt
 import pytest
 import sparapy.radiosity_fast.visibility_helpers as vh
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 @pytest.mark.parametrize("origin", [np.array([0.,1.,3.])])
@@ -109,5 +110,31 @@ def test_intersection_finder(patch,surf,solution):
         patch = surf
         surf = temp
 
-#np.array([]).reshape((-1,3)),
-#np.array([[-1.,1.,0.],[-1.,-1.,0.]]),
+
+@pytest.mark.parametrize("poly1", [
+    np.array([[1.,-.5,0.],[0.,1.,0.],[-1.,1.,0.]])
+    ])
+@pytest.mark.parametrize("poly2", [
+    np.array([[.5,-1.,0.],[1.,.5,0.],[0.,-1.,0.]])
+    ])
+def test_polygon_union(poly1, poly2):
+    """Test union of two polygons."""
+    #plot_polygon([poly1,poly2])
+
+    union = vh.poly_union(poly1=poly1,poly2=poly2,normal=np.array([0.,0.,1.]))
+
+    plot_polygon([union])
+
+
+
+def plot_polygon(polylist:np.ndarray):
+
+    plt.figure()
+
+    for poly in polylist:
+        poly=poly[:,:2].tolist()
+        poly.append(poly[0])
+        xs, ys = zip(*poly)
+        plt.plot(xs,ys)
+
+    plt.show()

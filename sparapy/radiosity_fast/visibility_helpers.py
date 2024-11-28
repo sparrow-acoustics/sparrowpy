@@ -50,26 +50,84 @@ def basic_visibility(vis_point: np.ndarray,
 #     intersections = find_all_intersections(poly1=patch_points,
 #                                             poly2=transf_surf)
 
+#@numba.njit()
+def poly_union(poly1: np.ndarray, poly2: np.ndarray,
+                                  normal:np.ndarray) -> np.ndarray:
+    """Generate oriented point list describing the union of two polygons.
+
+    The polygons must be coplanar
+
+    Parameters
+    ----------
+    poly1: np.ndarray (N_vertices_1, 3)
+        Vertex array of first polygon
+
+    poly2: np.ndarray (N_vertices_2, 3)
+        Vertex array of second polygon
+
+    normal: np.ndarray (3,)
+        normal of the polygons' plane
+
+    Returns
+    -------
+    poly_out: np.ndarray (N_vertices_out, 3)
+        Vertex array of resulting polygon
+
+    """
+    int_list = find_all_intersections(poly1=poly1, poly2=poly2)
+
+    int_conn=int_list[:,:2].astype(int)
+    int_points = int_list[:,2:]
+
+    poly_out = np.array([poly1[0]])
+
+    for kk in range(int_conn.shape[0]):
+
+        if kk%2==0:
+            s=1
+            pol=poly2
+        else:
+            s=0
+            pol=poly1
+
+        i=(int_conn[kk,s]+1)%pol.shape[0]
+
+        j=int_conn[(kk+1)%int_conn.shape[0],s]+1
+
+
+        poly_out = np.concatenate((poly_out,int_points[kk:kk+1], pol[i:j]))
+
+    return poly_out[1:]
+
 
 
 @numba.njit()
 def find_all_intersections(poly1:np.ndarray,
                             poly2:np.ndarray) -> np.ndarray:
     """Find all intersections between two coplanar polygons."""
-    out = np.empty((0,))
+    out = np.empty((1,5))
 
     for i in range(poly1.shape[0]):
         p0 = poly1[i]
         p1 = poly1[(i+1)%poly1.shape[0]]
+
+        dist = np.empty((0))
+        temp = np.empty((0))
+
         for j in range(poly2.shape[0]):
             s0 = poly2[j]
             s1 = poly2[(j+1)%poly2.shape[0]]
             int_pt = line_line_int(p0,p1,s0,s1)
-            if int_pt.shape[0]==3:
-                out = np.append(out, np.array([float(i),float(j)]))
-                out = np.append(out, int_pt)
 
-    return np.reshape(out,(-1,5))
+            if int_pt.shape[0]==3:
+                temp = np.append(temp, np.array([float(i),float(j)]))
+                temp = np.append(temp, int_pt)
+                dist = np.append(dist, np.linalg.norm(int_pt-p0))
+
+        temp = temp.reshape((-1,5))
+        out = np.concatenate((out,temp[np.argsort(dist)]))
+
+    return out[1:]
 
 
 @numba.njit()
@@ -99,10 +157,10 @@ def line_line_int(a,b,c,d):
     if abs(np.dot(k[0]/norm[0],k[1]/norm[1]))<1-1e-6:
         t = np.linalg.solve(k.T, bb)
         p = (1-t[0])*a + t[0]*b
-        if (np.linalg.norm(p-a)<np.linalg.norm(b-a) and
-            np.linalg.norm(p-b)<np.linalg.norm(b-a) and
-            np.linalg.norm(p-c)<np.linalg.norm(d-c) and
-            np.linalg.norm(p-d)<np.linalg.norm(d-c)):
+        if (np.linalg.norm(p-a)<=np.linalg.norm(b-a) and
+            np.linalg.norm(p-b)<=np.linalg.norm(b-a) and
+            np.linalg.norm(p-c)<=np.linalg.norm(d-c) and
+            np.linalg.norm(p-d)<=np.linalg.norm(d-c)):
             out = p
 
     return out
