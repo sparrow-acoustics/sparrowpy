@@ -80,7 +80,6 @@ def test_line_intersection(l1,l2,solution):
 
     npt.assert_array_equal(out,solution)
 
-
 @pytest.mark.parametrize("surf", [
     np.array([[0.,2.,0.],[-2.,2.,0.],[-2.,-2.,0.],[0.,-2.,0.]])
     ])
@@ -88,30 +87,27 @@ def test_line_intersection(l1,l2,solution):
     np.array([[1.,1.,0.],[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.]])
     ])
 @pytest.mark.parametrize("solution", [
-    [[np.array([]).reshape((-1,3)),
-     np.array([[0,3],[2,3]]),
+    [[np.array([[0,3],[2,3]]),
      np.array([[0.,1.,0.],[0.,-1.,0.]])
     ],
-    [np.array([[-1.,1.,0.],[-1.,-1.,0.]]),
-     np.array([[3,0],[3,2]]),
+    [np.array([[3,0],[3,2]]),
      np.array([[0.,1.,0.],[0.,-1.,0.]])
     ]]
     ])
 def test_intersection_finder(patch,surf,solution):
-
+    """Test intersection finding function."""
     for i in range(2):
-        verts, conn, pts =vh.find_all_intersections(
-                                                vis_point=np.array([0.,0.,1.]),
-                                                patch_points=patch,
-                                                patch_normal=np.array([0.,0.,1.]),
-                                                surf_points=surf)
+        bdbd =vh.find_all_intersections(poly1=patch,poly2=surf)
 
-        npt.assert_array_equal(verts, solution[i][0])
-        npt.assert_array_equal(conn, solution[i][1])
-        npt.assert_array_equal(pts, solution[i][2])
+        conn = bdbd[:,:2].astype(int)
+        pts = bdbd[:,2:]
+
+        npt.assert_array_equal(conn, solution[i][0])
+        npt.assert_array_equal(pts, solution[i][1])
 
         temp = patch
         patch = surf
         surf = temp
 
-
+#np.array([]).reshape((-1,3)),
+#np.array([[-1.,1.,0.],[-1.,-1.,0.]]),
