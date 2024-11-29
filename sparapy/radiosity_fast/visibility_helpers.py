@@ -2,6 +2,7 @@
 import numpy as np
 import numba
 from sparapy.radiosity_fast.universal_ff.ffhelpers import rotation_matrix,inner
+import matplotlib.pyplot as plt
 
 @numba.njit()
 def basic_visibility(vis_point: np.ndarray,
@@ -79,6 +80,19 @@ def poly_union(poly1: np.ndarray, poly2: np.ndarray,
     int_conn=int_list[:,:2].astype(int)
     int_points = int_list[:,2:]
 
+    pre_proc = True
+    counter = 0
+
+    while pre_proc:
+        if int_conn[counter,0]==int_conn[counter+3,0]:
+            int_conn=np.reshape(np.append(int_conn.flatten()[:((counter+1)*2)],int_conn.flatten()[((counter+3)*2):]),(-1,2))
+            int_points=np.reshape(np.append(int_points.flatten()[:((counter+1)*3)],int_points.flatten()[((counter+3)*3):]),(-1,3))
+        else:
+            counter+=2
+
+        if counter+2 >= int_conn.shape[0]:
+            pre_proc=False
+
     poly_out = np.array([poly1[0]])
 
     for kk in range(int_conn.shape[0]):
@@ -90,12 +104,32 @@ def poly_union(poly1: np.ndarray, poly2: np.ndarray,
             s=0
             pol=poly1
 
-        i=(int_conn[kk,s]+1)%pol.shape[0]
+        ii = int_conn[kk,s]
 
-        j=int_conn[(kk+1)%int_conn.shape[0],s]+1
+        jj = int_conn[(kk+1)%int_conn.shape[0],s]
 
+        if jj <= ii and not (jj==0):
+            search = np.arange(jj-1,ii)%pol.shape[0]
+        elif jj <= ii and ( jj==0):
+             search = np.arange(ii+1,jj+1+pol.shape[0])%pol.shape[0]
+        else:
+            search = np.arange(ii+1,jj+1)%pol.shape[0]
 
-        poly_out = np.concatenate((poly_out,int_points[kk:kk+1], pol[i:j]))
+        poly_out = np.concatenate((poly_out,int_points[kk:kk+1], pol[search]))
+
+        print(int_conn[kk])
+        print(".")
+        print(search)
+        print("...")
+
+        plt.figure()
+        polllly=poly_out[:,:2].tolist()
+        xs, ys = zip(*polllly)
+        plt.xlim([-1.5,1.5])
+        plt.ylim([-1.5,1.5])
+        plt.grid()
+        plt.plot(xs,ys)
+        plt.show()
 
     return poly_out[1:]
 
