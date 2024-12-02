@@ -118,25 +118,26 @@ def test_intersection_finder(patch,surf,solution):
     np.array([[1.,.5,0.],[-1.,.5,0.],[0.,-1.,0.]]),
     np.array([[1.,.5,0.],[-1.,.5,0.],[0.,0.,0.]]),
     np.array([[-.5,-1.,0.],[.5,-1.,0.],[0.,0.,0.]]),
-    np.array([[-1.,-1.,0.],[1.,-1.,0.],[.5,-.25,0.],[0.,-.75,0.],[-.5,-.25,0.]]),
+    np.array([[1.,-1.,0.],[.5,-.25,0.],[0.,-.75,0.],[-.5,-.25,0.],[-1.,-1.,0.]]),
+    np.array([[2.,-.5,0.],[.4,-.4,0.],[1.,-1.,0.],[0.,-.4,0.],[0.,-2.,0.]]),
     ])
 def test_polygon_union(poly1, poly2):
     """Test union of two polygons."""
-    for i in range(1):
+    for i in range(2):
         if i==0:
             poly11=poly2
             poly22=poly1
-        # else:
-        #     poly11=poly2
-        #     poly22=poly1
+        else:
+            poly11=poly2
+            poly22=poly1
 
-        #plot_polygon([poly11,poly22])
+        plot_polygon([poly11,poly22])
 
         union = vh.poly_union(poly1=poly11,
                               poly2=poly22,
                               normal=np.array([0.,0.,1.]))
 
-        #plot_polygon([poly11,poly22,union])
+        plot_polygon([poly11,poly22,union])
 
 
 
@@ -149,7 +150,7 @@ def plot_polygon(polylist:np.ndarray, fig=0):
         poly.append(poly[0])
         xs, ys = zip(*poly)
         plt.plot(xs,ys)
-
+    plt.grid()
     plt.show()
 
     return fig
