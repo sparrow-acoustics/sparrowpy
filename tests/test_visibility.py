@@ -126,15 +126,15 @@ def test_intersection_finder(patch,surf,solution):
     ])
 def test_polygon_union(poly1, poly2):
     """Test union of two polygons."""
-    for i in range(2):
+    for i in range(1):
         if i==0:
-            poly11=poly2
-            poly22=poly1
+            poly11=poly1
+            poly22=poly2
         else:
             poly11=poly2
             poly22=poly1
 
-        plot_polygon([poly11,poly22])
+        #plot_polygon([poly11,poly22])
 
         union = vh.poly_union(poly1=poly11,
                               poly2=poly22,
