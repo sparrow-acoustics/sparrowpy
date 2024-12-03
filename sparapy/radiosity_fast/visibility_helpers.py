@@ -77,61 +77,77 @@ def poly_union(poly1: np.ndarray, poly2: np.ndarray,
     """
     int_list = find_all_intersections(poly1=poly1, poly2=poly2)
 
-    int_conn=int_list[:,:2].astype(int)
-    int_points = int_list[:,2:]
+    if int_list.shape[0]==0:
 
+        if point_in_polygon(point3d=poly1[0], polygon3d=poly2,
+                                              plane_normal=normal):
+            poly_out=np.array([poly2])
 
-    counter = 0
+        elif point_in_polygon(point3d=poly2[0], polygon3d=poly1,
+                                                plane_normal=normal):
+            poly_out=np.array([poly1])
 
-    while counter+2 < int_conn.shape[0]:
-        if int_conn[counter,0]==int_conn[counter+2,0] and int_conn[counter,0]==int_conn[counter+3,0]:
-            int_conn=np.reshape(np.append(int_conn.flatten()[:((counter+1)*2)],int_conn.flatten()[((counter+3)*2):]),(-1,2))
-            int_points=np.reshape(np.append(int_points.flatten()[:((counter+1)*3)],int_points.flatten()[((counter+3)*3):]),(-1,3))
-        elif int_conn[counter,1]==int_conn[counter+2,1] and int_conn[counter,1]==int_conn[counter+3,1]:
-            int_conn=np.reshape(np.append(int_conn.flatten()[:((counter+1)*2)],int_conn.flatten()[((counter+3)*2):]),(-1,2))
-            int_points=np.reshape(np.append(int_points.flatten()[:((counter+1)*3)],int_points.flatten()[((counter+3)*3):]),(-1,3))
         else:
-            counter+=2
+            poly_out = np.array([poly1,poly2])
+    else:
 
-    poly_out = np.array([poly1[0]])
+        int_conn=int_list[:,:2].astype(int)
+        int_points = int_list[:,2:]
 
-    for kk in range(int_conn.shape[0]):
+        poly_out = np.array(poly1[0])
 
-        if kk%2==0:
-            s=1
-            pol=poly2
-        else:
-            s=0
-            pol=poly1
+        counter = 0
 
-        ii = int_conn[kk,s]
+        while counter+2 < int_conn.shape[0]:
+            if int_conn[counter,0]==int_conn[counter+2,0] and int_conn[counter,0]==int_conn[counter+3,0]:
+                int_conn=np.reshape(np.append(int_conn.flatten()[:((counter+1)*2)],int_conn.flatten()[((counter+3)*2):]),(-1,2))
+                int_points=np.reshape(np.append(int_points.flatten()[:((counter+1)*3)],int_points.flatten()[((counter+3)*3):]),(-1,3))
+            elif int_conn[counter,1]==int_conn[counter+2,1] and int_conn[counter,1]==int_conn[counter+3,1]:
+                int_conn=np.reshape(np.append(int_conn.flatten()[:((counter+1)*2)],int_conn.flatten()[((counter+3)*2):]),(-1,2))
+                int_points=np.reshape(np.append(int_points.flatten()[:((counter+1)*3)],int_points.flatten()[((counter+3)*3):]),(-1,3))
+            else:
+                counter+=2
 
-        jj = int_conn[(kk+1)%int_conn.shape[0],s]
+        poly_out = np.array([poly1[0]])
 
-        if jj <= ii and not (jj==0):
-            search = np.arange(jj-1,ii)%pol.shape[0]
-        elif jj <= ii and (jj==0):
-            search = np.arange(ii+1,jj+1+pol.shape[0])%pol.shape[0]
-        else:
-            search = np.arange(ii+1,jj+1)%pol.shape[0]
+        for kk in range(int_conn.shape[0]):
 
-        poly_out = np.concatenate((poly_out,int_points[kk:kk+1], pol[search]))
+            if kk%2==0:
+                s=1
+                pol=poly2
+            else:
+                s=0
+                pol=poly1
 
-        # print(int_conn[kk])
-        # print(".")
-        # print(search)
-        # print("...")
+            ii = int_conn[kk,s]
 
-        # plt.figure()
-        # polllly=poly_out[1:,:2].tolist()
-        # xs, ys = zip(*polllly)
-        # plt.xlim([-1.5,1.5])
-        # plt.ylim([-1.5,1.5])
-        # plt.grid()
-        # plt.plot(xs,ys)
-        # plt.show()
+            jj = int_conn[(kk+1)%int_conn.shape[0],s]
 
-    return poly_out[1:]
+            if jj <= ii and not (jj==0):
+                search = np.arange(jj-1,ii)%pol.shape[0]
+            elif jj <= ii and (jj==0):
+                search = np.arange(ii+1,jj+1+pol.shape[0])%pol.shape[0]
+            else:
+                search = np.arange(ii+1,jj+1)%pol.shape[0]
+
+            poly_out = np.concatenate((poly_out,int_points[kk:kk+1], pol[search]))
+
+            print(int_conn[kk])
+            print(".")
+            print(search)
+            print("...")
+
+            # plt.figure()
+            # polllly=poly_out[1:,:2].tolist()
+            # xs, ys = zip(*polllly)
+            # plt.xlim([-1.5,1.5])
+            # plt.ylim([-1.5,1.5])
+            # plt.grid()
+            # plt.plot(xs,ys)
+            # plt.show()
+        poly_out = poly_out[1:]
+
+    return np.array([poly_out])
 
 
 

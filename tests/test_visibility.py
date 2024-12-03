@@ -115,11 +115,14 @@ def test_intersection_finder(patch,surf,solution):
     np.array([[-1.,-.5,0.],[1.,-.5,0.],[0.,1.,0.]])
     ])
 @pytest.mark.parametrize("poly2", [
+    6*np.array([[-1.,-.5,0.],[1.,-.5,0.],[0.,1.,0.]]),
+    np.array([[4.,.5,0.],[2.,.5,0.],[3.,-1.,0.]]),
     np.array([[1.,.5,0.],[-1.,.5,0.],[0.,-1.,0.]]),
     np.array([[1.,.5,0.],[-1.,.5,0.],[0.,0.,0.]]),
     np.array([[-.5,-1.,0.],[.5,-1.,0.],[0.,0.,0.]]),
     np.array([[1.,-1.,0.],[.5,-.25,0.],[0.,-.75,0.],[-.5,-.25,0.],[-1.,-1.,0.]]),
-    np.array([[2.,-.5,0.],[.4,-.4,0.],[1.,-1.,0.],[0.,-.4,0.],[0.,-2.,0.]]),
+    np.array([[4.,0.,0.],[.4,-.25,0.],[1.25,-.75,0.],[0.,-.4,0.],[0.,-2.,0.]]),
+    np.array([[4.,0.,0.],[.2,0.,0.],[2,-.75,0.],[0.,-.4,0.],[0.,-2.,0.]]),
     ])
 def test_polygon_union(poly1, poly2):
     """Test union of two polygons."""
@@ -137,7 +140,7 @@ def test_polygon_union(poly1, poly2):
                               poly2=poly22,
                               normal=np.array([0.,0.,1.]))
 
-        plot_polygon([poly11,poly22,union])
+        plot_polygon(union)
 
 
 
