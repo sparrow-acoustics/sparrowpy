@@ -6,7 +6,7 @@ import sofar as sf
 from tqdm import tqdm
 
 from sparapy.geometry import Polygon, SoundSource
-from sparapy import plot as pltcolor
+from sparapy import plot as pltpatches
 
 
 class Patches(Polygon):
@@ -460,50 +460,8 @@ class Patches(Polygon):
         return self.form_factors[
             source_path_id, i_receiver_ff + i_receiver_offset]
 
-    def energy_patches(
-            self, max_order):
-        """Calculate the energy stored by a patch at a certain time.
-
-        this is supposed to be from just one wall
-
-        Parameters
-        ----------
-        max_order : _type_
-            _description_
-        sound_source : _type_
-            _description_
-        receiver : _type_
-            _description_
-        ir_length_s : _type_
-            _description_
-        speed_of_sound : float, optional
-            _description_, by default 346.18
-        sampling_rate : int, optional
-            _description_, by default 1000
-
-        Returns
-        -------
-        _type_
-            _description_
-
-        """
-        energy_patches = np.zeros((self.n_bins, len(self.patches), self.E_n_samples))
-
-        for i_source, source_patch in enumerate(self.patches):
-
-            for k in range(max_order+1):
-
-                for i_frequency in range(self.n_bins):
-                    
-                    energy = self.E_matrix[i_frequency, k, i_source, :]
-                    
-                    energy_patches[i_frequency, i_source,:] += energy
-
-        return energy_patches
-    
     def plot_energy_patches_time(
-            self, max_order, time, receiver, ir_length_s,
-            speed_of_sound=346.18, sampling_rate=1000):
+            self, time):
         """Calculate the energy stored by a patch at a certain time.
 
         this is supposed to be from just one wall
@@ -529,21 +487,28 @@ class Patches(Polygon):
             _description_
 
         """
-        matrix = self.energy_patches(max_order)
-        n_sample = time * sampling_rate
+        data = self.E_matrix
 
-        for patches in self.patches:
-            points = self.pts
+        sample = time * self.E_sampling_rate
 
-        for i_frequency in range(self.n_bins):
+        energy_patches = pltpatches.energy_matrix_patches(data)
+        # this already goes through each frequency bin
 
-            energy = self.E_matrix[i_frequency, :, n_sample]
+        energy_patches_time = pltpatches.energy_patches_time(energy_patches,sample)
+        # this gives the energy for each frequency bin 
 
-            pltcolor.patches(points, energy)
-            
+        # pltpatches.patches 
 
-
+        # find the points of the patches 
         
+        patches_points = []
+
+        for patch in self.patches:
+            patches_points.append(patch.pts)
+        
+        for i_frequency, freq in enumerate(self.n_bins):
+            energy = energy_patches_time[i_frequency,:]
+            pltpatches.patches(patches_points, energy)
 
     def energy_at_receiver(
             self, max_order, receiver, ir_length_s,
@@ -1159,7 +1124,7 @@ class Radiosity():
             ir[:, delay_dir] += direct_sound
 
         return ir
-
+    
     def write(self, filename, compress=True):
         """Write the object to a far file."""
         pf.io.write(filename, compress=compress, **self.to_dict())

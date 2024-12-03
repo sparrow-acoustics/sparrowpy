@@ -28,6 +28,10 @@ energy_patches = sp.plot.energy_matrix_patches(data)
 print(energy_patches)
 
 # %%
+energy = energy_patches[:, :, 3]
+print(energy)
+
+# %%
 
 energy_patches_time = sp.plot.energy_patches_time(energy_patches,2)
 print(energy_patches_time)
