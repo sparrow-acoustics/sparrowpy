@@ -6,6 +6,8 @@ import os
 import pyfar as pf
 
 import sparapy as sp
+import time
+import matplotlib.pyplot as plt
 
 
 create_reference_files = False
@@ -43,6 +45,48 @@ def test_compute_form_factors(sample_walls):
     radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
+    radiosity.bake_geometry(ff_method='universal')
+    npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
+
+def test_compute_form_factor_vals(sample_walls):
+    # just to compile the programs
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, 1)
+    radiosity.bake_geometry(ff_method='kang')
+    radiosity.bake_geometry(ff_method='universal')
+
+    # actual run
+    radiosity = sp.radiosity_fast.DRadiosityFast.from_polygon(sample_walls, .2)
+    
+    t0 = time.time()
+    radiosity.bake_geometry(ff_method='universal')
+    tuniv = time.time()-t0
+    univ = radiosity.form_factors
+
+    t0 = time.time()
+    radiosity.bake_geometry(ff_method='kang')
+    tkang = time.time()-t0
+    kang = radiosity.form_factors
+
+    diff = np.abs(kang-univ)
+    
+    diff = diff[kang!=0]
+    univ = univ[kang!=0]
+    kang = kang[kang!=0]
+
+    maximo = np.max(diff)
+    rms = np.sqrt(np.sum(np.square(diff)))/(diff.shape[0]**2)
+    mmean = np.mean(diff)
+
+    maximo_rel = 100*maximo/kang[np.argmax(diff)]
+
+    rms_rel = 100*rms/np.mean(kang)
+
+    mean_rel = 100*mmean/np.mean(kang)
+
+    assert maximo_rel < 25
+    assert mean_rel < 10
+    assert rms_rel < 1
+    
 
 
 @pytest.mark.parametrize('walls', [

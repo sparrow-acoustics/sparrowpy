@@ -222,13 +222,14 @@ def _calculate_size(points):
 
 @numba.njit()
 def _calculate_area(points):
-    vec1 = points[..., 0, :]-points[..., 1, :]
-    vec2 = points[..., 1, :]-points[..., 2, :]
-    size = vec1-vec2
-    return np.abs(
-        size[..., 0]*size[..., 1] + size[..., 1]*size[..., 2] \
-            + size[..., 0]*size[..., 2])
 
+    area = np.zeros(points.shape[0])
+    
+    for i in numba.prange(points.shape[0]):
+        for tri in range(points.shape[1]-2):
+            area[i] +=  .5 * np.linalg.norm(np.cross(points[i, tri+1,:] - points[i, 0,:], points[i, tri+2,:]-points[i, 0,:]))
+    
+    return area
 
 @numba.njit()
 def process_patches(
