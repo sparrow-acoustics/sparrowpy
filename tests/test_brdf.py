@@ -42,8 +42,9 @@ def test_create_from_scattering_with_valid_data(tmp_path):
 
     # Call the function
     sp.brdf.create_from_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
+        file_path=file_path,
         )
     data, s, r = pf.io.read_sofa(file_path)
 
@@ -69,8 +70,9 @@ def test_create_from_scattering_1(tmp_path):
 
     # Call the function
     sp.brdf.create_from_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
+        file_path=file_path,
         )
     data, s, r = pf.io.read_sofa(file_path)
 
@@ -91,8 +93,9 @@ def test_create_from_scattering_0(tmp_path):
 
     # Call the function
     sp.brdf.create_from_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
+        file_path=file_path,
         )
     data, s, r = pf.io.read_sofa(file_path)
 
@@ -114,8 +117,9 @@ def test_create_from_scattering_0_3(tmp_path):
 
     # Call the function
     sp.brdf.create_from_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     data, s, r = pf.io.read_sofa(file_path)
 
@@ -141,9 +145,10 @@ def test_create_from_scattering_0_3_with_absorption(tmp_path):
 
     # Call the function
     sp.brdf.create_from_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data + np.zeros((3, )), frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     data, s, r = pf.io.read_sofa(file_path)
 
@@ -167,18 +172,19 @@ def test_create_from_scattering_with_invalid_data(tmp_path):
     with pytest.raises(
             TypeError,
             match="scattering_coefficient must be a pf.FrequencyData object"):
-        sp.brdf.create_from_scattering(tmp_path, coords, coords, 'invalid')
+        sp.brdf.create_from_scattering(
+            coords, coords, 'invalid', file_path=tmp_path)
     # Call the function and expect it to raise an error
     with pytest.raises(
             TypeError,
             match="source_directions must be a pf.Coordinates object"):
         sp.brdf.create_from_scattering(
-            tmp_path, 'coords', coords, scattering_data)
+            'coords', coords, scattering_data, file_path=tmp_path)
     with pytest.raises(
             TypeError,
             match="receiver_directions must be a pf.Coordinates object"):
         sp.brdf.create_from_scattering(
-            tmp_path, coords, 'coords', scattering_data)
+            coords, 'coords', scattering_data, file_path=tmp_path)
 
 
 @pytest.mark.parametrize('scattering_data', [0, 0.3, 1])
@@ -194,9 +200,10 @@ def test_create_from_scattering_energy_conservation(
 
     # Call the function
     sp.brdf.create_from_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data + np.zeros((3, )), frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     sofa = sf.read_sofa(file_path)
     data, s, r = pf.io.convert_sofa(sofa)
@@ -224,9 +231,10 @@ def test_create_from_scattering_reciprocal_principle(
 
     # Call the function
     sp.brdf.create_from_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data + np.zeros((3, )), frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     sofa = sf.read_sofa(file_path)
     data, s, r = pf.io.convert_sofa(sofa)
@@ -254,9 +262,10 @@ def test_directional_energy_conservation_specular(
 
     # Call the function
     sp.brdf.create_from_directional_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     sofa = sf.read_sofa(file_path)
     data, _s, r = pf.io.convert_sofa(sofa)
@@ -283,9 +292,10 @@ def test_directional_energy_conservation_diffuse(
 
     # Call the function
     sp.brdf.create_from_directional_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     sofa = sf.read_sofa(file_path)
     data, _s, r = pf.io.convert_sofa(sofa)
@@ -313,9 +323,10 @@ def test_directional_reciprocal_principle_specular(
 
     # Call the function
     sp.brdf.create_from_directional_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     sofa = sf.read_sofa(file_path)
     data, _, r = pf.io.convert_sofa(sofa)
@@ -345,9 +356,10 @@ def test_directional_energy_conservation_two_directions(
 
     # Call the function
     sp.brdf.create_from_directional_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     sofa = sf.read_sofa(file_path)
     data, _s, r = pf.io.convert_sofa(sofa)
@@ -379,9 +391,10 @@ def test_directional_energy_conservation_two_directions_rand(
     # Call the function
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
     sp.brdf.create_from_directional_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     sofa = sf.read_sofa(file_path)
     data, _s, r = pf.io.convert_sofa(sofa)
@@ -408,9 +421,10 @@ def test_directional_random_directional_scattering(
 
     # Call the function
     sp.brdf.create_from_directional_scattering(
-        file_path, coords, coords,
+        coords, coords,
         pf.FrequencyData(scattering_data, frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
+        file_path=file_path,
         )
     sofa = sf.read_sofa(file_path)
     data, _, r = pf.io.convert_sofa(sofa)
