@@ -110,7 +110,7 @@ class DRadiosityFast():
         """
         # Check the visibility between patches.
         self._visibility_matrix = geometry.check_visibility(
-            self.patches_center, self.patches_normal)
+            self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
         visible_patches = np.empty((n_combinations, 2), dtype=np.int32)

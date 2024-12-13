@@ -63,4 +63,3 @@ def test_basic_visibility(point, origin, plpt, pln):
         solution = 0
 
     assert solution==out
-    
