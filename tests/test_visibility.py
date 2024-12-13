@@ -2,7 +2,8 @@ import numpy.testing as npt
 import pytest
 import sparapy.radiosity_fast.visibility_helpers as vh
 import numpy as np
-
+import sparapy.radiosity_fast.geometry as geom
+import sparapy.radiosity_fast.blender_helpers as bh
 
 @pytest.mark.parametrize("origin", [np.array([0.,1.,3.])])
 @pytest.mark.parametrize("point", [np.array([0.,1.,-1])])
@@ -63,3 +64,33 @@ def test_basic_visibility(point, origin, plpt, pln):
         solution = 0
 
     assert solution==out
+
+@pytest.mark.parametrize("model", [
+    "./tests/test_data/cube.blend",
+    "./tests/test_data/cube_blocked.blend",
+    ])
+@pytest.mark.parametrize("solution", [
+    np.array([0.,0.,1.]),
+    np.array([0.,.5,-.5])/np.linalg.norm(np.array([0.,.5,-.5]))
+    ])
+def test_vis_matrix_assembly(model, solution):
+
+    m1,m2 = bh.read_geometry_file(model)
+
+    patches_points = np.empty((len(m1["conn"]),len(m1["conn"][0]),3))
+    patches_centers = np.empty((len(m1["conn"]),3))
+
+    for m in [m1,m2]:
+        surfs=m
+
+        surfs_points = np.empty((len(surfs["conn"]),len(surfs["conn"][0]),3))
+        surfs_normals = np.empty((len(m["conn"]),3))
+
+
+        for i in range(len(m1["conn"])):
+            patches_points[i]=m1["verts"][m1["conn"][i]]
+            patches_centers[i]=geom._calculate_center(m1["verts"][m1["conn"][i]])
+
+        for i in range(len(m["conn"])):
+            surfs_points[i]=m["verts"][m["conn"][i]]
+            surfs_normals[i]=geom._calculate_center(m["verts"][m["conn"][i]])
