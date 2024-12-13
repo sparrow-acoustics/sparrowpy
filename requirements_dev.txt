@@ -24,3 +24,4 @@ numba
 ipykernel
 ipympl
 watermark
+bpy
