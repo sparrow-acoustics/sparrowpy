@@ -1,7 +1,7 @@
 """Geometry functions for the radiosity fast solver."""
 import numba
 import numpy as np
-import visibility_helpers as vh
+import sparapy.radiosity_fast.visibility_helpers as vh
 
 
 @numba.njit()

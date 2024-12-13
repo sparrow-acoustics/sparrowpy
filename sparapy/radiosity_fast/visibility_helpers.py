@@ -18,7 +18,7 @@ def basic_visibility(vis_point: np.ndarray,
         point being evaluated for visibility.
 
     surf_points: np.ndarray (N,3)
-        hull points of a possibly blocking surface.
+        boundary points of a possibly blocking surface.
 
     surf_normal: np.ndarray (3,)
         normal of possibly blocking surface.
@@ -30,7 +30,7 @@ def basic_visibility(vis_point: np.ndarray,
         (1 if points are visible to eachother, otherwise 0)
 
     """
-    is_visible = 1
+    is_visible = True
 
     pt = project_to_plane(origin=vis_point, point=eval_point,
                             plane_pt=surf_points[0], plane_normal=surf_normal)
@@ -39,7 +39,7 @@ def basic_visibility(vis_point: np.ndarray,
         if np.linalg.norm(eval_point-vis_point)>np.linalg.norm(pt-vis_point):
             if point_in_polygon(point3d=pt, polygon3d=surf_points,
                                 plane_normal=surf_normal):
-                is_visible = 0
+                is_visible = False
 
     return is_visible
 
@@ -109,7 +109,7 @@ def point_in_polygon(point3d: np.ndarray,
         point being evaluated.
 
     polygon3d: np.ndarray (N,3)
-        polygon node points (hull)
+        polygon boundary points
 
     plane_normal: np.ndarray(float) (3,)
         normal of the polygon's plane
