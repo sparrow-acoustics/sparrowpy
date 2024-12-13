@@ -47,7 +47,38 @@ def basic_visibility(vis_point: np.ndarray,
 def project_to_plane(origin: np.ndarray, point: np.ndarray,
                      plane_pt: np.ndarray, plane_normal: np.ndarray,
                      epsilon=1e-6, check_normal=True):
-    """Project point onto plane following direction defined by origin."""
+    """Project point onto plane following direction defined by origin.
+
+    Also applicable to lower or higher-dimensional spaces, not just 3D.
+
+    Parameters
+    ----------
+    origin: np.ndarray(float) (n_dims,)
+        point determining projection direction
+
+    point: np.ndarray(float) (n_dims,)
+        point to project
+
+    plane_pt: np.ndarray(float) (n_dims,)
+        reference point on projection plane
+
+    plane_normal: np.ndarray(float) (n_dims,)
+        normal of projection plane
+
+    epsilon: float
+        tolerance for plane orthogonality check
+
+    check_normal: bool
+        if True, discards projections on planes facing
+        opposite direction from the point and origin.
+
+    Returns
+    -------
+    int_point: np.ndarray(float) (n_dims,) or None
+        intersection point.
+        None if no intersection point is found
+
+    """
     v = point-origin
     dotprod = np.dot(v,plane_normal)
 
@@ -70,27 +101,55 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
 def point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
                      eta=1e-6) -> bool:
-    """Check if point is inside given polygon."""
+    """Check if point is inside given polygon.
+
+    Parameters
+    ----------
+    point3d: np.ndarray(float) (3,)
+        point being evaluated.
+
+    polygon3d: np.ndarray (N,3)
+        polygon node points (hull)
+
+    plane_normal: np.ndarray(float) (3,)
+        normal of the polygon's plane
+
+    eta: float
+        tolerance for point inside of line check.
+
+    Returns
+    -------
+    out: bool
+        flags if point is inside polygon
+        (True if inside, False if not)
+
+    """
+    # rotate all (coplanar) points to a horizontal plane
+    # and remove z dimension for convenience
     rotmat = rotation_matrix(n_in=plane_normal)
 
     pt = inner(matrix=rotmat,vector=point3d)[0:point3d.shape[0]-1]
-
     poly = np.empty((polygon3d.shape[0],2))
     for i in numba.prange(polygon3d.shape[0]):
         poly[i] = inner(matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
 
+
+    # winding number algorithm
     count = 0
     for i in numba.prange(poly.shape[0]):
         a1 = poly[(i+1)%poly.shape[0]]
         a0 = poly[i%poly.shape[0]]
-
         side = a1-a0
+
+        # check if line from evaluation point in +x direction
+        # intersects polygon side
         nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
         b = project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
                              plane_pt=a1, plane_normal=nl,
                              check_normal=False)
 
-        if (b is not None) and b[0]>pt[0]: # an intersection point is found
+        # check if intersection exists and if is inside side [a0,a1]
+        if (b is not None) and b[0]>pt[0]:
             if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
                                 -np.linalg.norm(a1-a0)) <= eta:
                 if np.dot(b-pt,nl)>0:
