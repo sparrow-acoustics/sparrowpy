@@ -2,7 +2,6 @@ import numpy.testing as npt
 import pytest
 import sparapy.radiosity_fast.visibility_helpers as vh
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 @pytest.mark.parametrize("origin", [np.array([0.,1.,3.])])
@@ -109,51 +108,3 @@ def test_intersection_finder(patch,surf,solution):
         temp = patch
         patch = surf
         surf = temp
-
-
-@pytest.mark.parametrize("poly1", [
-    np.array([[-1.,-.5,0.],[1.,-.5,0.],[0.,1.,0.]])
-    ])
-@pytest.mark.parametrize("poly2", [
-    6*np.array([[-1.,-.5,0.],[1.,-.5,0.],[0.,1.,0.]]),
-    np.array([[4.,.5,0.],[2.,.5,0.],[3.,-1.,0.]]),
-    np.array([[1.,.5,0.],[-1.,.5,0.],[0.,-1.,0.]]),
-    np.array([[1.,.5,0.],[-1.,.5,0.],[0.,0.,0.]]),
-    np.array([[-.5,-1.,0.],[.5,-1.,0.],[0.,0.,0.]]),
-    np.array([[1.,-1.,0.],[.5,-.25,0.],[0.,-.75,0.],[-.5,-.25,0.],[-1.,-1.,0.]]),
-    np.array([[4.,0.,0.],[.4,-.25,0.],[1.25,-.75,0.],[0.,-.4,0.],[0.,-2.,0.]]),
-    np.array([[4.,0.,0.],[.2,0.,0.],[2,-.75,0.],[0.,-.4,0.],[0.,-2.,0.]]),
-    ])
-def test_polygon_union(poly1, poly2):
-    """Test union of two polygons."""
-    for i in range(2):
-        if i==0:
-            poly11=poly2
-            poly22=poly1
-        else:
-            poly11=poly2
-            poly22=poly1
-
-        plot_polygon([poly11,poly22])
-
-        union = vh.poly_union(poly1=poly11,
-                              poly2=poly22,
-                              normal=np.array([0.,0.,1.]))
-
-        plot_polygon(union)
-
-
-
-def plot_polygon(polylist:np.ndarray, fig=0):
-
-    fig = plt.figure(fig)
-
-    for poly in polylist:
-        poly=poly[:,:2].tolist()
-        poly.append(poly[0])
-        xs, ys = zip(*poly)
-        plt.plot(xs,ys)
-    plt.grid()
-    plt.show()
-
-    return fig
