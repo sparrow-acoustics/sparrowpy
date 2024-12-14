@@ -16,7 +16,7 @@ Z = 4
 patch_size = 0.5
 ir_length_s = 2
 sampling_rate = 1000
-max_order_k = 10
+max_order_k = 150
 speed_of_sound = 343
 
 absorption = 0.1
@@ -30,7 +30,7 @@ RT = 24*np.log(10)/(speed_of_sound)*V/(-S*np.log(1-alpha_dash))
 print(f'reverberation time is {RT}s')
 # create geometry
 walls = sp.testing.shoebox_room_stub(X, Y, Z)
-source = sp.geometry.SoundSource([2.5, 2.5, 2.5], [0, 1, 0], [0, 0, 1])
+source = sp.geometry.SoundSource([2, 2, 2], [0, 1, 0], [0, 0, 1])
 
 ## new approach
 radi = sp.radiosity.Radiosity(
@@ -42,6 +42,26 @@ radi.run(source)
 # %%
 for wall in radi.patch_list:
     wall.plot_energy_patches_time(1000)
+
+plt.show()
+
+# %%
+
+radi.patch_list[5].plot_energy_patches_time(1000)
+
+
+
+# %%
+
+fig, ax = plt.subplots()
+
+# Loop through your list of walls
+for wall in radi.patch_list:
+    # Plot on the same axis (ax) in each iteration
+    wall.plot_energy_patches_time(1000, ax=ax)
+
+# Show the final plot after the loop
+plt.show()
 
 # %%
 
