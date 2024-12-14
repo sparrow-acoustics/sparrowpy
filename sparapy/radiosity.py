@@ -500,11 +500,12 @@ class Patches(Polygon):
         # pltpatches.patches 
 
         # find the points of the patches 
-        
-        patches_points = np.array([])
-        
+                
+        patches_points = np.zeros((len(self.patches), 4, 3))
+
         for idx, patch in enumerate(self.patches):
-            patches_points[idx] = patch.pts
+            points = patch.pts
+            patches_points[idx] = points
 
         for i_frequency in range(self.n_bins):
             energy = energy_patches_time[i_frequency,:]
