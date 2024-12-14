@@ -33,7 +33,7 @@ print(energy)
 
 # %%
 
-energy_patches_time = sp.plot.energy_patches_time(energy_patches,2)
+energy_patches_time = sp.plot.energy_patches_time(energy_patches,3)
 print(energy_patches_time)
 # %%
 

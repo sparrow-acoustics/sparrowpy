@@ -214,43 +214,16 @@ def energy_matrix_patches(E_matrix):
 
     return energy_patches
 
-def energy_patches_time(energy_matrix_patches, time):
+def energy_patches_time(energy_matrix_patches, sample):
     # returns energy array used in patches function (for every frequency bin)
     # basically returns the energy at a specific time 
 
-    #sample = time * sampling_rate * time
-
-    n_bins = energy_matrix_patches.shape[0]
-    max_order = energy_matrix_patches[1]
-    n_patches = energy_matrix_patches[2]
-    n_samples = energy_matrix_patches[3]
-
-    energy_patches_time = np.zeros((n_bins, n_patches))
-
-    for i_frequency in range(n_bins):
-
-         energy_patches_time[i_frequency, :] = energy_matrix_patches[i_frequency, :, time]
+    energy = energy_matrix_patches[:, :, sample]
+        
+    return energy
     
-    return energy_patches_time
 
-def color_patches_time(energy_matrix_patches, time):
-    # returns energy array used in patches function (for every frequency bin)
-    # basically returns the energy at a specific time 
 
-    #sample = time * sampling_rate * time
-
-    n_bins = energy_matrix_patches.shape[0]
-    max_order = energy_matrix_patches[1]
-    n_patches = energy_matrix_patches[2]
-    n_samples = energy_matrix_patches[3]
-
-    energy_patches_time = np.zeros((n_bins, n_patches))
-
-    for i_frequency in range(n_bins):
-
-         energy_patches_time[i_frequency, :] = energy_matrix_patches[i_frequency, :, time]
-    
-    return energy_patches_time
 
 
 
