@@ -155,24 +155,24 @@ def brdf_polar(
         ax=ax, orientation='vertical')
     return ax
 
-
-def patches(patches_points, energy, ax=None):
-    """Show the energy of the patches in 3d.
+def patches(patches_points, energy, ax=None, show_colorbar=True):
+    """Show the energy of the patches in 3D.
 
     Parameters
     ----------
     patches_points : np.ndarray, list
         The points of the patches of shape (#patches, #points, 3).
-    energy : _type_
-        energy for each patch of shape (#patches,).
+    energy : np.ndarray
+        Energy for each patch of shape (#patches,).
     ax : matplotlib.axes.Axes, optional
-        The axes to plot on., by default None
+        The axes to plot on. By default, None.
+    show_colorbar : bool, optional
+        Whether to display the colorbar, by default True.
 
     Returns
     -------
     ax : matplotlib.axes.Axes
         The axes to plot on.
-
     """
     if ax is None:
         ax = plt.axes(projection='3d')
@@ -187,11 +187,15 @@ def patches(patches_points, energy, ax=None):
         ax.add_collection3d(Poly3DCollection(
             patches_points[i][np.newaxis, ...], color=cmap(energy_normalized[i])))
 
-    
-    plt.colorbar(mpl.cm.ScalarMappable(
-        norm=mpl.colors.Normalize(0, np.max(energy)), cmap=cmap),
-        ax=ax, orientation='vertical')
+    # Only add the colorbar once
+    if show_colorbar:
+        plt.colorbar(
+            mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(0, np.max(energy)), cmap=cmap),
+            ax=ax, orientation='vertical'
+        )
+
     return ax
+
 
 def energy_matrix_patches(E_matrix):
     # adds up all the reflection orders in E_matrix, specific for each patch. 

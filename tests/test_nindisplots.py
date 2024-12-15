@@ -47,18 +47,19 @@ plt.show()
 
 # %%
 
-radi.patch_list[5].plot_energy_patches_time(1000)
+ax = plt.figure()
+radi.patch_list[5].plot_energy_patches_time(1000, ax)
 
 
 
 # %%
 
-fig, ax = plt.subplots()
+ax = plt.axes(projection='3d')
 
 # Loop through your list of walls
-for wall in radi.patch_list:
-    # Plot on the same axis (ax) in each iteration
-    wall.plot_energy_patches_time(1000, ax=ax)
+for idx, wall in enumerate(radi.patch_list):
+    # Show the colorbar only on the first iteration
+    wall.plot_energy_patches_time(1000, ax=ax, show_colorbar=(idx == 0))
 
 # Show the final plot after the loop
 plt.show()
