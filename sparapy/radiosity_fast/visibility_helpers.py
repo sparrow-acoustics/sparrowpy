@@ -6,7 +6,8 @@ from sparapy.radiosity_fast.universal_ff.ffhelpers import rotation_matrix,inner
 #@numba.njit()
 def basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
-                     surf_points: np.ndarray, surf_normal: np.ndarray)->bool:
+                     surf_points: np.ndarray, surf_normal: np.ndarray,
+                     eta=1e-6)->bool:
     """Return visibility of a point based on view point position.
 
     Parameters
@@ -32,14 +33,18 @@ def basic_visibility(vis_point: np.ndarray,
     """
     is_visible = True
 
-    pt = project_to_plane(origin=vis_point, point=eval_point,
-                            plane_pt=surf_points[0], plane_normal=surf_normal,check_normal=True)
+    if np.abs(np.dot(surf_normal,eval_point-surf_points[0]))>eta:
 
-    if pt is not None:
-        if np.linalg.norm(eval_point-vis_point)>np.linalg.norm(pt-vis_point):
-            if point_in_polygon(point3d=pt, polygon3d=surf_points,
-                                plane_normal=surf_normal):
-                is_visible = False
+        pt = project_to_plane(origin=vis_point, point=eval_point,
+                              plane_pt=surf_points[0],
+                              plane_normal=surf_normal,
+                              check_normal=True)
+
+        if pt is not None:
+            if np.linalg.norm(eval_point-vis_point)>np.linalg.norm(pt-vis_point):
+                if point_in_polygon(point3d=pt, polygon3d=surf_points,
+                                    plane_normal=surf_normal):
+                    is_visible = False
 
     return is_visible
 
@@ -97,7 +102,7 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
 
     return int_point
 
-@numba.njit()
+#@numba.njit()
 def point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
                      eta=1e-6) -> bool:
