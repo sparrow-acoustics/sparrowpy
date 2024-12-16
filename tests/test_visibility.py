@@ -69,7 +69,7 @@ def test_basic_visibility(point, origin, plpt, pln):
 @pytest.mark.parametrize("model", [
     "./tests/test_data/cube_simple.blend",
     "./tests/test_data/cube.blend",
-    #"./tests/test_data/cube_blocked.blend",
+    "./tests/test_data/cube_blocked.blend",
     ])
 def test_vis_matrix_assembly(model):
 
@@ -106,6 +106,8 @@ def test_vis_matrix_assembly(model):
         elif model=="./tests/test_data/cube_blocked.blend":
             solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
                             dtype=bool)
+            for ids in A:
+                solution[ids[0],ids[1]]=True
         elif model=="./tests/test_data/cube_simple.blend":
             solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
                             dtype=bool)
@@ -125,7 +127,73 @@ def test_vis_matrix_assembly(model):
                                            surf_normal=surfs_normals,
                                            surf_points=surfs_points)
 
-        plt.imsave(model[:-6]+"_vis.pdf",vis_matrix,dpi=60)
-        plt.imsave(model[:-6]+"_sol.pdf",solution, dpi=60)
+        plt.imsave(model[:-6]+"_vis.pdf",vis_matrix)
+        plt.imsave(model[:-6]+"_sol.pdf",solution)
         npt.assert_array_equal(vis_matrix,solution)
 
+A=[
+    [0,1],
+    [0,3],
+    [0,4],
+    [0,5],
+    [0,6],
+    [0,9],
+    [0,14],
+    [1,3],
+    [1,4],
+    [1,6],
+    [1,7],
+    [1,9],
+    [1,14],
+    [2,8],
+    [2,9],
+    [2,10],
+    [2,11],
+    [2,12],
+    [2,13],
+    [2,15],
+    [3,5],
+    [3,6],
+    [3,7],
+    [3,8],
+    [3,9],
+    [3,10],
+    [3,11],
+    [3,12],
+    [3,13],
+    [3,14],
+    [3,15],
+    [4,5],
+    [4,6],
+    [4,7],
+    [4,9],
+    [4,14],
+    [5,6],
+    [5,7],
+    [5,9],
+    [5,14],
+    [6,7],
+    [6,9],
+    [6,14],
+    [7,9],
+    [7,14],
+    [8,9],
+    [8,10],
+    [8,11],
+    [8,12],
+    [8,15],
+    [9,10],
+    [9,12],
+    [9,13],
+    [9,15],
+    [10,11],
+    [10,12],
+    [10,13],
+    [10,15],
+    [11,12],
+    [11,13],
+    [11,15],
+    [12,13],
+    [13,15],
+    [11,12],
+   ]
