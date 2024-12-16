@@ -3,7 +3,7 @@ import numpy as np
 import numba
 from sparapy.radiosity_fast.universal_ff.ffhelpers import rotation_matrix,inner
 
-@numba.njit()
+#@numba.njit()
 def basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
                      surf_points: np.ndarray, surf_normal: np.ndarray)->bool:
@@ -33,7 +33,7 @@ def basic_visibility(vis_point: np.ndarray,
     is_visible = True
 
     pt = project_to_plane(origin=vis_point, point=eval_point,
-                            plane_pt=surf_points[0], plane_normal=surf_normal)
+                            plane_pt=surf_points[0], plane_normal=surf_normal,check_normal=True)
 
     if pt is not None:
         if np.linalg.norm(eval_point-vis_point)>np.linalg.norm(pt-vis_point):
@@ -43,7 +43,7 @@ def basic_visibility(vis_point: np.ndarray,
 
     return is_visible
 
-@numba.njit()
+#@numba.njit()
 def project_to_plane(origin: np.ndarray, point: np.ndarray,
                      plane_pt: np.ndarray, plane_normal: np.ndarray,
                      epsilon=1e-6, check_normal=True):
@@ -82,7 +82,7 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
     v = point-origin
     dotprod = np.dot(v,plane_normal)
 
-    cond = dotprod < -epsilon
+    cond = dotprod < epsilon
 
     if not check_normal:
         cond = abs(dotprod) > epsilon

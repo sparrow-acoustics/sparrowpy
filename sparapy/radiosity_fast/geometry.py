@@ -126,7 +126,7 @@ def get_scattering_data_source(
 
 
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def check_visibility(
         patches_center:np.ndarray,
         surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
@@ -150,20 +150,21 @@ def check_visibility(
     """
     n_patches = patches_center.shape[0]
     visibility_matrix = np.empty((n_patches, n_patches), dtype=np.bool_)
-    visibility_matrix.fill(True)
+    visibility_matrix.fill(False)
     indexes = []
     for i_source in range(n_patches):
         for i_receiver in range(n_patches):
             if i_source < i_receiver:
                 indexes.append((i_source, i_receiver))
+                visibility_matrix[i_source,i_receiver]=True
     indexes = np.array(indexes)
     for i in numba.prange(indexes.shape[0]):
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
 
         surfid=0
-        while (visibility_matrix[i_source, i_receiver]
-                        and surfid!=surf_normal.shape[0]):
+        while (visibility_matrix[i_source, i_receiver] and
+                                surfid!=surf_normal.shape[0]):
 
             visibility_matrix[i_source, i_receiver]=vh.basic_visibility(
                                                             patches_center[i_source],
