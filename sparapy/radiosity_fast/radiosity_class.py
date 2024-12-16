@@ -4,6 +4,7 @@ import pyfar as pf
 from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_recursive as ee_recursive
 from . import energy_exchange_order as ee_order
+from . import blender_helpers
 
 
 class DRadiosityFast():
@@ -85,6 +86,39 @@ class DRadiosityFast():
         walls_normal = np.array([p.normal for p in polygon_list])
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
 
+        # create patches
+        (
+            patches_points, patches_normal,
+            n_patches, patch_to_wall_ids) = geometry.process_patches(
+            walls_points, walls_normal, patch_size, len(polygon_list))
+        # create radiosity object
+        return cls(
+            walls_points, walls_normal, walls_up_vector,
+            patches_points, patches_normal, patch_size, n_patches,
+            patch_to_wall_ids)
+    @classmethod
+    def from_blenderfile(
+            cls, file_path):
+        """Create a Radiosity object from .blend file.
+
+        Parameters
+        ----------
+        polygon_list : list[PatchesDirectional]
+            list of patches
+        patch_size : float
+            maximal patch size in meters.
+        max_order_k : int
+            max order of energy exchange iterations.
+        ir_length_s : float
+            length of ir in seconds.
+        sofa_path : Path, string, list of Path, list of string
+            path of directional scattering coefficients or list of path
+            for each Patch.
+        source : SoundSource, optional
+            Source object, by default None, can be added later.
+
+        """
+        fine,rough=blender_helpers.read_geometry_file(file_path)
         # create patches
         (
             patches_points, patches_normal,
