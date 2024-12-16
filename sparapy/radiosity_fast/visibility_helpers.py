@@ -33,18 +33,32 @@ def basic_visibility(vis_point: np.ndarray,
     """
     is_visible = True
 
+    # if eval point is not coplanar with surf
     if np.abs(np.dot(surf_normal,eval_point-surf_points[0]))>eta:
 
+        # check if projected point on surf
         pt = project_to_plane(origin=vis_point, point=eval_point,
-                              plane_pt=surf_points[0],
-                              plane_normal=surf_normal,
-                              check_normal=True)
+                            plane_pt=surf_points[0],
+                            plane_normal=surf_normal,
+                            check_normal=True)
 
+        # if intersection point exists
         if pt is not None:
-            if np.linalg.norm(eval_point-vis_point)>np.linalg.norm(pt-vis_point):
+            # if plane is in front of eval point
+            if (np.linalg.norm(eval_point-vis_point)>
+                                np.linalg.norm(pt-vis_point)):
+                # if point is inside surf polygon
                 if point_in_polygon(point3d=pt, polygon3d=surf_points,
                                     plane_normal=surf_normal):
                     is_visible = False
+
+    # if both vis and eval point are coplanar
+    elif (np.abs(np.dot(surf_normal,vis_point-surf_points[0]))<eta and
+                    np.abs(np.dot(surf_normal,eval_point-surf_points[0]))<eta):
+        is_visible = False
+
+
+
 
     return is_visible
 
