@@ -164,7 +164,7 @@ def check_visibility(
 
         surfid=0
         while (visibility_matrix[i_source, i_receiver] and
-                                surfid!=surf_normal.shape[0]):
+                                surfid!=len(surf_normal)):
 
             visibility_matrix[i_source, i_receiver]=vh.basic_visibility(
                                                             patches_center[i_source],
