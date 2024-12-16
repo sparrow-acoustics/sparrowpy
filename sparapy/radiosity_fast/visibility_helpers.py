@@ -3,7 +3,7 @@ import numpy as np
 import numba
 from sparapy.radiosity_fast.universal_ff.ffhelpers import rotation_matrix,inner
 
-#@numba.njit()
+@numba.njit()
 def basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
                      surf_points: np.ndarray, surf_normal: np.ndarray,
@@ -23,6 +23,9 @@ def basic_visibility(vis_point: np.ndarray,
 
     surf_normal: np.ndarray (3,)
         normal of possibly blocking surface.
+
+    eta: float
+        coplanarity check tolerance
 
     Returns
     -------
@@ -62,7 +65,7 @@ def basic_visibility(vis_point: np.ndarray,
 
     return is_visible
 
-#@numba.njit()
+@numba.njit()
 def project_to_plane(origin: np.ndarray, point: np.ndarray,
                      plane_pt: np.ndarray, plane_normal: np.ndarray,
                      epsilon=1e-6, check_normal=True):
@@ -101,14 +104,14 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
     v = point-origin
     dotprod = np.dot(v,plane_normal)
 
-    cond = dotprod < epsilon
+    cond = dotprod < -epsilon
 
     if not check_normal:
         cond = abs(dotprod) > epsilon
 
     if cond:
         w = point-plane_pt
-        fac = -np.dot(plane_normal,w) / dotprod
+        fac = -np.divide(np.dot(plane_normal,w), dotprod)
 
         int_point = w + plane_pt + fac*v
     else:
@@ -116,7 +119,7 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
 
     return int_point
 
-#@numba.njit()
+@numba.njit()
 def point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
                      eta=1e-6) -> bool:

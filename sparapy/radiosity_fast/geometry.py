@@ -126,7 +126,7 @@ def get_scattering_data_source(
 
 
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def check_visibility(
         patches_center:np.ndarray,
         surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
