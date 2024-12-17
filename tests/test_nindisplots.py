@@ -71,7 +71,7 @@ ax = plt.axes(projection='3d')
 # Loop through your list of walls
 for idx, wall in enumerate(radi.patch_list):
     # Show the colorbar only on the first iteration
-    wall.plot_energy_patches_time(1000, ax=ax, show_colorbar=(idx == 0))
+    wall.plot_energy_patches_time(1, ax=ax, show_colorbar=(idx == 0))
 
 # Show the final plot after the loop
 plt.show()

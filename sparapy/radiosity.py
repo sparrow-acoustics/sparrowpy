@@ -461,7 +461,7 @@ class Patches(Polygon):
             source_path_id, i_receiver_ff + i_receiver_offset]
 
     def plot_energy_patches_time(
-            self, sample, ax, show_colorbar=True):
+            self, time, ax, show_colorbar=True):
         """Calculate the energy stored by a patch at a certain time.
 
         this is supposed to be from just one wall
@@ -489,7 +489,7 @@ class Patches(Polygon):
         """
         data = self.E_matrix
 
-        #sample = time * self.E_sampling_rate
+        sample = time * self.E_sampling_rate
 
         energy_patches = pltpatches.energy_matrix_patches(data)
         # this already goes through each frequency bin
