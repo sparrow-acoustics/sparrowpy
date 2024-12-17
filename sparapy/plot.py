@@ -198,7 +198,18 @@ def patches(patches_points, energy, ax=None, show_colorbar=True):
 
 
 def energy_matrix_patches(E_matrix):
-    # adds up all the reflection orders in E_matrix, specific for each patch. 
+    """Add all of the reflection orders of the energy matrix.
+
+    Parameters
+    ----------
+    E_matrix : np.ndarray, list
+        The points of the patches of shape (#patches, #points, 3).
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes to plot on.
+    """ 
     n_bins = E_matrix.shape[0]
     max_order = E_matrix.shape[1]
     n_patches = E_matrix.shape[2]
@@ -219,9 +230,24 @@ def energy_matrix_patches(E_matrix):
     return energy_patches
 
 def energy_patches_time(energy_matrix_patches, sample):
-    # returns energy array used in patches function (for every frequency bin)
-    # basically returns the energy at a specific time 
+    """Get the energy of all patches at certain time.
+    
+    Parameters
+    ----------
+    patches_points : np.ndarray, list
+        The points of the patches of shape (#patches, #points, 3).
+    energy : np.ndarray
+        Energy for each patch of shape (#patches,).
+    ax : matplotlib.axes.Axes, optional
+        The axes to plot on. By default, None.
+    show_colorbar : bool, optional
+        Whether to display the colorbar, by default True.
 
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes to plot on.
+    """
     energy = energy_matrix_patches[:, :, sample]
         
     return energy
