@@ -6,11 +6,7 @@ import matplotlib.pyplot as plt
 import pyfar as pf
 import sparapy as sp
 
-%matplotlib notebook
-
 import pickle
-
-
 
 # %%
 # geometry
