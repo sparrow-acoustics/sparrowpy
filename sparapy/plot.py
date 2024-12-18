@@ -203,12 +203,12 @@ def energy_matrix_patches(E_matrix):
     Parameters
     ----------
     E_matrix : np.ndarray, list
-        The points of the patches of shape (#patches, #points, 3).
+        The energy matrix of one wall with shape (#bins, max_order, #patches, #samples).
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
-        The axes to plot on.
+    energy_patches : matplotlib.axes.Axes
+        A matrix of the energy at each patch with shape (#bins, #patches, #samples).
     """ 
     n_bins = E_matrix.shape[0]
     max_order = E_matrix.shape[1]
@@ -230,23 +230,19 @@ def energy_matrix_patches(E_matrix):
     return energy_patches
 
 def energy_patches_time(energy_matrix_patches, sample):
-    """Get the energy of all patches at certain time.
+    """Get the energy of all patches at certain sample number.
     
     Parameters
     ----------
-    patches_points : np.ndarray, list
-        The points of the patches of shape (#patches, #points, 3).
-    energy : np.ndarray
-        Energy for each patch of shape (#patches,).
-    ax : matplotlib.axes.Axes, optional
-        The axes to plot on. By default, None.
-    show_colorbar : bool, optional
-        Whether to display the colorbar, by default True.
+    energy_matrix_patches : np.ndarray, list
+        The energy matrix of each patch with shape (#bins, #patches, #samples).
+    sample : np.ndarray
+        The sample number that is being accessed.
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
-        The axes to plot on.
+    energy : matplotlib.axes.Axes
+        A matrix with the energy of all patches at a certain sample number with shape (#bins, #patches).
     """
     energy = energy_matrix_patches[:, :, sample]
         
