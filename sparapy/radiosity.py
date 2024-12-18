@@ -462,29 +462,21 @@ class Patches(Polygon):
 
     def plot_energy_patches_time(
             self, time, ax, show_colorbar=True):
-        """Calculate the energy stored by a patch at a certain time.
-
-        this is supposed to be from just one wall
+        """Plot the energy colormap of all patches at a certain time.
 
         Parameters
         ----------
-        max_order : _type_
-            _description_
-        sound_source : _type_
-            _description_
-        receiver : _type_
-            _description_
-        ir_length_s : _type_
-            _description_
-        speed_of_sound : float, optional
-            _description_, by default 346.18
-        sampling_rate : int, optional
-            _description_, by default 1000
+        time : float
+            The time point in which the energy is being investigated. 
+        ax : matplotlib.axes.Axes
+            The axes to plot on. 
+        show_colorbar : bool
+            Whether to display the colorbar. 
 
         Returns
         -------
-        _type_
-            _description_
+        None
+            Displays a plot of the energy colormap of all patches at a certain time. Does not return a particular value. 
 
         """
         data = self.E_matrix
