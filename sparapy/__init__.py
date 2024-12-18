@@ -12,6 +12,7 @@ from . import radiosity
 from . import sound_object
 from . import testing
 from . import brdf
+from . import plot
 
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     'sound_object',
     'testing',
     'brdf',
+    'plot',
 ]

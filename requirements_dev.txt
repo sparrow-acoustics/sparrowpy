@@ -11,10 +11,11 @@ tqdm
 pytest
 pytest-runner
 pytest-cov
-numpy
+numpy<2
 scipy
 matplotlib
-pyfar
+pyfar>0.6
+mplstereonet
 autodocsumm
 pydata-sphinx-theme
 sphinx-design
