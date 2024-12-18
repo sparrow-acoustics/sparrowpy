@@ -478,6 +478,9 @@ class Patches(Polygon):
         None
             Displays a plot of the energy colormap of all patches at a certain time. Does not return a particular value. 
 
+        .. image:: tests/patches_time.png
+            :alt: Energy colormap of patches at a certain time
+            :width: 500px
         """
         data = self.E_matrix
 
