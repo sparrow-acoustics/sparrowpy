@@ -42,30 +42,6 @@ radi.run(source)
 
 # %%
 
-# Save the object to a file
-with open("radi_simulation.pkl", "wb") as f:
-    pickle.dump(radi, f)
-    print("Object saved successfully.")
-
-# %%
-for wall in radi.patch_list:
-    wall.plot_energy_patches_time(1000)
-
-plt.show()
-
-# %%
-
-ax = plt.figure()
-radi.patch_list[5].plot_energy_patches_time(1000, ax)
-
-# %%
-with open("radi_simulation.pkl", "rb") as f:
-    radi = pickle.load(f)
-    print("Object loaded successfully.")
-
-
-# %%
-
 ax = plt.axes(projection='3d')
 
 # Loop through your list of walls
@@ -78,15 +54,4 @@ plt.show()
 
 # %%
 
-points = np.array([
-            [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
-            [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
-            [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]],
-             ])
 
-energy = np.array([20,10,0])
-
-sp.plot.patches(points,energy
-       )
-
-# %%
