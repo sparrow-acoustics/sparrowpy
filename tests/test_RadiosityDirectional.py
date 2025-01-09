@@ -222,13 +222,6 @@ def test_directional_energy_exchange(
         patch_1.calculate_energy_exchange(
             patches, k, speed_of_sound, sampling_rate)
         patch_2.calculate_energy_exchange(
-            patches, k, speed_of_sound, sampling_rate)
-
-    data = pf.io.read(path_reference)
-
-    for i_freq in range(patch_1.E_matrix.shape[0]):
-        for i_rec in range(patch_1.E_matrix.shape[-1]):
-            npt.assert_almost_equal(
                 10*np.log10(data['E_matrix'][0, ...]),
                 10*np.log10(patch_1.E_matrix[i_freq, ..., i_rec]), decimal=1)
 

@@ -15,6 +15,7 @@ lint.select = [
     "W",
     "D",
 ]
+# lint.preview = true
 
 # Ignore missing docstrings in tests
 [tool.ruff.lint.per-file-ignores]

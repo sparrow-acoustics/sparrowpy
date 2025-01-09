@@ -23,7 +23,7 @@ def brdf_s_0(tmp_path_factory):
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
     sp.brdf.create_from_scattering(
-        filename, coords, coords, pf.FrequencyData(0, [100]))
+        coords, coords, pf.FrequencyData(0, [100]), file_path=filename)
     return filename
 
 
@@ -45,7 +45,7 @@ def brdf_s_1(tmp_path_factory):
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
     sp.brdf.create_from_scattering(
-        filename, coords, coords, pf.FrequencyData(1, [100]))
+        coords, coords, pf.FrequencyData(1, [100]), file_path=filename)
     return filename
 
 
