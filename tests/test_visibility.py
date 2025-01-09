@@ -72,7 +72,7 @@ def test_basic_visibility(point, origin, plpt, pln):
     "./tests/test_data/cube_blocked.blend",
     ])
 def test_vis_matrix_assembly(model):
-
+    """Check if visibility matrices are correctly assembled."""
     m1,m2 = bh.read_geometry_file(model)
 
     patches_points = np.empty((len(m1["conn"]),len(m1["conn"][0]),3))

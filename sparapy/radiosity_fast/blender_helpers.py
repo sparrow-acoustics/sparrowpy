@@ -15,7 +15,7 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def read_geometry_file(blend_file: Path):
+def read_geometry_file(blend_file: Path, angular_tolerance=3.):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -30,6 +30,10 @@ def read_geometry_file(blend_file: Path):
     blend_file: Path
         path to blender file describing the
         scene geometry and setup
+
+    angular_tolerance: float
+        maximum angle in degree by which two patches are considered coplanar
+        determines surfaces in simplified mesh
 
     Returns
     -------
@@ -76,7 +80,7 @@ def read_geometry_file(blend_file: Path):
 
     # dissolve coplanar faces for visibility check
     surfs = out_mesh.copy()
-    bmesh.ops.dissolve_limit(surfs, angle_limit=5*np.pi/180,
+    bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
                              verts=surfs.verts, edges=surfs.edges)
 
     finemesh = generate_connectivity(out_mesh)
