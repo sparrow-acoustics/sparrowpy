@@ -184,49 +184,6 @@ def test_init_energy_exchange_directional_omni(
 
 
 @pytest.mark.parametrize('perpendicular_walls', [
-    [0, 2], [2, 0]
-    ])
-@pytest.mark.parametrize('patch_size', [
-    0.5,
-    1
-    ])
-def test_directional_energy_exchange(
-        sample_walls, perpendicular_walls, patch_size):
-    """Test vs references for energy_exchange."""
-    max_order_k=3
-    ir_length_s=5
-    sampling_rate = 1000
-    speed_of_sound = 346.18
-    wall_source = sample_walls[perpendicular_walls[0]]
-    wall_receiver = sample_walls[perpendicular_walls[1]]
-    path_reference = os.path.join(
-        os.path.dirname(__file__), 'test_data',
-        f'reference_energy_exchange_size{patch_size}.far')
-    path_sofa = os.path.join(
-        os.path.dirname(__file__), 'test_data', 'ihta.E_sec_2.sofa')
-    patch_1 = radiosity.PatchesDirectional.from_sofa(
-        wall_source, patch_size, [1], 0, path_sofa)
-    patch_1.directivity_data.freq = np.ones_like(patch_1.directivity_data.freq)
-    patch_2 = radiosity.PatchesDirectional.from_sofa(
-        wall_receiver, patch_size, [0], 1, path_sofa)
-    patch_2.directivity_data.freq = np.ones_like(patch_2.directivity_data.freq)
-    source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
-    patches = [patch_1, patch_2]
-    patch_1.calculate_form_factor(patches)
-    patch_1.init_energy_exchange(
-        max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
-    patch_2.calculate_form_factor(patches)
-    patch_2.init_energy_exchange(
-        max_order_k, ir_length_s, source, sampling_rate, speed_of_sound)
-    for k in range(1, max_order_k+1):
-        patch_1.calculate_energy_exchange(
-            patches, k, speed_of_sound, sampling_rate)
-        patch_2.calculate_energy_exchange(
-                10*np.log10(data['E_matrix'][0, ...]),
-                10*np.log10(patch_1.E_matrix[i_freq, ..., i_rec]), decimal=1)
-
-
-@pytest.mark.parametrize('perpendicular_walls', [
     [0, 2],
     [0, 4], [2, 0], [2, 4], [4, 0], [4, 2],
     [1, 2], [1, 3], [1, 4], [1, 5],
