@@ -316,3 +316,14 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
         y_idx = 2
 
     return patch_nums[x_idx]*patch_nums[y_idx]
+
+@numba.njit()
+def calculate_normals(points: np.ndarray):
+
+    normals = np.empty((points.shape[0],3))
+
+    for i in numba.prange(points.shape[0]):
+        normals[i]=np.cross(points[i][1]-points[i][0],points[i][2]-points[i][0])
+        normals[i]/=np.linalg.norm(normals[i])
+
+    return normals
