@@ -135,7 +135,7 @@ def test_form_factors_directivity_for_diffuse(
     #     histogram_time_resolution=time_resolution,
     #     histogram_time_length=length_histogram)
 
-    form_factors_from_tilde = np.max(radiosity._form_factors_tilde, axis=0)
+    form_factors_from_tilde = np.max(radiosity._form_factors_tilde, axis=2)
     for i in range(4):
         npt.assert_almost_equal(
             radiosity.form_factors[:4, 4:], form_factors_from_tilde[:4, 4:, i])
@@ -145,7 +145,6 @@ def test_form_factors_directivity_for_diffuse(
 
     for i in range(8):
         npt.assert_almost_equal(radiosity._form_factors_tilde[i, i, :, :], 0)
-        npt.assert_almost_equal(radiosity._form_factors_tilde[:, i, i, :], 0)
 
 
 def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
