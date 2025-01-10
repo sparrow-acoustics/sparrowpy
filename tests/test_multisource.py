@@ -160,7 +160,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
     [[2.,-2.,0], [-1, 0, 0], [0, 0, 1]],
     [[2.,0.,-2.], [-1, 0, 0], [0, 0, 1]],
     ])
-def test_reciprocity_s2p_p2r(src,rec,method="universal"):
+def test_reciprocity_s2p_p2r(src,rec,method="kang"):
     """Check if radiosity implementation has source-receiver reciprocity."""
     wall = [sp.geometry.Polygon(
             [[0, -1, -1], [0, -1, 1],
@@ -209,8 +209,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
 
             e_r = sp.radiosity_fast.receiver_energy._kang(
                                                         patch_receiver_distance=np.array([(rec_.position-wall[0].center)]),
-                                                        patches_normal=np.array([wall[0].normal]),
-                                                        n_bins=1
+                                                        patches_normal=np.array([wall[0].normal])
                                                         )
 
         e = e_s*e_r
