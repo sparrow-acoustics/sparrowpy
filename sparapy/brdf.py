@@ -6,11 +6,11 @@ import sparapy
 
 
 def create_from_scattering(
-        file_path,
         source_directions,
         receiver_directions,
         scattering_coefficient,
         absorption_coefficient=None,
+        file_path=None,
         ):
     r"""Create the BRDF from a scattering coefficient and write to SOFA file.
 
@@ -38,8 +38,6 @@ def create_from_scattering(
 
     Parameters
     ----------
-    file_path : string, path
-        path where sofa file should be saved
     source_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
         source directions for the BRDF, should contain weights.
         cshape of data should be (n_sources)
@@ -53,6 +51,13 @@ def create_from_scattering(
         frequency dependent absorption coefficient data, by default
         no absorption.
         cshape of data should be (1, ).
+    file_path : string, path
+        path where sofa file should be saved, by default no file is saved.
+
+    Returns
+    -------
+    brdf : :py:class:`~pyfar.classes.audio.FrequencyData`
+        BRDF data.
 
     References
     ----------
@@ -65,12 +70,11 @@ def create_from_scattering(
     >>> import pyfar as pf
     >>> import sparapy as sp
     >>> import numpy as np
-    >>> file_path = 'brdf.sofa'
     >>> scattering_coefficient = pf.FrequencyData(0.5, [100])
     >>> directions = pf.samplings.sph_gaussian(sh_order=3)
     >>> directions = directions[directions.z > 0]
-    >>> sp.brdf.create_from_scattering(
-    ...     file_path, directions, directions,
+    >>> brdf = sp.brdf.create_from_scattering(
+    ...     directions, directions,
     ...     scattering_coefficient)
 
     """
@@ -91,7 +95,7 @@ def create_from_scattering(
             np.zeros_like(scattering_coefficient.frequencies),
             scattering_coefficient.frequencies)
 
-    data_out = np.zeros((
+    brdf = np.zeros((
         source_directions.csize, receiver_directions.csize,
         scattering_coefficient.n_bins))
 
@@ -105,28 +109,30 @@ def create_from_scattering(
             receiver_directions.colatitude) * receiver_weights)
     cos_factor = cos_factor[..., np.newaxis]
     scattering_factor = 1 - scattering_flattened[np.newaxis, ...]
-    data_out[:, :, :] += (
+    brdf[:, :, :] += (
         scattering_flattened) / np.pi
     i_sources = np.arange(source_directions.csize)
-    data_out[i_sources, i_receiver, :] += scattering_factor / cos_factor
+    brdf[i_sources, i_receiver, :] += scattering_factor / cos_factor
 
-    data_out *= (1 - absorption_coefficient.freq.flatten())
-    sofa = _create_sofa(
-        pf.FrequencyData(data_out, scattering_coefficient.frequencies),
-        source_directions,
-        receiver_directions,
-        history='constructed brdf based on scattering coefficients',
-    )
+    brdf *= (1 - absorption_coefficient.freq.flatten())
+    if file_path is not None:
+        sofa = _create_sofa(
+            pf.FrequencyData(brdf, scattering_coefficient.frequencies),
+            source_directions,
+            receiver_directions,
+            history='constructed brdf based on scattering coefficients',
+        )
 
-    sf.write_sofa(file_path, sofa)
+        sf.write_sofa(file_path, sofa)
+    return pf.FrequencyData(brdf, scattering_coefficient.frequencies)
 
 
 def create_from_directional_scattering(
-        file_path,
         source_directions,
         receiver_directions,
         directional_scattering,
         absorption_coefficient=None,
+        file_path=None,
         ):
     r"""Create the BRDF from the directional scattering and write to SOFA file.
 
@@ -151,8 +157,6 @@ def create_from_directional_scattering(
 
     Parameters
     ----------
-    file_path : string, path
-        path where sofa file should be saved
     source_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
         source directions for the BRDF, should contain weights.
         cshape of data should be (n_sources)
@@ -166,6 +170,8 @@ def create_from_directional_scattering(
         frequency dependent absorption coefficient data, by default
         no absorption.
         cshape of data should be (1, ).
+    file_path : string, path, optional
+        path where sofa file should be saved, by default no file is saved.
 
     References
     ----------
@@ -207,17 +213,19 @@ def create_from_directional_scattering(
             source_directions.colatitude)) * source_weights
     source_factor = source_factor[..., np.newaxis, np.newaxis]
 
-    data_out = directional_scattering.freq / receiver_factor
+    brdf = directional_scattering.freq / receiver_factor
 
-    data_out *= (1 - absorption_coefficient.freq.flatten())
-    sofa = _create_sofa(
-        pf.FrequencyData(data_out, directional_scattering.frequencies),
-        source_directions,
-        receiver_directions,
-        history='constructed brdf based on directional scattering',
-    )
+    brdf *= (1 - absorption_coefficient.freq.flatten())
+    if file_path is not None:
+        sofa = _create_sofa(
+            pf.FrequencyData(brdf, directional_scattering.frequencies),
+            source_directions,
+            receiver_directions,
+            history='constructed brdf based on directional scattering',
+        )
 
-    sf.write_sofa(file_path, sofa)
+        sf.write_sofa(file_path, sofa)
+    return pf.FrequencyData(brdf, absorption_coefficient.frequencies)
 
 
 def _create_sofa(
