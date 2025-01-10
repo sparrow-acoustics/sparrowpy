@@ -3,7 +3,7 @@ import pytest
 import sparapy.radiosity_fast.visibility_helpers as vh
 import numpy as np
 import sparapy.radiosity_fast.geometry as geom
-import sparapy.radiosity_fast.blender_helpers as bh
+import sparapy.utils.blender as bh
 import matplotlib.pyplot as plt
 
 @pytest.mark.parametrize("origin", [np.array([0.,1.,3.])])
