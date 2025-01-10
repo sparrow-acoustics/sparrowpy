@@ -4,6 +4,7 @@ import pyfar as pf
 from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_recursive as ee_recursive
 from . import energy_exchange_order as ee_order
+from . import blender_helpers  as bh
 
 
 class DRadiosityFast():
@@ -94,6 +95,22 @@ class DRadiosityFast():
         return cls(
             walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
+            patch_to_wall_ids)
+
+    @classmethod
+    def from_blenderfile(cls, blender_file):
+        """Create a Radiosity object from a blender file.
+
+        """
+        fine_mesh,rough_mesh = bh.read_geometry_file(blend_file=blender_file)
+
+        patches_points = fine_mesh["verts"][fine_mesh["conn"]]
+        patches_normal = geometry.calculate_normals(patches_points)
+        n_patches = len(fine_mesh["conn"])
+        # create radiosity object
+        return cls(
+            walls_points, walls_normal, walls_up_vector,
+            patches_points, patches_normal, n_patches,
             patch_to_wall_ids)
 
     def bake_geometry(self, ff_method='kang', algorithm='recursive'):
