@@ -127,7 +127,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
         radi.init_source_energy(src_,ff_method=method,algorithm=algo)
 
         radi.calculate_energy_exchange(
-                            receiver_pos=rec_, speed_of_sound=speed_of_sound,
+                            speed_of_sound=speed_of_sound,
                             histogram_time_resolution=1/sampling_rate,
                             histogram_length=ir_length_s, algorithm=algo,
                             max_depth=max_order_k
@@ -260,7 +260,7 @@ def run_basicscene(scene, src_pos, freqs, algorithm, method):
     radi.init_source_energy(src_pos,ff_method=method,algorithm=algorithm)
 
     radi.calculate_energy_exchange(
-            receiver_pos=[.5,.5,.5], speed_of_sound=speed_of_sound,
+            speed_of_sound=speed_of_sound,
             histogram_time_resolution=1/sampling_rate,
             histogram_length=ir_length_s, algorithm=algorithm,
             max_depth=max_order_k )
