@@ -160,7 +160,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
     [[2.,-2.,0], [-1, 0, 0], [0, 0, 1]],
     [[2.,0.,-2.], [-1, 0, 0], [0, 0, 1]],
     ])
-def test_reciprocity_s2p_p2r(src,rec,method="kang"):
+def test_reciprocity_s2p_p2r(src,rec,method="universal"):
     """Check if radiosity implementation has source-receiver reciprocity."""
     wall = [sp.geometry.Polygon(
             [[0, -1, -1], [0, -1, 1],
