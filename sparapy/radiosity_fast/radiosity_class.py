@@ -195,21 +195,14 @@ class DRadiosityFast():
             raise NotImplementedError()
 
     def calculate_energy_exchange(
-            self, receiver_pos, speed_of_sound,
+            self, speed_of_sound,
             histogram_time_resolution,
             histogram_length, algorithm='order',
-            threshold=1e-6, max_depth=-1, recalculate=False):
+            max_depth=-1, recalculate=False):
         """Calculate the energy exchange between patches."""
         n_samples = int(histogram_length/histogram_time_resolution)
-        receiver_pos = np.array(receiver_pos)
-        if receiver_pos.ndim==1:
-            receiver_pos=receiver_pos[np.newaxis,:]
+        
         patches_center = self.patches_center
-        patch_receiver_distance = np.empty([receiver_pos.shape[0],
-                                            self.n_patches,patches_center.shape[-1]])
-        for i in range(receiver_pos.shape[0]):
-            patch_receiver_distance[i] = patches_center - receiver_pos[i]
-
         distance_0 = self.distance_0
         n_patches = self.n_patches
         distance_i_j = np.empty((n_patches, n_patches))
@@ -240,8 +233,7 @@ class DRadiosityFast():
         n_patches = self.n_patches
         n_bins = self.n_bins
 
-        if receiver_pos.ndim==1:
-            receiver_pos=receiver_pos[np.newaxis,:]
+        receiver_pos = np.atleast_2d(receiver_pos)
 
         n_receivers = receiver_pos.shape[0]
 
