@@ -14,6 +14,7 @@ from .radiosity_fast.radiosity_class import DRadiosityFast
 from . import testing
 from . import radiosity_fast
 from . import brdf
+from . import utils
 
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     'radiosity_fast',
     'testing',
     'brdf',
+    'utils',
 ]
