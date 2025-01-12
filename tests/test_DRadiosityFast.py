@@ -37,7 +37,8 @@ def test_check_visibility_wrapper(sample_walls):
     radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
     visibility_matrix = sp.radiosity_fast.geometry.check_visibility(
-        radiosity.patches_center, radiosity.patches_normal)
+        radiosity.patches_center, radiosity.patches_normal,
+        radiosity.patches_points)
     npt.assert_almost_equal(radiosity._visibility_matrix, visibility_matrix)
 
 
@@ -47,7 +48,6 @@ def test_compute_form_factors(sample_walls):
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
     radiosity.bake_geometry(ff_method='universal')
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
-    
 
 
 @pytest.mark.parametrize('walls', [
