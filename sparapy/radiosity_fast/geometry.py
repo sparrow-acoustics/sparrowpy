@@ -1,6 +1,7 @@
 """Geometry functions for the radiosity fast solver."""
 import numba
 import numpy as np
+import sparapy.radiosity_fast.visibility_helpers as vh
 
 
 @numba.njit()
@@ -127,15 +128,18 @@ def get_scattering_data_source(
 
 @numba.njit(parallel=True)
 def check_visibility(
-        patches_center:np.ndarray, patches_normal:np.ndarray) -> np.ndarray:
+        patches_center:np.ndarray,
+        surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
     """Check the visibility between patches.
 
     Parameters
     ----------
     patches_center : np.ndarray
         center points of all patches of shape (n_patches, 3)
-    patches_normal : np.ndarray
+    surf_normal : np.ndarray
         normal vectors of all patches of shape (n_patches, 3)
+    surf_points : np.ndarray
+        boundary points of possible blocking surfaces (n_surfaces,)
 
     Returns
     -------
@@ -152,21 +156,24 @@ def check_visibility(
         for i_receiver in range(n_patches):
             if i_source < i_receiver:
                 indexes.append((i_source, i_receiver))
+                visibility_matrix[i_source,i_receiver]=True
     indexes = np.array(indexes)
     for i in numba.prange(indexes.shape[0]):
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
-        patches_parallel = np.abs(np.dot(
-            patches_normal[i_source], patches_normal[i_receiver]) -1) < 1e-5
-        same_dim = np.sum(
-            patches_normal[i_source] * patches_center[i_source]) == np.sum(
-                patches_normal[i_receiver] * patches_center[i_receiver])
-        if i_source == i_receiver:
-            visibility_matrix[i_source, i_receiver] = False
-        elif patches_parallel and same_dim:
-            visibility_matrix[i_source, i_receiver] = False
-        else:
-            visibility_matrix[i_source, i_receiver] = True
+
+        surfid=0
+        while (visibility_matrix[i_source, i_receiver] and
+                                surfid!=len(surf_normal)):
+
+            visibility_matrix[i_source, i_receiver]=vh.basic_visibility(
+                                                            patches_center[i_source],
+                                                            patches_center[i_receiver],
+                                                            surf_points[surfid],
+                                                            surf_normal[surfid])
+
+            surfid+=1
+
     return visibility_matrix
 
 @numba.njit()
@@ -228,11 +235,11 @@ def _calculate_area(points):
     for i in numba.prange(points.shape[0]):
         for tri in range(points.shape[1]-2):
             area[i] +=  .5 * np.linalg.norm(
-                                np.cross(
-                                    points[i, tri+1,:] - points[i, 0,:],
-                                    points[i, tri+2,:]-points[i, 0,:]
-                                    )
-                                )
+                np.cross(
+                    points[i, tri+1,:] - points[i, 0,:],
+                    points[i, tri+2,:]-points[i, 0,:]
+                    )
+                )
 
     return area
 

@@ -3,6 +3,7 @@ import numpy as np
 import pyfar as pf
 from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_order as ee_order
+from . import blender_helpers
 
 
 class DRadiosityFast():
@@ -107,7 +108,7 @@ class DRadiosityFast():
         """
         # Check the visibility between patches.
         self._visibility_matrix = geometry.check_visibility(
-            self.patches_center, self.patches_normal)
+            self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
         visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
