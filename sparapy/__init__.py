@@ -13,6 +13,7 @@ from . import sound_object
 from .radiosity_fast.radiosity_class import DRadiosityFast
 from . import testing
 from . import radiosity_fast
+from . import brdf
 
 
 __all__ = [
@@ -22,5 +23,5 @@ __all__ = [
     'DRadiosityFast',
     'radiosity_fast',
     'testing',
+    'brdf',
 ]
-

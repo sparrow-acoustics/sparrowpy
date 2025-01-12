@@ -10,3 +10,4 @@ according to their modules.
    modules/sparapy.radiosity
    modules/sparapy.geometry
    modules/sparapy.sound_object
+   modules/sparapy.brdf
