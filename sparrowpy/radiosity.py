@@ -4,8 +4,8 @@ import numpy as np
 import pyfar as pf
 import sofar as sf
 from tqdm import tqdm
-from sparapy.form_factor import calc_form_factor as universal_ffactor
-from sparapy.geometry import Polygon, SoundSource
+from sparrowpy.form_factor import calc_form_factor as universal_ffactor
+from sparrowpy.geometry import Polygon, SoundSource
 
 
 class Patches(Polygon):

@@ -5,7 +5,7 @@ import pytest
 import os
 import pyfar as pf
 
-import sparapy as sp
+import sparrowpy as sp
 import time
 import matplotlib.pyplot as plt
 

@@ -1,5 +1,5 @@
 import numpy as np
-from sparapy import is_obj as ob
+from sparrowpy import is_obj as ob
 
 
 def get_walls_hesse(RoomX,RoomY,RoomZ):

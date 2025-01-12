@@ -1,8 +1,8 @@
-"""Test sparapy package."""
+"""Test sparrowpy package."""
 
-def test_import_sparapy():
-    """Test importing sparapy."""
+def test_import_sparrowpy():
+    """Test importing sparrowpy."""
     try:
-        import sparapy           # noqa
+        import sparrowpy           # noqa
     except ImportError:
         assert False

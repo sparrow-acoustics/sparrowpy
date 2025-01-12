@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Top-level package for sparapy."""
+"""Top-level package for sparrowpy."""
 
 __author__ = """The pyfar developers"""
 __email__ = ''

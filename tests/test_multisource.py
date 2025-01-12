@@ -3,7 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import pyfar as pf
 import pytest
-import sparapy as sp
+import sparrowpy as sp
 
 create_reference_files = False
 

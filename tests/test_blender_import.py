@@ -1,7 +1,7 @@
 import numpy.testing as npt
 import pytest
 
-from sparapy.radiosity_fast import blender_helpers as bh
+from sparrowpy.radiosity_fast import blender_helpers as bh
 
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube.blend","./tests/test_data/cube.stl"])

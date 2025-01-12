@@ -2,7 +2,7 @@
 import numba
 import numpy as np
 from . import geometry
-from sparapy.radiosity_fast.universal_ff.univ_form_factor import (
+from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import (
                                                             calc_form_factor )
 
 

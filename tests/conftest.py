@@ -1,5 +1,5 @@
 """Fixtures for the tests in the tests/ directory."""
-import sparapy as sp
+import sparrowpy as sp
 import pyfar as pf
 import numpy as np
 import pytest

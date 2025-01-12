@@ -1,7 +1,7 @@
 """Functions for computation of visibility matrix/factors."""
 import numpy as np
 import numba
-from sparapy.radiosity_fast.universal_ff.ffhelpers import rotation_matrix,inner
+from sparrowpy.radiosity_fast.universal_ff.ffhelpers import rotation_matrix,inner
 
 @numba.njit()
 def basic_visibility(vis_point: np.ndarray,
