@@ -66,3 +66,16 @@ def sofa_data_diffuse():
         1, (100, 1000))[0]
     data = np.ones((sources.csize, receivers.csize, frequencies.size))
     return (pf.FrequencyData(data, frequencies), sources, receivers)
+
+@pytest.fixture()
+def basicscene():
+    scene=dict()
+    scene["patch_size"] = .2
+    scene["ir_length_s"] = 1.
+    scene["sampling_rate"] = 100
+    scene["max_order_k"] = 10
+    scene["speed_of_sound"] = 343
+    scene["absorption"] = 0.1
+    scene["walls"] = sp.testing.shoebox_room_stub(1, 1, 1)
+
+    return scene
