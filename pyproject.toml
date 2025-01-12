@@ -24,16 +24,15 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    
 ]
 dependencies = [
     'numpy',
     'scipy',
     'matplotlib',
     'pyfar',
-    'numba',  %can be made optional later on
-    'bpy',  %can be made optional later on
-    'tqdm',  %can be made optional later on
+    'numba',  # can be made optional later on
+    'bpy',  # can be made optional later on
+    'tqdm',  # can be made optional later on
     'sofar',
 ]
 
