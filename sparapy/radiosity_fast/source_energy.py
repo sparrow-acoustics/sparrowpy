@@ -143,6 +143,9 @@ def _init_energy_universal(
         
         distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
 
-        energy[j,:] = np.exp(-air_attenuation*distance_out[j]) * patch2point(point=source_pos, patch_points=receiver_pts, mode="source")
+        if air_attenuation is not None:
+            energy[j,:] = np.exp(-air_attenuation*distance_out[j]) * patch2point(point=source_pos, patch_points=receiver_pts, mode="source")
+        else:
+            energy[j,:] = patch2point(point=source_pos, patch_points=receiver_pts, mode="source")
 
     return (energy, distance_out)

@@ -134,8 +134,8 @@ def energy_exchange(
 
 @numba.njit()
 def _collect_receiver_energy(
-        ir, E_matrix_total, patch_receiver_distance, patch_receiver_energy,
-        speed_of_sound, histogram_time_resolution, receiver_idx):
+        E_matrix_total, patch_receiver_distance,
+        speed_of_sound, histogram_time_resolution, air_attenuation):
     """Collect the energy at the receiver.
 
     Parameters
@@ -163,12 +163,16 @@ def _collect_receiver_energy(
         impulse response of shape (n_samples, n_bins)
 
     """
-    n_patches = patch_receiver_energy.shape[0]
-    patch_receiver_energy = patch_receiver_energy[..., np.newaxis]
-    for i in range(n_patches):
+    E_mat_out = np.zeros_like(E_matrix_total)
+    n_patches = E_matrix_total.shape[0]
+    n_bins = E_matrix_total.shape[1]
+
+    for i in numba.prange(n_patches):
         n_delay_samples = int(np.ceil(
             patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
-        ir += np.roll(
-            E_matrix_total[i, receiver_idx[i]] * patch_receiver_energy[i],
-            n_delay_samples)
-    return ir
+        for j in range(n_bins):
+            E_mat_out[i,j] = np.roll(
+                E_matrix_total[i,j]*np.exp(-air_attenuation[j]*patch_receiver_distance[i]),
+                n_delay_samples)
+        
+    return E_mat_out
