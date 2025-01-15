@@ -295,13 +295,15 @@ class DRadiosityFast():
             assert receiver_idx.shape[0] == self.n_patches
             assert len(receiver_idx.shape) == 1
 
+            # E_matrix_total shape (
+            #     2, n_patches, n_directions, n_bins, n_samples)
             for k in range(n_patches):
                 E_matrix[k,:]= (self.E_matrix_total[k, receiver_idx[k],:]
                                                     * patch_receiver_energy[k])
 
             speed_of_sound = self.speed_of_sound
             histogram_time_resolution = self._histogram_time_resolution
-            histogram_out[i] += ee_order._collect_receiver_energy(
+            histogram_out[i] = ee_order._collect_receiver_energy(
                 E_matrix,
                 np.linalg.norm(patches_receiver_difference, axis=1),
                 speed_of_sound,

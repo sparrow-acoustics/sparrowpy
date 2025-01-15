@@ -60,7 +60,7 @@ def _add_directional(
     return energy_0_directivity
 
 
-@numba.njit()
+# @numba.njit()
 def energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
         form_factors_tilde,
@@ -163,12 +163,13 @@ def _collect_receiver_energy(
     n_samples = E_matrix_total.shape[-1]
     ir = np.zeros((n_bins, n_samples))
 
-    for i in numba.prange(n_patches):
+    for i_patch in numba.prange(1):
         n_delay_samples = int(np.ceil(
-            patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
-        for j in range(n_bins):
-            ir[j] += np.roll(
-                E_matrix_total[i,j]*np.exp(-air_attenuation[j]*patch_receiver_distance[i]),
+            patch_receiver_distance[i_patch]/speed_of_sound/histogram_time_resolution))
+        for i_bin in range(n_bins):
+            ir[i_bin] += np.roll(
+                E_matrix_total[i_patch,i_bin]*np.exp(
+                    -air_attenuation[i_bin]*patch_receiver_distance[i_patch]),
                 n_delay_samples)
 
     return ir
