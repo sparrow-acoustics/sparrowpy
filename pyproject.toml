@@ -30,6 +30,7 @@ dependencies = [
     'matplotlib',
     'pyfar',
     'numba',  # can be made optional later on
+    'bpy',  # can be made optional later on
     'tqdm',  # can be made optional later on
     'sofar',
 ]
