@@ -132,7 +132,7 @@ def energy_exchange(
     return E_matrix_total
 
 
-@numba.njit()
+# @numba.njit()
 def _collect_receiver_energy(
         E_matrix_total, patch_receiver_distance,
         speed_of_sound, histogram_time_resolution, air_attenuation):
@@ -140,22 +140,17 @@ def _collect_receiver_energy(
 
     Parameters
     ----------
-    ir : np.ndarray
-        impulse response of shape (n_samples, n_bins)
     E_matrix_total : np.ndarray
         energy of all patches of shape
-        (n_patches, n_directions, n_bins, n_samples)
+        (n_patches, n_bins, n_samples)
     patch_receiver_distance : np.ndarray
         distance from the patch to the receiver of shape (n_patches)
-    patch_receiver_energy : np.ndarray
-        energy of the patch at the receiver of shape (n_patches, n_bins)
     speed_of_sound : float
         speed of sound in m/s.
     histogram_time_resolution : float
         time resolution of the histogram in s.
-    receiver_idx : np.ndarray
-        indexes of the direction from the patch towards the receiver,
-        of shape (n_patches)
+    air_attenuation : np.ndarray
+        air attenuation of shape (n_bins)
 
     Returns
     -------
@@ -163,16 +158,17 @@ def _collect_receiver_energy(
         impulse response of shape (n_samples, n_bins)
 
     """
-    E_mat_out = np.zeros_like(E_matrix_total)
     n_patches = E_matrix_total.shape[0]
     n_bins = E_matrix_total.shape[1]
+    n_samples = E_matrix_total.shape[-1]
+    ir = np.zeros((n_bins, n_samples))
 
     for i in numba.prange(n_patches):
         n_delay_samples = int(np.ceil(
             patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
         for j in range(n_bins):
-            E_mat_out[i,j] = np.roll(
+            ir[j] += np.roll(
                 E_matrix_total[i,j]*np.exp(-air_attenuation[j]*patch_receiver_distance[i]),
                 n_delay_samples)
-        
-    return E_mat_out
+
+    return ir

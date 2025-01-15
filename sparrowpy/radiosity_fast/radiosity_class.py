@@ -274,7 +274,7 @@ class DRadiosityFast():
 
         E_matrix = np.empty((n_patches, n_bins, self.E_matrix_total.shape[-1]))
         histogram_out = np.empty(
-            (n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]) )
+            (n_receivers, n_bins, self.E_matrix_total.shape[-1]) )
 
         for i in range(n_receivers):
             patches_receiver_difference = patches_center - receiver_pos[i]
@@ -296,12 +296,12 @@ class DRadiosityFast():
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[k,:]= (self.E_matrix_total[k,receiver_idx[k],:]
+                E_matrix[k,:]= (self.E_matrix_total[k, receiver_idx[k],:]
                                                     * patch_receiver_energy[k])
 
             speed_of_sound = self.speed_of_sound
             histogram_time_resolution = self._histogram_time_resolution
-            histogram_out[i] = ee_order._collect_receiver_energy(
+            histogram_out[i] += ee_order._collect_receiver_energy(
                 E_matrix,
                 np.linalg.norm(patches_receiver_difference, axis=1),
                 speed_of_sound,
