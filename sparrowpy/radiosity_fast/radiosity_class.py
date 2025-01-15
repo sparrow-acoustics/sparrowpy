@@ -199,9 +199,27 @@ class DRadiosityFast():
             histogram_time_resolution,
             histogram_length, algorithm='order',
             max_depth=-1, recalculate=False):
-        """Calculate the energy exchange between patches."""
+        """Calculate the energy exchange between patches.
+
+        Parameters
+        ----------
+        speed_of_sound : float
+            speed of sound in m/s.
+        histogram_time_resolution : float
+            time resolution of the histogram in s.
+        histogram_length : float
+            length of the histogram in s.
+        algorithm : str, optional
+            algorithm to calculate the energy exchange, by default 'order'
+        max_depth : int, optional
+            maximal depth of the energy exchange, by default -1
+        recalculate : bool, optional
+            recalculate the energy exchange, by default False
+        """
+        self._speed_of_sound = speed_of_sound
+        self._histogram_time_resolution = histogram_time_resolution
         n_samples = int(histogram_length/histogram_time_resolution)
-        
+
         patches_center = self.patches_center
         distance_0 = self.distance_0
         n_patches = self.n_patches
@@ -224,10 +242,25 @@ class DRadiosityFast():
         else:
             raise NotImplementedError()
 
-    def collect_receiver_energy(self, receiver_pos,
-            speed_of_sound, histogram_time_resolution,
-            method="universal", propagation_fx=False):
-        """Collect patch histograms as detected by receiver."""
+    def collect_receiver_energy(
+            self, receiver_pos,
+            method="universal"):
+        """
+        Collect patch histograms as detected by receivers.
+
+        Parameters
+        ----------
+        receiver_pos : np.ndarray
+            receiver positions of shape (n_receivers, 3)
+        method : str, optional
+            method to calculate the receiver energy, by default "universal"
+
+        Returns
+        -------
+        histogram_out : np.ndarray
+            histogram of shape (n_receivers, n_bins, n_time_samples)
+
+        """
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
         n_patches = self.n_patches
@@ -238,15 +271,13 @@ class DRadiosityFast():
         n_receivers = receiver_pos.shape[0]
 
         patches_center = self.patches_center
-        patches_receiver_distance = np.empty([n_receivers,
-                                            self.n_patches,patches_center.shape[-1]])
 
         E_matrix = np.empty((n_patches, n_bins, self.E_matrix_total.shape[-1]))
         histogram_out = np.empty(
             (n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]) )
 
         for i in range(n_receivers):
-            patches_receiver_distance = patches_center - receiver_pos[i]
+            patches_receiver_difference = patches_center - receiver_pos[i]
 
             if method == "universal":
                 # geometrical weighting
@@ -257,7 +288,6 @@ class DRadiosityFast():
 
             # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
-                # scattering_index = np.array(self._scattering_index)
             receiver_idx = geometry.get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
                 self._patch_to_wall_ids)
@@ -269,16 +299,14 @@ class DRadiosityFast():
                 E_matrix[k,:]= (self.E_matrix_total[k,receiver_idx[k],:]
                                                     * patch_receiver_energy[k])
 
-            if propagation_fx:
-                # accumulate the patch energies towards the receiver
-                # with atmospheric effects (delay, atmospheric attenuation)
-                histogram_out[i] = ee_order._collect_receiver_energy(
-                        E_matrix,
-                        np.linalg.norm(patches_receiver_distance, axis=1),
-                                    speed_of_sound, histogram_time_resolution,
-                                    air_attenuation=air_attenuation)
-            else:
-                histogram_out[i] = E_matrix
+            speed_of_sound = self.speed_of_sound
+            histogram_time_resolution = self._histogram_time_resolution
+            histogram_out[i] = ee_order._collect_receiver_energy(
+                E_matrix,
+                np.linalg.norm(patches_receiver_difference, axis=1),
+                speed_of_sound,
+                histogram_time_resolution,
+                air_attenuation=air_attenuation)
 
         return histogram_out
 

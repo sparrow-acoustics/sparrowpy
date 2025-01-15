@@ -51,7 +51,7 @@ def _add_directional(
         wall_id_i = int(patch_to_wall_ids[i])
         scattering_factor = geometry.get_scattering_data_source(
             source_position, patches_center[i],
-            sources, wall_id_i, scattering, scattering_index)
+            sources, wall_id_i, scattering, scattering_index) * 4 * np.pi
 
         absorption_factor = 1-absorption[absorption_index[wall_id_i], :]
         energy_0_directivity[i, :, :] = energy_0[i] \

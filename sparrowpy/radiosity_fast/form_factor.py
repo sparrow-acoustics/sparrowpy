@@ -281,7 +281,7 @@ def _form_factors_with_directivity_dim(
                 scattering_factor = geometry.get_scattering_data_source(
                     patches_center[i], patches_center[j],
                     sources, wall_id_i,
-                    scattering, scattering_index)
+                    scattering, scattering_index) * 4 * np.pi
                 form_factors_tilde[i, j, :, :] = form_factors_tilde[
                     i, j, :, :] * scattering_factor
 
