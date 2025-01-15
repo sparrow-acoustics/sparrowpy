@@ -5,10 +5,10 @@ import numpy as np
 import numpy.testing as npt
 import pyfar as pf
 import pytest
-import sparapy as sp
-import sparapy.geometry as geo
-import sparapy.radiosity as radiosity
-from sparapy.sound_object import Receiver, SoundSource
+import sparrowpy as sp
+import sparrowpy.geometry as geo
+import sparrowpy.radiosity as radiosity
+from sparrowpy.sound_object import Receiver, SoundSource
 
 
 create_reference_files = False

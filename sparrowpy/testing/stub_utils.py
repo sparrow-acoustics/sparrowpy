@@ -1,5 +1,5 @@
 """Stub utilities for testing."""
-import sparapy as sp
+import sparrowpy as sp
 
 
 def shoebox_room_stub(length_x, length_y, length_z):

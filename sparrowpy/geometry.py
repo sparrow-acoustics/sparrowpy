@@ -3,7 +3,7 @@ import matplotlib.axes
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sparapy.sound_object import Receiver, SoundSource
+from sparrowpy.sound_object import Receiver, SoundSource
 
 
 class Polygon():
