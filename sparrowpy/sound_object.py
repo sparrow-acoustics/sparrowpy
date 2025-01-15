@@ -134,7 +134,6 @@ class SoundObject():
             ``matplotlib.pyplot.scatter()``.
 
         """
-        pf.plot.freq
         xyz = self.position
         ax.scatter(xyz[0], xyz[1], xyz[2], kwargs)
 

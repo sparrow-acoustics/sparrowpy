@@ -121,14 +121,17 @@ class Patches(Polygon):
         }
 
     @classmethod
-    def from_dict(cls, dict: dict):
+    def from_dict(cls, input_dict: dict):
         """Create an object from a dictionary. Used for read write."""
         return cls(
-            Polygon.from_dict(dict),
-            dict['max_size'], dict['other_wall_ids'], dict['wall_id'],
-            dict['scattering'], dict['absorption'],
-            dict['sound_attenuation_factor'],
-            E_matrix=dict['E_matrix'])
+            Polygon.from_dict(input_dict),
+            input_dict['max_size'],
+            input_dict['other_wall_ids'],
+            input_dict['wall_id'],
+            input_dict['scattering'],
+            input_dict['absorption'],
+            input_dict['sound_attenuation_factor'],
+            E_matrix=input_dict['E_matrix'])
 
     def plot(self, ax: mpl.axes.Axes = None, color=None):
         """Plot the patches."""
@@ -175,9 +178,6 @@ class Patches(Polygon):
             delay_seconds = distance/speed_of_sound
             delay_samples = int(delay_seconds*self.E_sampling_rate)
 
-            # array([0., 1., 0.]), array([ 0., -1.,  0.]),
-            # array([0., 0., 1.]), array([ 0.,  0., -1.]),
-            # array([1., 0., 0.]), array([-1.,  0.,  0.])]
             if np.abs(receiver_patch.normal[2]) > 0.99:
                 i = 2
                 indexes = [0, 1, 2]
@@ -197,12 +197,11 @@ class Patches(Polygon):
             dn = receiver_pos[indexes[2]]
             dd_l = receiver_patch.size[indexes[0]]
             dd_m = receiver_patch.size[indexes[1]]
-            dd_n = receiver_patch.size[indexes[2]]
             S_x = source_pos[indexes[0]]
             S_y = source_pos[indexes[1]]
             S_z = source_pos[indexes[2]]
             energy = _init_energy_exchange(
-                dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
+                dl, dm, dn, dd_l, dd_m, S_x, S_y, S_z,
                 source.sound_power, self.absorption, distance,
                 self.sound_attenuation_factor, self.n_bins)
             self.E_matrix[:, 0, i_receiver, delay_samples] += energy
@@ -266,7 +265,6 @@ class Patches(Polygon):
 
                         # add energy to energy matrix of self
                         self.E_matrix[i_frequency, k, i_receiver, :] += energy
-                        # energy[3]
                         #
 
     def calculate_form_factor(self, patches_list) -> None:
@@ -307,53 +305,39 @@ class Patches(Polygon):
                         receiver_center = receiver_patch.center
 
                         if np.abs(source_patch.normal[0]) > 1e-5:
-                            idx_source = set([2, 1])
+                            idx_source = {2, 1}
                             dl = source_center[2]
                             dm = source_center[1]
                         elif np.abs(source_patch.normal[1]) > 1e-5:
-                            idx_source = set([2, 0])
+                            idx_source = {2, 0}
                             dl = source_center[2]
                             dm = source_center[0]
                         elif np.abs(source_patch.normal[2]) > 1e-5:
-                            idx_source = set([0, 1])
+                            idx_source = {0, 1}
                             dl = source_center[1]
                             dm = source_center[0]
 
                         if np.abs(receiver_patch.normal[0]) > 1e-5:
-                            idx_receiver = set([2, 1])
+                            idx_receiver = {2, 1}
                             dl_prime = receiver_center[1]
                             dn_prime = receiver_center[2]
                         elif np.abs(receiver_patch.normal[1]) > 1e-5:
-                            idx_receiver = set([0, 2])
+                            idx_receiver = {0, 2}
                             dl_prime = receiver_center[0]
                             dn_prime = receiver_center[2]
                         elif np.abs(receiver_patch.normal[2]) > 1e-5:
-                            idx_receiver = set([0, 1])
+                            idx_receiver = {0, 1}
                             dl_prime = receiver_center[1]
                             dn_prime = receiver_center[0]
-                        idx_l = list(idx_receiver.intersection(idx_source))[0]
-                        idx_s = list(idx_source.difference(set([idx_l])))[0]
-                        idx_r = list(idx_receiver.difference(set([idx_l])))[0]
+                        idx_l = tuple(idx_receiver.intersection(idx_source))
+                        idx_s = tuple(idx_source.difference(set(idx_l)))
+                        idx_r = tuple(idx_receiver.difference(set(idx_l)))
                         dm = np.abs(
                             source_center[idx_s]-receiver_center[idx_s])
                         dl = source_center[idx_l]
                         dl_prime = receiver_center[idx_l]
                         dn_prime = np.abs(
                             source_center[idx_r]-receiver_center[idx_r])
-
-                        # if source_patch.center[2] == 0:
-                        #     # source is ground, receiver is wall --> UNSURE
-                        #     assert dl == source_patch.center[0]
-                        #     assert dm == source_patch.center[1]
-                        #     assert dl_prime == receiver_patch.center[0]
-                        #     assert dn_prime == receiver_patch.center[2]
-
-                        # else:
-                        #     # source is wall, receiver is ground
-                        #     assert dl == receiver_patch.center[0]
-                        #     assert dm == receiver_patch.center[1]
-                        #     assert dl_prime == source_patch.center[0]
-                        #     assert dn_prime == source_patch.center[2]
 
                         d = np.sqrt( ( (dl - dl_prime) ** 2 ) + ( dm ** 2 ) + (
                             dn_prime ** 2) )
@@ -447,19 +431,18 @@ class Patches(Polygon):
 
         """
         i_receiver_offset = 0
-        for idx, other_wall in enumerate(self.other_wall_ids):
+        for other_wall in self.other_wall_ids:
             if other_wall == receiver_wall_id:
                 i_receiver_ff = receiver_patch_id
                 break
             wall = patches_list[other_wall]
-            # wall = patches_list[idx]
             i_receiver_offset += len(wall.patches)
 
         return self.form_factors[
             source_path_id, i_receiver_ff + i_receiver_offset]
 
     def energy_at_receiver(
-            self, max_order, receiver, ir_length_s,
+            self, max_order, receiver,
             speed_of_sound, sampling_rate):
         """Calculate the energy at the receiver.
 
@@ -472,8 +455,6 @@ class Patches(Polygon):
         sound_source : _type_
             _description_
         receiver : _type_
-            _description_
-        ir_length_s : _type_
             _description_
         speed_of_sound : float, optional
             _description_
@@ -617,31 +598,32 @@ class PatchesDirectional(Patches):
         }
 
     @classmethod
-    def from_dict(cls, dict: dict):
+    def from_dict(cls, input_dict: dict):
         """Create an object from a dictionary. Used for read write."""
         data = pf.FrequencyData(
-            dict['directivity_data'], dict['directivity_data_frequencies'])
+            input_dict['directivity_data'],
+            input_dict['directivity_data_frequencies'])
         sources = pf.Coordinates(
-            np.array(dict['directivity_sources']).T[0],
-            np.array(dict['directivity_sources']).T[1],
-            np.array(dict['directivity_sources']).T[2],
-            weights=dict['directivity_sources_weights'])
+            np.array(input_dict['directivity_sources']).T[0],
+            np.array(input_dict['directivity_sources']).T[1],
+            np.array(input_dict['directivity_sources']).T[2],
+            weights=input_dict['directivity_sources_weights'])
         receivers = pf.Coordinates(
-            np.array(dict['directivity_receivers']).T[0],
-            np.array(dict['directivity_receivers']).T[1],
-            np.array(dict['directivity_receivers']).T[2],
-            weights=dict['directivity_receivers_weights'])
+            np.array(input_dict['directivity_receivers']).T[0],
+            np.array(input_dict['directivity_receivers']).T[1],
+            np.array(input_dict['directivity_receivers']).T[2],
+            weights=input_dict['directivity_receivers_weights'])
         return cls(
-            Polygon.from_dict(dict),
-            max_size=dict['max_size'],
-            other_wall_ids=dict['other_wall_ids'],
-            wall_id=dict['wall_id'],
+            Polygon.from_dict(input_dict),
+            max_size=input_dict['max_size'],
+            other_wall_ids=input_dict['other_wall_ids'],
+            wall_id=input_dict['wall_id'],
             data=data,
             sources=sources,
             receivers=receivers,
-            absorption=dict['absorption'],
-            sound_attenuation_factor=dict['sound_attenuation_factor'],
-            E_matrix=dict['E_matrix'],
+            absorption=input_dict['absorption'],
+            sound_attenuation_factor=input_dict['sound_attenuation_factor'],
+            E_matrix=input_dict['E_matrix'],
             already_converted=True,
             )
 
@@ -681,7 +663,6 @@ class PatchesDirectional(Patches):
         # all incident angles x receiver
         for i_frequency in range(self.directivity_data.n_bins):
             scattering = self.directivity_data.freq[source_idx, :, i_frequency]
-            # assert all(np.sum(np.real(scattering), axis=-1)-1 < 1e-5)
             if len(self.patches) == 1:
                 self.E_matrix[i_frequency, 0, 0, :, :] *= np.abs(
                     scattering)
@@ -763,12 +744,10 @@ class PatchesDirectional(Patches):
                         # add energy to energy matrix of self
                         self.E_matrix[
                             i_frequency, k, i_receiver, :, :] += energy
-                        # energy[3]
-                        # 0.00120904
 
     def energy_at_receiver(
-            self, max_order, receiver, ir_length_s,
-            speed_of_sound, sampling_rate, M=0):
+            self, max_order, receiver,
+            speed_of_sound, sampling_rate):
         """Calculate the energy at the receiver.
 
         this is supposed to be from just one wall
@@ -781,14 +760,10 @@ class PatchesDirectional(Patches):
             sound source with ``sound_power`` and ``position``
         receiver : Receiver
             receiver object with position.
-        ir_length_s : float
-            useless
         speed_of_sound : float, optional
             Speed of sound in m/s.
         sampling_rate : int, optional
             _description_, by default 1000
-        M : float, optional
-            Air attenuation factor in Np/m, by default 0.
 
         Returns
         -------
@@ -836,10 +811,9 @@ class PatchesDirectional(Patches):
 
 
 def _init_energy_exchange(
-            dl, dm, dn, dd_l, dd_m, dd_n, S_x, S_y, S_z,
+            dl, dm, dn, dd_l, dd_m, S_x, S_y, S_z,
             sound_power, absorption, distance, attenuation, n_bins):
     half_l = dd_l/2
-    # half_n = dd_n/2
     half_m = dd_m/2
 
     sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
@@ -848,7 +822,6 @@ def _init_energy_exchange(
     test1 = (dl - half_l) <= S_x
     test2 = S_x <= (dl + half_l)
     k_phi = -1 if test1 and test2 else 1
-    # k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
     sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
         dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
     if (sin_phi_delta-sin_phi) < 1e-11:
@@ -861,7 +834,6 @@ def _init_energy_exchange(
     test2 = S_y <= (dm + half_m)
     k_beta = -1 if test1 and test2 else 1
 
-    # k_beta = -1 if (dn - half_n) <= S_z <= (dn + half_n) else 1
     beta = np.abs(plus-(k_beta*minus))
 
     # don't forget to add constants
@@ -901,8 +873,6 @@ def _add_delay(ir, delay_samples, axis=-1):
             'length of ir is longer then ir delay is '
             f'{delay_samples} > {ir.shape[-1]}')
     ir_delayed = np.roll(ir, delay_samples, axis=axis)
-    # if np.sum(ir_delayed[:delay_samples, ...]) != 0:
-    #     raise ValueError('length of ir is to short, ')
     return ir_delayed
 
 
@@ -927,7 +897,6 @@ def _calc_incident_direction(position, normal, up_vector, target_position):
 
     """
     direction = np.array(target_position) - np.array(position)
-    # distance = np.linalg.norm(direction)
 
     x_dash = np.cross(normal, up_vector)
     y_dash = np.array(up_vector)
@@ -954,7 +923,6 @@ class Radiosity():
     sampling_rate: int
     patch_size: float
     ir_length_s: float
-    # source: SoundSource
     patch_list: list[Patches]
 
     def __init__(
@@ -1019,19 +987,20 @@ class Radiosity():
         }
 
     @classmethod
-    def from_dict(cls, dict: dict):
+    def from_dict(cls, input_dict: dict):
         """Create an object from a dictionary. Used for read write."""
         patch_list = [
-            Patches.from_dict(patch) for patch in dict['patches']]
+            Patches.from_dict(patch) for patch in input_dict['patches']]
         source = None
-        if dict is not None:
+        if input_dict is not None:
             source = SoundSource(
-                dict['source_position'],
-                dict['source_view'], dict['source_up'])
+                input_dict['source_position'],
+                input_dict['source_view'], input_dict['source_up'])
         obj = cls(
-            patch_list, dict['patch_size'], dict['max_order_k'],
-            dict['ir_length_s'],
-            dict['speed_of_sound'], dict['sampling_rate'], source=source)
+            patch_list, input_dict['patch_size'], input_dict['max_order_k'],
+            input_dict['ir_length_s'],
+            input_dict['speed_of_sound'], input_dict['sampling_rate'],
+            source=source)
         return obj
 
     def run(self, source):
@@ -1066,7 +1035,7 @@ class Radiosity():
         M_value = self.patch_list[0].sound_attenuation_factor
         for patches in self.patch_list:
             ir += patches.energy_at_receiver(
-                max_order_k, receiver, self.ir_length_s,
+                max_order_k, receiver,
                 speed_of_sound=self.speed_of_sound,
                 sampling_rate=self.sampling_rate)
         if not ignore_direct:
@@ -1172,21 +1141,22 @@ class DirectionalRadiosity():
         }
 
     @classmethod
-    def from_dict(cls, dict: dict):
+    def from_dict(cls, input_dict: dict):
         """Create an object from a dictionary. Used for read write."""
         patch_list = [
-            PatchesDirectional.from_dict(patch) for patch in dict['patches']]
+            PatchesDirectional.from_dict(patch) for patch in input_dict[
+                'patches']]
         source = None
-        if dict['source_position'] is not None:
+        if input_dict['source_position'] is not None:
             source = SoundSource(
-                dict['source_position'],
-                dict['source_view'], dict['source_up'])
+                input_dict['source_position'],
+                input_dict['source_view'], input_dict['source_up'])
         obj = cls(
-            patch_list, dict['patch_size'], dict['max_order_k'],
-            dict['ir_length_s'],
+            patch_list, input_dict['patch_size'], input_dict['max_order_k'],
+            input_dict['ir_length_s'],
             sofa_path=None,
-            speed_of_sound=dict['speed_of_sound'],
-            sampling_rate=dict['sampling_rate'],
+            speed_of_sound=input_dict['speed_of_sound'],
+            sampling_rate=input_dict['sampling_rate'],
             source=source,
             )
         return obj
@@ -1222,7 +1192,7 @@ class DirectionalRadiosity():
         M = self.patch_list[0].sound_attenuation_factor
         for patches in self.patch_list:
             ir += patches.energy_at_receiver(
-                order_k, receiver, self.ir_length_s,
+                order_k, receiver,
                 speed_of_sound=self.speed_of_sound,
                 sampling_rate=self.sampling_rate)
         r = np.sqrt(np.sum((receiver.position-self.source.position)**2))

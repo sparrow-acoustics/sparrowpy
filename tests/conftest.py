@@ -49,13 +49,13 @@ def brdf_s_1(tmp_path_factory):
     return filename
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_walls():
     """Return a list of 6 walls, which form a cube."""
     return sp.testing.shoebox_room_stub(1, 1, 1)
 
 
-@pytest.fixture()
+@pytest.fixture
 def sofa_data_diffuse():
     """Return a list of 6 walls, which form a cube."""
     gaussian = pf.samplings.sph_gaussian(sh_order=1)
@@ -67,9 +67,9 @@ def sofa_data_diffuse():
     data = np.ones((sources.csize, receivers.csize, frequencies.size))
     return (pf.FrequencyData(data, frequencies), sources, receivers)
 
-@pytest.fixture()
+@pytest.fixture
 def basicscene():
-    scene=dict()
+    scene = {}
     scene["patch_size"] = .2
     scene["ir_length_s"] = 1.
     scene["sampling_rate"] = 100

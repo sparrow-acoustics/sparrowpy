@@ -125,7 +125,7 @@ def test_polygon_from_dict():
     polygon_dict = {
         'pts': points.tolist(),
         'up_vector': up_vector.tolist(),
-        'normal': normal.tolist()
+        'normal': normal.tolist(),
     }
 
     # Act

@@ -147,10 +147,6 @@ def test_init_energy_exchange(sample_walls, i_wall):
             assert all(patches.directivity_receivers.cartesian[:, i] > -eps)
         if normal[i] < -eps:
             assert all(patches.directivity_receivers.cartesian[:, i] < eps)
-    # check if receiver dimension is different
-    # idx = np.argmax(patches.E_matrix[0, 0, :, :])
-    # assert patches.E_matrix[0, 0, :, :] != patches.E_matrix[
-    #     0, 0, idx, :]
 
 
 @pytest.mark.parametrize('patch_size', [
@@ -194,7 +190,7 @@ def test_init_energy_exchange_directional_omni(
     ])
 @pytest.mark.parametrize('patch_size', [
     0.5,
-    1
+    1,
     ])
 def test_directional_specular_reflections(
         sample_walls, perpendicular_walls, patch_size):
@@ -231,10 +227,10 @@ def test_directional_specular_reflections(
 
     ir = 0
     ir += patch_1.energy_at_receiver(
-        max_order_k, receiver, ir_length_s,
+        max_order_k, receiver,
         speed_of_sound=346.18, sampling_rate=1000)
     ir += patch_2.energy_at_receiver(
-        max_order_k, receiver, ir_length_s,
+        max_order_k, receiver,
         speed_of_sound=346.18, sampling_rate=1000)
 
     if create_reference_files and (

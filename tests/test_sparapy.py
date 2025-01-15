@@ -1,8 +1,10 @@
 """Test sparrowpy package."""
+import pytest
+
 
 def test_import_sparrowpy():
     """Test importing sparrowpy."""
     try:
         import sparrowpy           # noqa
     except ImportError:
-        assert False
+        pytest.fail('import pyfar failed')

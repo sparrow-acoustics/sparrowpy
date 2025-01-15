@@ -64,9 +64,10 @@ class Polygon():
         }
 
     @classmethod
-    def from_dict(cls, dict):
+    def from_dict(cls, input_dict):
         """Create an object from a dictionary. Used for read write."""
-        return cls(dict['pts'], dict['up_vector'], dict['normal'])
+        return cls(
+            input_dict['pts'], input_dict['up_vector'], input_dict['normal'])
 
     @property
     def normal(self) -> np.ndarray:
@@ -80,11 +81,11 @@ class Polygon():
         vec2 = np.array(self.pts[1])-np.array(self.pts[2])
         size = np.abs(vec1-vec2)
         return size
-    
+
     @property
     def area(self) -> np.ndarray:
         """Return the area in m^2 of the polygon.
-        supports all convex polygons and some concave polygons
+        supports all convex polygons and some concave polygons.
         """
 
         area = 0
@@ -93,17 +94,22 @@ class Polygon():
             area_pts = np.array([self.pts])
 
         elif len(self.pts) == 4:
-            area_pts = np.array([self.pts[0:3],[self.pts[2],self.pts[3],self.pts[0]] ])
+            area_pts = np.array([
+                self.pts[0:3],[self.pts[2],self.pts[3],self.pts[0]] ])
 
         else:
-            area_pts = np.empty((self.pts.shape[0],3,3)) # slow, can be optimized
+            # slow, can be optimized
+            area_pts = np.empty((self.pts.shape[0],3,3))
 
             for i in range(area_pts.shape[0]):
-                area_pts[i] = np.array([self.pts[i%self.pts.shape[0]], self.pts[(i+1)%self.pts.shape[0]], self.center])
+                area_pts[i] = np.array([
+                    self.pts[i%self.pts.shape[0]],
+                    self.pts[(i+1)%self.pts.shape[0]],
+                    self.center])
 
         for tri in area_pts:
             area  +=  .5*np.linalg.norm(np.cross(tri[1]-tri[0], tri[2]-tri[0]))
-        
+
         return area
 
     @property
@@ -136,7 +142,6 @@ class Polygon():
             if _cmp_floats(m1*m2, 0.):
                 return True  # point is one of the nodes
             else:
-                # angle(normal, vector)
                 cos_theta = np.dot(v1, v2)/(m1*m2)
             sum_angle = sum_angle + np.arccos(cos_theta)
         return _cmp_floats(sum_angle, 2*np.pi)
@@ -199,8 +204,6 @@ class Polygon():
         points = np.concatenate((points, points), axis=1)
         # plot wall
         self.plot_point(ax, color)
-        # plot view
-        #self.plot_view_up(ax, color)
 
     def plot_point(self, ax: matplotlib.axes.Axes = None, color=None):
         """Plot the polygon points."""
@@ -209,7 +212,7 @@ class Polygon():
         # plot wall
         ax.plot(points[0], points[1], points[2], color=color)
 
-    def plot_view_up(self, ax: matplotlib.axes.Axes = None, color=None):
+    def plot_view_up(self, ax: matplotlib.axes.Axes = None):
         """Plot the view and up vector of the polygon."""
         ax.quiver(
             self.center[0], self.center[1], self.center[2],
@@ -264,10 +267,6 @@ class Environment():
         ax.set_ylabel('y',labelpad=30)
         ax.set_zlabel('z')
         ax.set_aspect('equal', 'box')
-
-        #ax.set_xticks([])
-        #ax.set_yticks([])
-        #ax.set_zticks([])
 
 
 def _cmp_floats(a, b, atol=1e-12):
