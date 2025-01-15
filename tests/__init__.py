@@ -1,1 +1,1 @@
-"""Unit test package for sparapy."""
+"""Unit test package for sparrowpy."""

@@ -1,6 +1,6 @@
 """methods for universal form factor calculation."""
 import numpy as np
-import sparapy.radiosity_fast.universal_ff.ffhelpers as helpers
+import sparrowpy.radiosity_fast.universal_ff.ffhelpers as helpers
 import numba
 
 #/////////////////////////////////////////////////////////////////////////////////////#

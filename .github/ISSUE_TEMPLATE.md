@@ -1,9 +1,9 @@
 ## General
 
-* sparapy version:
+* sparrowpy version:
 * Python version:
 * Operating System:
-* Did you install pyfar via pip:
+* Did you install sparrowpy via pip:
 
 ## Description
 

@@ -1,7 +1,7 @@
 """Implementation of the receiver energy calculation."""
 import numba
 import numpy as np
-from sparapy.radiosity_fast.universal_ff.univ_form_factor import pt_solution
+from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import pt_solution
 
 @numba.njit()
 def _kang(

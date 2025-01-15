@@ -3,7 +3,6 @@ import numpy as np
 import pyfar as pf
 from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_order as ee_order
-from . import blender_helpers
 
 
 class DRadiosityFast():

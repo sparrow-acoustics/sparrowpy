@@ -1,9 +1,9 @@
 import numpy.testing as npt
 import pytest
-import sparapy.radiosity_fast.visibility_helpers as vh
+import sparrowpy.radiosity_fast.visibility_helpers as vh
 import numpy as np
-import sparapy.radiosity_fast.geometry as geom
-import sparapy.utils.blender as bh
+import sparrowpy.radiosity_fast.geometry as geom
+import sparrowpy.utils.blender as bh
 import matplotlib.pyplot as plt
 
 @pytest.mark.parametrize("origin", [np.array([0.,1.,3.])])

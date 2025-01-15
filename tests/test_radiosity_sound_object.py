@@ -5,7 +5,7 @@ import numpy as np
 import numpy.testing as npt
 import pyfar as pf
 import pytest
-import sparapy.sound_object as so
+import sparrowpy.sound_object as so
 
 
 def test_directivity_ms():
