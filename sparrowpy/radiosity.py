@@ -4,7 +4,6 @@ import numpy as np
 import pyfar as pf
 import sofar as sf
 from tqdm import tqdm
-from sparrowpy.form_factor import calc_form_factor as universal_ffactor
 from sparrowpy.geometry import Polygon, SoundSource
 
 
@@ -250,7 +249,7 @@ class Patches(Polygon):
                             i_frequency, k-1, i_source, :]
 
                         # delay IR by delay_samples
-                        A_k_minus1_delay = add_delay(
+                        A_k_minus1_delay = _add_delay(
                             A_k_minus_1, delay_samples)
 
                         # find form factor of source and receiver patches
@@ -425,35 +424,6 @@ class Patches(Polygon):
 
                 i_receiver_offset += len(receiver_wall.patches)
 
-    def calculate_univ_form_factor(self, patches_list) -> None:
-        """Calculate the form factors between patches using a universal method.
-
-        Parameters
-        ----------
-        patches_list : list of patches
-            List of patches.
-        M : float, optional
-            Air attenuation factor in Np/m, by default 0
-        alpha : float, optional
-            absorption coefficient of wall, by default 0.1
-
-        """
-        num_other_patches = np.sum([
-            len(patches_list[i].patches) for i in self.other_wall_ids])
-        self.form_factors = np.zeros((len(self.patches), num_other_patches))
-        for i_source, source_patch in enumerate(self.patches):
-            i_receiver_offset = 0
-            for receiver_wall_id in self.other_wall_ids:
-                receiver_wall = patches_list[receiver_wall_id]
-                for i_receiver, receiver_patch in enumerate(
-                        receiver_wall.patches):
-                    
-                    index_rec = i_receiver 
-                    self.form_factors[i_source, index_rec] = universal_ffactor(source_pts=source_patch.pts, receiving_pts=receiver_patch.pts, source_normal=source_patch.normal, receiving_normal=receiver_patch.normal)
-
-                i_receiver_offset += len(receiver_wall.patches)
-
-
     def get_form_factor(
             self, patches_list, source_path_id, receiver_wall_id,
             receiver_patch_id):
@@ -532,7 +502,7 @@ class Patches(Polygon):
             for k in range(max_order+1):
                 for i_frequency in range(self.n_bins):
                     energy = self.E_matrix[i_frequency, k, i_source, :]
-                    delayed_energy = add_delay(energy, delay)
+                    delayed_energy = _add_delay(energy, delay)
 
                     # Equation 20
                     factor = cos_xi * (np.exp(
@@ -765,7 +735,7 @@ class PatchesDirectional(Patches):
                             i_frequency, k-1, i_source, :, :]
 
                         # delay IR by delay_samples
-                        A_k_minus1_delay = add_delay(
+                        A_k_minus1_delay = _add_delay(
                             A_k_minus_1, delay_samples, 0)
 
                         # multiply delayed IR by form factor
@@ -851,7 +821,7 @@ class PatchesDirectional(Patches):
                 for i_frequency in range(self.n_bins):
                     energy = self.E_matrix[
                         i_frequency, k, i_source, :, i_patch]
-                    delayed_energy = add_delay(energy, delay, axis=-1)
+                    delayed_energy = _add_delay(energy, delay, axis=-1)
 
                     # Equation 20
                     factor = cos_xi * (np.exp(
@@ -907,7 +877,7 @@ def _init_energy_exchange(
         energies[i_frequency] = energy
     return energies
 
-def add_delay(ir, delay_samples, axis=-1):
+def _add_delay(ir, delay_samples, axis=-1):
     """Add delay to impulse response.
 
     Parameters
@@ -936,7 +906,7 @@ def add_delay(ir, delay_samples, axis=-1):
     return ir_delayed
 
 
-def calc_incident_direction(position, normal, up_vector, target_position):
+def _calc_incident_direction(position, normal, up_vector, target_position):
     """Calculate the incident direction of a sound wave.
 
     Parameters

@@ -30,7 +30,6 @@ dependencies = [
     'matplotlib',
     'pyfar',
     'numba',  # can be made optional later on
-    'bpy',  # can be made optional later on
     'tqdm',  # can be made optional later on
     'sofar',
 ]
@@ -49,6 +48,7 @@ tests = [
     "watchdog",
     "ruff==0.8.3",
     "coverage",
+    "watermark",
 ]
 docs = [
     "sphinx",
