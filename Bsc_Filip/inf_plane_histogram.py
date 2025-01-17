@@ -2,6 +2,7 @@
 import sparapy as sp
 import numpy as np
 import pyfar as pf
+import matplotlib.pyplot as plt
 
 def infinite_plane(s:np.ndarray,r:np.ndarray, ratio=30.):
     """Create an "infinite" xy plane relative to eval point position.
@@ -42,10 +43,10 @@ def infinite_plane(s:np.ndarray,r:np.ndarray, ratio=30.):
                                 normal=np.array([0.,0.,1.]))
             ]
 
-def get_histogram(source_pos=np.array([0.,0.,1.]),
-                  receiver_pos=np.array([0.,0.,1.]),
-                  sampling_rate=100.,
-                  h2ps_ratio=1.,
+def get_histogram(source_pos=np.array([1.,1.,1.]),
+                  receiver_pos=np.array([-1.,-1.,1.]),
+                  sampling_rate=1000.,
+                  h2ps_ratio=10.,
                   freq_bins=np.array([1000.]),
                   ):
     """Generate histogram of infinite plane scenario.
@@ -75,11 +76,12 @@ def get_histogram(source_pos=np.array([0.,0.,1.]),
     #simulation parameters
     speed_of_sound = 346.18
     max_sound_path_length = np.sqrt(
-        (plane.pts[0]-plane.pts[2])[0]**2 +
-        (plane.pts[0]-plane.pts[2])[1]**2 +
+        (plane[0].pts[0]-plane[0].pts[2])[0]**2 +
+        (plane[0].pts[0]-plane[0].pts[2])[1]**2 +
         max(receiver_pos[2],source_pos[2])**2
     )
     max_histogram_length = max_sound_path_length/speed_of_sound
+    max_order = 2
 
     ## PREPARE RADIOSITY SIMULATION ##
     #initialize radiosity class instance based on plane "radi"
@@ -89,8 +91,8 @@ def get_histogram(source_pos=np.array([0.,0.,1.]),
     scattering_data = pf.FrequencyData(
                 np.ones((1, 1, freq_bins.size)), freq_bins)
     radi.set_wall_scattering(np.arange(1), scattering_data,
-                             sources=np.array([source_pos]),
-                             receivers=np.array([receiver_pos]))
+                             sources=pf.Coordinates(source_pos[0],source_pos[1],source_pos[2]),
+                             receivers=pf.Coordinates(receiver_pos[0],receiver_pos[1],receiver_pos[2]))
 
     #set atmospheric attenuation and surface absorption coefficient to 0
     radi.set_air_attenuation(
@@ -114,5 +116,36 @@ def get_histogram(source_pos=np.array([0.,0.,1.]),
     radi.calculate_energy_exchange(
         speed_of_sound=speed_of_sound,
         histogram_time_resolution=1/sampling_rate,
-        histogram_length=1.*max_histogram_length
+        histogram_length=1.*max_histogram_length,
+        max_depth=0
     )
+    
+    #sum energy from all the patches at each time stamp.
+    histogram = np.sum(radi.collect_receiver_energy(
+                                    receiver_pos=receiver_pos,
+                                    speed_of_sound=speed_of_sound,
+                                    histogram_time_resolution=1/sampling_rate
+                                    ),axis=1)[0]
+    return histogram
+
+
+# routine if file is run as standalone program
+if __name__=="__main__":
+    
+    src=np.array([1.,1.,1.])
+    rec=np.array([-1.,-1.,1.])
+    sr=500
+    
+    histogram = get_histogram(
+        source_pos=src,
+        receiver_pos=rec,
+        h2ps_ratio=.5,sampling_rate=sr)
+    
+    plt.figure()
+    plt.plot(np.arange(histogram.shape[1])/sr,histogram[0], "*")
+    plt.grid()
+    plt.title("infinite plane histogram")
+    plt.xlabel("time [s]")
+    plt.ylabel("energy coefficients")
+    plt.savefig("Bsc_Filip/test_inf_plane.png")
+    
