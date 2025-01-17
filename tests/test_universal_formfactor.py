@@ -1,17 +1,17 @@
 """Test the universal form factor module."""
 
 import pytest
-import sparapy.geometry as geo
+import sparrowpy.geometry as geo
 import numpy as np
 import numpy.testing as npt
-import sparapy.radiosity_fast.universal_ff.univ_form_factor as form_factor
-import sparapy.testing.exact_ff_solutions as exact_solutions
-from sparapy.sound_object import SoundSource, Receiver
-from sparapy.radiosity import Patches
+import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
+import sparrowpy.testing.exact_ff_solutions as exact_solutions
+from sparrowpy.sound_object import SoundSource, Receiver
+from sparrowpy.radiosity import Patches
 import time
-import sparapy as sp
+import sparrowpy as sp
 import pyfar as pf
-from sparapy.radiosity_fast import form_factor as FFac
+from sparrowpy.radiosity_fast import form_factor as FFac
 
 
 @pytest.mark.parametrize("width", [0.5, 1.0, 1.5, 3.])

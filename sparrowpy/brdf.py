@@ -2,7 +2,7 @@
 import numpy as np
 import sofar as sf
 import pyfar as pf
-import sparapy
+import sparrowpy
 
 
 def create_from_scattering(
@@ -68,7 +68,7 @@ def create_from_scattering(
     Examples
     --------
     >>> import pyfar as pf
-    >>> import sparapy as sp
+    >>> import sparrowpy as sp
     >>> import numpy as np
     >>> scattering_coefficient = pf.FrequencyData(0.5, [100])
     >>> directions = pf.samplings.sph_gaussian(sh_order=3)
@@ -265,8 +265,8 @@ def _create_sofa(
     sofa = sf.Sofa(convention)
 
     # write meta data
-    sofa.GLOBAL_ApplicationName = 'sparapy'
-    sofa.GLOBAL_ApplicationVersion = sparapy.__version__
+    sofa.GLOBAL_ApplicationName = 'sparrowpy'
+    sofa.GLOBAL_ApplicationVersion = sparrowpy.__version__
     sofa.GLOBAL_History = history
 
     # Source and receiver data

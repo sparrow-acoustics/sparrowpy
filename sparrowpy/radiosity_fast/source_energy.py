@@ -1,7 +1,7 @@
 """Calculate initial energy from the source to the patch."""
 import numba
 import numpy as np
-from sparapy.radiosity_fast.universal_ff.univ_form_factor import pt_solution as patch2point
+from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import pt_solution as patch2point
 
 @numba.njit(parallel=True)
 def _init_energy_kang(

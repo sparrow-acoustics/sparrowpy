@@ -1,5 +1,5 @@
 """functions to generate energy histogram of "infinite" plane scenario."""
-import sparapy as sp
+import sparrowpy as sp
 import numpy as np
 import pyfar as pf
 import matplotlib.pyplot as plt
