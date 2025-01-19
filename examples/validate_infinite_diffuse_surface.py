@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 # Setup a simulation for infinite plane
 
 def calculate_ratio_old(
-        width, depth, patch_size, source_pos, receiver_pos, speed_of_sound, sampling_rate):
+        width, depth, patch_size, source_pos, receiver_pos,
+        speed_of_sound, sampling_rate):
     source = pf.Coordinates(*source_pos)
     receiver = pf.Coordinates(*receiver_pos)
     source_is = source.copy()
@@ -45,7 +46,8 @@ def calculate_ratio_old(
 
 
 def calculate_ratio_new(
-        width, depth, patch_size, source_pos, receiver_pos, speed_of_sound, sampling_rate):
+        width, depth, patch_size, source_pos, receiver_pos,
+        speed_of_sound, sampling_rate):
     source = pf.Coordinates(*source_pos)
     receiver = pf.Coordinates(*receiver_pos)
     source_is = source.copy()
@@ -163,7 +165,7 @@ ax.semilogx(dimensions, ratio_1_old, '--', label='case 1 old')
 ax.semilogx(dimensions, ratio_1_new, label='case 1 new')
 ax.semilogx(dimensions, ratio_2_old, '--', label='case 2 old')
 ax.semilogx(dimensions, ratio_2_new, label='case 2 new')
-ax.hlines(2, dimensions[0], dimensions[-1], 'r', label='expected')
+ax.hlines(2, dimensions[0], dimensions[-1], label='expected')
 ax.set_xlabel('sampling rate')
 plt.legend()
 plt.show()
@@ -223,7 +225,7 @@ ax.plot(dimensions, ratio_1_old, '--', label='case 1 old')
 ax.plot(dimensions, ratio_1_new, label='case 1 new')
 ax.plot(dimensions, ratio_2_old, '--', label='case 2 old')
 ax.plot(dimensions, ratio_2_new, label='case 2 new')
-ax.hlines(2, dimensions[0], dimensions[-1], 'r', label='expected')
+ax.hlines(2, dimensions[0], dimensions[-1], label='expected')
 plt.legend()
 plt.show()
 fig.savefig('validate_infinite_diffuse_surface_vs_plane_size.png')
