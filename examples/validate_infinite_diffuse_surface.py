@@ -154,7 +154,6 @@ for w in dimensions:
         w, w, patch_size, source_pos,
         receiver_pos, speed_of_sound, sampling_rate)
     ratio_2_new.append(r)
-    # case 2: source and receiver are on the same normal
 
 
 # %%
@@ -164,7 +163,7 @@ ax.plot(dimensions, ratio_1_old, '--', label='case 1 old')
 ax.plot(dimensions, ratio_1_new, label='case 1 new')
 ax.plot(dimensions, ratio_2_old, '--', label='case 2 old')
 ax.plot(dimensions, ratio_2_new, label='case 2 new')
-ax.hlines(2, dimensions[0], dimensions[-1], 'r')
+ax.hlines(2, dimensions[0], dimensions[-1], 'r', label='expected')
 plt.legend()
 plt.show()
 fig.savefig('validate_infinite_diffuse_surface.png')
