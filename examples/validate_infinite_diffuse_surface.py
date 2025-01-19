@@ -116,6 +116,66 @@ def calculate_ratio_new(
 # %%
 # Test case one
 
+width = 40
+depth = 40
+patch_size = 1
+speed_of_sound = 346.18
+sampling_rate = 1
+
+ratio_1_new = []
+ratio_1_old = []
+ratio_2_new = []
+ratio_2_old = []
+ratio_3 = []
+ratio_4 = []
+dimensions = [1, 10, 100, 1000]
+for w in dimensions:
+    # case 1: source and receiver are at the same position
+    expected_ratio = 2
+    source_pos = [0, 0, 3]
+    receiver_pos = [0, 0, 3]
+    r, I_specular, I_diffuse = calculate_ratio_old(
+        width, depth, patch_size, source_pos,
+        receiver_pos, speed_of_sound, w)
+    ratio_1_old.append(r)
+    r, I_specular, I_diffuse = calculate_ratio_new(
+        width, depth, patch_size, source_pos,
+        receiver_pos, speed_of_sound, w)
+    ratio_1_new.append(r)
+    # case 2: source and receiver are on the same normal
+    expected_ratio = 2
+    source_pos = [0, 0, 10]
+    receiver_pos = [0, 0, 3]
+    r, I_specular, I_diffuse = calculate_ratio_old(
+        width, depth, patch_size, source_pos,
+        receiver_pos, speed_of_sound, w)
+    ratio_2_old.append(r)
+    r, I_specular, I_diffuse = calculate_ratio_new(
+        width, depth, patch_size, source_pos,
+        receiver_pos, speed_of_sound, w)
+    ratio_2_new.append(r)
+
+
+# %%
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.semilogx(dimensions, ratio_1_old, '--', label='case 1 old')
+ax.semilogx(dimensions, ratio_1_new, label='case 1 new')
+ax.semilogx(dimensions, ratio_2_old, '--', label='case 2 old')
+ax.semilogx(dimensions, ratio_2_new, label='case 2 new')
+ax.hlines(2, dimensions[0], dimensions[-1], 'r', label='expected')
+ax.set_xlabel('sampling rate')
+plt.legend()
+plt.show()
+fig.savefig('validate_infinite_diffuse_surface_vs_sampling_rate.png')
+
+
+
+# %%
+
+# %%
+# Test case one
+
 width = 10
 depth = 10
 patch_size = 1
@@ -166,6 +226,6 @@ ax.plot(dimensions, ratio_2_new, label='case 2 new')
 ax.hlines(2, dimensions[0], dimensions[-1], 'r', label='expected')
 plt.legend()
 plt.show()
-fig.savefig('validate_infinite_diffuse_surface.png')
+fig.savefig('validate_infinite_diffuse_surface_vs_plane_size.png')
 
 # %%
