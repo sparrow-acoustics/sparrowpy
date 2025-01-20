@@ -94,6 +94,7 @@ def get_histogram(source_pos=np.array([1.,1.,1.]),
                   sampling_rate=1000.,
                   h2ps_ratio=10.,
                   freq_bins=np.array([1000.]),
+                  surfs=None
                   ):
     """Generate histogram of infinite plane scenario.
 
@@ -114,7 +115,8 @@ def get_histogram(source_pos=np.array([1.,1.,1.]),
     """
     ## BASIC STUFF ##
     #generate "infinite" plane
-    plane = infinite_plane(r=receiver_pos,s=source_pos)
+    if surfs is None:
+        surfs = infinite_plane(r=receiver_pos,s=source_pos)
 
     #determine patch size based on input ratio
     patch_size = h2ps_ratio*max(receiver_pos[2],source_pos[2])
@@ -122,15 +124,15 @@ def get_histogram(source_pos=np.array([1.,1.,1.]),
     #simulation parameters
     speed_of_sound = 346.18
     max_sound_path_length = np.sqrt(
-        (plane[0].pts[0]-plane[0].pts[2])[0]**2 +
-        (plane[0].pts[0]-plane[0].pts[2])[1]**2 +
+        (surfs[0].pts[0]-surfs[0].pts[2])[0]**2 +
+        (surfs[0].pts[0]-surfs[0].pts[2])[1]**2 +
         max(receiver_pos[2],source_pos[2])**2
     )
     max_histogram_length = .75*max_sound_path_length/speed_of_sound
     
     ## PREPARE RADIOSITY SIMULATION ##
     #initialize radiosity class instance based on plane "radi"
-    radi = sp.DRadiosityFast.from_polygon(plane,patch_size)
+    radi = sp.DRadiosityFast.from_polygon(surfs,patch_size)
 
     #set scattering distribution (lambertian surface)
     scattering_data = pf.FrequencyData(

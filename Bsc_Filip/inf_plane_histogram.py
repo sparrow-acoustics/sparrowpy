@@ -1,5 +1,5 @@
 """functions to generate energy histogram of "infinite" plane scenario."""
-from sparrowpy.testing.stub_utils import infinite_plane, get_histogram
+from sparrowpy.testing.stub_utils import get_histogram
 import matplotlib.pyplot as plt
 import numpy as np
 
