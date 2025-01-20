@@ -107,12 +107,13 @@ def generate_connectivity(mesh: bmesh):
     -------
     out_mesh: dict({
                     "conn":  list (n_polygons, :),
+                    "norm": list (n_polygons, 3),
                     "verts": np.ndarray (n_nodes,3)
                     })
         mesh in reduced data representation.
 
     """
-    out_mesh = dict({"conn":[], "verts": np.array([])})
+    out_mesh = dict({"conn":[], "verts": np.array([]), "norm":[]})
 
     out_mesh["verts"] = np.array([v.co for v in mesh.verts])
 
@@ -121,5 +122,8 @@ def generate_connectivity(mesh: bmesh):
         for v in f.verts:
             line.append(v.index)
         out_mesh["conn"].append(line)
+        out_mesh["norm"].append(np.array(f.normal))
+
+    out_mesh["norm"] = np.array(out_mesh["norm"])
 
     return out_mesh
