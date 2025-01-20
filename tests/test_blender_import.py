@@ -11,3 +11,6 @@ def test_mesh_simplification(path):
 
     npt.assert_array_equal(fine["verts"],rough["verts"])
     assert len(fine["conn"]) == len(rough["conn"])*2
+    assert len(fine["norm"]) == len(rough["norm"])*2
+    assert fine["norm"].shape[1]==rough["norm"].shape[1]
+    assert fine["norm"].shape[1]==3
