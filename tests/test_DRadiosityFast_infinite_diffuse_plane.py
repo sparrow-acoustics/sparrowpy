@@ -1,7 +1,7 @@
 """
 This files validates the Radiosity method for a diffuse infinite plane.
 
-The analytical results are taken from Svensson et. al.
+The analytical results are taken from Svensson et. al. [1].
 
 [1] U. P. Svensson and L. Savioja, "The Lambert diffuse reflection model
 revisited," The Journal of the Acoustical Society of America, vol. 156,
