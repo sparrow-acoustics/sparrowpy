@@ -5,10 +5,10 @@ import numpy as np
 import numpy.testing as npt
 import pyfar as pf
 import pytest
-import sparapy as sp
-import sparapy.geometry as geo
-import sparapy.radiosity as radiosity
-from sparapy.sound_object import Receiver, SoundSource
+import sparrowpy as sp
+import sparrowpy.geometry as geo
+import sparrowpy.radiosity as radiosity
+from sparrowpy.sound_object import Receiver, SoundSource
 
 
 create_reference_files = False
@@ -179,7 +179,6 @@ def test_small_room_and_rotate_init_energy():
         # run init energy
         # B. First-order patch
         for patches in radi.patch_list:
-            # print(patches.normal)
             patches.init_energy_exchange(
                 radi.max_order_k, radi.ir_length_s, source,
                 sampling_rate=radi.sampling_rate,
@@ -282,7 +281,6 @@ def test_radiosity_reference(max_order_k):
 
     npt.assert_almost_equal(
         result['signal'].time[0, ...], signal.time[0, ...], decimal=2)
-    # npt.assert_almost_equal(result['signal'].time, signal.time, decimal=4)
     npt.assert_almost_equal(result['signal'].times, signal.times)
 
 
@@ -329,7 +327,6 @@ def test_radiosity_reference_with_read_write(max_order_k, tmpdir):
 
     npt.assert_almost_equal(
         result['signal'].time[0, ...], signal.time[0, ...], decimal=2)
-    # npt.assert_almost_equal(result['signal'].time, signal.time, decimal=4)
     npt.assert_almost_equal(result['signal'].times, signal.times)
 
 
@@ -358,7 +355,7 @@ def test_init_energy_exchange_normal(sample_walls, patch_size, i_wall):
 
 
 @pytest.mark.parametrize('parallel_walls', [
-    [0, 1], [1, 0], [2, 3], [3, 2], [4, 5], [5, 4]
+    [0, 1], [1, 0], [2, 3], [3, 2], [4, 5], [5, 4],
     ])
 @pytest.mark.parametrize('patch_size', [
     0.5,
@@ -446,11 +443,11 @@ def test_calc_form_factor_perpendicular_distance(
 
 
 @pytest.mark.parametrize('perpendicular_walls', [
-    [0, 2], [2, 0]
+    [0, 2], [2, 0],
     ])
 @pytest.mark.parametrize('patch_size', [
     0.5,
-    1
+    1,
     ])
 def test_energy_exchange(
         sample_walls, perpendicular_walls, patch_size):
