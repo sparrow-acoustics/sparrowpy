@@ -5,7 +5,7 @@ The analytical results are taken from Svensson et. al. [1].
 
 [1] U. P. Svensson and L. Savioja, "The Lambert diffuse reflection model
 revisited," The Journal of the Acoustical Society of America, vol. 156,
-no. 6, pp. 3788–3796, Dec. 2024, doi: 10.1121/10.0034561.
+no. 6, pp. 3788-3796, Dec. 2024, doi: 10.1121/10.0034561.
 
 """
 
@@ -16,7 +16,7 @@ import pytest
 import numpy.testing as npt
 
 
-def calculate_ratio_new(
+def run_energy_diff_specular_ratio(
         width, depth, patch_size, source, receiver):
     """
     Calculate the ratio of diffuse to specular energy for an plane.
@@ -85,9 +85,6 @@ def calculate_ratio_new(
             np.zeros_like(brdf.frequencies)+0,
             brdf.frequencies))
 
-    # calculate from factors including directivity and absorption
-    # radi.bake_geometry(algorithm='order')
-
     # initialize source energy at each patch
     radi.init_source_energy(source.cartesian[0], algorithm='order')
 
@@ -118,7 +115,8 @@ def test_colocated_source_receiver(patch_size):
     depth = 20
     source = pf.Coordinates(0, 0, 3, weights=1)
     receiver = pf.Coordinates(0, 0, 3, weights=1)
-    ratio = calculate_ratio_new(width, depth, patch_size, source, receiver)
+    ratio = run_energy_diff_specular_ratio(
+        width, depth, patch_size, source, receiver)
 
     # the energy should be 2 ideally, but the simulation cannot cover
     # an infinite plane, therefore the energy is slightly less than 2
@@ -137,7 +135,8 @@ def test_source_receiver_along_same_normal(patch_size):
     depth = 20
     source = pf.Coordinates(0, 0, 5, weights=1)
     receiver = pf.Coordinates(0, 0, 3, weights=1)
-    ratio = calculate_ratio_new(width, depth, patch_size, source, receiver)
+    ratio = run_energy_diff_specular_ratio(
+        width, depth, patch_size, source, receiver)
 
     # the energy should be 2 ideally, but the simulation cannot cover
     # an infinite plane, therefore the energy is slightly less than 2
@@ -161,7 +160,8 @@ def test_source_receiver_same_hight(patch_size, theta_deg):
         0, theta_rad, 2, weights=1)
     receiver = pf.Coordinates.from_spherical_colatitude(
         np.pi, theta_rad, 2, weights=1)
-    ratio = calculate_ratio_new(width, depth, patch_size, source, receiver)
+    ratio = run_energy_diff_specular_ratio(
+        width, depth, patch_size, source, receiver)
 
     npt.assert_allclose(ratio, 2*np.cos(theta_rad), atol=0.03, rtol=0.03)
 
