@@ -237,8 +237,8 @@ def _calculate_area(points):
             area[i] +=  .5 * np.linalg.norm(
                 np.cross(
                     points[i, tri+1,:] - points[i, 0,:],
-                    points[i, tri+2,:]-points[i, 0,:]
-                    )
+                    points[i, tri+2,:]-points[i, 0,:],
+                    ),
                 )
 
     return area

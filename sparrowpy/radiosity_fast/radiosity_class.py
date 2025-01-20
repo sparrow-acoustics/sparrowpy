@@ -201,7 +201,7 @@ class DRadiosityFast():
             max_depth=-1, recalculate=False):
         """Calculate the energy exchange between patches."""
         n_samples = int(histogram_length/histogram_time_resolution)
-        
+
         patches_center = self.patches_center
         distance_0 = self.distance_0
         n_patches = self.n_patches

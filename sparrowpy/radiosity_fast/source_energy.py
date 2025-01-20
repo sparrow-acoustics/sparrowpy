@@ -140,7 +140,7 @@ def _init_energy_universal(
         source_pos = source_position.copy()
         receiver_pos = patches_center[j, :].copy()
         receiver_pts = patches_points[j, :, :].copy()
-        
+
         distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
 
         if air_attenuation is not None:

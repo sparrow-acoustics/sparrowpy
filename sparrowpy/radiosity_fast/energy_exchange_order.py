@@ -174,5 +174,5 @@ def _collect_receiver_energy(
             E_mat_out[i,j] = np.roll(
                 E_matrix_total[i,j]*np.exp(-air_attenuation[j]*patch_receiver_distance[i]),
                 n_delay_samples)
-        
+
     return E_mat_out

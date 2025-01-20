@@ -3,14 +3,11 @@
 import pytest
 import sparrowpy.geometry as geo
 import numpy as np
-import numpy.testing as npt
 import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy.radiosity import Patches
 import time
-import sparrowpy as sp
-import pyfar as pf
 from sparrowpy.radiosity_fast import form_factor as FFac
 
 
@@ -60,7 +57,7 @@ def test_parallel_facing_patches(width, height, distance):
 def test_perpendicular_coincidentline_patches(width, height, length):
     """Test universal form factor for perpendicular patches sharing a side."""
     exact = exact_solutions.perpendicular_patch_coincidentline(
-        width, height, length
+        width, height, length,
     )
 
     patch_1 = geo.Polygon(
@@ -94,11 +91,11 @@ def test_perpendicular_coincidentline_patches(width, height, length):
 @pytest.mark.parametrize("length1", [1.0, 2.0, 3.0])
 @pytest.mark.parametrize("length2", [1.0, 2.0, 3.0])
 def test_perpendicular_coincidentpoint_patches(
-    width1, width2, length1, length2
+    width1, width2, length1, length2,
 ):
     """Test form factor for perpendicular patches w/ common vertex."""
     exact = exact_solutions.perpendicular_patch_coincidentpoint(
-        width1, length2, width2, length1
+        width1, length2, width2, length1,
     )
 
     patch_1 = geo.Polygon(
@@ -176,7 +173,7 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
     )
 
     patch.init_energy_exchange(
-        0, 0.1, source, sampling_rate=sr, speed_of_sound=c
+        0, 0.1, source, sampling_rate=sr, speed_of_sound=c,
     )
 
     patch = source_cast(src=source, rpatch=patch, absor=absor_factor)
@@ -200,7 +197,7 @@ def source_cast(src, rpatch, absor):
     print(
         "nusselt approach runtime: "
         + str(tf_nusselt * 1000)
-        + "ms \n #################################"
+        + "ms \n #################################",
     )
     return rpatch
 
@@ -214,13 +211,13 @@ def receiver_cast(rcv, patch, radi, sr, c):
             ir_length_s=0.1,
             speed_of_sound=c,
             sampling_rate=sr,
-        )
+        ),
     )
 
     patch_energy = np.sum(patch.E_matrix)
 
     nuss = form_factor.pt_solution(
-            point=rcv.position, patch_points=patch.pts, mode="receiver"
+            point=rcv.position, patch_points=patch.pts, mode="receiver",
             ) * patch_energy
 
     rel_error_nuss = abs(true_rec_energy - nuss) / true_rec_energy * 100

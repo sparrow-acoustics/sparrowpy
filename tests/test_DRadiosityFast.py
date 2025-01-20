@@ -2,12 +2,9 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
-import os
 import pyfar as pf
 
 import sparrowpy as sp
-import time
-import matplotlib.pyplot as plt
 
 
 create_reference_files = False

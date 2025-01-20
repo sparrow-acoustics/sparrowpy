@@ -25,7 +25,7 @@ def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, so
         source patch normal (3,)
 
     Returns
-    --------
+    -------
     out: float
         form factor
 
@@ -41,7 +41,7 @@ def calc_form_factor(receiving_pts: np.ndarray, receiving_normal: np.ndarray, so
     return out
 
 #######################################################################################
-### Stokes integration 
+### Stokes integration
 @numba.njit()
 def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
     """
@@ -58,7 +58,7 @@ def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
         in the stokes integration of the form factor, a point on a different patch's boundary
 
     Returns
-    --------
+    -------
     result: float
         form function for points p1, p0
     """
@@ -84,7 +84,7 @@ def load_stokes_entries(i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndar
         list of points in patch j boundary (n_boundary_points_j , 3)
 
     Returns
-    --------
+    -------
     form_mat: np.ndarray
         matrix of form function values (n_boundary_points_i , n_boundary_points_j)
 
@@ -122,7 +122,7 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
         polynomial order of the form function integration estimation
 
     Returns
-    --------
+    -------
     form factor between patch_i and patch_j using Stokes' theorem for integration
     """
 
@@ -133,7 +133,7 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
     subseci = np.zeros((i_conn.shape[1]))
     form_mat = np.zeros((i_bpoints.shape[0],j_bpoints.shape[0]))
 
-    # if coincidence_check(i_bpoints,j_bpoints): 
+    # if coincidence_check(i_bpoints,j_bpoints):
     #     return float('nan')
 
     # first compute and store form function sample values
@@ -148,8 +148,8 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
 
         for i in range(len(i_bpoints)):                                 # for each point in patch i boundary
             for segj in j_conn:                                         # for each segment segj in patch j boundary
-                
-                xj = j_bpoints[segj][:,dim]          
+
+                xj = j_bpoints[segj][:,dim]
 
                 if xj[-1]-xj[0]!=0:
                     for k in range(len(segj)):
@@ -167,7 +167,7 @@ def stokes_integration(patch_i: np.ndarray, patch_j: np.ndarray, source_area: fl
             if xi[-1]-xi[0]!=0:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                quadfactors = helpers.poly_estimation(x=xi, y=subseci) 
+                quadfactors = helpers.poly_estimation(x=xi, y=subseci)
                 outer_integral += helpers.poly_integration(c=quadfactors,x=xi)
 
     return np.abs(outer_integral/(2*np.pi*source_area))
@@ -205,7 +205,7 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> floa
     hand = np.sign(np.dot(np.cross( patch_points[1]-patch_points[0] , patch_points[2]-patch_points[1] ), patch_normal) )
 
     curved_area = 0
-        
+
     sphPts = np.empty_like( boundary_points )
     projPts = np.empty_like( boundary_points )
     plnPts = np.empty( shape=(len(boundary_points),2) )
@@ -216,7 +216,7 @@ def nusselt_analog(surf_origin, surf_normal, patch_points, patch_normal) -> floa
     rotmat = helpers.rotation_matrix(n_in=surf_normal)
 
     for ii in numba.prange(len(sphPts)):
-        plnPts[ii,:] = helpers.inner(matrix=rotmat,vector=sphPts[ii])[:-1] # points on the hemisphere projected onto 
+        plnPts[ii,:] = helpers.inner(matrix=rotmat,vector=sphPts[ii])[:-1] # points on the hemisphere projected onto
         projPts[ii,:-1] = plnPts[ii,:]
         projPts[ii,-1] = 0.
 
@@ -296,7 +296,7 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
             if True, the samples are randomly distributed in a uniform way
             if False, a regular sampling of the surface is performed
     """
-    
+
     if random:
         p0_array = helpers.sample_random(patch_i,nsamples)
     else:
@@ -309,7 +309,7 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal
 
     out *= helpers.polygon_area(patch_i)/(np.pi * len(p0_array) * helpers.polygon_area(patch_j))
 
-    return out 
+    return out
 
 
 #/////////////////////////////////////////////////////////////////////////////////////#
@@ -334,7 +334,7 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
         determines if point is acting as a source ('source')
         or as a receiver ('receiver')
     """
-    
+
     if mode == 'receiver':
         source_area = helpers.polygon_area(patch_points)
     elif mode == 'source':
@@ -351,7 +351,7 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     for i in range(npoints):
         patch_onsphere[i]= (patch_points[i]-point) / np.linalg.norm(patch_points[i]-point)
 
-    for i in range(npoints): 
+    for i in range(npoints):
 
         v0 = helpers.calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i-1)%npoints])
         v1 = helpers.calculate_tangent_vector(patch_onsphere[i], patch_onsphere[(i+1)%npoints])

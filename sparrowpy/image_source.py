@@ -17,7 +17,7 @@ def get_walls_hesse(RoomX,RoomY,RoomZ):
 def calculate_image_sources(WallsHesse, SourcePos, MaxOrder):
     n_walls = WallsHesse.shape[0]
     n_IS = int(1 + n_walls / (n_walls - 2) * ((n_walls - 1) ** MaxOrder - 1))
-   
+
     ISList = [ob.ISObj() for object in range(1,n_IS+1)]
 
 
@@ -38,12 +38,12 @@ def calculate_image_sources(WallsHesse, SourcePos, MaxOrder):
                     p = ISList[iISID].Position
                     d = WallsHesse[iWalls-1, 3]
                     t0 = d - np.dot(n0, p)
-           
+
                     if order == 1:
                         wallCriterium = True
                     else:
                             wallCriterium = (iWalls != ISList[iISID].Walls[-1])
-           
+
                     if wallCriterium and (t0 > 0):
 
 
@@ -53,16 +53,16 @@ def calculate_image_sources(WallsHesse, SourcePos, MaxOrder):
 
 
                         list_end += 1
-   
+
     # this was changed in order to cut the list
 
 
     ISList = ISList[:list_end + 1]
     return ISList
-   
 
 
-   
+
+
 
 
 def get_corners_of_walls_hesse(Walls_Hesse):
@@ -73,7 +73,8 @@ def get_corners_of_walls_hesse(Walls_Hesse):
     - walls_hesse (np.ndarray): An (n_walls, 4) array where each row represents a wall
                                 in Hesse normal form [n0x, n0y, n0z, d].
    
-    Returns:
+    Returns
+    -------
     - np.ndarray: An array of corner points.
     """
     Corners = []
@@ -95,7 +96,7 @@ def get_corners_of_walls_hesse(Walls_Hesse):
                 angles_cos = np.array([
                     np.dot(n1, n2),
                     np.dot(n1, n3),
-                    np.dot(n2, n3)
+                    np.dot(n2, n3),
                 ])
 
 
@@ -109,7 +110,7 @@ def get_corners_of_walls_hesse(Walls_Hesse):
 
 
                 Corners.append(corner)
-   
+
     array_8x3 = np.array(Corners)
     array_8x3 = np.abs(array_8x3)
     return array_8x3
@@ -131,67 +132,68 @@ def filter_image_sources(ISList, WallsHesse, ReceiverPos):
     - MaxOrder (int): The maximum order of reflections to consider.
 
 
-    Returns:
+    Returns
+    -------
     - list of dict: Filtered list of image sources.
     """
     corners = get_corners_of_walls_hesse(WallsHesse)
     bound_min = np.min(corners, axis=0) - 0.001 #axis=0
     bound_max = np.max(corners, axis=0) + 0.001
-   
+
     n_walls = WallsHesse.shape[0]
     filter_flags = np.ones(len(ISList), dtype=bool)
-       
+
     for ind, mis in enumerate(ISList):
         walls = mis.Walls
-       
+
         if len(walls) < 1:
             continue
-       
+
         a = ReceiverPos
         b = mis.Position - ReceiverPos
-       
+
         for k in range(len(walls)-1, -1, -1):
             wall_hesse = WallsHesse[walls[k]-1,:]  # PROBLEM HERE original was walls[k]. maybe walls[k-1] is correct?
             n0 = wall_hesse[0:3]
             d = wall_hesse[3]  # Index 3 to get the scalar value
-           
+
             t = (d - np.dot(n0, a)) / np.dot(n0, b)
-           
+
             if t < 0:
                 filter_flags[ind] = False
                 break
-           
+
             a = a + t * b
-           
+
             # Ensure that a, bound_min, and bound_max are scalars; otherwise, use np.any() or np.all()
 
 
             if any(a[i] < bound_min[i] or a[i] > bound_max[i] for i in range(3)):
                 filter_flags[ind] = False
                 break
-               
+
             test_in_room = True
             except_wall = walls[k]  # Changed from walls[k] to element
             for ind2 in range(1,n_walls+1): #original was for ind2 in range(n_walls)
                 if ind2 == except_wall:
                     continue
-               
+
                 wall = WallsHesse[ind2-1,:] #original was WallsHesse[ind2,:]
                 if np.dot(a, wall[0:3]) > wall[3]:
                     test_in_room = False
                     break
-           
+
             if not test_in_room:
                 filter_flags[ind] = False
                 break
-           
+
             b = b - 2 * np.dot(b, n0) * n0
-       
+
         # if filter_flags[ind]:
         #     errorvalue = np.linalg.norm(np.cross(b, mis.Position - a)) / np.linalg.norm(b)
         #     if errorvalue > 0.01:
         #         raise ValueError(f'error: errorvalue ({errorvalue:.6f}) too big')
-   
+
     return [ISList[i] for i in range(len(ISList)) if filter_flags[i]]
 
 
@@ -206,7 +208,7 @@ def calculate_impulse_response(ISList, WallsR, ReceiverPos):
 
 
     for ind, mis in enumerate(ISList):
-       
+
         im_source = np.array(mis.Position)
         receiver = np.array(ReceiverPos)
         dis = np.linalg.norm(im_source - receiver)
@@ -229,7 +231,7 @@ def calculate_impulse_response(ISList, WallsR, ReceiverPos):
         t_index = round(t * sampling_rate) #aslinya tadi +1
         pressure = (1 / distance) * (WallsR ** order)
         IR[t_index] = pressure
-   
+
     return IR
 
 
