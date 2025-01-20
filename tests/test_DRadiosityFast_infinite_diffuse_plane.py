@@ -17,7 +17,7 @@ import numpy.testing as npt
 
 
 def run_energy_diff_specular_ratio(
-        width, depth, patch_size, source, receiver):
+        width, length, patch_size, source, receiver):
     """
     Calculate the ratio of diffuse to specular energy for an plane.
     The plane is located in the x-y plane. Its center is at (0, 0, 0).
@@ -26,8 +26,8 @@ def run_energy_diff_specular_ratio(
     ----------
     width : float
         Width of the plane.
-    depth : float
-        Depth of the plane.
+    length : float
+        length of the plane.
     patch_size : float
         Size of the patches.
     source : pf.Coordinates
@@ -49,12 +49,11 @@ def run_energy_diff_specular_ratio(
     max_histogram_length=1
 
     plane = sp.geometry.Polygon(
-        [[-width/2, -depth/2, 0],
-        [-width/2, depth/2, 0],
-        [width/2, depth/2, 0],
-        [width/2, depth/2, 0]],
-        up_vector=np.array([1.,0.,0.]),
-        normal=np.array([0.,0.,1.]))
+            [[-width/2, -length/2, 0],
+             [width/2, -length/2, 0],
+             [width/2, length/2, 0],
+             [-width/2, length/2, 0]],
+            [1, 0, 0], [0, 0, 1])
 
     #simulation parameters
     radi = sp.radiosity_fast.DRadiosityFast.from_polygon(
