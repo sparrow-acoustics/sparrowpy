@@ -61,6 +61,43 @@ def _add_directional(
 
 
 @numba.njit()
+def energy_exchange_init_energy(
+        n_samples, energy_0_directivity, distance_0,
+        speed_of_sound, histogram_time_resolution):
+    """Calculate energy exchange between patches.
+
+    Parameters
+    ----------
+    n_samples : int
+        number of samples of the histogram.
+    energy_0_directivity : np.ndarray
+        init energy of all patches of shape (n_patches, n_directions, n_bins)
+    distance_0 : np.ndarray
+        distance from the source to all patches of shape (n_patches)
+    speed_of_sound : float
+        speed of sound in m/s.
+    histogram_time_resolution : float
+        time resolution of the histogram in s.
+
+    Returns
+    -------
+    E_matrix_total : np.ndarray
+        energy of all patches of shape
+        (n_patches, n_directions, n_bins, n_samples)
+
+    """
+    n_patches = energy_0_directivity.shape[0]
+    n_directions = energy_0_directivity.shape[1]
+    n_bins = energy_0_directivity.shape[2]
+    E_matrix_total = np.zeros((n_patches, n_directions, n_bins, n_samples))
+    for i in numba.prange(n_patches):
+        n_delay_samples = int(
+            distance_0[i]/speed_of_sound/histogram_time_resolution)
+        E_matrix_total[i, :, :, n_delay_samples] += energy_0_directivity[i]
+    return E_matrix_total
+
+
+@numba.njit()
 def energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
         form_factors_tilde,
