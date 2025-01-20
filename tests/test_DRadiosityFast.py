@@ -12,8 +12,19 @@ import matplotlib.pyplot as plt
 
 create_reference_files = False
 
-def test_init(sample_walls):
+def test_init_from_polygon(sample_walls):
     radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    npt.assert_almost_equal(radiosity.patches_points.shape, (150, 4, 3))
+    npt.assert_almost_equal(radiosity.patches_area.shape, (150))
+    npt.assert_almost_equal(radiosity.patches_center.shape, (150, 3))
+    npt.assert_almost_equal(radiosity.patches_size.shape, (150, 3))
+    npt.assert_almost_equal(radiosity.patches_normal.shape, (150, 3))
+    
+@pytest.mark.parametrize('filename', [
+    "tests/test_data/cube.blend",
+    ])
+def test_init_from_blenderfile(filename):
+    radiosity = sp.DRadiosityFast.from_blender_file(filename)
     npt.assert_almost_equal(radiosity.patches_points.shape, (150, 4, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (150))
     npt.assert_almost_equal(radiosity.patches_center.shape, (150, 3))
