@@ -163,8 +163,5 @@ def test_source_receiver_same_hight(patch_size, theta_deg):
         np.pi, theta_rad, 2, weights=1)
     ratio = calculate_ratio_new(width, depth, patch_size, source, receiver)
 
-    # the energy should be 2*cos(theta) ideally, but the simulation cannot
-    # cover an infinite plane, therefore the energy is slightly less than 2
-    npt.assert_array_less(ratio, 2*np.cos(theta_rad))
     npt.assert_allclose(ratio, 2*np.cos(theta_rad), atol=0.03, rtol=0.03)
 

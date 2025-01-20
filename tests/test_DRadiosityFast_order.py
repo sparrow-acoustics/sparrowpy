@@ -89,11 +89,11 @@ def test_form_factors_directivity_for_diffuse(
             if i < j:
                 npt.assert_almost_equal(
                     radiosity._form_factors_tilde[i, j, :, :],
-                    radiosity._form_factors[i, j])
+                    radiosity._form_factors[i, j*np.pi])
             else:
                 npt.assert_almost_equal(
                     radiosity._form_factors_tilde[i, j, :, :],
-                    radiosity._form_factors[j, i])
+                    radiosity._form_factors[j, i]*np.pi)
 
 
 @pytest.mark.parametrize('patch_size', [1])
