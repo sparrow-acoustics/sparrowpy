@@ -3,6 +3,7 @@ import numpy as np
 import pyfar as pf
 from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_order as ee_order
+from sparrowpy.utils import blender
 
 
 class DRadiosityFast():
@@ -82,6 +83,35 @@ class DRadiosityFast():
         walls_points = np.array([p.pts for p in polygon_list])
         walls_normal = np.array([p.normal for p in polygon_list])
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
+
+        # create patches
+        (
+            patches_points, patches_normal,
+            n_patches, patch_to_wall_ids) = geometry.process_patches(
+            walls_points, walls_normal, patch_size, len(polygon_list))
+        # create radiosity object
+        return cls(
+            walls_points, walls_normal, walls_up_vector,
+            patches_points, patches_normal, patch_size, n_patches,
+            patch_to_wall_ids)
+        
+    @classmethod
+    def from_file(
+            cls, blend_filename):
+        """Create a Radiosity object ffrom a blender file.
+
+        """
+        mesh,_ = blender.read_geometry_file(blend_filename)
+        # save wall information
+        walls_normal = mesh["norm"]
+        
+        walls_points=np.empty((len(mesh["conn"]), len(mesh["conn"][0]), mesh["verts"].shape[1]))
+        walls_up_vector = np.empty_like(walls_normal)
+        
+        for patchID in range(walls_normal.shape[0]):
+            walls_points[patchID] = mesh["verts"][mesh["conn"][patchID]]
+            walls_up_vector = walls_points[patchID][1]-walls_points[patchID][0] # PLACEHOLDER!!!
+        
 
         # create patches
         (
