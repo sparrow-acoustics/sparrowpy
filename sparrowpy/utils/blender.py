@@ -80,8 +80,9 @@ def read_geometry_file(blend_file: Path, angular_tolerance=3.):
 
     # dissolve coplanar faces for visibility check
     surfs = out_mesh.copy()
-    bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
-                             verts=surfs.verts, edges=surfs.edges)
+    region = bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
+                             verts=surfs.verts, edges=surfs.edges,
+                             delimit={'MATERIAL'})
 
     finemesh = generate_connectivity(out_mesh)
     roughmesh = generate_connectivity(surfs)
@@ -122,8 +123,5 @@ def generate_connectivity(mesh: bmesh):
         for v in f.verts:
             line.append(v.index)
         out_mesh["conn"].append(line)
-        out_mesh["norm"].append(np.array(f.normal))
-
-    out_mesh["norm"] = np.array(out_mesh["norm"])
 
     return out_mesh
