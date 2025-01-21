@@ -112,7 +112,7 @@ def generate_connectivity(mesh: bmesh):
         mesh in reduced data representation.
 
     """
-    out_mesh = dict({"conn":[], "verts": np.array([])})
+    out_mesh = {"conn":[], "verts": np.array([])}
 
     out_mesh["verts"] = np.array([v.co for v in mesh.verts])
 

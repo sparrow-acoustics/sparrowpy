@@ -1,11 +1,11 @@
-"""creates an image source object"""
+"""creates an image source object."""
 
 
 import numpy as np
 
 
 class ISObj:
-
+    """Image source object."""
 
     def __init__(self, position=None, walls=None, order=None):
         if position is None:
@@ -31,6 +31,7 @@ class ISObj:
 
 
     def find_image_sources_with_same_position(self, ISList):
+        """Find image sources with the same position."""
         IndexList = []
         for ind, is_obj in enumerate(ISList):
             if np.array_equal(self.Position, is_obj.Position):
@@ -39,6 +40,7 @@ class ISObj:
 
 
     def get_small_info_strings(self):
+        """Get small info strings."""
         lines = []
         walls_str = 'Wall IDs: '
         if not self.Walls:
@@ -51,11 +53,13 @@ class ISObj:
 
 
     def export_is_as_array(self):
+        """Export an ISObj as an array."""
         return np.concatenate((self.Position, self.Walls)).astype(float)
 
 
     @staticmethod
     def import_array(arr):
+        """Import an array as an ISObj."""
         obj = ISObj()
         obj.Position = np.array(arr[:3], dtype=float)
         walls = np.array(arr[3:], dtype=int)
@@ -70,7 +74,9 @@ class ISObj:
 
     @staticmethod
     def export_is_list_as_matrix(islist):
-        mat = np.zeros((len(islist), 3 + max(len(is_obj.Walls) for is_obj in islist)))
+        """Export a list of ISObj as a matrix."""
+        mat = np.zeros((len(islist), 3 + max(
+            len(is_obj.Walls) for is_obj in islist)))
         for ind, IS in enumerate(islist):
             array = IS.export_is_as_array()
             mat[ind, :len(array)] = array
@@ -79,6 +85,7 @@ class ISObj:
 
     @staticmethod
     def import_matrix_as_is_list(mat):
+        """Import a matrix as a list of ISObj."""
         islist = []
         for row in mat:
             islist.append(ISObj.import_array(row))
@@ -87,13 +94,16 @@ class ISObj:
 
     @staticmethod
     def scatter_is_callback(event_obj):
+        """Callback function for scatter plot."""
         pos = event_obj["Position"]
         userdata = event_obj.get("Target", {}).get("UserData", None)
         output_txt = []
 
 
-        if userdata and isinstance(userdata, list) and all(isinstance(obj, ISObj) for obj in userdata):
-            output_txt.append(f'Position: {pos[0]:.4f}, {pos[1]:.4f}, {pos[2]:.4f}')
+        if userdata and isinstance(userdata, list) and all(
+                isinstance(obj, ISObj) for obj in userdata):
+            output_txt.append(
+                f'Position: {pos[0]:.4f}, {pos[1]:.4f}, {pos[2]:.4f}')
             for list_ind, mis in enumerate(userdata):
                 if np.allclose(mis.Position, pos[:3], atol=0.001):
                     output_txt.append(f'--Index: {list_ind} ---')

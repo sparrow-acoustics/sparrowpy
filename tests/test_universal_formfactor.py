@@ -178,7 +178,7 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
 
     patch = source_cast(src=source, rpatch=patch, absor=absor_factor)
 
-    receiver_cast(receiver, patch, absor_factor, sr, c)
+    receiver_cast(receiver, patch, sr, c)
 
 
 def source_cast(src, rpatch, absor):
@@ -202,7 +202,7 @@ def source_cast(src, rpatch, absor):
     return rpatch
 
 
-def receiver_cast(rcv, patch, radi, sr, c):
+def receiver_cast(rcv, patch, sr, c):
     """Cast and test patch-to-receiver factor calculation."""
     true_rec_energy = np.sum(
         patch.energy_at_receiver(

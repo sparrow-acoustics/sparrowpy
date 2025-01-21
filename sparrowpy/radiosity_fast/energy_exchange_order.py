@@ -140,22 +140,17 @@ def _collect_receiver_energy(
 
     Parameters
     ----------
-    ir : np.ndarray
-        impulse response of shape (n_samples, n_bins)
     E_matrix_total : np.ndarray
         energy of all patches of shape
         (n_patches, n_directions, n_bins, n_samples)
     patch_receiver_distance : np.ndarray
         distance from the patch to the receiver of shape (n_patches)
-    patch_receiver_energy : np.ndarray
-        energy of the patch at the receiver of shape (n_patches, n_bins)
     speed_of_sound : float
         speed of sound in m/s.
     histogram_time_resolution : float
         time resolution of the histogram in s.
-    receiver_idx : np.ndarray
-        indexes of the direction from the patch towards the receiver,
-        of shape (n_patches)
+    air_attenuation : np.ndarray
+        the air attenuation factor per frequency of shape (n_bins).
 
     Returns
     -------

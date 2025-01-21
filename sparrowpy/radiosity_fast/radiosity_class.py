@@ -214,7 +214,6 @@ class DRadiosityFast():
 
         if algorithm == 'order':
             energy_0_dir = self.energy_0_dir
-            # assert max_depth>=1, "max_depth must be larger than 1"
             if not hasattr(self, 'E_matrix_total') or recalculate:
                 self.E_matrix_total = ee_order.energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
@@ -257,7 +256,6 @@ class DRadiosityFast():
 
             # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
-                # scattering_index = np.array(self._scattering_index)
             receiver_idx = geometry.get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
                 self._patch_to_wall_ids)

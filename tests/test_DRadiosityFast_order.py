@@ -127,7 +127,4 @@ def test_order_vs_analytic(patch_size):
             10*np.log10(histogram[0, samples_reverb_start:samples_reverb_end]),
             10*np.log10(reverberation_analytic[samples_reverb_start:samples_reverb_end]),
             atol=0.3)
-        # npt.assert_almost_equal(
-        # histogram[0, histogram[0,:]>0],
-        # histogram_old[0, histogram_old[0,:]>0])
 
