@@ -15,7 +15,7 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def read_geometry_file(blend_file: Path, angular_tolerance=3.):
+def read_geometry_file(blend_file: Path, angular_tolerance=1.):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -80,14 +80,15 @@ def read_geometry_file(blend_file: Path, angular_tolerance=3.):
 
     # dissolve coplanar faces for visibility check
     surfs = out_mesh.copy()
-    region = bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
+    bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
                              verts=surfs.verts, edges=surfs.edges,
                              delimit={'MATERIAL'})
 
-    finemesh = generate_connectivity(out_mesh)
-    roughmesh = generate_connectivity(surfs)
+    #finemesh = generate_connectivity(out_mesh)
+    wall_data = generate_connectivity_wall(surfs)
+    patch_data = generate_connectivity_patch(surfs)
 
-    return finemesh, roughmesh
+    return wall_data
 
 
 def ensure_object_mode():
@@ -96,7 +97,7 @@ def ensure_object_mode():
         if bpy.context.object.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
 
-def generate_connectivity(mesh: bmesh):
+def generate_connectivity_wall(mesh: bmesh):
     """Generate node list and surf connectivity matrix.
 
     Parameters
@@ -114,12 +115,15 @@ def generate_connectivity(mesh: bmesh):
         mesh in reduced data representation.
 
     """
-    out_mesh = dict({"conn":[], "verts": np.array([]), "norm":[]})
+    out_mesh = {"conn":[], "verts": np.array([]), "normal":[], "material": []}
 
     out_mesh["verts"] = np.array([v.co for v in mesh.verts])
 
     for f in mesh.faces:
-        line = []
+        out_mesh["material"].append(bpy.context.object.material_slots[f.material_index].name)
+
+        line=[]
+
         for v in f.verts:
             line.append(v.index)
         out_mesh["conn"].append(line)
