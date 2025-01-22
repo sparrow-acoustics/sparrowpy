@@ -136,11 +136,13 @@ def energy_exchange(
     n_directions = form_factors_tilde.shape[2]
     n_bins = energy_0_directivity.shape[2]
     form_factors_tilde = form_factors_tilde[..., np.newaxis]
-    E_matrix_total  = energy_exchange_init_energy(
-        n_samples, energy_0_directivity, distance_0, speed_of_sound,
-        histogram_time_resolution)
     E_matrix = np.zeros((2, n_patches, n_directions, n_bins, n_samples))
-    E_matrix[0] += E_matrix_total
+    for i in numba.prange(n_patches):
+        n_delay_samples = int(
+            distance_0[i]/speed_of_sound/histogram_time_resolution)
+        E_matrix[0, i, :, :, n_delay_samples] += energy_0_directivity[i]
+    E_matrix_total = np.zeros((n_patches, n_directions, n_bins, n_samples))
+    E_matrix_total += E_matrix[0]
     if max_order == 0:
         return E_matrix_total
     for k in range(max_order):
