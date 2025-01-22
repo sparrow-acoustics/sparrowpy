@@ -43,11 +43,11 @@ def test_form_factors_directivity_for_diffuse(
             if i < j:
                 npt.assert_almost_equal(
                     radiosity._form_factors_tilde[i, j, :, :],
-                    radiosity._form_factors[i, j*np.pi])
+                    radiosity._form_factors[i, j])
             else:
                 npt.assert_almost_equal(
                     radiosity._form_factors_tilde[i, j, :, :],
-                    radiosity._form_factors[j, i]*np.pi)
+                    radiosity._form_factors[j, i])
 
 
 @pytest.mark.parametrize('patch_size', [1])
@@ -67,28 +67,27 @@ def test_order_vs_analytic(patch_size):
 
     absorption = 0.1
 
-    sources = pf.Coordinates(0, 0, 1)
-    receivers = pf.Coordinates(0, 0, 1)
+    sources = pf.Coordinates(0, 0, 1, weights=1)
+    receivers = pf.Coordinates(0, 0, 1, weights=1)
     frequencies = np.array([500])
-    data_scattering = pf.FrequencyData(
-        np.ones((sources.csize, receivers.csize, frequencies.size)),
-        frequencies)
+    brdf = sp.brdf.create_from_scattering(
+        sources, receivers, pf.FrequencyData(1, frequencies))
     walls = sp.testing.shoebox_room_stub(X, Y, Z)
 
     radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
 
     radiosity.set_wall_scattering(
-        np.arange(len(walls)), data_scattering, sources, receivers)
+        np.arange(len(walls)), brdf, sources, receivers)
     radiosity.set_air_attenuation(
         pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies),
-            data_scattering.frequencies))
+            np.zeros_like(brdf.frequencies),
+            brdf.frequencies))
     radiosity.set_wall_absorption(
         np.arange(len(walls)),
         pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies)+absorption,
-            data_scattering.frequencies))
+            np.zeros_like(brdf.frequencies)+absorption,
+            brdf.frequencies))
     radiosity.bake_geometry(algorithm='order')
 
 
@@ -98,7 +97,7 @@ def test_order_vs_analytic(patch_size):
         histogram_time_resolution=time_resolution,
         histogram_length=length_histogram,
         algorithm='order', max_depth=max_order_k, recalculate=True)
-    
+
     patches_hist = radiosity.collect_receiver_energy(
         receiver_pos, speed_of_sound, time_resolution, propagation_fx=True
     )
