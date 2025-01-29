@@ -100,7 +100,7 @@ def run_energy_diff_specular_ratio(
     I_diffuse = pf.Signal(ir_fast, sampling_rate=sampling_rate)
 
     I_specular = 1/(4*np.pi*reflection_len**2)
-    return np.sum(I_diffuse.freq[:, :])/I_specular
+    return np.sum(I_diffuse.time)/I_specular
 
 
 @pytest.mark.parametrize("patch_size", [1])
