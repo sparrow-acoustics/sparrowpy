@@ -126,7 +126,8 @@ def generate_connectivity_wall(mesh: bmesh):
     out_mesh["verts"] = np.array([v.co for v in mesh.verts])
 
     for f in mesh.faces:
-        out_mesh["material"].append(bpy.context.object.material_slots[f.material_index].name)
+        if len(bpy.context.object.material_slots)!=0:
+            out_mesh["material"].append(bpy.context.object.material_slots[f.material_index].name)
 
         line=[]
 
