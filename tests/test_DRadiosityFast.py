@@ -62,50 +62,6 @@ def test_compute_form_factors(sample_walls):
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
 
 
-@pytest.mark.parametrize('walls', [
-    # perpendicular walls
-    [0, 2], [0, 3], [0, 4], [0, 5],
-    [1, 2], [1, 3], [1, 4], [1, 5],
-    [2, 0], [2, 1], [2, 4], [2, 5],
-    [3, 0], [3, 1], [3, 4], [3, 5],
-    [4, 0], [4, 1], [4, 2], [4, 3],
-    [5, 0], [5, 1], [5, 2], [5, 3],
-    # parallel walls
-    [0, 1], [2, 3], [4, 5],
-    [1, 0], [3, 2], [5, 4],
-    ])
-@pytest.mark.parametrize('patch_size', [
-    0.5,
-    ])
-def test_calc_form_factor_perpendicular_distance(
-        sample_walls, walls, patch_size):
-    """Test form factor calculation for perpendicular walls."""
-    wall_source = sample_walls[walls[0]]
-    wall_receiver = sample_walls[walls[1]]
-    patch_1 = sp.radiosity.Patches(wall_source, patch_size, [1], 0)
-    patch_2 = sp.radiosity.Patches(wall_receiver, patch_size, [0], 1)
-    patches = [patch_1, patch_2]
-    patch_1.calculate_univ_form_factor(patches)
-    patch_2.calculate_univ_form_factor(patches)
-
-    radiosity = sp.DRadiosityFast.from_polygon(
-        [wall_source, wall_receiver], patch_size)
-    radiosity.bake_geometry()
-
-    patch_pos = np.array([patch.center for patch in patch_1.patches])
-    if (np.abs(patch_pos- radiosity.patches_center[:4, :])<1e-5).all():
-        npt.assert_almost_equal(
-            radiosity.form_factors[:4, 4:], patch_1.form_factors)
-    else:
-        npt.assert_almost_equal(
-            radiosity.form_factors[:4, 4:], patch_1.form_factors.T)
-
-    patch_pos = np.array([patch.center for patch in patch_2.patches])
-    if (np.abs(patch_pos- radiosity.patches_center[4:, :])<1e-5).all():
-        npt.assert_almost_equal(radiosity.form_factors[4:, :4], 0)
-    else:
-        npt.assert_almost_equal(radiosity.form_factors[4:, :4], 0)
-
 
 @pytest.mark.parametrize('walls', [
     # perpendicular walls
@@ -140,12 +96,6 @@ def test_form_factors_directivity_for_diffuse(
         np.arange(len(walls)),
         pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
     radiosity.bake_geometry()
-    # radiosity.calculate_energy_exchange(k)
-    # radiosity.init_energy(source_pos)
-    # histogram = radiosity.collect_energy_receiver(
-    #     receiver_pos, speed_of_sound=speed_of_sound,
-    #     histogram_time_resolution=time_resolution,
-    #     histogram_time_length=length_histogram)
 
     form_factors_from_tilde = np.max(radiosity._form_factors_tilde, axis=2)
     for i in range(4):

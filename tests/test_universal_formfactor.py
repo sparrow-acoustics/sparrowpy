@@ -211,7 +211,6 @@ def receiver_cast(rcv, patch, radi, sr, c):
         patch.energy_at_receiver(
             receiver=rcv,
             max_order=0,
-            ir_length_s=0.1,
             speed_of_sound=c,
             sampling_rate=sr,
         )
