@@ -90,7 +90,7 @@ def read_geometry_file(blend_file: Path, angular_tolerance=1.):
     bmesh.ops.triangulate(out_mesh, faces=surfs.faces)
     patch_data = generate_patches(out_mesh)
 
-    return wall_data
+    return wall_data, patch_data
 
 
 def ensure_object_mode():
@@ -132,7 +132,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
     return out_mesh
 
-def generate_patches(mesh: dict, max_patch_size: float):
+def generate_patches(mesh: dict, max_patch_size=np.sqrt(2)):
     """Generate patches procedurally for each wall based on max edge size."""
 
     patches={"conn":np.array([]),
