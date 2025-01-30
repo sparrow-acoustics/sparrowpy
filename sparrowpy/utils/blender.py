@@ -87,8 +87,8 @@ def read_geometry_file(blend_file: Path, angular_tolerance=1.):
     #finemesh = generate_connectivity(out_mesh)
     wall_data = generate_connectivity_wall(surfs)
 
-    bmesh.ops.triangulate(out_mesh, faces=surfs.faces)
-    patch_data = generate_patches(out_mesh)
+    bmesh.ops.triangulate(out_mesh, faces=[s for s in out_mesh.faces])
+    patch_data = generate_patches(generate_connectivity_wall(out_mesh))
 
     return wall_data, patch_data
 
