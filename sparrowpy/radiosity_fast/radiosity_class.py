@@ -94,35 +94,51 @@ class DRadiosityFast():
             walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
-        
-    # @classmethod
-    # def from_file(
-    #         cls, blend_filename):
-    #     """Create a Radiosity object ffrom a blender file.
 
-    #     """
-    #     mesh,_ = blender.read_geometry_file(blend_filename)
-    #     # save wall information
-    #     walls_normal = mesh["norm"]
+    @classmethod
+    def from_file(
+            cls, blend_filename: str, max_patch_size=1.):
+        """Create a Radiosity object ffrom a blender file.
 
-    #     walls_points=np.empty((len(mesh["conn"]), len(mesh["conn"][0]), mesh["verts"].shape[1]))
-    #     walls_up_vector = np.empty_like(walls_normal)
+        """
+        walls,patches = blender.read_geometry_file(blend_filename,
+                                                   max_patch_size=max_patch_size)
 
-    #     for patchID in range(walls_normal.shape[0]):
-    #         walls_points[patchID] = mesh["verts"][mesh["conn"][patchID]]
-    #         walls_up_vector = walls_points[patchID][1]-walls_points[patchID][0] # PLACEHOLDER!!!
+        ## save wall information
+        walls_normal = walls["normal"]
 
+        walls_points=np.empty((len(walls["conn"]),
+                               len(walls["conn"][0]),
+                               walls["verts"].shape[-1]))
+        walls_up_vector = np.empty_like(walls_normal)
 
-    #     # create patches
-    #     (
-    #         patches_points, patches_normal,
-    #         n_patches, patch_to_wall_ids) = geometry.process_patches(
-    #         walls_points, walls_normal, patch_size, len(polygon_list))
-    #     # create radiosity object
-    #     return cls(
-    #         walls_points, walls_normal, walls_up_vector,
-    #         patches_points, patches_normal, patch_size, n_patches,
-    #         patch_to_wall_ids)
+        for wallID in range(len(walls_normal)):
+            walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
+            walls_up_vector = walls_points[wallID][1]-walls_points[wallID][0] # PLACEHOLDER!!!
+
+        ## save patch information
+        n_patches = patches["conn"].shape[0]
+        patch_to_wall_ids=np.empty((n_patches,),dtype=int)
+        patches_points=np.empty((n_patches,
+                                patches["conn"].shape[1],
+                                patches["verts"].shape[-1]))
+        patches_normal=np.empty((n_patches,
+                                patches["verts"].shape[-1]))
+
+        for patchID in range(n_patches):
+            patches_points[patchID]=patches["verts"][patches["conn"][patchID]]
+            patch_to_wall_ids[patchID] = patches["wall_ID"][patchID]
+            patches_normal[patchID] = walls["normal"][
+                                                patches["wall_ID"][patchID]
+                                                                            ]
+
+        patch_size = max_patch_size
+
+        # create radiosity object
+        return cls(
+            walls_points, walls_normal, walls_up_vector,
+            patches_points, patches_normal, patch_size, n_patches,
+            patch_to_wall_ids)
 
     def bake_geometry(self, ff_method='universal', algorithm='order'):
         """Bake the geometry by calculating all the form factors.
