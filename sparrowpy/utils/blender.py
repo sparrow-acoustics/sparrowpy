@@ -15,7 +15,9 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def read_geometry_file(blend_file: Path, angular_tolerance=1., max_patch_size=1.):
+def read_geometry_file(blend_file: Path,
+                       angular_tolerance=1.,
+                       max_patch_size=1.):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -135,6 +137,8 @@ def generate_connectivity_wall(mesh: bmesh):
         for v in f.verts:
             line.append(v.index)
         out_mesh["conn"].append(line)
+
+        out_mesh["normal"].append(np.array(f.normal))
 
     return out_mesh
 
