@@ -15,7 +15,7 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def read_geometry_file(blend_file: Path, angular_tolerance=1.):
+def read_geometry_file(blend_file: Path, angular_tolerance=1., max_patch_size=1.):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -91,8 +91,9 @@ def read_geometry_file(blend_file: Path, angular_tolerance=1.):
     #finemesh = generate_connectivity(out_mesh)
     wall_data = generate_connectivity_wall(surfs)
 
-    bmesh.ops.triangulate(out_mesh, faces=[s for s in out_mesh.faces])
-    patch_data = generate_patches(generate_connectivity_wall(out_mesh))
+    bmesh.ops.triangulate(out_mesh, faces=list(out_mesh.faces))
+    patch_data = generate_patches(generate_connectivity_wall(out_mesh),
+                                            max_patch_size=max_patch_size)
 
     return wall_data, patch_data
 
