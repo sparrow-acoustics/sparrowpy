@@ -51,14 +51,18 @@ def read_geometry_file(blend_file: Path, angular_tolerance=1.):
     if os.path.splitext(blend_file)[-1] == ".blend":
         bpy.ops.wm.open_mainfile(filepath=str(blend_file))
     elif os.path.splitext(blend_file)[-1] ==".stl":
+        bpy.ops.object.select_all(action='SELECT')
+        bpy.ops.object.delete()
         bpy.ops.wm.stl_import(filepath=str(blend_file))
     else:
         NotImplementedError("Only .stl and .blend files are supported.")
 
     ensure_object_mode()
-
     objects = bpy.data.objects
 
+    if os.path.splitext(blend_file)[-1] != ".blend":
+        for obj in objects:
+            obj.name = "Geometry"
 
     if "Geometry" not in objects:
         print("Geometry object not found in blend file")
@@ -132,7 +136,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
     return out_mesh
 
-def generate_patches(mesh: dict, max_patch_size=np.sqrt(2)):
+def generate_patches(mesh: dict, max_patch_size=2):
     """Generate patches procedurally for each wall based on max edge size."""
 
     patches={"conn":np.array([]),
