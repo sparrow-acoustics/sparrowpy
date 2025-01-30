@@ -5,7 +5,7 @@ from pathlib import Path
 import bpy
 import bmesh
 import numpy as np
-
+import trimesh as tm
 
 class DotDict(dict):
     """dot.notation access to dictionary attributes."""
@@ -86,7 +86,9 @@ def read_geometry_file(blend_file: Path, angular_tolerance=1.):
 
     #finemesh = generate_connectivity(out_mesh)
     wall_data = generate_connectivity_wall(surfs)
-    patch_data = generate_connectivity_patch(surfs)
+
+    bmesh.ops.triangulate(out_mesh, faces=surfs.faces)
+    patch_data = generate_patches(out_mesh)
 
     return wall_data
 
@@ -129,3 +131,21 @@ def generate_connectivity_wall(mesh: bmesh):
         out_mesh["conn"].append(line)
 
     return out_mesh
+
+def generate_patches(mesh: dict, max_patch_size: float):
+    """Generate patches procedurally for each wall based on max edge size."""
+
+    patches={"conn":np.array([]),
+             "verts": np.array([]),
+             "wall_ID": np.array([])}
+
+    verts, facs, IDs=tm.remesh.subdivide_to_size(vertices=mesh["verts"],
+                                        faces=mesh["conn"],
+                                        max_edge=max_patch_size,
+                                        return_index=True)
+
+    patches["verts"]   = np.array(verts)
+    patches["conn"]    = np.array(facs)
+    patches["wall_ID"] = np.array(IDs)
+
+    return patches
