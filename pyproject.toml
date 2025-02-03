@@ -83,7 +83,7 @@ exclude = [
     ".git",
     "docs",
 ]
-line-length = 79
+line-length = 95
 lint.ignore = [
     "D200",   # One-line docstring should fit on one line with quotes
     "D202",   # No blank lines allowed after function docstring
