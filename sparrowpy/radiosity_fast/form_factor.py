@@ -286,7 +286,7 @@ def _form_factors_with_directivity_dim(
                     patches_center[i],
                     patches_center[j],
                     sources,
-                    patch_to_wall_ids,  ### change made here for ndarray instead of int value
+                    np.asarray(wall_id_i),  ### change made here for ndarray instead of int
                     scattering,
                     scattering_index,
                 )
