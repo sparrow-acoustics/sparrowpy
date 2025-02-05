@@ -1,13 +1,11 @@
 """Module for the radiosity simulation."""
-
 import numpy as np
 import pyfar as pf
-
+from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_order as ee_order
-from . import form_factor, geometry, receiver_energy, source_energy
 
 
-class DRadiosityFast:
+class DRadiosityFast():
     """Radiosity object for directional scattering coefficients."""
 
     _walls_points: np.ndarray
@@ -38,17 +36,11 @@ class DRadiosityFast:
     _air_attenuation: np.ndarray
     _patch_to_wall_ids: np.ndarray
 
+
     def __init__(
-        self,
-        walls_points,
-        walls_normal,
-        walls_up_vector,
-        patches_points,
-        patches_normal,
-        patch_size,
-        n_patches,
-        patch_to_wall_ids,
-    ):
+            self, walls_points, walls_normal, walls_up_vector,
+            patches_points, patches_normal, patch_size, n_patches,
+            patch_to_wall_ids):
         """Create a Radiosity object for directional implementation."""
         self._walls_points = walls_points
         self._walls_normal = walls_normal
@@ -64,9 +56,9 @@ class DRadiosityFast:
         self._receivers = None
         self._absorption = None
         self._air_attenuation = None
-
     @classmethod
-    def from_polygon(cls, polygon_list, patch_size):
+    def from_polygon(
+            cls, polygon_list, patch_size):
         """Create a Radiosity object for directional scattering coefficients.
 
         Parameters
@@ -92,22 +84,17 @@ class DRadiosityFast:
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
 
         # create patches
-        (patches_points, patches_normal, n_patches, patch_to_wall_ids) = (
-            geometry.process_patches(walls_points, walls_normal, patch_size, len(polygon_list))
-        )
+        (
+            patches_points, patches_normal,
+            n_patches, patch_to_wall_ids) = geometry.process_patches(
+            walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
-            walls_points,
-            walls_normal,
-            walls_up_vector,
-            patches_points,
-            patches_normal,
-            patch_size,
-            n_patches,
-            patch_to_wall_ids,
-        )
+            walls_points, walls_normal, walls_up_vector,
+            patches_points, patches_normal, patch_size, n_patches,
+            patch_to_wall_ids)
 
-    def bake_geometry(self, ff_method="universal", algorithm="order"):
+    def bake_geometry(self, ff_method='universal', algorithm='order'):
         """Bake the geometry by calculating all the form factors.
 
         Parameters
@@ -120,10 +107,7 @@ class DRadiosityFast:
         """
         # Check the visibility between patches.
         self._visibility_matrix = geometry.check_visibility(
-            self.patches_center,
-            self.patches_normal,
-            self.patches_points,
-        )
+            self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
         visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
@@ -137,13 +121,10 @@ class DRadiosityFast:
                 i_counter += 1
         self._visible_patches = visible_patches
 
-        if ff_method == "universal":
+        if ff_method == 'universal':
             self._form_factors = form_factor.universal(
-                self.patches_points,
-                self.patches_normal,
-                self.patches_area,
-                self._visible_patches,
-            )
+                self.patches_points, self.patches_normal,
+                self.patches_area, self._visible_patches)
         else:
             raise NotImplementedError()
 
@@ -168,30 +149,22 @@ class DRadiosityFast:
 
         n_bins = 1 if self._n_bins is None else self._n_bins
 
-        if algorithm == "order":
-            self._form_factors_tilde = form_factor._form_factors_with_directivity_dim(
-                self.visibility_matrix,
-                self.form_factors,
-                n_bins,
+        if algorithm == 'order':
+            self._form_factors_tilde = \
+                form_factor._form_factors_with_directivity_dim(
+                self.visibility_matrix, self.form_factors, n_bins,
                 self.patches_center,
-                self._air_attenuation,
-                absorption,
+                self._air_attenuation, absorption,
                 absorption_index,
-                self._patch_to_wall_ids,
-                scattering,
+                self._patch_to_wall_ids, scattering,
                 scattering_index,
-                sources_array,
-                receivers_array,
-            )
+                sources_array, receivers_array)
         else:
             raise NotImplementedError()
 
     def init_source_energy(
-        self,
-        source_position: np.ndarray,
-        ff_method="universal",
-        algorithm="order",
-    ):
+            self, source_position:np.ndarray,
+            ff_method="universal", algorithm='order'):
         """Initialize the source energy."""
         source_position = np.array(source_position)
         patch_to_wall_ids = self._patch_to_wall_ids
@@ -204,43 +177,28 @@ class DRadiosityFast:
         patches_center = self.patches_center
         if ff_method == "universal":
             energy_0, distance_0 = source_energy._init_energy_universal(
-                source_position,
-                patches_center,
-                self.patches_points,
-                self._air_attenuation,
-                self.n_bins,
-            )
+                source_position, patches_center, self.patches_points,
+                self._air_attenuation, self.n_bins)
         else:
             raise NotImplementedError()
 
-        if algorithm == "order":
+        if algorithm == 'order':
             energy_0_dir = ee_order._add_directional(
-                energy_0,
-                source_position,
-                patches_center,
-                self._n_bins,
-                patch_to_wall_ids,
-                absorption,
-                absorption_index,
-                sources,
-                receivers,
-                scattering,
-                scattering_index,
-            )
+                energy_0, source_position,
+                patches_center, self._n_bins, patch_to_wall_ids,
+                absorption, absorption_index,
+                sources, receivers,
+                scattering, scattering_index)
             self.energy_0_dir = energy_0_dir
             self.distance_0 = distance_0
         else:
             raise NotImplementedError()
 
     def calculate_energy_exchange(
-        self,
-        speed_of_sound,
-        histogram_time_resolution,
-        histogram_length,
-        algorithm="order",
-        max_depth=-1,
-        recalculate=False,
-    ):
+            self, speed_of_sound,
+            histogram_time_resolution,
+            histogram_length, algorithm='order',
+            max_depth=-1, recalculate=False):
         """Calculate the energy exchange between patches."""
         n_samples = int(histogram_length/histogram_time_resolution)
 
@@ -252,10 +210,9 @@ class DRadiosityFast:
         for i in range(n_patches):
             for j in range(n_patches):
                 distance_i_j[i, j] = np.linalg.norm(
-                    patches_center[i, :] - patches_center[j, :],
-                )
+                    patches_center[i, :]-patches_center[j, :])
 
-        if algorithm == "order":
+        if algorithm == 'order':
             energy_0_dir = self.energy_0_dir
 
             if not hasattr(self, 'E_matrix_total') or recalculate:
@@ -273,14 +230,9 @@ class DRadiosityFast:
         else:
             raise NotImplementedError()
 
-    def collect_receiver_energy(
-        self,
-        receiver_pos,
-        speed_of_sound,
-        histogram_time_resolution,
-        method="universal",
-        propagation_fx=False,
-    ):
+    def collect_receiver_energy(self, receiver_pos,
+            speed_of_sound, histogram_time_resolution,
+            method="universal", propagation_fx=False):
         """Collect patch histograms as detected by receiver."""
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
@@ -292,14 +244,12 @@ class DRadiosityFast:
         n_receivers = receiver_pos.shape[0]
 
         patches_center = self.patches_center
-        patches_receiver_distance = np.empty(
-            [n_receivers, self.n_patches, patches_center.shape[-1]],
-        )
+        patches_receiver_distance = np.empty([n_receivers,
+                                            self.n_patches,patches_center.shape[-1]])
 
         E_matrix = np.empty((n_patches, n_bins, self.E_matrix_total.shape[-1]))
         histogram_out = np.empty(
-            (n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]),
-        )
+            (n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]) )
 
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
@@ -307,46 +257,38 @@ class DRadiosityFast:
             if method == "universal":
                 # geometrical weighting
                 patch_receiver_energy = receiver_energy._universal(
-                    receiver_pos[i],
-                    patches_points,
-                )
+                        receiver_pos[i], patches_points)
             else:
                 raise NotImplementedError()
 
             # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
-            # scattering_index = np.array(self._scattering_index)
+                # scattering_index = np.array(self._scattering_index)
             receiver_idx = geometry.get_scattering_data_receiver_index(
-                patches_center,
-                receiver_pos[i],
-                receivers_array,
-                self._patch_to_wall_ids,
-            )
+                patches_center, receiver_pos[i], receivers_array,
+                self._patch_to_wall_ids)
 
             assert receiver_idx.shape[0] == self.n_patches
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[k, :] = (
-                    self.E_matrix_total[k, receiver_idx[k], :] * patch_receiver_energy[k]
-                )
+                E_matrix[k,:]= (self.E_matrix_total[k,receiver_idx[k],:]
+                                                    * patch_receiver_energy[k])
 
             if propagation_fx:
                 # accumulate the patch energies towards the receiver
                 # with atmospheric effects (delay, atmospheric attenuation)
                 histogram_out[i] = ee_order._collect_receiver_energy(
-                    E_matrix,
-                    np.linalg.norm(patches_receiver_distance, axis=1),
-                    speed_of_sound,
-                    histogram_time_resolution,
-                    air_attenuation=air_attenuation,
-                )
+                        E_matrix,
+                        np.linalg.norm(patches_receiver_distance, axis=1),
+                                    speed_of_sound, histogram_time_resolution,
+                                    air_attenuation=air_attenuation)
             else:
                 histogram_out[i] = E_matrix
 
         return histogram_out
 
-    def set_wall_absorption(self, wall_indexes, absorption: pf.FrequencyData):
+    def set_wall_absorption(self, wall_indexes, absorption:pf.FrequencyData):
         """Set the wall absorption.
 
         Parameters
@@ -364,9 +306,10 @@ class DRadiosityFast:
             self._absorption = []
 
         self._absorption.append(np.atleast_1d(absorption.freq.squeeze()))
-        self._absorption_index[wall_indexes] = len(self._absorption) - 1
+        self._absorption_index[wall_indexes] = len(self._absorption)-1
 
-    def set_air_attenuation(self, air_attenuation: pf.FrequencyData):
+
+    def set_air_attenuation(self, air_attenuation:pf.FrequencyData):
         """Set air attenuation factor in Np/m.
 
         Parameters
@@ -379,12 +322,9 @@ class DRadiosityFast:
         self._air_attenuation = np.atleast_1d(air_attenuation.freq.squeeze())
 
     def set_wall_scattering(
-        self,
-        wall_indexes: list[int],
-        scattering: pf.FrequencyData,
-        sources: pf.Coordinates,
-        receivers: pf.Coordinates,
-    ):
+            self, wall_indexes:list[int],
+            scattering:pf.FrequencyData, sources:pf.Coordinates,
+            receivers:pf.Coordinates):
         """Set the wall scattering.
 
         Parameters
@@ -399,8 +339,10 @@ class DRadiosityFast:
             receiver coordinates
 
         """
-        assert (sources.z >= 0).all(), "Sources must be in the positive half space"
-        assert (receivers.z >= 0).all(), "Receivers must be in the positive half space"
+        assert (sources.z >= 0).all(), \
+            "Sources must be in the positive half space"
+        assert (receivers.z >= 0).all(), \
+            "Receivers must be in the positive half space"
         self._check_set_frequency(scattering.frequencies)
         if self._sources is None:
             self._sources = np.empty((self.n_walls), dtype=pf.Coordinates)
@@ -411,27 +353,26 @@ class DRadiosityFast:
 
         for i in wall_indexes:
             sources_rot, receivers_rot = _rotate_coords_to_normal(
-                self.walls_normal[i],
-                self.walls_up_vector[i],
-                sources,
-                receivers,
-            )
+                self.walls_normal[i], self.walls_up_vector[i],
+                sources, receivers)
             self._sources[i] = sources_rot
             self._receivers[i] = receivers_rot
 
         self._scattering.append(scattering.freq*np.pi)
         self._scattering_index[wall_indexes] = len(self._scattering)-1
 
-    def _check_set_frequency(self, frequencies: np.ndarray):
+    def _check_set_frequency(self, frequencies:np.ndarray):
         """Check if the frequency data matches the radiosity object."""
         if self._n_bins is None:
             self._n_bins = frequencies.size
         else:
-            assert self._n_bins == frequencies.size, "Number of bins do not match"
+            assert self._n_bins == frequencies.size, \
+                "Number of bins do not match"
         if self._frequencies is None:
             self._frequencies = frequencies
         else:
-            assert (self._frequencies == frequencies).all(), "Frequencies do not match"
+            assert (self._frequencies == frequencies).all(), \
+                "Frequencies do not match"
 
     @property
     def n_bins(self):
@@ -519,21 +460,20 @@ class DRadiosityFast:
         return self._speed_of_sound
 
 
+
 def _rotate_coords_to_normal(
-    wall_normal: np.ndarray,
-    wall_up_vector: np.ndarray,
-    sources: pf.Coordinates,
-    receivers: pf.Coordinates,
-):
+        wall_normal:np.ndarray, wall_up_vector:np.ndarray,
+        sources:pf.Coordinates, receivers:pf.Coordinates):
     """Rotate the coordinates to the normal vector."""
-    o1 = pf.Orientations.from_view_up(wall_normal, wall_up_vector)
+    o1 = pf.Orientations.from_view_up(
+        wall_normal, wall_up_vector)
     o2 = pf.Orientations.from_view_up([0, 0, 1], [1, 0, 0])
-    o_diff = o1.inv() * o2
-    euler = o_diff.as_euler("xyz", True).flatten()
+    o_diff = o1.inv()*o2
+    euler = o_diff.as_euler('xyz', True).flatten()
     receivers_cp = receivers.copy()
-    receivers_cp.rotate("xyz", euler)
+    receivers_cp.rotate('xyz', euler)
     receivers_cp.radius = 1
     sources_cp = sources.copy()
-    sources_cp.rotate("xyz", euler)
+    sources_cp.rotate('xyz', euler)
     sources_cp.radius = 1
     return sources_cp, receivers_cp

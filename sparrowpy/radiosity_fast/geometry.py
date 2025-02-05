@@ -121,8 +121,8 @@ def get_scattering_data_source(
     difference_source = pos_h-pos_i
     difference_source /= np.linalg.norm(difference_source)
     source_idx = np.argmin(np.sum(
-        (sources[wall_id_i[0], :, :]-difference_source)**2, axis=-1))
-    return scattering[scattering_index[wall_id_i[0]], source_idx]
+        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+    return scattering[scattering_index[wall_id_i], source_idx]
 
 
 
