@@ -62,10 +62,11 @@ def sofa_data_diffuse():
     gaussian = gaussian[gaussian.z>0]
     sources = gaussian.copy()
     receivers = gaussian.copy()
-    frequencies = pf.dsp.filter.fractional_octave_frequencies(
-        1, (100, 1000))[0]
-    data = np.ones((sources.csize, receivers.csize, frequencies.size))
-    return (pf.FrequencyData(data, frequencies), sources, receivers)
+    frequencies = np.array([125, 250, 500, 1000])
+    brdf = sp.brdf.create_from_scattering(
+        sources, receivers,
+        pf.FrequencyData(np.ones_like(frequencies), frequencies))
+    return (brdf, sources, receivers)
 
 @pytest.fixture
 def basicscene():

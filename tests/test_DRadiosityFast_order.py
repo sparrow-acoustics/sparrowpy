@@ -8,52 +8,6 @@ import pyfar as pf
 import sparrowpy as sp
 
 
-create_reference_files = False
-
-@pytest.mark.parametrize('walls', [
-    # perpendicular walls
-    [0, 2], [0, 3], [0, 4], [0, 5],
-    [1, 2], [1, 3], [1, 4], [1, 5],
-    [2, 0], [2, 1], [2, 4], [2, 5],
-    [3, 0], [3, 1], [3, 4], [3, 5],
-    [4, 0], [4, 1], [4, 2], [4, 3],
-    [5, 0], [5, 1], [5, 2], [5, 3],
-    # parallel walls
-    [0, 1], [2, 3], [4, 5],
-    [1, 0], [3, 2], [5, 4],
-    ])
-@pytest.mark.parametrize('patch_size', [
-    0.5,
-    ])
-def test_calc_form_factor_perpendicular_distance(
-        sample_walls, walls, patch_size):
-    """Test form factor calculation for perpendicular walls."""
-    wall_source = sample_walls[walls[0]]
-    wall_receiver = sample_walls[walls[1]]
-    patch_1 = sp.radiosity.Patches(wall_source, patch_size, [1], 0)
-    patch_2 = sp.radiosity.Patches(wall_receiver, patch_size, [0], 1)
-    patches = [patch_1, patch_2]
-    patch_1.calculate_univ_form_factor(patches)
-    patch_2.calculate_univ_form_factor(patches)
-
-    radiosity = sp.DRadiosityFast.from_polygon(
-        [wall_source, wall_receiver], patch_size)
-    radiosity.bake_geometry(algorithm='order')
-
-    patch_pos = np.array([patch.center for patch in patch_1.patches])
-    if (np.abs(patch_pos- radiosity.patches_center[:4, :])<1e-5).all():
-        npt.assert_almost_equal(
-            radiosity.form_factors[:4, 4:], patch_1.form_factors)
-    else:
-        npt.assert_almost_equal(
-            radiosity.form_factors[:4, 4:], patch_1.form_factors.T)
-
-    patch_pos = np.array([patch.center for patch in patch_2.patches])
-    if (np.abs(patch_pos- radiosity.patches_center[4:, :])<1e-5).all():
-        npt.assert_almost_equal(radiosity.form_factors[4:, :4], 0)
-    else:
-        npt.assert_almost_equal(radiosity.form_factors[4:, :4], 0)
-
 
 @pytest.mark.parametrize('walls', [
     # perpendicular walls
@@ -113,28 +67,27 @@ def test_order_vs_analytic(patch_size):
 
     absorption = 0.1
 
-    sources = pf.Coordinates(0, 0, 1)
-    receivers = pf.Coordinates(0, 0, 1)
+    sources = pf.Coordinates(0, 0, 1, weights=1)
+    receivers = pf.Coordinates(0, 0, 1, weights=1)
     frequencies = np.array([500])
-    data_scattering = pf.FrequencyData(
-        np.ones((sources.csize, receivers.csize, frequencies.size)),
-        frequencies)
+    brdf = sp.brdf.create_from_scattering(
+        sources, receivers, pf.FrequencyData(1, frequencies))
     walls = sp.testing.shoebox_room_stub(X, Y, Z)
 
     radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
 
     radiosity.set_wall_scattering(
-        np.arange(len(walls)), data_scattering, sources, receivers)
+        np.arange(len(walls)), brdf, sources, receivers)
     radiosity.set_air_attenuation(
         pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies),
-            data_scattering.frequencies))
+            np.zeros_like(brdf.frequencies),
+            brdf.frequencies))
     radiosity.set_wall_absorption(
         np.arange(len(walls)),
         pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies)+absorption,
-            data_scattering.frequencies))
+            np.zeros_like(brdf.frequencies)+absorption,
+            brdf.frequencies))
     radiosity.bake_geometry(algorithm='order')
 
 
@@ -144,7 +97,7 @@ def test_order_vs_analytic(patch_size):
         histogram_time_resolution=time_resolution,
         histogram_length=length_histogram,
         algorithm='order', max_depth=max_order_k, recalculate=True)
-    
+
     patches_hist = radiosity.collect_receiver_energy(
         receiver_pos, speed_of_sound, time_resolution, propagation_fx=True
     )
