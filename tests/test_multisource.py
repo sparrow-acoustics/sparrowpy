@@ -101,25 +101,30 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
         ## initialize radiosity class
         radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
 
-        data_scattering = pf.FrequencyData(
-            np.ones((sc_src.csize,sc_rec.csize,frequencies.size)), frequencies)
+        source_brdf = pf.Coordinates(0, 0, 1, weights=1)
+        receivers_brdf = pf.Coordinates(0, 0, 1, weights=1)
+        brdf = sp.brdf.create_from_scattering(
+            source_brdf,
+            receivers_brdf,
+            pf.FrequencyData(
+                np.ones((frequencies.size)), frequencies))
 
         # set directional scattering data
         radi.set_wall_scattering(
-            np.arange(len(walls)), data_scattering, sc_src, sc_rec)
+            np.arange(len(walls)), brdf, sc_src, sc_rec)
 
         # set air absorption
         radi.set_air_attenuation(
             pf.FrequencyData(
-                np.zeros_like(data_scattering.frequencies),
-                data_scattering.frequencies))
+                np.zeros_like(frequencies),
+                frequencies))
 
         # set absorption coefficient
         radi.set_wall_absorption(
             np.arange(len(walls)),
             pf.FrequencyData(
-                np.zeros_like(data_scattering.frequencies)+absorption,
-                data_scattering.frequencies))
+                np.zeros_like(frequencies)+absorption,
+                frequencies))
 
         # run simulation
         radi.bake_geometry(ff_method=method,algorithm=algo)
