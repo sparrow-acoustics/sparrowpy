@@ -73,7 +73,7 @@ def read_geometry_file(blend_file: Path,
     geometry = objects["Geometry"]
 
 
-    # Creates file with only static geometric data of original blender file 
+    # Creates file with only static geometric data of original blender file
     # without information about source and receiver
     bpy.ops.object.select_all(action="DESELECT")
     geometry.select_set(True)
@@ -90,12 +90,13 @@ def read_geometry_file(blend_file: Path,
                              verts=surfs.verts, edges=surfs.edges,
                              delimit={'MATERIAL'})
 
-    #finemesh = generate_connectivity(out_mesh)
+    bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
+                          quad_method="BEAUTY",
+                          ngon_method="BEAUTY")
+
     wall_data = generate_connectivity_wall(surfs)
 
-    bmesh.ops.triangulate(out_mesh, faces=list(out_mesh.faces))
-    patch_data = generate_patches(generate_connectivity_wall(out_mesh),
-                                            max_patch_size=max_patch_size)
+    patch_data = generate_patches(wall_data,max_patch_size=max_patch_size)
 
     return wall_data, patch_data
 
