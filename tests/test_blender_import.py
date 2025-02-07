@@ -25,6 +25,11 @@ def test_material_assignment(path):
     if path.endswith(".blend"):
         assert len(walls["material"])==len(walls["conn"])
         assert isinstance(walls["material"][0], str)
+        for i in range(len(walls["conn"])):
+            if i == 2:
+                assert walls["material"][i]=="matA"
+            else:
+                assert walls["material"][i]=="matB"
     else:
         assert len(walls["material"])==0
     assert True
