@@ -1,7 +1,7 @@
 import numpy.testing as npt
 import pytest
 import numpy as np
-
+import matplotlib.pyplot as plt
 import sparrowpy.utils.blender as bh
 
 @pytest.mark.parametrize("path",
@@ -46,7 +46,18 @@ def test_patch_generation(path):
     npt.assert_equal(patches["verts"],walls["verts"])
 
     ## check if n patches follows the max_patch_size change
-    _,p0 = bh.read_geometry_file(path,max_patch_size=.5)
-    _,p1 = bh.read_geometry_file(path,max_patch_size=.25)
+    _,p0 = bh.read_geometry_file(path,max_patch_size=1.2)
+    _,p1 = bh.read_geometry_file(path,max_patch_size=.6)
 
     assert p1["conn"].shape[0]>p0["conn"].shape[0]
+
+    for i,plist in enumerate([p0,p1]):
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        for ids in plist["conn"]:
+            ids=np.append(ids,ids[0])
+            ax.plot(plist["verts"][ids,0],plist["verts"][ids,1],plist["verts"][ids,2],"b-")
+
+        plt.savefig("tests/test_data/patch_gen_"+str(i)+".png")
+
