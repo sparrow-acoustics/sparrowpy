@@ -37,4 +37,11 @@ def test_patch_generation(path):
 
     ## check if new patches are generated
     # in case max patch size is larger than max wall side
-    assert patches["conn"].shape[0]==len(walls["conn"])
+    npt.assert_equal(patches["conn"],np.array(walls["conn"]))
+    npt.assert_equal(patches["verts"],walls["verts"])
+
+    ## check if n patches follows the max_patch_size change
+    _,p0 = bh.read_geometry_file(path,max_patch_size=.5)
+    _,p1 = bh.read_geometry_file(path,max_patch_size=.25)
+
+    assert p1["conn"].shape[0]>p0["conn"].shape[0]
