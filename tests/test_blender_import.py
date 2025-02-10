@@ -53,33 +53,20 @@ def test_patch_generation(path):
     side = np.linalg.norm(walls["verts"][1]-walls["verts"][0])
 
     ## check if n patches follows the max_patch_size change
-    walls,p0 = bh.read_geometry_file(path,max_patch_size=.5*side)
+    _,p0 = bh.read_geometry_file(path,max_patch_size=.5*side)
     _,p1 = bh.read_geometry_file(path,max_patch_size=.25*side)
-
-    plot_mesh_data(mesh=walls, model_name=model_name, refinement="_walls")
 
     assert p1["conn"].shape[0]>p0["conn"].shape[0]
 
     level = ["_rough","_fine"]
 
     for i,plist in enumerate([p0,p1]):
-        plot_mesh_data(mesh=plist, model_name=model_name,refinement=level[i])
 
-        
-
-def plot_mesh_data(mesh,model_name, refinement):
-    
-    fig = plt.figure()
-    if "disk" not in model_name:
+        fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        for ids in mesh["conn"]:
+        for ids in plist["conn"]:
             ids=np.append(ids,ids[0])
-            ax.plot(mesh["verts"][ids,0],mesh["verts"][ids,1],mesh["verts"][ids,2],"b-")
-    else:
-        ax = fig.add_subplot()
-        for ids in mesh["conn"]:
-            ids=np.append(ids,ids[0])
-            ax.plot(mesh["verts"][ids,0],mesh["verts"][ids,1],"b-")
-        ax.axis("equal")
-            
-    plt.savefig("tests/test_data/patch_gen_"+model_name+refinement+".png")
+            ax.plot(plist["verts"][ids,0],plist["verts"][ids,1],plist["verts"][ids,2],"b-")
+
+        plt.savefig("tests/test_data/patch_gen_"+model_name+level[i]+".png")
+
