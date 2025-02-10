@@ -112,7 +112,9 @@ def read_geometry_file(blend_file: Path,
     if auto_patches:
         patch_data = generate_patches(wall_data,max_patch_size=max_patch_size)
     else:
-        patch_data = 
+        patch_data = {"conn":   np.array(wall_data["conn"]),
+                      "verts":  np.array(wall_data["verts"]),
+                      "wall_ID":np.arange(len(wall_data["conn"]))}
 
     return wall_data, patch_data
 
