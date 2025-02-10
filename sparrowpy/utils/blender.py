@@ -18,7 +18,7 @@ class DotDict(dict):
 def read_geometry_file(blend_file: Path,
                        angular_tolerance=1.,
                        max_patch_size=1.,
-                       overwrite_walls=True,
+                       auto_walls=True,
                        auto_patches=True):
     """Read blender file and return fine and rough mesh.
 
@@ -88,7 +88,7 @@ def read_geometry_file(blend_file: Path,
 
     
     surfs = out_mesh.copy()
-    if overwrite_walls:
+    if auto_walls:
         # dissolve coplanar faces for simplicity
         bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
                                 verts=surfs.verts, edges=surfs.edges,
@@ -181,7 +181,6 @@ def generate_patches(mesh: dict, max_patch_size=2):
 
 def check_consistent_patches(surflist):
     for i in range(1,len(surflist)):
-        if len(surflist[0]) != len(surflist[i]):
+        if len(surflist[0].verts) != len(surflist[i].verts):
             return False
-            
     return True
