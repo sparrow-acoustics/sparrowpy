@@ -247,7 +247,7 @@ class DRadiosityFast():
             max_depth=-1, recalculate=False):
         """Calculate the energy exchange between patches."""
         n_samples = int(histogram_length/histogram_time_resolution)
-        
+
         patches_center = self.patches_center
         distance_0 = self.distance_0
         n_patches = self.n_patches
@@ -260,13 +260,19 @@ class DRadiosityFast():
 
         if algorithm == 'order':
             energy_0_dir = self.energy_0_dir
-            # assert max_depth>=1, "max_depth must be larger than 1"
+
             if not hasattr(self, 'E_matrix_total') or recalculate:
-                self.E_matrix_total = ee_order.energy_exchange(
-                    n_samples, energy_0_dir, distance_0, distance_i_j,
-                    self._form_factors_tilde,
-                    speed_of_sound, histogram_time_resolution, max_depth,
-                    self._visible_patches)
+                if max_depth < 1:
+                    self.E_matrix_total = ee_order.energy_exchange_init_energy(
+                        n_samples, energy_0_dir, distance_0,
+                        speed_of_sound, histogram_time_resolution,
+                        )
+                else:
+                    self.E_matrix_total = ee_order.energy_exchange(
+                        n_samples, energy_0_dir, distance_0, distance_i_j,
+                        self._form_factors_tilde,
+                        speed_of_sound, histogram_time_resolution, max_depth,
+                        self._visible_patches)
         else:
             raise NotImplementedError()
 
@@ -398,7 +404,7 @@ class DRadiosityFast():
             self._sources[i] = sources_rot
             self._receivers[i] = receivers_rot
 
-        self._scattering.append(scattering.freq)
+        self._scattering.append(scattering.freq*np.pi)
         self._scattering_index[wall_indexes] = len(self._scattering)-1
 
     def _check_set_frequency(self, frequencies:np.ndarray):
