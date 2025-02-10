@@ -89,7 +89,7 @@ def read_geometry_file(blend_file: Path,
     bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
                              verts=surfs.verts, edges=surfs.edges,
                              delimit={'MATERIAL'})
-
+    
     bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
                           quad_method="BEAUTY",
                           ngon_method="BEAUTY")

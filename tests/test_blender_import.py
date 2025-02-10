@@ -3,9 +3,11 @@ import pytest
 import numpy as np
 import matplotlib.pyplot as plt
 import sparrowpy.utils.blender as bh
+import os
 
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube.blend","./tests/test_data/cube.stl"])
+
 def test_basic_features(path):
 
     walls,patches = bh.read_geometry_file(path)
@@ -35,8 +37,11 @@ def test_material_assignment(path):
     assert True
 
 @pytest.mark.parametrize("path",
-                         ["./tests/test_data/cube.blend","./tests/test_data/cube.stl"])
+                         ["./tests/test_data/cube.blend","./tests/test_data/cube.stl",
+                          "./tests/test_data/disk_10sides.blend", "./tests/test_data/disk_72sides.blend"])
 def test_patch_generation(path):
+
+    model_name = os.path.split(path)[1].replace(".","_")
 
     walls,patches = bh.read_geometry_file(path,max_patch_size=3.)
 
@@ -45,11 +50,15 @@ def test_patch_generation(path):
     npt.assert_equal(patches["conn"],np.array(walls["conn"]))
     npt.assert_equal(patches["verts"],walls["verts"])
 
+    side = np.linalg.norm(walls["verts"][1]-walls["verts"][0])
+
     ## check if n patches follows the max_patch_size change
-    _,p0 = bh.read_geometry_file(path,max_patch_size=1.2)
-    _,p1 = bh.read_geometry_file(path,max_patch_size=.6)
+    _,p0 = bh.read_geometry_file(path,max_patch_size=.5*side)
+    _,p1 = bh.read_geometry_file(path,max_patch_size=.25*side)
 
     assert p1["conn"].shape[0]>p0["conn"].shape[0]
+
+    level = ["_rough","_fine"]
 
     for i,plist in enumerate([p0,p1]):
 
@@ -59,5 +68,5 @@ def test_patch_generation(path):
             ids=np.append(ids,ids[0])
             ax.plot(plist["verts"][ids,0],plist["verts"][ids,1],plist["verts"][ids,2],"b-")
 
-        plt.savefig("tests/test_data/patch_gen_"+str(i)+".png")
+        plt.savefig("tests/test_data/patch_gen_"+model_name+level[i]+".png")
 
