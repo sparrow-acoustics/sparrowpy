@@ -17,7 +17,9 @@ class DotDict(dict):
 
 def read_geometry_file(blend_file: Path,
                        angular_tolerance=1.,
-                       max_patch_size=1.):
+                       max_patch_size=1.,
+                       overwrite_walls=True,
+                       auto_patches=True):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -86,17 +88,31 @@ def read_geometry_file(blend_file: Path,
 
     # dissolve coplanar faces for visibility check
     surfs = out_mesh.copy()
-    bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
-                             verts=surfs.verts, edges=surfs.edges,
-                             delimit={'MATERIAL'})
+    if overwrite_walls:
+        bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
+                                verts=surfs.verts, edges=surfs.edges,
+                                delimit={'MATERIAL'})
     
-    bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
-                          quad_method="BEAUTY",
-                          ngon_method="BEAUTY")
+    check_wall_
+    
+    if auto_patches:
+        bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
+                            quad_method="BEAUTY",
+                            ngon_method="BEAUTY")
+    elif not auto_patches:
+        if not check_consistent_patches(list(surfs.faces)):
+            UserWarning("User-input patches are not of consistent size.\nA rough triangulation will be applied.")
+            bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
+                            quad_method="BEAUTY",
+                            ngon_method="BEAUTY")
+            
 
     wall_data = generate_connectivity_wall(surfs)
-
-    patch_data = generate_patches(wall_data,max_patch_size=max_patch_size)
+    
+    if auto_patches:
+        patch_data = generate_patches(wall_data,max_patch_size=max_patch_size)
+    else:
+        patch_data = 
 
     return wall_data, patch_data
 
@@ -160,3 +176,4 @@ def generate_patches(mesh: dict, max_patch_size=2):
     patches["wall_ID"] = np.array(IDs)
 
     return patches
+
