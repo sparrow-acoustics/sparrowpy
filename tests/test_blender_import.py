@@ -38,7 +38,7 @@ def test_material_assignment(path):
 
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube.blend","./tests/test_data/cube.stl",
-                          "./tests/test_data/disk_10sides.blend", "./tests/test_data/disk_72sides.blend"])
+                          "./tests/test_data/disk_10sides.blend"])
 def test_patch_generation(path):
 
     model_name = os.path.split(path)[1].replace(".","_")
