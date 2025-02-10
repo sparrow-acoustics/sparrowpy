@@ -86,14 +86,13 @@ def read_geometry_file(blend_file: Path,
     out_mesh = bmesh.new()
     out_mesh.from_mesh(geometry.data)
 
-    # dissolve coplanar faces for visibility check
+    
     surfs = out_mesh.copy()
     if overwrite_walls:
+        # dissolve coplanar faces for simplicity
         bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
                                 verts=surfs.verts, edges=surfs.edges,
                                 delimit={'MATERIAL'})
-    
-    check_wall_
     
     if auto_patches:
         bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
@@ -179,3 +178,10 @@ def generate_patches(mesh: dict, max_patch_size=2):
 
     return patches
 
+
+def check_consistent_patches(surflist):
+    for i in range(1,len(surflist)):
+        if len(surflist[0]) != len(surflist[i]):
+            return False
+            
+    return True
