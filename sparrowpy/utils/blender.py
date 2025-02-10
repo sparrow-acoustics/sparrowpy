@@ -6,6 +6,7 @@ import bpy
 import bmesh
 import numpy as np
 import trimesh as tm
+import warnings
 
 class DotDict(dict):
     """dot.notation access to dictionary attributes."""
@@ -86,7 +87,6 @@ def read_geometry_file(blend_file: Path,
     out_mesh = bmesh.new()
     out_mesh.from_mesh(geometry.data)
 
-    
     surfs = out_mesh.copy()
     if auto_walls:
         # dissolve coplanar faces for simplicity
@@ -95,12 +95,13 @@ def read_geometry_file(blend_file: Path,
                                 delimit={'MATERIAL'})
     
     if auto_patches:
+        warnings.warn(RuntimeWarning("A rough triangulation pass may be applied to user-defined walls for auto patch generation."))
         bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
                             quad_method="BEAUTY",
                             ngon_method="BEAUTY")
     elif not auto_patches:
         if not check_consistent_patches(list(surfs.faces)):
-            UserWarning("User-input patches are not of consistent size.\nA rough triangulation will be applied.")
+            warnings.warn(UserWarning("User-input patches have inconsistent shapes.\nA rough triangulation will be applied."))
             bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
                             quad_method="BEAUTY",
                             ngon_method="BEAUTY")
