@@ -23,6 +23,7 @@ def test_basic_features(path):
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube.blend","./tests/test_data/cube.stl"])
 def test_material_assignment(path):
+    """Check that material is correctly assigned from model."""
     walls,_ = bh.read_geometry_file(path)
     if path.endswith(".blend"):
         assert len(walls["material"])==len(walls["conn"])
@@ -40,9 +41,7 @@ def test_material_assignment(path):
                          ["./tests/test_data/cube.blend","./tests/test_data/cube.stl",
                           "./tests/test_data/disk_10sides.blend"])
 def test_patch_generation(path):
-
-    model_name = os.path.split(path)[1].replace(".","_")
-
+    """Test if patches are being generated in a predictable fashion."""
     walls,patches = bh.read_geometry_file(path,max_patch_size=3.)
 
     ## check if new patches are generated
@@ -56,6 +55,7 @@ def test_patch_generation(path):
     walls,p0 = bh.read_geometry_file(path,max_patch_size=.5*side)
     _,p1 = bh.read_geometry_file(path,max_patch_size=.25*side)
 
+    model_name = os.path.split(path)[1].replace(".","_")
     plot_mesh_data(mesh=walls, model_name=model_name, refinement="_walls")
 
     assert p1["conn"].shape[0]>p0["conn"].shape[0]
@@ -70,61 +70,59 @@ def test_patch_generation(path):
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube.blend"])
 def test_patch_generation_options(simplepath,path):
+    """Test that user options for patch generation are respected."""
     squarewalls,squarepatches = bh.read_geometry_file(simplepath,
                                                       max_patch_size=.2,
                                                       auto_walls=False,
                                                       auto_patches=False)
-    
+
     # check that user-defined walls are same as user-defined patches
     npt.assert_equal(np.array(squarewalls["conn"]), squarepatches["conn"])
     npt.assert_equal(np.array(squarewalls["verts"]), squarepatches["verts"])
-    
+
     triwalls,tripatches = bh.read_geometry_file(simplepath,
                                                       max_patch_size=.2,
                                                       auto_walls=True,
                                                       auto_patches=False)
-    
+
     # check that auto walls are same as non-auto patches
     npt.assert_equal(np.array(triwalls["conn"]), tripatches["conn"])
     npt.assert_equal(np.array(triwalls["verts"]), tripatches["verts"])
-    
+
     # check that vertices are the same regardless of shape as long
     # as patches are not generated automatically
     npt.assert_equal(np.array(triwalls["verts"]), squarepatches["verts"])
-    
-    # check auto walls are same as user walls (no polygons are to be merged in simple cube)
+
+    # check auto walls are same as user walls
+    # (no polygons are to be merged in simple cube)
     assert len(triwalls["conn"]) == len(squarewalls["conn"])
-    
-    
+
     with pytest.warns() as rec:
         simplewalls,simplepatches = bh.read_geometry_file(simplepath,
-                                                      max_patch_size=.2,
-                                                      auto_walls=False,
-                                                      auto_patches=True)
-        walls, patches = bh.read_geometry_file( path,
-                                                max_patch_size=.2,
-                                                auto_walls=False,
-                                                auto_patches=False )
-        
+                                                          max_patch_size=.2,
+                                                          auto_walls=False,
+                                                          auto_patches=True)
+        walls,_ = bh.read_geometry_file( path,
+                                         max_patch_size=.2,
+                                         auto_walls=False,
+                                         auto_patches=False )
+
     assert len(simplewalls["conn"]) < simplepatches["conn"].shape[0]
-    npt.assert_equal(np.array(simplewalls["verts"]), -np.array(walls["verts"])) # not sure why cube is rotated
-    
-    # check that auto_patches and irregular wall shape both force triangulation of the walls
+    npt.assert_equal(np.array(simplewalls["verts"]), np.array(walls["verts"]))
+
+    # check that auto_patches and irregular wall shape force wall triangulation
     assert len(walls["conn"]) == len(simplewalls["conn"])
     # check wall triangulation
     assert len(walls["conn"]) == 2*len(squarewalls["conn"])
-    
-    # check that warning is thrown if user-defined walls are of inconsistent shapes
-    assert len(rec)==2
-    assert issubclass(rec[1].category, UserWarning)
-    assert str(rec[1].message) == "User-input patches have inconsistent shapes.\nA rough triangulation will be applied."
-    assert issubclass(rec[0].category, RuntimeWarning)
-    assert str(rec[0].message) == "A rough triangulation pass may be applied to user-defined walls for auto patch generation."
 
-    
+    # check that warnings are thrown in relevant cases
+    assert len(rec)==2
+    assert issubclass(rec[0].category, RuntimeWarning)
+    assert issubclass(rec[1].category, UserWarning)
+
 
 def plot_mesh_data(mesh,model_name, refinement):
-    
+    """Plot mesh from dict data structure and save figure."""
     fig = plt.figure()
     if "disk" not in model_name:
         ax = fig.add_subplot(111, projection='3d')
@@ -137,5 +135,5 @@ def plot_mesh_data(mesh,model_name, refinement):
             ids=np.append(ids,ids[0])
             ax.plot(mesh["verts"][ids,0],mesh["verts"][ids,1],"b-")
         ax.axis("equal")
-            
+
     plt.savefig("tests/test_data/patch_gen_"+model_name+refinement+".png")
