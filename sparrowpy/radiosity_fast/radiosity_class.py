@@ -114,7 +114,8 @@ class DRadiosityFast():
 
         for wallID in range(len(walls_normal)):
             walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
-            walls_up_vector = walls_points[wallID][1]-walls_points[wallID][0] # PLACEHOLDER!!!
+            walls_up_vector[wallID] = (walls_points[wallID][1] # PLACEHOLDER!!!
+                                        - walls_points[wallID][0])
 
         ## save patch information
         n_patches = patches["conn"].shape[0]
