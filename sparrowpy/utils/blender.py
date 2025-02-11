@@ -101,6 +101,7 @@ def read_geometry_file(blend_file: Path,
     out_mesh.from_mesh(geometry.data)
 
     surfs = out_mesh.copy()
+    surfs.transform(geometry.matrix_world)
     if auto_walls:
         # dissolve coplanar faces for simplicity
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
