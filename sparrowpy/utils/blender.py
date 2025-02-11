@@ -3,7 +3,7 @@ import sys
 import os
 from pathlib import Path
 import bpy
-import bmesh
+import bmesh # type: ignore
 import numpy as np
 import trimesh as tm
 import warnings
@@ -40,17 +40,30 @@ def read_geometry_file(blend_file: Path,
         maximum angle in degree by which two patches are considered coplanar
         determines surfaces in simplified mesh
 
+    max_patch_size: float
+        maximum size of the patch edges.
+        real patch size may be significantly smaller
+            if max_patch_size is close to wall dimensions.
+
+    auto_walls: bool
+        flags if walls should be auto detected from the model geometry (True)
+        or if each polygon in the model should become a wall (False).
+        the output walls may be a rough triangularized version of the input.
+
+    auto_patches: bool
+        flags if patches should be automatically created given max size (True)
+        or if each polygon in the model should become a patch (False).
+        if False, the input is checked and/or corrected for consistent shape.
+
     Returns
     -------
-    finemesh: dict
-        includes vertex list and polygon connectivity matrix.
+    wall_data: dict
+        wall vertex list ["verts"], polygon vertex mapping ["conn"],
+        normals["normal"], and material names ["material"].
 
-    roughmesh: dict
-        mesh with reduced number of vertices.
-        coplanar polygons in the input model are dissolved to
-        create large surfaces.
-        includes vertex list and polygon connectivity matrix.
-
+    patch_data: dict
+        patch vertex list ["verts"], polygon vertex mapping ["conn"],
+        patch-to-wall mapping ["wall_ID"]
 
     """
     if os.path.splitext(blend_file)[-1] == ".blend":
@@ -90,25 +103,31 @@ def read_geometry_file(blend_file: Path,
     surfs = out_mesh.copy()
     if auto_walls:
         # dissolve coplanar faces for simplicity
-        bmesh.ops.dissolve_limit(surfs, angle_limit=angular_tolerance*np.pi/180,
+        bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
                                 verts=surfs.verts, edges=surfs.edges,
                                 delimit={'MATERIAL'})
-    
+
     if auto_patches:
-        warnings.warn(RuntimeWarning("A rough triangulation pass may be applied to user-defined walls for auto patch generation."))
+        warnings.warn(                                    # noqa: B028
+            RuntimeWarning(
+                "A rough triangulation pass may be applied" +
+                "to user-defined walls for auto patch generation."))
         bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
                             quad_method="BEAUTY",
                             ngon_method="BEAUTY")
     elif not auto_patches:
         if not check_consistent_patches(list(surfs.faces)):
-            warnings.warn(UserWarning("User-input patches have inconsistent shapes.\nA rough triangulation will be applied."))
+            warnings.warn(                                # noqa: B028
+                UserWarning(
+                    "User-input patches have inconsistent shapes." +
+                    "\nA rough triangulation will be applied."))
             bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
                             quad_method="BEAUTY",
                             ngon_method="BEAUTY")
-            
+
 
     wall_data = generate_connectivity_wall(surfs)
-    
+
     if auto_patches:
         patch_data = generate_patches(wall_data,max_patch_size=max_patch_size)
     else:
@@ -126,7 +145,11 @@ def ensure_object_mode():
             bpy.ops.object.mode_set(mode='OBJECT')
 
 def generate_connectivity_wall(mesh: bmesh):
-    """Generate node list and surf connectivity matrix.
+    """Summarize characteristics of polygons in a given mesh.
+
+    Return a dictionary which includes a list of vertices,
+    mapping (connectivity) of the vertex list to each mesh polygon,
+    list of normals for each patch, and list of materials.
 
     Parameters
     ----------
@@ -136,14 +159,19 @@ def generate_connectivity_wall(mesh: bmesh):
     Returns
     -------
     out_mesh: dict({
+                    "verts": np.ndarray(n_vertices,3),
                     "conn":  list (n_polygons, :),
-                    "norm": list (n_polygons, 3),
-                    "verts": np.ndarray (n_nodes,3)
+                    "normal": list (n_polygons, 3),
+                    "material": list(n_polygons)
                     })
         mesh in reduced data representation.
+            "verts":    vertex (node) list
+            "conn":     vertex to polygon mapping,
+            "normal":   normal list
+            "material": material list
 
     """
-    out_mesh = {"conn":[], "verts": np.array([]), "normal":[], "material": []}
+    out_mesh = {"verts": np.array([]), "conn":[], "normal":[], "material": []}
 
     out_mesh["verts"] = np.array([v.co for v in mesh.verts])
 
@@ -161,15 +189,45 @@ def generate_connectivity_wall(mesh: bmesh):
 
     return out_mesh
 
-def generate_patches(mesh: dict, max_patch_size=2):
-    """Generate patches procedurally for each wall based on max edge size."""
+def generate_patches(walls: dict, max_patch_size=1.):
+    """Generate patches automatically for each wall based on max edge size.
 
+    Parameters
+    ----------
+    walls: dict({
+                    "verts": np.ndarray(n_wall_verts,3),
+                    "conn":  list(n_walls, :),
+                    "normal": list(n_walls, 3),
+                    "material": list(n_walls)
+                    })
+        wall geometry data.
+            "verts":    wall vertex (node) list
+            "conn":     vertex to wall mapping,
+            "normal":   normal list
+            "material": material list
+
+    max_patch_size: float
+        maximum edge dimension of patches
+
+    Returns
+    -------
+    patches: dict({
+                    "verts": np.ndarray(n_patch_verts,3),
+                    "conn":  np.ndarray(n_patches, 3),
+                    "wall_id": np.ndarray(n_patches,)
+                    })
+        patch data in reduced data representation.
+            "verts":   patch vertex (node) list
+            "conn":    vertex to patch mapping,
+            "wall_ID": patch to wall mapping
+
+    """
     patches={"conn":np.array([]),
              "verts": np.array([]),
              "wall_ID": np.array([])}
 
-    verts, facs, IDs=tm.remesh.subdivide_to_size(vertices=mesh["verts"],
-                                        faces=mesh["conn"],
+    verts, facs, IDs=tm.remesh.subdivide_to_size(vertices=walls["verts"],
+                                        faces=walls["conn"],
                                         max_edge=max_patch_size,
                                         return_index=True)
 
@@ -180,8 +238,30 @@ def generate_patches(mesh: dict, max_patch_size=2):
     return patches
 
 
-def check_consistent_patches(surflist):
+def check_consistent_patches(surflist: list):
+    """Check if all patches have the same shape.
+
+    Return True if all polygons in a given mesh
+    have the same number of vertices (all triangles, all quads, etc).
+    Return False otherwise.
+
+    Parameters
+    ----------
+    surflist: list(bmesh.faces)
+        list of all faces (polygons) in a given mesh
+
+
+    Returns
+    -------
+    out: bool
+        flags if all polygons in mesh have the same shape (True)
+        or not (False).
+
+    """
+    out = True
     for i in range(1,len(surflist)):
         if len(surflist[0].verts) != len(surflist[i].verts):
-            return False
-    return True
+            out = False
+            break
+
+    return out
