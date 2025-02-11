@@ -73,7 +73,7 @@ def test_basic_visibility(point, origin, plpt, pln):
     ])
 def test_vis_matrix_assembly(model):
     """Check if visibility matrices are correctly assembled."""
-    m1,m2 = bh.read_geometry_file(model)
+    m1,m2 = bh.read_geometry_file(model, auto_walls=False, auto_patches=False)
 
     patches_points = np.empty((len(m1["conn"]),len(m1["conn"][0]),3))
     patches_centers = np.empty((len(m1["conn"]),3))
