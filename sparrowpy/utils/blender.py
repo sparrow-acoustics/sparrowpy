@@ -136,7 +136,35 @@ def read_geometry_file(blend_file: Path,
                       "verts":  np.array(wall_data["verts"]),
                       "wall_ID":np.arange(len(wall_data["conn"]))}
 
+    write_to_file(blend_file, wall_data, patch_data)
+
     return wall_data, patch_data
+
+def check_collections(colname):
+    """Find or create blender collections."""
+
+    collections = bpy.data.collections
+
+    foundcol=False
+    for col in collections:
+        if col.name==colname:
+            foundcol=True
+
+    if not foundcol:
+        colout = bpy.data.collection.new(colname)
+        bpy.context.scene.collection.children.link(colout)
+
+
+def write_to_file(blend_file, wall_data, patch_data):
+    """Write walls, patches, materials to blender model."""
+    check_collections("sparrow-model")
+    ## walls
+    walls = bpy.data.meshes.new(name="walls")
+
+    
+
+    walls.from_pydata()
+
 
 
 def ensure_object_mode():
