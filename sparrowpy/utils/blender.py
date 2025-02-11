@@ -99,10 +99,10 @@ def read_geometry_file(blend_file: Path,
 
 
     # create bmesh from geometry
-    out_mesh = bmesh.new()
-    out_mesh.from_mesh(geometry.data)
+    surfs = bmesh.new()
+    surfs.from_mesh(geometry.data)
 
-    surfs = out_mesh.copy()
+    #surfs = out_mesh.copy()
     surfs.transform(geometry.matrix_world)
     if auto_walls:
         # dissolve coplanar faces for simplicity
@@ -139,14 +139,14 @@ def read_geometry_file(blend_file: Path,
                       "wall_ID":np.arange(len(wall_data["conn"]))}
 
     if write_back:
-        write_to_file(blend_file, wall_data, patch_data)
+        write_to_file(blend_file, wall_data, patch_data, bpy.context, bpy.data)
 
     return wall_data, patch_data
 
-def check_collections(colname):
+def check_collections(colname, context, data):
     """Find or create blender collections."""
 
-    collections = bpy.data.collections
+    collections = data.collections
 
     foundcol=False
     for col in collections:
@@ -154,23 +154,41 @@ def check_collections(colname):
             foundcol=True
 
     if not foundcol:
-        colout = bpy.data.collection.new(colname)
-        bpy.context.scene.collection.children.link(colout)
+        colout = data.collections.new(colname)
+        context.scene.collection.children.link(colout)
+
+    return colout, context, data
 
 
-def write_to_file(blend_file, wall_data, patch_data):
+def write_to_file(blend_file, wall_data, patch_data, context, data):
     """Write walls, patches, materials to blender model."""
-    check_collections("sparrow-model")
+    coll, context, data = check_collections("sparrow-model", context, data)
     ## walls
-    walls = bpy.data.meshes.new(name="walls")
+    wall_mesh = data.meshes.new(name="walls")
 
     verts = []
-    for v in walls["verts"]:
+    for v in wall_data["verts"]:
         verts.append(Vector((v[0],v[1],v[2])))
 
-    walls.from_pydata(verts, [], walls["conn"])
+    wall_mesh.from_pydata(verts, [], wall_data["conn"])
 
-    
+    walls = data.objects.new("walls", wall_mesh)
+
+    ## patches
+    patch_mesh = bpy.data.meshes.new(name="patches")
+
+    verts = []
+    for v in patch_data["verts"]:
+        verts.append(Vector((v[0],v[1],v[2])))
+
+    patch_mesh.from_pydata(verts, [], patch_data["conn"])
+
+    patches = data.objects.new("patches", wall_mesh)
+
+    coll.objects.link(walls)
+    coll.objects.link(patches)
+
+    bpy.ops.wm.save_mainfile(filepath="./tests/test_data/test.blend")
 
 
 
