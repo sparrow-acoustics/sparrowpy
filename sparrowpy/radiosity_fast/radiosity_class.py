@@ -94,15 +94,16 @@ class DRadiosityFast():
             walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
-
     @classmethod
-    def from_file(
-            cls, blend_filename: str, max_patch_size=1.):
+    def from_file(cls, blend_filename: str, max_patch_size=1.,
+                       auto_walls=True, auto_patches=True):
         """Create a Radiosity object ffrom a blender file.
 
         """
         walls,patches = blender.read_geometry_file(blend_filename,
-                                                   max_patch_size=max_patch_size)
+                                                   max_patch_size=max_patch_size,
+                                                   auto_walls=auto_walls,
+                                                   auto_patches=auto_patches)
 
         ## save wall information
         walls_normal = walls["normal"]
@@ -114,8 +115,8 @@ class DRadiosityFast():
 
         for wallID in range(len(walls_normal)):
             walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
-            walls_up_vector[wallID] = (walls_points[wallID][1] # PLACEHOLDER!!!
-                                        - walls_points[wallID][0])
+            walls_up_vector[wallID] = (walls_points[wallID][0] # PLACEHOLDER!!!
+                                        - walls_points[wallID][1])
 
         ## save patch information
         n_patches = patches["conn"].shape[0]
