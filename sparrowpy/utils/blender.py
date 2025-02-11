@@ -7,6 +7,7 @@ import bmesh # type: ignore
 import numpy as np
 import trimesh as tm
 import warnings
+from mathutils import Vector
 
 class DotDict(dict):
     """dot.notation access to dictionary attributes."""
@@ -20,7 +21,8 @@ def read_geometry_file(blend_file: Path,
                        angular_tolerance=1.,
                        max_patch_size=1.,
                        auto_walls=True,
-                       auto_patches=True):
+                       auto_patches=True,
+                       write_back=False):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -136,7 +138,8 @@ def read_geometry_file(blend_file: Path,
                       "verts":  np.array(wall_data["verts"]),
                       "wall_ID":np.arange(len(wall_data["conn"]))}
 
-    write_to_file(blend_file, wall_data, patch_data)
+    if write_back:
+        write_to_file(blend_file, wall_data, patch_data)
 
     return wall_data, patch_data
 
@@ -161,9 +164,13 @@ def write_to_file(blend_file, wall_data, patch_data):
     ## walls
     walls = bpy.data.meshes.new(name="walls")
 
-    
+    verts = []
+    for v in walls["verts"]:
+        verts.append(Vector((v[0],v[1],v[2])))
 
-    walls.from_pydata()
+    walls.from_pydata(verts, [], walls["conn"])
+
+    
 
 
 
