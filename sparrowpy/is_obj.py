@@ -1,4 +1,4 @@
-"""creates an image source object """
+"""creates an image source object"""
 
 
 import numpy as np
@@ -20,14 +20,14 @@ class ISObj:
             self.Walls = walls
 
 
-       
+
         if order is None:
             self.Order = -1
         else:
             self.Order = order
 
 
-       
+
 
 
     def find_image_sources_with_same_position(self, ISList):

@@ -2,7 +2,6 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
-import os
 import pyfar as pf
 
 import sparrowpy as sp
@@ -99,7 +98,7 @@ def test_order_vs_analytic(patch_size):
         algorithm='order', max_depth=max_order_k, recalculate=True)
 
     patches_hist = radiosity.collect_receiver_energy(
-        receiver_pos, speed_of_sound, time_resolution, propagation_fx=True
+        receiver_pos, speed_of_sound, time_resolution, propagation_fx=True,
     )
 
     histogram = np.sum(patches_hist[0],axis=0)

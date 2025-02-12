@@ -9,7 +9,7 @@ import numba
 @numba.njit()
 def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
                      source_area: np.ndarray, receiver_pts: np.ndarray,
-                     receiver_normal: np.ndarray, receiver_area: np.ndarray
+                     receiver_normal: np.ndarray, receiver_area: np.ndarray,
                      ) -> float:
     """Return the form factor based on input patches geometry.
 
