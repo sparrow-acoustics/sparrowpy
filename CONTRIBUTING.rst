@@ -44,7 +44,7 @@ Ready to contribute? Here's how to set up `sparrowpy` for local development usin
 
 3. Install your local copy into a virtualenv. Assuming you have Anaconda or Miniconda installed, this is how you set up your fork for local development::
 
-    $ conda create --name sparrowpy python
+    $ conda create --name sparrowpy python=3.11
     $ conda activate sparrowpy
     $ pip install -e ".[dev]"
 
