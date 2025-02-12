@@ -9,13 +9,13 @@ create_reference_files = False
 
 @pytest.mark.parametrize('frequencies', [
     np.array([1000]),
-    np.array([500,1000,2000])
+    np.array([500,1000,2000]),
     ])
 @pytest.mark.parametrize('receivers', [
     np.array([.25,.25,.25]),
     np.array([ np.array([.25,.25,.25]),
                np.array([.45,.45,.45]),
-               np.array([.75,.75,.75]) ])
+               np.array([.75,.75,.75]) ]),
     ])
 def test_multi_receiver(basicscene, frequencies,
                         receivers, method="universal"):
@@ -30,7 +30,7 @@ def test_multi_receiver(basicscene, frequencies,
     big_histo = radi.collect_receiver_energy(receiver_pos=receivers,
                                   speed_of_sound=basicscene["speed_of_sound"],
                                    histogram_time_resolution=1/basicscene["sampling_rate"],
-                                   method=method
+                                   method=method,
                                    )
 
     # assert correct dimensions of output histogram
@@ -50,7 +50,7 @@ def test_multi_receiver(basicscene, frequencies,
                                     receiver_pos=receivers[i],
                                     speed_of_sound=basicscene["speed_of_sound"],
                                     histogram_time_resolution=1/basicscene["sampling_rate"],
-                                    method=method
+                                    method=method,
                                     )
 
             npt.assert_array_almost_equal(big_histo[i], small_histo[0])
@@ -64,13 +64,13 @@ def test_multi_receiver(basicscene, frequencies,
     [.5,1,2.5],
     [1,2.5,1.5],
     ])
-@pytest.mark.parametrize('ord', [
-    10,20
+@pytest.mark.parametrize('order', [
+    10,20,
     ])
 @pytest.mark.parametrize('ps', [
-    .5,1.5
+    .5,1.5,
     ])
-def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
+def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
     """Test if radiosity results are reciprocal in shoebox room."""
     X = 3
     Y = 3
@@ -78,7 +78,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
     patch_size = ps
     ir_length_s = .5
     sampling_rate = 200
-    max_order_k = ord
+    max_order_k = order
     speed_of_sound = 343
     irs_new = []
     frequencies = np.array([1000])
@@ -135,14 +135,14 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
                             speed_of_sound=speed_of_sound,
                             histogram_time_resolution=1/sampling_rate,
                             histogram_length=ir_length_s, algorithm=algo,
-                            max_depth=max_order_k
+                            max_depth=max_order_k,
                             )
 
         ir = np.sum(
             radi.collect_receiver_energy(receiver_pos=rec_,
                                         speed_of_sound=speed_of_sound,
                                         histogram_time_resolution=1/sampling_rate,
-                                        method=method, propagation_fx=True
+                                        method=method, propagation_fx=True,
                                         ),
                     axis=1)[0][0]
 
@@ -194,11 +194,11 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                     patches_center=np.array([wall[0].center]),
                                                     patches_points=np.array([wall[0].pts]),
                                                     air_attenuation=air_att,
-                                                    n_bins=1
+                                                    n_bins=1,
                                                     )
 
             e_r = sp.radiosity_fast.receiver_energy._universal(
-                                                    receiver_pos=rec_.position,patches_points=np.array([wall[0].pts])
+                                                    receiver_pos=rec_.position,patches_points=np.array([wall[0].pts]),
                                                     )
 
 
@@ -209,12 +209,12 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                         patches_normal=np.array([wall[0].normal]),
                                                         air_attenuation=air_att,
                                                         patches_size=np.array([wall[0].size]),
-                                                        n_bins=1
+                                                        n_bins=1,
                                                         )
 
             e_r = sp.radiosity_fast.receiver_energy._kang(
                                                         patch_receiver_distance=np.array([(rec_.position-wall[0].center)]),
-                                                        patches_normal=np.array([wall[0].normal])
+                                                        patches_normal=np.array([wall[0].normal]),
                                                         )
 
         e = e_s*e_r
