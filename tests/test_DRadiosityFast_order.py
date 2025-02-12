@@ -66,28 +66,27 @@ def test_order_vs_analytic(patch_size):
 
     absorption = 0.1
 
-    sources = pf.Coordinates(0, 0, 1)
-    receivers = pf.Coordinates(0, 0, 1)
+    sources = pf.Coordinates(0, 0, 1, weights=1)
+    receivers = pf.Coordinates(0, 0, 1, weights=1)
     frequencies = np.array([500])
-    data_scattering = pf.FrequencyData(
-        np.ones((sources.csize, receivers.csize, frequencies.size)),
-        frequencies)
+    brdf = sp.brdf.create_from_scattering(
+        sources, receivers, pf.FrequencyData(1, frequencies))
     walls = sp.testing.shoebox_room_stub(X, Y, Z)
 
     radiosity = sp.DRadiosityFast.from_polygon(
         walls, patch_size)
 
     radiosity.set_wall_scattering(
-        np.arange(len(walls)), data_scattering, sources, receivers)
+        np.arange(len(walls)), brdf, sources, receivers)
     radiosity.set_air_attenuation(
         pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies),
-            data_scattering.frequencies))
+            np.zeros_like(brdf.frequencies),
+            brdf.frequencies))
     radiosity.set_wall_absorption(
         np.arange(len(walls)),
         pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies)+absorption,
-            data_scattering.frequencies))
+            np.zeros_like(brdf.frequencies)+absorption,
+            brdf.frequencies))
     radiosity.bake_geometry(algorithm='order')
 
 
