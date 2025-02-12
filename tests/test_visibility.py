@@ -91,7 +91,7 @@ def test_vis_matrix_assembly(model):
     for m in [m1,m2]:
         surfs=m
 
-        surfs_points = list([])
+        surfs_points = []
         surfs_normals =list([np.empty((3,))]*len(surfs["conn"]))
 
         if model=="./tests/test_data/cube.blend":

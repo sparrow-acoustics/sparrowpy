@@ -1,7 +1,8 @@
 """Calculate initial energy from the source to the patch."""
 import numba
 import numpy as np
-from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import pt_solution as patch2point
+from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import (
+    pt_solution as patch2point)
 
 @numba.njit(parallel=True)
 def _init_energy_kang(
@@ -42,9 +43,6 @@ def _init_energy_kang(
         receiver_normal = patches_normal[j, :].copy()
         receiver_size = patches_size[j, :].copy()
 
-        # array([0., 1., 0.]), array([ 0., -1.,  0.]),
-        # array([0., 0., 1.]), array([ 0.,  0., -1.]),
-        # array([1., 0., 0.]), array([-1.,  0.,  0.])]
         if np.abs(receiver_normal[2]) > 0.99:
             i = 2
             indexes = [0, 1, 2]
@@ -62,13 +60,11 @@ def _init_energy_kang(
         dn = receiver_pos[indexes[2]]
         dd_l = receiver_size[indexes[0]]
         dd_m = receiver_size[indexes[1]]
-        # dd_n = receiver_size[indexes[2]]
         S_x = source_pos[indexes[0]]
         S_y = source_pos[indexes[1]]
         S_z = source_pos[indexes[2]]
 
         half_l = dd_l/2
-        # half_n = dd_n/2
         half_m = dd_m/2
 
         sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
@@ -76,7 +72,7 @@ def _init_energy_kang(
         test1 = (dl - half_l) <= S_x
         test2 = S_x <= (dl + half_l)
         k_phi = -1 if test1 and test2 else 1
-        # k_phi = -1 if dl - half_l <= S_x <= dl + half_l else 1
+
         sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
             dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
         if (sin_phi_delta-sin_phi) < 1e-11:
@@ -89,7 +85,6 @@ def _init_energy_kang(
         test2 = S_y <= (dm + half_m)
         k_beta = -1 if test1 and test2 else 1
 
-        # k_beta = -1 if (dn - half_n) <= S_z <= (dn + half_n) else 1
         beta = np.abs(plus-(k_beta*minus))
         distance_out[j] = np.sqrt(
             np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
@@ -144,8 +139,11 @@ def _init_energy_universal(
         distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
 
         if air_attenuation is not None:
-            energy[j,:] = np.exp(-air_attenuation*distance_out[j]) * patch2point(point=source_pos, patch_points=receiver_pts, mode="source")
+            energy[j,:] = np.exp(
+                -air_attenuation*distance_out[j]) * patch2point(
+                    point=source_pos, patch_points=receiver_pts, mode="source")
         else:
-            energy[j,:] = patch2point(point=source_pos, patch_points=receiver_pts, mode="source")
+            energy[j,:] = patch2point(
+                point=source_pos, patch_points=receiver_pts, mode="source")
 
     return (energy, distance_out)

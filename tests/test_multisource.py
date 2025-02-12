@@ -64,13 +64,13 @@ def test_multi_receiver(basicscene, frequencies,
     [.5,1,2.5],
     [1,2.5,1.5],
     ])
-@pytest.mark.parametrize('ord', [
+@pytest.mark.parametrize('order', [
     10,20,
     ])
 @pytest.mark.parametrize('ps', [
     .5,1.5,
     ])
-def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
+def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
     """Test if radiosity results are reciprocal in shoebox room."""
     X = 3
     Y = 3
@@ -78,7 +78,7 @@ def test_reciprocity_shoebox(src,rec,ord,ps, method="universal"):
     patch_size = ps
     ir_length_s = .5
     sampling_rate = 200
-    max_order_k = ord
+    max_order_k = order
     speed_of_sound = 343
     irs_new = []
     frequencies = np.array([1000])
