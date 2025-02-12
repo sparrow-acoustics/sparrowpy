@@ -18,9 +18,7 @@ class DotDict(dict):
 
 def read_geometry_file(blend_file: Path,
                        angular_tolerance=1.,
-                       max_patch_size=1.,
-                       auto_walls=True,
-                       auto_patches=True):
+                       auto_walls=True,):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -97,46 +95,26 @@ def read_geometry_file(blend_file: Path,
 
 
     # create bmesh from geometry
-    out_mesh = bmesh.new()
-    out_mesh.from_mesh(geometry.data)
-
-    surfs = out_mesh.copy()
+    surfs = bmesh.new()
+    surfs.from_mesh(geometry.data)
+    
+    # sometimes the object space is scaled/rotated inside the .blend model.
+    # this preserves the geometry as the user sees it inside blender.
     surfs.transform(geometry.matrix_world)
+    
     if auto_walls:
-        # dissolve coplanar faces for simplicity
+        # dissolve coplanar faces for simplicity's sake
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
                                 verts=surfs.verts, edges=surfs.edges,
                                 delimit={'MATERIAL'})
-
-    if auto_patches:
-        warnings.warn(                                    # noqa: B028
-            RuntimeWarning(
-                "A rough triangulation pass may be applied" +
-                "to user-defined walls for auto patch generation."))
-        bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
-                            quad_method="BEAUTY",
-                            ngon_method="BEAUTY")
-    elif not auto_patches:
-        if not check_consistent_patches(list(surfs.faces)):
-            warnings.warn(                                # noqa: B028
-                UserWarning(
-                    "User-input patches have inconsistent shapes." +
-                    "\nA rough triangulation will be applied."))
-            bmesh.ops.triangulate(surfs, faces=list(surfs.faces),
-                            quad_method="BEAUTY",
-                            ngon_method="BEAUTY")
-
-
+    
     wall_data = generate_connectivity_wall(surfs)
-
-    if auto_patches:
-        patch_data = generate_patches(wall_data,max_patch_size=max_patch_size)
-    else:
-        patch_data = {"conn":   np.array(wall_data["conn"]),
-                      "verts":  np.array(wall_data["verts"]),
-                      "wall_ID":np.arange(len(wall_data["conn"]))}
-
-    return wall_data, patch_data
+    
+    if check_geometry(wall_data):
+        wall_data["conn"] = np.array(wall_data["conn"])
+        wall_data["verts"] = np.array(wall_data["verts"])
+        wall_data["normal"] = np.array(wall_data["normal"])
+        return wall_data
 
 
 def ensure_object_mode():
@@ -190,56 +168,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
     return out_mesh
 
-def generate_patches(walls: dict, max_patch_size=1.):
-    """Generate patches automatically for each wall based on max edge size.
-
-    Parameters
-    ----------
-    walls: dict({
-                    "verts": np.ndarray(n_wall_verts,3),
-                    "conn":  list(n_walls, :),
-                    "normal": list(n_walls, 3),
-                    "material": list(n_walls)
-                    })
-        wall geometry data.
-            "verts":    wall vertex (node) list
-            "conn":     vertex to wall mapping,
-            "normal":   normal list
-            "material": material list
-
-    max_patch_size: float
-        maximum edge dimension of patches
-
-    Returns
-    -------
-    patches: dict({
-                    "verts": np.ndarray(n_patch_verts,3),
-                    "conn":  np.ndarray(n_patches, 3),
-                    "wall_id": np.ndarray(n_patches,)
-                    })
-        patch data in reduced data representation.
-            "verts":   patch vertex (node) list
-            "conn":    vertex to patch mapping,
-            "wall_ID": patch to wall mapping
-
-    """
-    patches={"conn":np.array([]),
-             "verts": np.array([]),
-             "wall_ID": np.array([])}
-
-    verts, facs, IDs=tm.remesh.subdivide_to_size(vertices=walls["verts"],
-                                        faces=walls["conn"],
-                                        max_edge=max_patch_size,
-                                        return_index=True)
-
-    patches["verts"]   = np.array(verts)
-    patches["conn"]    = np.array(facs)
-    patches["wall_ID"] = np.array(IDs)
-
-    return patches
-
-
-def check_consistent_patches(surflist: list):
+def check_geometry(walls: dict):
     """Check if all patches have the same shape.
 
     Return True if all polygons in a given mesh
@@ -251,18 +180,22 @@ def check_consistent_patches(surflist: list):
     surflist: list(bmesh.faces)
         list of all faces (polygons) in a given mesh
 
-
     Returns
     -------
     out: bool
-        flags if all polygons in mesh have the same shape (True)
+        flags if all polygons in mesh are regular quads (True)
         or not (False).
 
     """
-    out = True
-    for i in range(1,len(surflist)):
-        if len(surflist[0].verts) != len(surflist[i].verts):
-            out = False
-            break
-
+    out=True
+    for i in range(len(walls["conn"])):
+        w = walls["verts"][walls["conn"][i]]
+        nverts=len(w)
+        for j in range(nverts):
+            vec0 = w[(j+1)%nverts]-w[j]
+            vec1 = w[(j+2)%nverts]-w[(j+1)%nverts]
+        
+            if (nverts != 4 or np.dot(vec0,vec1)<1e-6):
+                ValueError("Walls of the model should be regular quads in shape (squares, rectangles).\n"+
+                    "You can define walls by hand in the geometry model and set auto_walls=False.")
     return out
