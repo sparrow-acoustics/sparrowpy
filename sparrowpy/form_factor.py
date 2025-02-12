@@ -53,7 +53,7 @@ def calc_form_factor(
 @numba.njit()
 def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
     """
-    returns the form function value for the stokes form factor integration
+    Returns the form function value for the stokes form factor integration
     method.
 
     Parameters
@@ -84,7 +84,7 @@ def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
 def load_stokes_entries(
         i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
     """
-    calculates all the stokes form function values between two patches
+    Calculates all the stokes form function values between two patches
     and stores them in a matrix.
 
     Parameters
@@ -116,7 +116,7 @@ def stokes_integration(
         patch_i: np.ndarray, patch_j: np.ndarray, source_area: float,
         approx_order=4) -> float:
     """
-    calculate an estimation of the form factor between two patches
+    Calculate an estimation of the form factor between two patches
     by computationally integrating a modified form function over the two
     patch boundaries.
     The modified form function follows Stokes' theorem.
@@ -366,7 +366,7 @@ def nusselt_integration(
 @numba.njit(parallel=True)
 def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     """
-    calculates the "form factor" between a point (source or receiver) and
+    Calculates the "form factor" between a point (source or receiver) and
     a patch using a modified version of the Nusselt analogue, transformed
     for a -point- source, rather than differential surface element.
 
