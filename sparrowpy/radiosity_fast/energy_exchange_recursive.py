@@ -101,7 +101,7 @@ def _energy_exchange(
         for j in range(n_patches):
             distance_new = distance + distance_1[i, j]
             if (energy_new[j] > 0) and (distance_new < max_distance):
-                # energy_new += energy * form_factors_tilde[h, i, j]
+
                 ir = _collect_receiver_energy(
                     ir, i_freq, energy_new[j], distance_new,
                     patch_receiver_distance[j],

@@ -22,10 +22,10 @@ def test_point_plane_projection(origin: np.ndarray, point: np.ndarray,
 
 @pytest.mark.parametrize("point", [
     np.array([0.,0.,0.]),
-    np.array([0.,2.,0.])
+    np.array([0.,2.,0.]),
     ])
 @pytest.mark.parametrize("plpt", [
-    np.array([[1.,1.,0.],[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.]])
+    np.array([[1.,1.,0.],[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.]]),
     ])
 @pytest.mark.parametrize("pln", [np.array([0.,0.,1.])])
 def test_point_in_polygon(point, plpt, pln):
@@ -47,11 +47,11 @@ def test_point_in_polygon(point, plpt, pln):
     ])
 @pytest.mark.parametrize("origin", [np.array([0.,0.,1.])])
 @pytest.mark.parametrize("plpt", [
-    np.array([[1.,1.,0.],[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.]])
+    np.array([[1.,1.,0.],[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.]]),
     ])
 @pytest.mark.parametrize("pln", [
     np.array([0.,0.,1.]),
-    np.array([0.,.5,-.5])/np.linalg.norm(np.array([0.,.5,-.5]))
+    np.array([0.,.5,-.5])/np.linalg.norm(np.array([0.,.5,-.5])),
     ])
 def test_basic_visibility(point, origin, plpt, pln):
     """Test basic_visibility function."""
@@ -91,7 +91,7 @@ def test_vis_matrix_assembly(model):
     for m in [m1,m2]:
         surfs=m
 
-        surfs_points = list([])
+        surfs_points = []
         surfs_normals =list([np.empty((3,))]*len(surfs["conn"]))
 
         if model=="./tests/test_data/cube.blend":

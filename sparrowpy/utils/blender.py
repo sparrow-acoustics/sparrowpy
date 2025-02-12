@@ -67,7 +67,7 @@ def read_geometry_file(blend_file: Path, angular_tolerance=3.):
     geometry = objects["Geometry"]
 
 
-    # Creates file with only static geometric data of original blender file 
+    # Creates file with only static geometric data of original blender file
     # without information about source and receiver
     bpy.ops.object.select_all(action="DESELECT")
     geometry.select_set(True)
@@ -112,7 +112,7 @@ def generate_connectivity(mesh: bmesh):
         mesh in reduced data representation.
 
     """
-    out_mesh = dict({"conn":[], "verts": np.array([])})
+    out_mesh = {"conn":[], "verts": np.array([])}
 
     out_mesh["verts"] = np.array([v.co for v in mesh.verts])
 
