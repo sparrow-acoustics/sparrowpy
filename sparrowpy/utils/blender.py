@@ -5,6 +5,7 @@ from pathlib import Path
 import bpy
 import bmesh # type: ignore
 import numpy as np
+from sparrowpy.radiosity_fast.visibility_helpers import point_in_polygon
 
 class DotDict(dict):
     """dot.notation access to dictionary attributes."""
@@ -103,8 +104,8 @@ def read_geometry_file(blend_file: Path,
     if auto_walls:
         # dissolve coplanar faces for simplicity's sake
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
-                                verts=surfs.verts, edges=surfs.edges,
-                                delimit={'MATERIAL'})
+                                 verts=surfs.verts, edges=surfs.edges,
+                                 delimit={'MATERIAL'})
 
     wall_data = generate_connectivity_wall(surfs)
 
@@ -112,6 +113,7 @@ def read_geometry_file(blend_file: Path,
         wall_data["conn"] = np.array(wall_data["conn"])
         wall_data["verts"] = np.array(wall_data["verts"])
         wall_data["normal"] = np.array(wall_data["normal"])
+        wall_data["material"] = np.array(wall_data["material"])
         return wall_data
 
 
@@ -155,6 +157,8 @@ def generate_connectivity_wall(mesh: bmesh):
     for f in mesh.faces:
         if len(bpy.context.object.material_slots)!=0:
             out_mesh["material"].append(bpy.context.object.material_slots[f.material_index].name)
+        else:
+            out_mesh["material"].append("")
 
         line=[]
 
