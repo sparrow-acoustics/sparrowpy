@@ -5,8 +5,6 @@ from pathlib import Path
 import bpy
 import bmesh # type: ignore
 import numpy as np
-import trimesh as tm
-import warnings
 
 class DotDict(dict):
     """dot.notation access to dictionary attributes."""
@@ -97,19 +95,19 @@ def read_geometry_file(blend_file: Path,
     # create bmesh from geometry
     surfs = bmesh.new()
     surfs.from_mesh(geometry.data)
-    
+
     # sometimes the object space is scaled/rotated inside the .blend model.
     # this preserves the geometry as the user sees it inside blender.
     surfs.transform(geometry.matrix_world)
-    
+
     if auto_walls:
         # dissolve coplanar faces for simplicity's sake
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
                                 verts=surfs.verts, edges=surfs.edges,
                                 delimit={'MATERIAL'})
-    
+
     wall_data = generate_connectivity_wall(surfs)
-    
+
     if check_geometry(wall_data):
         wall_data["conn"] = np.array(wall_data["conn"])
         wall_data["verts"] = np.array(wall_data["verts"])
@@ -177,7 +175,7 @@ def check_geometry(walls: dict):
 
     Parameters
     ----------
-    surflist: list(bmesh.faces)
+    walls: dict
         list of all faces (polygons) in a given mesh
 
     Returns
@@ -194,7 +192,7 @@ def check_geometry(walls: dict):
         for j in range(nverts):
             vec0 = w[(j+1)%nverts]-w[j]
             vec1 = w[(j+2)%nverts]-w[(j+1)%nverts]
-        
+
             if (nverts != 4 or np.dot(vec0,vec1)<1e-6):
                 ValueError("Walls of the model should be regular quads in shape (squares, rectangles).\n"+
                     "You can define walls by hand in the geometry model and set auto_walls=False.")
