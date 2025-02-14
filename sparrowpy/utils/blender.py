@@ -17,7 +17,8 @@ class DotDict(dict):
 
 def read_geometry_file(blend_file: Path,
                        angular_tolerance=1.,
-                       auto_walls=True,):
+                       auto_walls=True,
+                       patches_from_geometry=True):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -100,12 +101,27 @@ def read_geometry_file(blend_file: Path,
     # sometimes the object space is scaled/rotated inside the .blend model.
     # this preserves the geometry as the user sees it inside blender.
     surfs.transform(geometry.matrix_world)
-
+    
+    if patches_from_geometry:
+        patches = bmesh.copy(surfs)
+        
     if auto_walls:
         # dissolve coplanar faces for simplicity's sake
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
                                  verts=surfs.verts, edges=surfs.edges,
                                  delimit={'MATERIAL'})
+
+    if patches_from_geometry:
+        patch2wall_map =np.empty((len(patches.faces)),dtype=int)
+
+        for i,pface in enumerate(patches.faces):
+            for j,wface in enumerate(surfs.faces):
+                if (pface.normal==wface.normal).all():
+                    if pface.material_index==wface.material_index:
+                        if bmesh.geometry.intersect_face_point(wface, pface.calc_center_median()):
+                            patch2wall_map[i]=j
+                            break
+                            
 
     wall_data = generate_connectivity_wall(surfs)
 
