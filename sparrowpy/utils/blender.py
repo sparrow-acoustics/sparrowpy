@@ -101,10 +101,7 @@ def read_geometry_file(blend_file: Path,
     # sometimes the object space is scaled/rotated inside the .blend model.
     # this preserves the geometry as the user sees it inside blender.
     surfs.transform(geometry.matrix_world)
-    
-    if patches_from_geometry:
-        patches = bmesh.copy(surfs)
-        
+
     if auto_walls:
         # dissolve coplanar faces for simplicity's sake
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
@@ -112,20 +109,17 @@ def read_geometry_file(blend_file: Path,
                                  delimit={'MATERIAL'})
 
     if patches_from_geometry:
-        patch2wall_map =np.empty((len(patches.faces)),dtype=int)
+        # new bmesh with patch info
+        patches=bmesh.new()
+        patches.from_mesh(geometry.data)
+        patches.transfrom(geometry.matrix_world)
+        patch_data = generate_connectivity_patch(patches, surfs)
 
-        for i,pface in enumerate(patches.faces):
-            for j,wface in enumerate(surfs.faces):
-                if (pface.normal==wface.normal).all():
-                    if pface.material_index==wface.material_index:
-                        if bmesh.geometry.intersect_face_point(wface, pface.calc_center_median()):
-                            patch2wall_map[i]=j
-                            break
-                            
+
 
     wall_data = generate_connectivity_wall(surfs)
 
-    if check_geometry(wall_data):
+    if (not patches_from_geometry) and (check_geometry(wall_data)):
         wall_data["conn"] = np.array(wall_data["conn"])
         wall_data["verts"] = np.array(wall_data["verts"])
         wall_data["normal"] = np.array(wall_data["normal"])
@@ -183,6 +177,28 @@ def generate_connectivity_wall(mesh: bmesh):
         out_mesh["conn"].append(line)
 
         out_mesh["normal"].append(np.array(f.normal))
+
+    return out_mesh
+
+def generate_connectivity_patch(finemesh: bmesh, broadmesh:bmesh):
+
+    out_mesh = {"verts":np.array([]), "conn":np.array([]), "map":np.array([])}
+
+    out_mesh["verts"] = np.array([v.co for v in finemesh.verts])
+    out_mesh["map"] = np.empty((len(finemesh.faces)),dtype=int)
+
+    for i,pface in enumerate(finemesh.faces):
+        out_mesh["conn"].append([v.index for v in pface.verts])
+
+        for j,wface in enumerate(broadmesh.faces):
+            if (pface.normal==wface.normal).all():
+                if pface.material_index==wface.material_index:
+                    if bmesh.geometry.intersect_face_point(wface,
+                                                            pface.calc_center_median()):
+                        out_mesh["map"][i]=j
+                        break
+
+    out_mesh["conn"] = np.array(out_mesh["conn"])
 
     return out_mesh
 
