@@ -45,22 +45,9 @@ def test_auto_wall():
                          ["./tests/test_data/cube.stl","./tests/test_data/cube_simple.blend"])
 def test_patch_to_wall_maps(blend_file):
     """Check if patch/wall connectivity makes sense."""
-    walls = bh.read_geometry_file(blend_file=blend_file, auto_walls=True)
-    patches = bh.read_geometry_file(blend_file=blend_file, auto_walls=False)
+    geom = bh.read_geometry_file(blend_file=blend_file, auto_walls=True)
 
-    patches["wallID"] =np.empty((patches["conn"].shape[0],),dtype=int)
-
-    for i,pconn in enumerate(patches["conn"]):
-        pt = patches["verts"][pconn][0]
-        for j,wconn in enumerate(walls["conn"]):
-            if (patches["normal"][i]==walls["normal"][j]).all():
-                if patches["material"][i]==walls["material"][j]:
-                    if point_in_polygon(point3d=pt,
-                                        polygon3d=walls["verts"][wconn],
-                                        plane_normal=walls["normal"][j]):
-                        patches["wallID"][i]=j
-
-    print("hey hey hey")
+    print(geom)
 
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube_simple.blend","./tests/test_data/cube.stl"])

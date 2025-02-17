@@ -112,7 +112,7 @@ def read_geometry_file(blend_file: Path,
         # new bmesh with patch info
         patches=bmesh.new()
         patches.from_mesh(geometry.data)
-        patches.transfrom(geometry.matrix_world)
+        patches.transform(geometry.matrix_world)
         patch_data = generate_connectivity_patch(patches, surfs)
 
     wall_data = generate_connectivity_wall(surfs)
@@ -183,7 +183,7 @@ def generate_connectivity_wall(mesh: bmesh):
             line.append(v.index)
         out_mesh["conn"].append(line)
 
-        normals.append(out_mesh["normal"],np.array(f.normal))
+        normals.append(np.array(f.normal))
 
     out_mesh["normal"]=np.array(normals)
 
@@ -200,7 +200,7 @@ def generate_connectivity_patch(finemesh: bmesh, broadmesh:bmesh):
         out_mesh["conn"].append([v.index for v in pface.verts])
 
         for j,wface in enumerate(broadmesh.faces):
-            if (pface.normal==wface.normal).all():
+            if pface.normal==wface.normal:
                 if pface.material_index==wface.material_index:
                     if bmesh.geometry.intersect_face_point(wface,
                                                             pface.calc_center_median()):
