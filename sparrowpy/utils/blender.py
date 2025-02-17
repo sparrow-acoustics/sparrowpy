@@ -18,7 +18,7 @@ class DotDict(dict):
 def read_geometry_file(blend_file: Path,
                        angular_tolerance=1.,
                        auto_walls=True,
-                       patches_from_geometry=True):
+                       patches_from_model=True):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -108,24 +108,25 @@ def read_geometry_file(blend_file: Path,
                                  verts=surfs.verts, edges=surfs.edges,
                                  delimit={'MATERIAL'})
 
-    if patches_from_geometry:
+    if patches_from_model:
         # new bmesh with patch info
         patches=bmesh.new()
         patches.from_mesh(geometry.data)
         patches.transfrom(geometry.matrix_world)
         patch_data = generate_connectivity_patch(patches, surfs)
 
-
-
     wall_data = generate_connectivity_wall(surfs)
 
-    if (not patches_from_geometry) and (check_geometry(wall_data)):
+    if (not patches_from_model) and (check_geometry(wall_data)):
         wall_data["conn"] = np.array(wall_data["conn"])
         wall_data["verts"] = np.array(wall_data["verts"])
         wall_data["normal"] = np.array(wall_data["normal"])
         wall_data["material"] = np.array(wall_data["material"])
-        return wall_data
+        out_data = wall_data
+    elif patches_from_model and (check_geometry(patch_data)):
+        out_data
 
+    return out_data
 
 def ensure_object_mode():
     """Ensure Blender is in Object Mode."""
@@ -198,11 +199,9 @@ def generate_connectivity_patch(finemesh: bmesh, broadmesh:bmesh):
                         out_mesh["map"][i]=j
                         break
 
-    out_mesh["conn"] = np.array(out_mesh["conn"])
-
     return out_mesh
 
-def check_geometry(walls: dict):
+def check_geometry(faces: dict, wall_check=True):
     """Check if all patches have the same shape.
 
     Return True if all polygons in a given mesh
@@ -211,7 +210,7 @@ def check_geometry(walls: dict):
 
     Parameters
     ----------
-    walls: dict
+    faces: dict
         list of all faces (polygons) in a given mesh
 
     Returns
@@ -222,14 +221,24 @@ def check_geometry(walls: dict):
 
     """
     out=True
-    for i in range(len(walls["conn"])):
-        w = walls["verts"][walls["conn"][i]]
-        nverts=len(w)
-        for j in range(nverts):
-            vec0 = w[(j+1)%nverts]-w[j]
-            vec1 = w[(j+2)%nverts]-w[(j+1)%nverts]
+    if wall_check:
+        for i in range(len(faces["conn"])):
+            w = faces["verts"][faces["conn"][i]]
+            nverts=len(w)
+            for j in range(nverts):
+                vec0 = w[(j+1)%nverts]-w[j]
+                vec1 = w[(j+2)%nverts]-w[(j+1)%nverts]
 
-            if (nverts != 4 or np.dot(vec0,vec1)<1e-6):
-                ValueError("Walls of the model should be regular quads in shape (squares, rectangles).\n"+
-                    "You can define walls by hand in the geometry model and set auto_walls=False.")
+                if (nverts != 4 or np.dot(vec0,vec1)<1e-6):
+                    ValueError("Walls of the model should be regular quads in shape (squares and rectangles).\n"+
+                        "You can define walls by hand in the geometry model and set auto_walls=False.")
+                    out=False
+
+    else:
+        for i in range(1,len(faces["conn"])):
+            if len(faces["conn"][i]) != len(faces["conn"][0]):
+                ValueError("All patches must have the same number of sides.\n"+
+                    "Recheck your model or set patches_from_model=False.")
+                out=False
+
     return out
