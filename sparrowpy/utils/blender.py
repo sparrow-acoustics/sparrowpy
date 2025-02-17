@@ -117,6 +117,8 @@ def read_geometry_file(blend_file: Path,
 
     wall_data = generate_connectivity_wall(surfs)
 
+    geom_data = {"wall":{}, "patch":{}}
+
     if (not patches_from_model) and (check_geometry(wall_data)):
         wall_data["conn"] = np.array(wall_data["conn"])
         wall_data["verts"] = np.array(wall_data["verts"])
@@ -161,15 +163,19 @@ def generate_connectivity_wall(mesh: bmesh):
             "material": material list
 
     """
-    out_mesh = {"verts": np.array([]), "conn":[], "normal":[], "material": []}
+    out_mesh = {"verts": np.array([v.co for v in mesh.verts]),
+                "conn":[],
+                "normal":np.array([]),
+                "material": np.array([])}
 
-    out_mesh["verts"] = np.array([v.co for v in mesh.verts])
+    normals=[]
 
     for f in mesh.faces:
         if len(bpy.context.object.material_slots)!=0:
-            out_mesh["material"].append(bpy.context.object.material_slots[f.material_index].name)
+            out_mesh["material"] = np.append(out_mesh["material"],
+                                             bpy.context.object.material_slots[f.material_index].name)
         else:
-            out_mesh["material"].append("")
+           out_mesh["material"] = np.append(out_mesh["material"],"")
 
         line=[]
 
@@ -177,7 +183,9 @@ def generate_connectivity_wall(mesh: bmesh):
             line.append(v.index)
         out_mesh["conn"].append(line)
 
-        out_mesh["normal"].append(np.array(f.normal))
+        normals.append(out_mesh["normal"],np.array(f.normal))
+
+    out_mesh["normal"]=np.array(normals)
 
     return out_mesh
 
