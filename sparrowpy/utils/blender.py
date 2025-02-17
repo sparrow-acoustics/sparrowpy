@@ -119,16 +119,16 @@ def read_geometry_file(blend_file: Path,
 
     geom_data = {"wall":{}, "patch":{}}
 
-    if (not patches_from_model) and (check_geometry(wall_data)):
+    if (not patches_from_model) and (check_geometry(wall_data, wall_check=True)):
         wall_data["conn"] = np.array(wall_data["conn"])
-        wall_data["verts"] = np.array(wall_data["verts"])
-        wall_data["normal"] = np.array(wall_data["normal"])
-        wall_data["material"] = np.array(wall_data["material"])
-        out_data = wall_data
-    elif patches_from_model and (check_geometry(patch_data)):
-        out_data
 
-    return out_data
+    elif patches_from_model and (check_geometry(patch_data, wall_check=False)):
+        patch_data["conn"]=np.array(patch_data["conn"])
+        geom_data["patch"]=patch_data
+
+    geom_data["wall"]= wall_data
+
+    return geom_data
 
 def ensure_object_mode():
     """Ensure Blender is in Object Mode."""
@@ -191,7 +191,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
 def generate_connectivity_patch(finemesh: bmesh, broadmesh:bmesh):
 
-    out_mesh = {"verts":np.array([]), "conn":np.array([]), "map":np.array([])}
+    out_mesh = {"verts":np.array([]), "conn":[], "map":np.array([])}
 
     out_mesh["verts"] = np.array([v.co for v in finemesh.verts])
     out_mesh["map"] = np.empty((len(finemesh.faces)),dtype=int)
