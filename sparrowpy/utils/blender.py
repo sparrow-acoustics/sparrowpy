@@ -237,16 +237,16 @@ def check_geometry(faces: dict, wall_check=True):
                 vec0 = w[(j+1)%nverts]-w[j]
                 vec1 = w[(j+2)%nverts]-w[(j+1)%nverts]
 
-                if (nverts != 4 or np.dot(vec0,vec1)<1e-6):
-                    ValueError("Walls of the model should be regular quads in shape (squares and rectangles).\n"+
+                if (nverts != 4 or np.abs(np.dot(vec0,vec1))>1e-6):
+                    raise ValueError("Walls of the model should be regular quads in shape (squares and rectangles).\n"+
                         "You can define walls by hand in the geometry model and set auto_walls=False.")
-                    out=False
+
 
     else:
         for i in range(1,len(faces["conn"])):
             if len(faces["conn"][i]) != len(faces["conn"][0]):
-                ValueError("All patches must have the same number of sides.\n"+
+                raise ValueError("All patches must have the same number of sides.\n"+
                     "Recheck your model or set patches_from_model=False.")
-                out=False
+
 
     return out
