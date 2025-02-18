@@ -108,7 +108,7 @@ def read_geometry_file(blend_file: Path,
                                  verts=surfs.verts, edges=surfs.edges,
                                  delimit={'MATERIAL'})
 
-    if patches_from_model:
+    if patches_from_model and auto_walls:
         # new bmesh with patch info
         patches=bmesh.new()
         patches.from_mesh(geometry.data)
