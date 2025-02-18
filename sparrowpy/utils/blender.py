@@ -246,6 +246,8 @@ def check_geometry(faces: dict, wall_check=True):
         for i in range(1,len(faces["conn"])):
             if len(faces["conn"][i]) != len(faces["conn"][0]):
                 raise ValueError("All patches must have the same number of sides.\n"+
+                    "Your model has patches with "+str(len(faces["conn"][i]))+
+                    " and "+str(len(faces["conn"][0]))+" sides.\n"
                     "Recheck your model or set patches_from_model=False.")
 
 
