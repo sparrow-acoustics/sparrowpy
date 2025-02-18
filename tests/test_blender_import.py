@@ -7,13 +7,42 @@ import sparrowpy.utils.blender as bh
                          ["./tests/test_data/cube_simple.blend","./tests/test_data/cube.stl"])
 def test_geometry_loading(path):
 
-    geom = bh.read_geometry_file(path, auto_walls=True,
+    ## check that individual walls are extracted from file
+
+    ## check that auto_walls are correctly generated
+    geom_w = bh.read_geometry_file(path, auto_walls=True,
+                                 patches_from_model=False)
+
+    assert not geom_w["patch"]
+    assert geom_w["wall"]["conn"].shape[0]==6
+    assert geom_w["wall"]["normal"].shape[0]==geom_w["wall"]["conn"].shape[0]
+    assert geom_w["wall"]["verts"].shape[0]==8
+    assert geom_w["wall"]["normal"].shape[1]==3
+
+
+    geom_wp= bh.read_geometry_file(path, auto_walls=True,
                                  patches_from_model=True)
 
-    assert geom["wall"]["conn"].shape[0]==6
-    assert geom["wall"]["normal"].shape[0]==geom["wall"]["conn"].shape[0]
-    assert geom["wall"]["verts"].shape[0]==8
-    assert geom["wall"]["normal"].shape[1]==3
+
+    assert bool(geom_wp["patch"])
+    assert type(geom_wp["wall"]["conn"]) is list
+    npt.assert_equal(np.array(geom_wp["wall"]["conn"]),
+                            geom_w["wall"]["conn"])
+    npt.assert_equal(geom_wp["wall"]["normal"],
+                            geom_w["wall"]["normal"])
+    npt.assert_equal(geom_wp["wall"]["verts"],
+                            geom_w["wall"]["verts"])
+    npt.assert_equal(geom_wp["wall"]["material"],
+                            geom_w["wall"]["material"])
+
+    if path.endswith(".blend"):
+        assert geom_wp["patch"]["conn"].shape[0]==24
+        assert geom_wp["patch"]["verts"].shape[0]==26
+    else:
+        assert geom_wp["patch"]["conn"].shape[0]==12
+        assert geom_wp["patch"]["verts"].shape[0]==8
+
+
 
 
 @pytest.mark.parametrize("path",
