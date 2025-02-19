@@ -198,19 +198,19 @@ def run_ir_generation(
     #plt.xlim(5, 24000)
     plt.show()
 
-    # IEC 61260:1:2014 standard or in the future e.g.Raised Cosine Filter
-    filtered_sig, filter_frequencies = pf.dsp.filter.reconstructing_fractional_octave_bands(
+    # IEC 61260:1:2014 standard or in the future e.g. Raised Cosine Filter
+    filter_bands, filter_centerFreq = pf.dsp.filter.reconstructing_fractional_octave_bands(
         signal=None,
         num_fractions=1,
         frequency_range=(125, 16000),
         overlap=1,
         slope=0,
-        n_samples=4096,
+        n_samples=2**14,
         sampling_rate=sampling_rate_diracS,
     )
-    a = filtered_sig.process(dirac_sig)
-    
-    pf.plot.freq(a, label="dirac sequence")
+    filtered_sig = filter_bands.process(dirac_sig)
+    pf.plot.freq(pf.Signal(filtered_sig.time[1,:,:],sampling_rate_diracS),
+                 label="dirac sequence")
     plt.show()
     if divide_BW:   #placeholder
         a = -1
@@ -224,7 +224,6 @@ def run_ir_generation(
     for ix in range(len(hist_reduced)):
         low = int(ix*factor_s)
         high = int((ix+1)*factor_s)
-        print(f"low: {low}, high: {high}")
         div = sum(diracS_value[low:high])
         if div == 0:
             div = 1e-10
@@ -246,7 +245,7 @@ def run_ir_generation(
 
 
 # %% Run the functions
-update_hist = True
+update_hist = False
 
 X = 4
 Y = 5
