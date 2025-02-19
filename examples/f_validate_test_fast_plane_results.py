@@ -43,7 +43,7 @@ def run_energy_diff_specular_ratio(width, length, patch_size, source, receiver):
                 [width / 2, -length / 2, 0],
                 [width / 2, length / 2, 0],
                 [-width / 2, length / 2, 0],
-            ]
+            ],
         ),
         np.array([1, 0, 0]),
         np.array([0, 0, 1]),
@@ -65,12 +65,12 @@ def run_energy_diff_specular_ratio(width, length, patch_size, source, receiver):
 
     # set air absorption
     radi.set_air_attenuation(
-        pf.FrequencyData(np.zeros_like(brdf.frequencies), brdf.frequencies)
+        pf.FrequencyData(np.zeros_like(brdf.frequencies), brdf.frequencies),
     )
 
     # set absorption coefficient
     radi.set_wall_absorption(
-        np.arange(1), pf.FrequencyData(np.zeros_like(brdf.frequencies) + 0, brdf.frequencies)
+        np.arange(1), pf.FrequencyData(np.zeros_like(brdf.frequencies) + 0, brdf.frequencies),
     )
 
     # initialize source energy at each patch

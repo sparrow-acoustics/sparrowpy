@@ -123,3 +123,7 @@ docs/_static/css/custom.css
 docs/resources/logos/pyfar_logos_fixed_size_sparrowpy.png
 docs/resources/logos/pyfar_logos_fixed_size_pyfar.png
 *.pdf
+
+# ignore filip stuff and change file
+examples/stuff.py
+.gitignore
