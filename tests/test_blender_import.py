@@ -6,10 +6,7 @@ import sparrowpy.utils.blender as bh
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube_simple.blend","./tests/test_data/cube.stl"])
 def test_geometry_loading(path):
-
-    ## check that individual walls are extracted from file
-
-    ## check that auto_walls are correctly generated
+    """Test that geometry data is correctly loaded from file."""
     geom_w = bh.read_geometry_file(path, auto_walls=True,
                                  patches_from_model=False)
 
@@ -25,7 +22,7 @@ def test_geometry_loading(path):
 
 
     assert bool(geom_wp["patch"])
-    assert type(geom_wp["wall"]["conn"]) is list
+    assert isinstance(geom_wp["wall"]["conn"], list)
     npt.assert_equal(np.array(geom_wp["wall"]["conn"]),
                             geom_w["wall"]["conn"])
     npt.assert_equal(geom_wp["wall"]["normal"],

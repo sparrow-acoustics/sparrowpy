@@ -5,7 +5,6 @@ from pathlib import Path
 import bpy
 import bmesh # type: ignore
 import numpy as np
-from sparrowpy.radiosity_fast.visibility_helpers import point_in_polygon
 
 class DotDict(dict):
     """dot.notation access to dictionary attributes."""
@@ -16,8 +15,8 @@ class DotDict(dict):
 
 
 def read_geometry_file(blend_file: Path,
-                       angular_tolerance=1.,
                        auto_walls=True,
+                       angular_tolerance=1.,
                        patches_from_model=True):
     """Read blender file and return fine and rough mesh.
 
@@ -34,34 +33,28 @@ def read_geometry_file(blend_file: Path,
         path to blender file describing the
         scene geometry and setup
 
-    angular_tolerance: float
-        maximum angle in degree by which two patches are considered coplanar
-        determines surfaces in simplified mesh
-
-    max_patch_size: float
-        maximum size of the patch edges.
-        real patch size may be significantly smaller
-            if max_patch_size is close to wall dimensions.
-
     auto_walls: bool
         flags if walls should be auto detected from the model geometry (True)
         or if each polygon in the model should become a wall (False).
-        the output walls may be a rough triangularized version of the input.
 
-    auto_patches: bool
-        flags if patches should be automatically created given max size (True)
-        or if each polygon in the model should become a patch (False).
-        if False, the input is checked and/or corrected for consistent shape.
+    angular_tolerance: float
+        maximum angle in degree by which two patches are considered coplanar
+        determines walls if they are automatically assessed
+
+    patches_from_model: bool
+        flags if patches should be extracted from the model's polygons (True)
+        or not (False).
 
     Returns
     -------
-    wall_data: dict
-        wall vertex list ["verts"], polygon vertex mapping ["conn"],
-        normals["normal"], and material names ["material"].
+    geom_data: dict
+        "wall":
+            wall vertex list ["verts"], polygon vertex mapping ["conn"],
+            normals["normal"], and material names ["material"].
 
-    patch_data: dict
-        patch vertex list ["verts"], polygon vertex mapping ["conn"],
-        patch-to-wall mapping ["wall_ID"]
+        patch:
+            patch vertex list ["verts"], polygon vertex mapping ["conn"],
+            patch-to-wall mapping ["wall_ID"]
 
     """
     if os.path.splitext(blend_file)[-1] == ".blend":
@@ -108,7 +101,7 @@ def read_geometry_file(blend_file: Path,
                                  verts=surfs.verts, edges=surfs.edges,
                                  delimit={'MATERIAL'})
 
-    if patches_from_model and auto_walls:
+    if patches_from_model:
         # new bmesh with patch info
         patches=bmesh.new()
         patches.from_mesh(geometry.data)
@@ -119,7 +112,8 @@ def read_geometry_file(blend_file: Path,
 
     geom_data = {"wall":{}, "patch":{}}
 
-    if (not patches_from_model) and (check_geometry(wall_data, wall_check=True)):
+    if ((not patches_from_model) and
+        (check_geometry(wall_data, wall_check=True))):
         wall_data["conn"] = np.array(wall_data["conn"])
 
     elif patches_from_model and (check_geometry(patch_data, wall_check=False)):
@@ -190,6 +184,33 @@ def generate_connectivity_wall(mesh: bmesh):
     return out_mesh
 
 def generate_connectivity_patch(finemesh: bmesh, broadmesh:bmesh):
+    """Summarize characteristics of polygons in a fine mesh.
+
+    Return a dictionary which includes a list of vertices,
+    mapping (connectivity) of the vertex list to each fine mesh polygon,
+    and mapping of fine mesh polygons to broad mesh faces.
+
+    Parameters
+    ----------
+    finemesh: bmesh
+        fine mesh extracted from blender file
+
+    broadmesh: bmesh
+        broad mesh extracted from blender file
+
+    Returns
+    -------
+    out_mesh: dict({
+                    "verts": np.ndarray (n_vertices,3),
+                    "conn":  list (n_polygons, :),
+                    "map": np.ndarray (n_polygons,)
+                    })
+        mesh in reduced data representation.
+            "verts":    vertex (node) list
+            "conn":     vertex to polygon mapping,
+            "map":   broad mesh index of face where polygon belongs
+
+    """
 
     out_mesh = {"verts":np.array([]), "conn":[], "map":np.array([])}
 
@@ -221,6 +242,10 @@ def check_geometry(faces: dict, wall_check=True):
     faces: dict
         list of all faces (polygons) in a given mesh
 
+    wall_check: bool
+        toggles geometry checks for wall geometries (True)
+        or patch geometries (False)
+
     Returns
     -------
     out: bool
@@ -238,17 +263,22 @@ def check_geometry(faces: dict, wall_check=True):
                 vec1 = w[(j+2)%nverts]-w[(j+1)%nverts]
 
                 if (nverts != 4 or np.abs(np.dot(vec0,vec1))>1e-6):
-                    raise ValueError("Walls of the model should be regular quads in shape (squares and rectangles).\n"+
-                        "You can define walls by hand in the geometry model and set auto_walls=False.")
+                    raise (
+            ValueError("Model wall shapes should be rectangular quads.\n"+
+            "You can define walls by hand in the geometry model "+
+            "and set auto_walls=False.")
+                        )
 
 
     else:
         for i in range(1,len(faces["conn"])):
             if len(faces["conn"][i]) != len(faces["conn"][0]):
-                raise ValueError("All patches must have the same number of sides.\n"+
-                    "Your model has patches with "+str(len(faces["conn"][i]))+
-                    " and "+str(len(faces["conn"][0]))+" sides.\n"
-                    "Recheck your model or set patches_from_model=False.")
+                raise (
+            ValueError("All patches must have the same number of sides.\n"+
+            "Your model has patches with "+str(len(faces["conn"][i]))+
+            " and "+str(len(faces["conn"][0]))+" sides.\n"
+            "Recheck your model or set patches_from_model=False.")
+                    )
 
 
     return out
