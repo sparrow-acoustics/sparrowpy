@@ -1,6 +1,4 @@
 # %% Histogram generation
-
-from types import NoneType
 import numpy as np
 import pyfar as pf
 import sparrowpy as sp
@@ -50,41 +48,41 @@ def run_energy_simulation(
         scattering_coefficient=pf.FrequencyData(1, [1000]),
         absorption_coefficient=pf.FrequencyData(0, [1000]),
     )
-
+    print("Debug: a")
     radi.set_wall_scattering(
         wall_indexes=np.arange(len(walls)).tolist(),
         scattering=brdf,
         sources=pf.Coordinates(0, 0, 1, weights=1),
         receivers=pf.Coordinates(0, 0, 1, weights=1),
     )
-
+    print("Debug: b")
     radi.set_air_attenuation(
         pf.FrequencyData([0.2], [1000]),
     )
-
+    print("Debug: c")
     radi.set_wall_absorption(
         np.arange(len(walls)).tolist(),
         pf.FrequencyData(np.zeros_like(brdf.frequencies), brdf.frequencies),
     )
-
+    print("Debug: d")
     radi.bake_geometry()
-
+    print("Debug: e")
     radi.init_source_energy(source)
-
+    print("Debug: f")
     radi.calculate_energy_exchange(
         speed_of_sound=speed_of_sound,
         histogram_time_resolution=1 / sampling_rate,
         histogram_length=ir_length_s,
         max_depth=max_order_k,
     )
-
+    print("Debug: 3")
     histogram = radi.collect_receiver_energy(
         receiver_pos=receiver,
         speed_of_sound=speed_of_sound,
         histogram_time_resolution=1 / sampling_rate,
         propagation_fx=True,
     )
-
+    print("Debug: before ret")
     return histogram
 
 
@@ -113,6 +111,7 @@ def run_ir_generation(
     ir : pf.Signal
         Dirac impulse response of the room.
     """
+    
     delta_redHist = 1e-10 if delta_redHist is None else delta_redHist
     speed_of_sound = 343
     sampling_rate_diracS = 48000
@@ -147,7 +146,7 @@ def run_ir_generation(
             print(
                 f"Delta_t for the reduced histogram of {delta_redHist} is smaller\n"+
                 "than the original histogram resolution given by the sampling rate\n"+
-                "at {1/sampling_rate}.\n! Incorrect call !\n"+
+                f"at {1/sampling_rate}.\n! Incorrect call !\n"+
                 "Using original histogram (resolution).")
         else:
             print("Histogram resolution not reduced.")
@@ -176,7 +175,8 @@ def run_ir_generation(
             # else:
             #     diracNonZeros.append(-time)
             ##time% very sensitive for dirac +- value and bc of sampling rate
-    print(f"Sampling rate dirac: {sampling_rate_diracS}\nDelta_redHist: {delta_redHist}\nFactor delta_t: {factor_delta}")
+    print(f"Sampling rate dirac: {sampling_rate_diracS}\n" +
+          f"Delta_redHist: {delta_redHist}\nFactor delta_t: {factor_delta}")
 
     diracS_time = np.arange(0, time_stop, time_step)
     diracS_value = np.zeros_like(diracS_time)
@@ -247,7 +247,9 @@ def run_ir_generation(
 
 
 # %% Run the functions
-update_hist = False
+update_hist = True
+hist_HQnew = False   # 48k 2s k=180
+flag_char = "+" if hist_HQnew else ""
 delta_reduced_histogram = 0.01  # default 0.1 for the IR
 
 X = 4
@@ -256,10 +258,9 @@ Z = 3
 room_volume = X * Y * Z
 
 ir_length_s = 2         # default 2
-sampling_rate = 1000    # 1/delta_t
+sampling_rate = 8000    # 1/delta_t
 patch_size = 1
-max_order_k = 500       # default >200 for probably clean-200dB in the histogram
-
+max_order_k = 180       # default >=180 for clean-200dB in histogram
 print(f"X: {X}\nY: {Y}\nZ: {Z}\nPatch size: {patch_size}")
 
 if update_hist:
@@ -273,6 +274,7 @@ if update_hist:
         source=pf.Coordinates(1, 1, 1),
         receiver=pf.Coordinates(2.5, 3.5, 1.6),
     )
+    print("Debug: after ret")
     txt_data = np.concatenate(
         (
             np.arange(
@@ -280,35 +282,76 @@ if update_hist:
             hist_full[0, :, 0, :].reshape(-1),  # one freq bin
         ),
     )
+    print("Debug: 11")
     txt_data = np.reshape(txt_data, (hist_full.shape[1] + 1, hist_full.shape[3]))
-    np.savetxt(f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}.csv", txt_data, delimiter=",")
+    np.savetxt(
+        f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}{flag_char}.csv",
+        txt_data, delimiter=",")
+    print("Debug: 12")
     delta = datetime.now() - start
     print(f"Time elapsed: {delta}")
 else:
     txt_data = np.genfromtxt(
-        f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}.csv",
+        f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}{flag_char}.csv",
         delimiter=",",
     )
 
 hist_sum = np.sum(txt_data[1:, :], axis=0)
-hist_sum_sig = pf.Signal(hist_sum, sampling_rate)
 
+hist_sum_sig = pf.Signal(hist_sum, sampling_rate)
 plt.figure()
 pf.plot.time(
-    hist_sum_sig, dB=True, log_prefix=10,
-    label=f"Histogram of room with size {X}x{Y}x{Z} m\nPatch size of {patch_size}")
+    hist_sum_sig,
+    dB=True,
+    log_prefix=10,
+    label=f"Histogram of room with size {X}x{Y}x{Z} m\n"+
+    f"Patch size of {patch_size}{flag_char}")
 plt.ylim(-200, 0)
 plt.xlabel("seconds")
 plt.legend()
 if update_hist:
-    plt.savefig(fname=f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}.svg")
+    plt.savefig(fname=f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}{flag_char}.svg")
 plt.show()
 
-check_what_pf_sig = run_ir_generation(
-    hist_sum,
-    room_volume,
-    sampling_rate,
+# check_what_pf_sig = run_ir_generation(
+#     hist_sum,
+#     room_volume,
+#     sampling_rate,
+# )
+
+# %% Histogram csv comparison of datasets
+res_reduction_data2 = True
+ir_length_s = 2     # default 2
+txt_data1 = np.genfromtxt(
+    "sim_data/f_hist_room_4_5_3_1.csv",
+    delimiter=",",
 )
+txt_data2 = np.genfromtxt(
+    "sim_data/f_hist_room_4_5_3_1+.csv",
+    delimiter=",",
+)
+txt_data1 = np.sum(txt_data1[1:, :], axis=0)
+txt_data2 = np.sum(txt_data2[1:, :], axis=0)
+
+if res_reduction_data2:
+    print(txt_data1.shape[0])
+    print(txt_data2.shape[0])
+    factor_samRate = int(txt_data2.shape[0] / txt_data1.shape[0])
+    print(f"Factor sampling rate: {factor_samRate}")
+    txt_dataBetter_48 = []
+    for ix in range(int(len(txt_data2) / factor_samRate)):
+        txt_dataBetter_48.append(sum(txt_data2[ix * 2 : ix * 2 + factor_samRate]))
+    txt_data2 = np.asarray(txt_dataBetter_48)
+
+txt_data_diff = txt_data1 - txt_data2
+txt_data_diff_sig = pf.Signal(txt_data_diff, len(txt_data_diff) / ir_length_s)
+plt.figure()
+pf.plot.time(txt_data_diff_sig, dB=True, log_prefix=10, label="Histogram comparison")
+plt.xlabel("seconds")
+plt.legend()
+plt.show()
+print(f"Summed energy difference:\n\t{round(sum(txt_data_diff[:]), 3)}" +
+      f" or {round(10*np.log(abs(sum(txt_data_diff[:]))), 3)} dB")
 
 
 # %% noise tests
