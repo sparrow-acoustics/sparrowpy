@@ -3,7 +3,6 @@
 from types import NoneType
 import numpy as np
 import pyfar as pf
-from pyfar.dsp.filter import high_shelf  # type: ignore
 import sparrowpy as sp
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -91,7 +90,8 @@ def run_energy_simulation(
 
 # %% IR generation
 def run_ir_generation(
-    hist_sum, room_volume, sampling_rate, delta_rHist, keep_original_hist=False) -> pf.Signal:
+    hist_sum, room_volume, sampling_rate, keep_original_hist=True,
+    delta_redHist=None) -> pf.Signal:
     """
     Calculate the impulse response for a histogram.
 
@@ -103,62 +103,65 @@ def run_ir_generation(
         Volume through X*Y*Z of the room.
     sampling_rate : float
         Sampling rate of the original histogram.
-    delta_rHist : float
-        Time delta for the (reduced) histogram for the IR.
     keep_original_hist : bool
         Reduction of the histogram resolution.
+    delta_redHist : float
+        Time delta for the (reduced) histogram for the IR.
 
     Returns
     -------
     ir : pf.Signal
         Dirac impulse response of the room.
     """
-
+    delta_redHist = 1e-10 if delta_redHist is None else delta_redHist
     speed_of_sound = 343
     sampling_rate_diracS = 48000
     divide_BW = False
 
-    if not keep_original_hist and not delta_rHist < 1/sampling_rate:
-        factor_delta_t = delta_rHist * sampling_rate
-        print(f"Reduction in histogram resolution: {factor_delta_t}")
+    if not keep_original_hist and not delta_redHist < 1/sampling_rate:
+        factor_delta = delta_redHist * sampling_rate
+        print(f"Reduction in histogram resolution: {factor_delta}")
         hist_reduced = []
         index_values = range(
-            0, len(hist_sum), max(int(factor_delta_t), 1))
+            0, len(hist_sum), int(factor_delta))
         for ix in index_values:
-            hist_reduced.append(sum(hist_sum[ix : ix + max(int(factor_delta_t), 1)]))
-        time_values = np.arange(0, len(hist_reduced) * delta_rHist, delta_rHist)
+            hist_reduced.append(sum(hist_sum[ix : ix + int(factor_delta)]))
+        time_values = np.arange(0, len(hist_reduced) * delta_redHist, delta_redHist)
 
-        hist_reduced_sig = pf.Signal(hist_reduced, 1/delta_rHist)
+        hist_reduced_sig = pf.Signal(hist_reduced, 1/delta_redHist)
         plt.figure()
         pf.plot.time(
             hist_reduced_sig, dB=True, log_prefix=10,
             label=f"Histogram reduced of {room_volume} m^3 room" +
-                    f"\nReduction of resolution by {factor_delta_t}x")
+                    f"\nReduction of resolution by {factor_delta}x")
         plt.scatter(
             time_values,
             np.multiply(10, np.log10(np.asarray(hist_reduced))),
-            label="Separate values of reduced histogram",
-        )
+            label="Separate values of reduced histogram")
         plt.ylim(-200, 0)
         plt.xlabel("seconds")
         plt.legend()
         plt.show()
     else:
-        if delta_rHist < 1/sampling_rate:
-            print("Delta_rHist is smaller than the original sampling rate. Not relevant!")
+        if not keep_original_hist and delta_redHist < 1 / sampling_rate:
+            print(
+                f"Delta_t for the reduced histogram of {delta_redHist} is smaller\n"+
+                "than the original histogram resolution given by the sampling rate\n"+
+                "at {1/sampling_rate}.\n! Incorrect call !\n"+
+                "Using original histogram (resolution).")
         else:
-            print("No reduction in histogram resolution!")
-        delta_rHist = 1/sampling_rate
-        factor_delta_t = 1
+            print("Histogram resolution not reduced.")
+        delta_redHist = 1/sampling_rate
+        factor_delta = 1
         hist_reduced = hist_sum
 
     # noise sequence with poisson distribution
     rng = np.random.default_rng()
     diracNonZeros = []
-    µ_t = 4 * np.pi * pow(speed_of_sound, 3) / room_volume / 1000 ##trash for testing
+    µ_t = 4 * np.pi * pow(speed_of_sound, 3) / room_volume / 1000 ##div by 1000 for testing
 
     time_start = 1/max(sampling_rate_diracS,1000)      # max ~0.3m sound travel time
-    time_stop = len(hist_reduced) * delta_rHist     # max ir_length_s
+    time_stop = len(hist_reduced) * delta_redHist     # max ir_length_s
     time_step = 1/sampling_rate_diracS
     for time in np.arange(time_start, time_stop, time_step):
         time_for_itr = time
@@ -173,7 +176,7 @@ def run_ir_generation(
             # else:
             #     diracNonZeros.append(-time)
             ##time% very sensitive for dirac +- value and bc of sampling rate
-    print(f"Sampling rate dirac: {sampling_rate_diracS}\nDelta_rHist: {delta_rHist}\nFactor delta_t: {factor_delta_t}")
+    print(f"Sampling rate dirac: {sampling_rate_diracS}\nDelta_redHist: {delta_redHist}\nFactor delta_t: {factor_delta}")
 
     diracS_time = np.arange(0, time_stop, time_step)
     diracS_value = np.zeros_like(diracS_time)
@@ -189,17 +192,16 @@ def run_ir_generation(
     plt.xlim(0.2, 0.3) #for density checking
     plt.xlabel("seconds")
     plt.ylabel("amplitude")
-    #plt.savefig(fname=f"sim_data/f_dirac_{room_volume}m^3_{delta_rHist}s.svg")
+    #plt.savefig(fname=f"sim_data/f_dirac_{room_volume}m^3_{delta_redHist}s.svg")
     plt.show()
 
-    dirac_sig = pf.Signal(diracS_value, sampling_rate_diracS)
-                                        # future other smp_rate
+    dirac_sig = pf.Signal(diracS_value, sampling_rate_diracS) # future other smp_rate
     pf.plot.freq(dirac_sig, label="Dirac sequence freq")
     #plt.xlim(5, 24000)
     plt.show()
 
     # IEC 61260:1:2014 standard or in the future e.g. Raised Cosine Filter
-    filter_bands, filter_centerFreq = pf.dsp.filter.reconstructing_fractional_octave_bands(
+    filters, filter_centerFreq = pf.dsp.filter.reconstructing_fractional_octave_bands(
         signal=None,
         num_fractions=1,
         frequency_range=(125, 16000),
@@ -208,7 +210,7 @@ def run_ir_generation(
         n_samples=2**14,
         sampling_rate=sampling_rate_diracS,
     )
-    filtered_sig = filter_bands.process(dirac_sig)
+    filtered_sig = filters.process(dirac_sig) #
     pf.plot.freq(pf.Signal(filtered_sig.time[1,:,:],sampling_rate_diracS),
                  label="dirac sequence")
     plt.show()
@@ -220,7 +222,7 @@ def run_ir_generation(
         #diracS_filtered = dirac_sig
 
     diracS_weighted = np.zeros_like(diracS_value)
-    factor_s = sampling_rate_diracS*delta_rHist # >1!
+    factor_s = sampling_rate_diracS*delta_redHist # >1!
     for ix in range(len(hist_reduced)):
         low = int(ix*factor_s)
         high = int((ix+1)*factor_s)
@@ -234,11 +236,11 @@ def run_ir_generation(
     #if divide_BW: sum over frequency bands
     sig = pf.Signal(diracS_weighted, sampling_rate_diracS)
     plt.figure()
-    pf.plot.time(sig, dB=True, label="Dirac sequence weighted", log_prefix=10)
+    pf.plot.time(sig, dB=False, label="Dirac sequence weighted", log_prefix=10)
     #plt.xlim(0, 1) #for check
     plt.xlabel("seconds")
     plt.ylabel("amplitude")
-    #plt.savefig(fname=f"sim_data/f_dirac_weighted_{room_volume}m^3_{delta_rHist}s.svg")
+    #plt.savefig(fname=f"sim_data/f_dirac_weighted_{room_volume}m^3_{delta_redHist}s.svg")
     plt.show()
 
     return pf.Signal(diracS_weighted, sampling_rate_diracS)
@@ -246,6 +248,7 @@ def run_ir_generation(
 
 # %% Run the functions
 update_hist = False
+delta_reduced_histogram = 0.01  # default 0.1 for the IR
 
 X = 4
 Y = 5
@@ -253,12 +256,11 @@ Z = 3
 room_volume = X * Y * Z
 
 ir_length_s = 2         # default 2
-sampling_rate = 1000    # 1/delta_t per second
-patch_size = 1.2
+sampling_rate = 1000    # 1/delta_t
+patch_size = 1
 max_order_k = 500       # default >200 for probably clean-200dB in the histogram
-print(f"X: {X}\nY: {Y}\nZ: {Z}\nPatch size: {patch_size}")
 
-delta_rHist = 0.01           # default 0.1 for the IR
+print(f"X: {X}\nY: {Y}\nZ: {Z}\nPatch size: {patch_size}")
 
 if update_hist:
     start = datetime.now()
@@ -289,7 +291,6 @@ else:
     )
 
 hist_sum = np.sum(txt_data[1:, :], axis=0)
-
 hist_sum_sig = pf.Signal(hist_sum, sampling_rate)
 
 plt.figure()
@@ -303,85 +304,88 @@ if update_hist:
     plt.savefig(fname=f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}.svg")
 plt.show()
 
-check_what_pf_sig = run_ir_generation(  #return check?????
-    hist_sum, room_volume, sampling_rate, delta_rHist, keep_original_hist=True)
+check_what_pf_sig = run_ir_generation(
+    hist_sum,
+    room_volume,
+    sampling_rate,
+)
 
 
 # %% noise tests
-filterFI, filter_frequencies = pf.dsp.filter.reconstructing_fractional_octave_bands(
-    signal=None,##
-    num_fractions=1,
-    frequency_range=(125, 16000),
-    overlap=1,
-    slope=0,
-    n_samples=4096,
-    sampling_rate=48000,
-)
-y_sum = pf.Signal(np.sum(filterFI.time, 0), filtered_sig.sampling_rate)
-pf.plot.freq(filtered_sig, label="Filtered Signal")
-plt.show()
+# filterFI, filter_frequencies = pf.dsp.filter.reconstructing_fractional_octave_bands(
+#     signal=None,##
+#     num_fractions=1,
+#     frequency_range=(125, 16000),
+#     overlap=1,
+#     slope=0,
+#     n_samples=4096,
+#     sampling_rate=48000,
+# )
+# y_sum = pf.Signal(np.sum(filterFI.time, 0), filtered_sig.sampling_rate)
+# pf.plot.freq(filtered_sig, label="Filtered Signal")
+# plt.show()
 
-# noise sequence with poisson distribution
-    rng = np.random.default_rng()
+# # noise sequence with poisson distribution
+#     rng = np.random.default_rng()
 
-    diracS = []
-    µ_t = 4 * np.pi * pow(speed_of_sound, 3) / room_volume
+#     diracS = []
+#     µ_t = 4 * np.pi * pow(speed_of_sound, 3) / room_volume
 
-    time = 1/max(sampling_rate,1000) # max 0.3m sound travel time
-    while time < len(hist_reduced) * delta_t:   # max ir_length_s
-        µ = min(µ_t * pow(time, 2), 10000)
+#     time = 1/max(sampling_rate,1000) # max 0.3m sound travel time
+#     while time < len(hist_reduced) * delta_t:   # max ir_length_s
+#         µ = min(µ_t * pow(time, 2), 10000)
 
-        time_add = 1/µ * np.log(1/rng.uniform(1e-10, 1))
-        time += time_add
-        if time%(1/sampling_rate) < 1/sampling_rate/2:
-            diracS.append(time)
-        else:
-            diracS.append(-time)
-    #time% very sensitive for dirac +- value
-
-
+#         time_add = 1/µ * np.log(1/rng.uniform(1e-10, 1))
+#         time += time_add
+#         if time%(1/sampling_rate) < 1/sampling_rate/2:
+#             diracS.append(time)
+#         else:
+#             diracS.append(-time)
+#     #time% very sensitive for dirac +- value
 
 
-a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-sampling_rate = 10
-factor_delta_t = 1
-# noise sequence with poisson distribution
-rng = np.random.default_rng()
-dirac_sequence = rng.poisson(lam=1, size=len(a))
-for ix in range(len(dirac_sequence)):
-    if dirac_sequence[ix] != 0:
-        dirac_sequence[ix] = rng.choice([-1, 1], p=[0.5,0.5])
-plt.figure()
-plt.plot(
-    np.arange(len(a)), #np.arange(len(hist_reduced) / sampling_rate * factor_delta_t)
-    dirac_sequence,
-    label="dirac sequence",
-)
-plt.xlabel("seconds")
-plt.ylabel("amplitude")
-plt.show()
 
-# spectrum of the poisson diracs
-dirac_sig = pf.Signal(
-    dirac_sequence,
-    sampling_rate/factor_delta_t,
-)
-#dirac_freq = dirac_sig.freq
-plt.plot(
-    dirac_sig.freq,
-    label="dirac sequence",
-)
-plt.show()
 
-# e.g Raised Cosine Filter in the future! now IEC 61260:1:2014 standard
-filtered_sig, freq_center = pf.dsp.filter.reconstructing_fractional_octave_bands(
-    dirac_sig,
-    num_fractions=1,
-    frequency_range=(125, 16000),
-    overlap=1,
-    slope=0,
-    n_samples=4096,
-    sampling_rate=None,
-)
-pf.plot.freq(filtered_sig, label="dirac sequence")
-plt.show()
+# a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# sampling_rate = 10
+# factor_delta_t = 1
+# # noise sequence with poisson distribution
+# rng = np.random.default_rng()
+# dirac_sequence = rng.poisson(lam=1, size=len(a))
+# for ix in range(len(dirac_sequence)):
+#     if dirac_sequence[ix] != 0:
+#         dirac_sequence[ix] = rng.choice([-1, 1], p=[0.5,0.5])
+# plt.figure()
+# plt.plot(
+#     np.arange(len(a)), #np.arange(len(hist_reduced) / sampling_rate * factor_delta_t)
+#     dirac_sequence,
+#     label="dirac sequence",
+# )
+# plt.xlabel("seconds")
+# plt.ylabel("amplitude")
+# plt.show()
+
+# # spectrum of the poisson diracs
+# dirac_sig = pf.Signal(
+#     dirac_sequence,
+#     sampling_rate/factor_delta_t,
+# )
+# #dirac_freq = dirac_sig.freq
+# plt.plot(
+#     dirac_sig.freq,
+#     label="dirac sequence",
+# )
+# plt.show()
+
+# # e.g Raised Cosine Filter in the future! now IEC 61260:1:2014 standard
+# filtered_sig, freq_center = pf.dsp.filter.reconstructing_fractional_octave_bands(
+#     dirac_sig,
+#     num_fractions=1,
+#     frequency_range=(125, 16000),
+#     overlap=1,
+#     slope=0,
+#     n_samples=4096,
+#     sampling_rate=None,
+# )
+# pf.plot.freq(filtered_sig, label="dirac sequence")
+# plt.show()
