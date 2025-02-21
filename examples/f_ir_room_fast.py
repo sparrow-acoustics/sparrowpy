@@ -229,8 +229,7 @@ def run_ir_generation(
         div = sum(diracS_value[low:high])
         if div == 0:
             div = 1e-10
-        diracS_weighted[low:high] =\
-            diracS_value[low:high] *\
+        diracS_weighted[low:high] = diracS_value[low:high] *\
                 np.sqrt(hist_reduced[ix]/pow(div, 2))
             #*np.sqrt(diracS_filtered.frequencyBW/(sampling_rate_diracS/2)))
     #if divide_BW: sum over frequency bands
@@ -248,8 +247,7 @@ def run_ir_generation(
 
 # %% Run the functions
 update_hist = True
-hist_HQnew = False   # 48k 2s k=180
-flag_char = "+" if hist_HQnew else ""
+flag_char = ""
 delta_reduced_histogram = 0.01  # default 0.1 for the IR
 
 X = 4
@@ -257,11 +255,14 @@ Y = 5
 Z = 3
 room_volume = X * Y * Z
 
-ir_length_s = 2         # default 2
+ir_length_s = 1         # default 2
 sampling_rate = 8000    # 1/delta_t
-patch_size = 1
-max_order_k = 180       # default >=180 for clean-200dB in histogram
+patch_size = 0.5
+max_order_k = 140       # -200dB clean for >=180 at 2s, 140 at 1s
 print(f"X: {X}\nY: {Y}\nZ: {Z}\nPatch size: {patch_size}")
+str_fileNamePath = (
+    f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}_{int(sampling_rate/1000)}k{flag_char}"
+)
 
 if update_hist:
     start = datetime.now()
@@ -284,17 +285,12 @@ if update_hist:
     )
     print("Debug: 11")
     txt_data = np.reshape(txt_data, (hist_full.shape[1] + 1, hist_full.shape[3]))
-    np.savetxt(
-        f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}{flag_char}.csv",
-        txt_data, delimiter=",")
+    np.savetxt(str_fileNamePath + ".csv", txt_data, delimiter=",")
     print("Debug: 12")
     delta = datetime.now() - start
     print(f"Time elapsed: {delta}")
 else:
-    txt_data = np.genfromtxt(
-        f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}{flag_char}.csv",
-        delimiter=",",
-    )
+    txt_data = np.genfromtxt(str_fileNamePath + ".csv", delimiter=",")
 
 hist_sum = np.sum(txt_data[1:, :], axis=0)
 
@@ -310,7 +306,7 @@ plt.ylim(-200, 0)
 plt.xlabel("seconds")
 plt.legend()
 if update_hist:
-    plt.savefig(fname=f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}{flag_char}.svg")
+    plt.savefig(fname= str_fileNamePath + ".svg")
 plt.show()
 
 # check_what_pf_sig = run_ir_generation(
@@ -323,11 +319,11 @@ plt.show()
 res_reduction_data2 = True
 ir_length_s = 2     # default 2
 txt_data1 = np.genfromtxt(
-    "sim_data/f_hist_room_4_5_3_1.csv",
+    "sim_data/f_hist_room_4_5_3_2.csv",
     delimiter=",",
 )
 txt_data2 = np.genfromtxt(
-    "sim_data/f_hist_room_4_5_3_1+.csv",
+    "sim_data/f_hist_room_4_5_3_2+.csv",
     delimiter=",",
 )
 txt_data1 = np.sum(txt_data1[1:, :], axis=0)
@@ -338,23 +334,29 @@ if res_reduction_data2:
     print(txt_data2.shape[0])
     factor_samRate = int(txt_data2.shape[0] / txt_data1.shape[0])
     print(f"Factor sampling rate: {factor_samRate}")
-    txt_dataBetter_48 = []
+    txt_dataReducedRate = []
     for ix in range(int(len(txt_data2) / factor_samRate)):
-        txt_dataBetter_48.append(sum(txt_data2[ix * 2 : ix * 2 + factor_samRate]))
-    txt_data2 = np.asarray(txt_dataBetter_48)
+        txt_dataReducedRate.append(sum(txt_data2[ix * 2 : ix * 2 + factor_samRate]))
+    txt_data2 = np.asarray(txt_dataReducedRate)
 
 txt_data_diff = txt_data1 - txt_data2
 txt_data_diff_sig = pf.Signal(txt_data_diff, len(txt_data_diff) / ir_length_s)
 plt.figure()
 pf.plot.time(txt_data_diff_sig, dB=True, log_prefix=10, label="Histogram comparison")
 plt.xlabel("seconds")
+plt.ylim(-300, 0)
 plt.legend()
+# plt.text(0.3, -10, "Summed energy difference:   " +
+#         f"${round(10*np.log(abs(sum(txt_data_diff[:]))), 3)}\,dB$", fontsize=12)
+# plt.savefig(fname=f"sim_data/f_hist_room_diff_4_5_3_1_{int(txt_data1.shape[0]/1000)}k_" +
+#            f"{int(txt_data1.shape[0]*factor_samRate/1000)}k.svg")
 plt.show()
 print(f"Summed energy difference:\n\t{round(sum(txt_data_diff[:]), 3)}" +
       f" or {round(10*np.log(abs(sum(txt_data_diff[:]))), 3)} dB")
+# -0.175 or -17.417 dB for 4_5_3_1_8000 and 4_5_3_1_48000 curve -40dB diff
 
 
-# %% noise tests
+# %% TEST e.g. noise
 # filterFI, filter_frequencies = pf.dsp.filter.reconstructing_fractional_octave_bands(
 #     signal=None,##
 #     num_fractions=1,
