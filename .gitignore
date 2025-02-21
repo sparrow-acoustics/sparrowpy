@@ -126,5 +126,5 @@ docs/resources/logos/pyfar_logos_fixed_size_pyfar.png
 
 # ignore filip stuff and change file
 examples/stuff.py
-examples/f_hist_room_4_5_3_1_48k.csv
+examples/sim_data/f_hist_room_4_5_3_1_48k.csv
 .gitignore
