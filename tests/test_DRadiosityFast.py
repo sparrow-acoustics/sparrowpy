@@ -2,12 +2,9 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
-import os
 import pyfar as pf
 
 import sparrowpy as sp
-import time
-import matplotlib.pyplot as plt
 
 
 create_reference_files = False
@@ -26,12 +23,24 @@ def test_init_from_polygon(sample_walls):
     ])
 def test_init_from_file(filename):
     radiosity = sp.DRadiosityFast.from_file(filename,np.sqrt(2))
-    npt.assert_almost_equal(radiosity.patches_points.shape, (48, 3, 3))
-    npt.assert_almost_equal(radiosity.patches_area.shape, (48))
-    npt.assert_almost_equal(radiosity.patches_center.shape, (48, 3))
-    npt.assert_almost_equal(radiosity.patches_size.shape, (48, 3))
-    npt.assert_almost_equal(radiosity.patches_normal.shape, (48, 3))
+    npt.assert_almost_equal(radiosity.patches_points.shape, (12, 3, 3))
+    npt.assert_almost_equal(radiosity.patches_area.shape, (12))
+    npt.assert_almost_equal(radiosity.patches_center.shape, (12, 3))
+    npt.assert_almost_equal(radiosity.patches_size.shape, (12, 3))
+    npt.assert_almost_equal(radiosity.patches_normal.shape, (12, 3))
 
+
+@pytest.mark.parametrize('filename', [
+    "tests/test_data/sample_walls.blend",
+    ])
+def test_init_comparison(filename, sample_walls):
+    radifile = sp.DRadiosityFast.from_file(filename)
+    radipoly = sp.DRadiosityFast.from_polygon(sample_walls, patch_size=1)
+    npt.assert_equal(radifile.patches_points.shape, radipoly.patches_points.shape)
+    npt.assert_equal(radifile.patches_area.shape, radipoly.patches_area.shape)
+    npt.assert_equal(radifile.patches_center.shape, radipoly.patches_center.shape)
+    npt.assert_equal(radifile.patches_size.shape, radipoly.patches_size.shape)
+    npt.assert_equal(radifile.patches_normal.shape, radipoly.patches_normal.shape)
 
 
 def test_check_visibility(sample_walls):
