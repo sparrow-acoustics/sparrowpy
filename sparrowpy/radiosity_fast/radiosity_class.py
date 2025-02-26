@@ -95,7 +95,7 @@ class DRadiosityFast():
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
     @classmethod
-    def from_file(cls, blend_filename: str,
+    def from_file(cls, blend_filename: str, patch_size=1.0,
                        auto_walls=True):
         """Create a Radiosity object ffrom a blender file.
 
@@ -104,7 +104,6 @@ class DRadiosityFast():
                                            auto_walls=auto_walls)
 
         walls   = geom_data["wall"]
-        patches = geom_data["patch"]
 
         ## save wall information
         walls_normal = walls["normal"]
@@ -117,22 +116,30 @@ class DRadiosityFast():
         for wallID in range(len(walls_normal)):
             walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
 
-        ## save patch information
-        n_patches = len(patches["map"])
+        if bool(geom_data["patch"]):
+            patches = geom_data["patch"]
 
-        patch_to_wall_ids = patches["map"]
+            ## save patch information
+            n_patches = len(patches["map"])
 
-        patches_normal = walls["normal"][patch_to_wall_ids]
+            patch_to_wall_ids = patches["map"]
 
-        patches_points = np.empty((n_patches,
-                               len(patches["conn"][0]),
-                               patches["verts"].shape[-1]))
+            patches_normal = walls["normal"][patch_to_wall_ids]
 
-        patch_size = 1 ## placeholder
+            patches_points = np.empty((n_patches,
+                                len(patches["conn"][0]),
+                                patches["verts"].shape[-1]))
 
-        for patchID in range(n_patches):
-            patches_points[patchID] = patches["verts"][patches["conn"][patchID]]
+            for patchID in range(n_patches):
+                patches_points[patchID] = patches["verts"][
+                                                patches["conn"][patchID]
+                                                ]
 
+        else:
+            (
+            patches_points, patches_normal,
+            n_patches, patch_to_wall_ids) = geometry.process_patches(
+            walls_points, walls_normal, patch_size, len(walls_normal))
 
         # create radiosity object
         return cls(
