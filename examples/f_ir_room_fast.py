@@ -1,11 +1,11 @@
 # %% Histogram generation
 import numpy as np
-import pyfar as pf
+import pyfar as pf  # type: ignore
 import sparrowpy as sp
 import matplotlib.pyplot as plt
 from datetime import datetime
 plt.ion()
-print(pf.plot.shortcuts())
+# print(pf.plot.shortcuts())
 # ruff: noqa: D100 ERA001 W605
 
 def run_energy_simulation(
@@ -89,7 +89,7 @@ def run_energy_simulation(
 # %% IR generation
 def run_ir_generation(
     hist_sum, room_volume, sampling_rate, keep_original_hist=True,
-    delta_redHist=None) -> pf.Signal:
+    delta_reducHist=None) -> pf.Signal:
     """
     Calculate the impulse response for a histogram.
 
@@ -103,7 +103,7 @@ def run_ir_generation(
         Sampling rate of the original histogram.
     keep_original_hist : bool
         Reduction of the histogram resolution.
-    delta_redHist : float
+    delta_reducHist : float
         Time delta for the (reduced) histogram for the IR.
 
     Returns
@@ -111,24 +111,23 @@ def run_ir_generation(
     ir : pf.Signal
         Dirac impulse response of the room.
     """
-    
-    delta_redHist = 1e-10 if delta_redHist is None else delta_redHist
-    speed_of_sound = 343
-    sampling_rate_diracS = 48000
-    divide_BW = False
 
-    if not keep_original_hist and not delta_redHist < 1/sampling_rate:
-        factor_delta = delta_redHist * sampling_rate
+    delta_reducHist = 1e-10 if delta_reducHist is None else delta_reducHist
+    speed_of_sound = 343
+    sampling_rate_dirac = 48000
+    divide_BW = True
+
+    if not keep_original_hist and not delta_reducHist < 1/sampling_rate:
+        factor_delta = delta_reducHist * sampling_rate
         print(f"Reduction in histogram resolution: {factor_delta}")
         hist_reduced = []
         index_values = range(
             0, len(hist_sum), int(factor_delta))
         for ix in index_values:
             hist_reduced.append(sum(hist_sum[ix : ix + int(factor_delta)]))
-        time_values = np.arange(0, len(hist_reduced) * delta_redHist, delta_redHist)
+        time_values = np.arange(0, len(hist_reduced) * delta_reducHist, delta_reducHist)
 
-        hist_reduced_sig = pf.Signal(hist_reduced, 1/delta_redHist)
-        plt.figure()
+        hist_reduced_sig = pf.Signal(hist_reduced, 1/delta_reducHist)
         pf.plot.time(
             hist_reduced_sig, dB=True, log_prefix=10,
             label=f"Histogram reduced of {room_volume} m^3 room" +
@@ -142,26 +141,26 @@ def run_ir_generation(
         plt.legend()
         plt.show()
     else:
-        if not keep_original_hist and delta_redHist < 1 / sampling_rate:
+        if not keep_original_hist and delta_reducHist < 1 / sampling_rate:
             print(
-                f"Delta_t for the reduced histogram of {delta_redHist} is smaller\n"+
+                f"Delta_t for the reduced histogram of {delta_reducHist} is smaller\n"+
                 "than the original histogram resolution given by the sampling rate\n"+
                 f"at {1/sampling_rate}.\n! Incorrect call !\n"+
                 "Using original histogram (resolution).")
         else:
             print("Histogram resolution not reduced.")
-        delta_redHist = 1/sampling_rate
+        delta_reducHist = 1/sampling_rate
         factor_delta = 1
         hist_reduced = hist_sum
 
     # noise sequence with poisson distribution
     rng = np.random.default_rng()
     diracNonZeros = []
-    µ_t = 4 * np.pi * pow(speed_of_sound, 3) / room_volume / 1000 ##div by 1000 for testing
+    µ_t = 4 * np.pi * pow(speed_of_sound, 3) / room_volume ##div by 1000 for testing
 
-    time_start = 1/max(sampling_rate_diracS,1000)      # max ~0.3m sound travel time
-    time_stop = len(hist_reduced) * delta_redHist     # max ir_length_s
-    time_step = 1/sampling_rate_diracS
+    time_start = 1/max(sampling_rate_dirac,1000)      # max ~0.3m sound travel time
+    time_stop = len(hist_reduced) * delta_reducHist     # max ir_length_s
+    time_step = 1/sampling_rate_dirac
     for time in np.arange(time_start, time_stop, time_step):
         time_for_itr = time
         while (delta :=\
@@ -175,77 +174,87 @@ def run_ir_generation(
             # else:
             #     diracNonZeros.append(-time)
             ##time% very sensitive for dirac +- value and bc of sampling rate
-    print(f"Sampling rate dirac: {sampling_rate_diracS}\n" +
-          f"Delta_redHist: {delta_redHist}\nFactor delta_t: {factor_delta}")
+    print(f"Sampling rate dirac: {sampling_rate_dirac}\n" +
+          f"Delta_redHist: {delta_reducHist}\nFactor delta_t: {factor_delta}")
 
-    diracS_time = np.arange(0, time_stop, time_step)
-    diracS_value = np.zeros_like(diracS_time)
+    dirac_times = np.arange(0, time_stop, time_step)
+    dirac_values = np.zeros_like(dirac_times)
     for time in diracNonZeros:
         ix = int(abs(time)/time_step)
-        if diracS_value[ix] == 0:
-            diracS_value[ix] = np.sign(time)
-
+        if dirac_values[ix] == 0:
+            dirac_values[ix] = np.sign(time)
 
     # plot the dirac sequence in time and frequency domain
-    plt.figure()
-    plt.plot(diracS_time, diracS_value, label="Dirac sequence")
+    dirac_sig = pf.Signal(dirac_values, sampling_rate_dirac)
+    pf.plot.time(dirac_sig, label="Dirac sequence")
     plt.xlim(0.2, 0.3) #for density checking
-    plt.xlabel("seconds")
-    plt.ylabel("amplitude")
-    #plt.savefig(fname=f"sim_data/f_dirac_{room_volume}m^3_{delta_redHist}s.svg")
+    plt.legend()
     plt.show()
-
-    dirac_sig = pf.Signal(diracS_value, sampling_rate_diracS) # future other smp_rate
-    pf.plot.freq(dirac_sig, label="Dirac sequence freq")
+    pf.plot.freq(dirac_sig, label="Dirac sequence")
+    plt.legend()
     #plt.xlim(5, 24000)
     plt.show()
 
     # IEC 61260:1:2014 standard or in the future e.g. Raised Cosine Filter
-    if divide_BW:   #placeholder
+    if divide_BW:
         filters, filter_centerFreq = pf.dsp.filter.reconstructing_fractional_octave_bands(
             signal=None,
             num_fractions=1,
             frequency_range=(125, 16000),
             overlap=1,
             slope=0,
-            n_samples=2**14,
-            sampling_rate=sampling_rate_diracS,
+            n_samples=2**12, # increase for better res but bad exec time
+            sampling_rate=sampling_rate_dirac,
         )
-        filtered_sig = filters.process(dirac_sig) #
-        pf.plot.freq(pf.Signal(filtered_sig.time[1,:,:],sampling_rate_diracS),
-                    label="dirac sequence")
+        dirac_filtered_sig = filters.process(dirac_sig)  # type: ignore
+        pf.plot.freq(
+            pf.Signal(dirac_filtered_sig.time, sampling_rate_dirac),
+        )
         plt.show()
-        #diracS_filtered = filtered_sig.process(dirac_sig)
+        print(dirac_filtered_sig.time.shape)
     else:
-        a = -1
-        #diracS_filtered = dirac_sig
+        dirac_filtered_sig = pf.Signal(dirac_sig.time, sampling_rate_dirac)
+        # change dims
 
-    diracS_weighted = np.zeros_like(diracS_value)
-    factor_s = sampling_rate_diracS*delta_redHist # >1!
+    dirac_weighted = np.zeros_like(np.atleast_3d(dirac_filtered_sig.time)[0, 0])
+    factor_s = sampling_rate_dirac*delta_reducHist # >1!
+    print(f"Factor_s: {factor_s}")
     for ix in range(len(hist_reduced)):
         low = int(ix*factor_s)
         high = int((ix+1)*factor_s)
-        div = sum(diracS_value[low:high])
+        div = sum(
+            np.atleast_3d(dirac_filtered_sig.time)[3, 0, low:high]) # forLoop use ix2
         if div == 0:
             div = 1e-10
-        diracS_weighted[low:high] = diracS_value[low:high] *\
-                np.sqrt(hist_reduced[ix]/pow(div, 2))
-            #*np.sqrt(diracS_filtered.frequencyBW/(sampling_rate_diracS/2)))
+        dirac_weighted[ix] = div * np.sqrt(hist_reduced[ix])
+        #if(divide_BW): energy?
+            #dirac_weighted[low:high] *=
     #if divide_BW: sum over frequency bands
-    sig = pf.Signal(diracS_weighted, sampling_rate_diracS)
-    plt.figure()
-    pf.plot.time(sig, dB=False, label="Dirac sequence weighted", log_prefix=10)
+    hist_weighted_sig = pf.Signal(dirac_weighted, sampling_rate_dirac) ##really sr of diracSeq?
+    pf.plot.time(hist_weighted_sig,
+                 dB=True, label="Dirac sequence weighted", log_prefix=10)
     #plt.xlim(0, 1) #for check
     plt.xlabel("seconds")
-    plt.ylabel("amplitude")
+    plt.ylabel("Amplitude in dB")
+    plt.legend()
     #plt.savefig(fname=f"sim_data/f_dirac_weighted_{room_volume}m^3_{delta_redHist}s.svg")
     plt.show()
 
-    return pf.Signal(diracS_weighted, sampling_rate_diracS)
+    pf.io.write_audio(
+        hist_weighted_sig,
+        f"sim_data/diracS_weighted_{room_volume}m^3_{delta_reducHist}s.wav",
+        overwrite=True,
+    )
+    # wav-files of subtype PCM_16 are clipped to +/- 1. Normalize your audio with
+    # pyfar.dsp.normalize to 1-LSB, with LSB being the least significant bit (e.g. 2**-15 for
+    # 16 bit) or use non-clipping subtypes 'FLOAT', 'DOUBLE', or 'VORBIS'
+    # (see pyfar.io.audio_subtypes)
+
+    return hist_weighted_sig
 
 
 # %% Run the functions
-update_hist = True
+update_hist = False
 flag_char = ""
 delta_reduced_histogram = 0.01  # default 0.1 for the IR
 
@@ -254,10 +263,10 @@ Y = 5
 Z = 3
 room_volume = X * Y * Z
 
-ir_length_s = 1         # default 2
-sampling_rate = 1000    # 1/delta_t
-patch_size = 0.5
-max_order_k = 140       # -200dB clean for >=180 at 2s, 140 at 1s
+ir_length_s = 1         # default 2 for update_hist
+sampling_rate = 8000    # 1/delta_t below 48000
+patch_size = 1
+max_order_k = 140       # -200dB clean for >=180 at 2s, 140 at 1s for update_hist
 print(f"X: {X}\nY: {Y}\nZ: {Z}\nPatch size: {patch_size}")
 str_fileNamePath = (
     f"sim_data/f_hist_room_{X}_{Y}_{Z}_{patch_size}_{int(sampling_rate/1000)}k{flag_char}")
@@ -302,11 +311,13 @@ if update_hist:
     plt.savefig(fname= str_fileNamePath + ".svg")
 plt.show()
 
-# check_what_pf_sig = run_ir_generation(
-#     hist_sum,
-#     room_volume,
-#     sampling_rate,
-# )
+check_what_pf_sig = run_ir_generation(
+    hist_sum,
+    room_volume,
+    sampling_rate,
+    keep_original_hist=False,
+    delta_reducHist=delta_reduced_histogram,
+)
 
 # %% Histogram csv comparison of datasets
     ##Input##
@@ -316,7 +327,7 @@ sampling_rate1 = 8000
 txt_data2 = np.genfromtxt("sim_data/f_hist_room_4_5_3_1_48k.csv", delimiter=",")
 sampling_rate2 = 48000
     ##-----##
-    
+
 txt_data1 = np.sum(txt_data1[1:, :], axis=0)
 txt_data2 = np.sum(txt_data2[1:, :], axis=0)
 
@@ -397,7 +408,6 @@ print("Maximum single value difference: " +
 # for ix in range(len(dirac_sequence)):
 #     if dirac_sequence[ix] != 0:
 #         dirac_sequence[ix] = rng.choice([-1, 1], p=[0.5,0.5])
-# plt.figure()
 # plt.plot(
 #     np.arange(len(a)), #np.arange(len(hist_reduced) / sampling_rate * factor_delta_t)
 #     dirac_sequence,
