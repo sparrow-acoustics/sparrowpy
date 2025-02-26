@@ -187,7 +187,7 @@ def run_ir_generation(
     # plot the dirac sequence in time and frequency domain
     dirac_sig = pf.Signal(dirac_values, sampling_rate_dirac)
     pf.plot.time(dirac_sig, label="Dirac sequence")
-    plt.xlim(0.2, 0.3) #for density checking
+    plt.xlim(0.0, 0.05) #for density checking
     plt.legend()
     plt.show()
     pf.plot.freq(dirac_sig, label="Dirac sequence")
@@ -223,10 +223,9 @@ def run_ir_generation(
         low = int(ix*factor_s)
         high = int((ix+1)*factor_s)
         div = sum(
-            np.atleast_3d(dirac_filtered_sig.time)[3, 0, low:high]) # forLoop use ix2
-        if div == 0:
-            div = 1e-10
-        dirac_weighted[ix] = div * np.sqrt(hist_reduced[ix])
+            np.atleast_3d(dirac_filtered_sig.time)[3, 0, low:high]**2) # forLoop use ix2
+        dirac_weighted[low:high] = dirac_filtered_sig.time[3, 0, low] *\
+            np.sqrt(hist_reduced[ix]/div)
         #if(divide_BW): energy?
             #dirac_weighted[low:high] *=
     #if divide_BW: sum over frequency bands
@@ -239,6 +238,8 @@ def run_ir_generation(
     plt.legend()
     #plt.savefig(fname=f"sim_data/f_dirac_weighted_{room_volume}m^3_{delta_redHist}s.svg")
     plt.show()
+    #txt_data = np.concatenate(dirac_times, hist_weighted_sig.times[0,0,:])
+    np.savetxt("sim_data/f_hist_room_++" + ".csv", txt_data, delimiter=",")
 
     pf.io.write_audio(
         hist_weighted_sig,
@@ -322,15 +323,17 @@ check_what_pf_sig = run_ir_generation(
 # %% Histogram csv comparison of datasets
     ##Input##
 res_reduction_data2 = True
-txt_data1 = np.genfromtxt("sim_data/f_hist_room_4_5_3_1_8k.csv", delimiter=",")
-sampling_rate1 = 8000
-txt_data2 = np.genfromtxt("sim_data/f_hist_room_4_5_3_1_48k.csv", delimiter=",")
-sampling_rate2 = 48000
+txt_data1 = np.genfromtxt("sim_data/f_hist_room_4_5_3_0.5_1k.csv", delimiter=",")
+sampling_rate1 = 1000
+txt_data2 = np.genfromtxt("sim_data/f_hist_room_4_5_3_0.5_8k.csv", delimiter=",")
+sampling_rate2 = 8000
     ##-----##
 
 txt_data1 = np.sum(txt_data1[1:, :], axis=0)
 txt_data2 = np.sum(txt_data2[1:, :], axis=0)
-
+plt.figure()
+pf.plot.time(pf.Signal(txt_data1, sampling_rate1))
+pf.plot.time(pf.Signal(txt_data2, sampling_rate2))
 if res_reduction_data2:
     print(f"Length of Signal 1: {txt_data1.shape[0]/sampling_rate1}s")
     print(f"Length of Signal 2: {txt_data2.shape[0]/sampling_rate2}s" +
@@ -343,14 +346,14 @@ if res_reduction_data2:
         txt_dataReducedRate.append(
             sum(txt_data2[ix*factor_samRate : ix*factor_samRate + factor_samRate]))
     txt_data2 = np.asarray(txt_dataReducedRate)
-
-txt_data_diff = abs(txt_data1 - txt_data2)
+pf.plot.time(pf.Signal(txt_data2, sampling_rate1))
+txt_data_diff = txt_data1 / txt_data2 - 1
 txt_data_diff_sig = pf.Signal(txt_data_diff, sampling_rate1)
 plt.figure()
 pf.plot.time(txt_data_diff_sig, dB=True, log_prefix=10, label="Histogram comparison")
 plt.xlabel("seconds")
-plt.xlim(0, 0.05)
-plt.ylim(-200, 0)
+#plt.xlim(0, 0.05)
+#plt.ylim(-200, 0)
 plt.legend()
 plt.text(0.15, 0, "Summed energy difference:   " +
         f"${round(10*np.log10(sum(txt_data_diff[:])), 2)}\,dB$", fontsize=12)
