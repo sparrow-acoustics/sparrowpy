@@ -100,28 +100,38 @@ class DRadiosityFast():
         """Create a Radiosity object ffrom a blender file.
 
         """
-        walls = blender.read_geometry_file(blend_filename,
+        geom_data = blender.read_geometry_file(blend_filename,
                                            auto_walls=auto_walls)
+
+        walls   = geom_data["walls"]
+        patches = geom_data["patches"]
 
         ## save wall information
         walls_normal = walls["normal"]
+        walls_up_vector = np.empty_like(walls["up"])
 
         walls_points=np.empty((len(walls["conn"]),
                                len(walls["conn"][0]),
                                walls["verts"].shape[-1]))
-        walls_up_vector = np.empty_like(walls_normal)
 
         for wallID in range(len(walls_normal)):
             walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
-            # PLACEHOLDER FOR UP VECTOR!!!
-            walls_up_vector[wallID] = (walls_points[wallID][0] 
-                                        - walls_points[wallID][1])
 
-        # create patches
-        (
-            patches_points, patches_normal,
-            n_patches, patch_to_wall_ids) = geometry.process_patches(
-            walls_points, walls_normal, patch_size, len(walls_normal))
+        ## save patch information
+        n_patches = len(patches["map"])
+
+        patch_to_wall_ids = patches["map"]
+
+        patches_normal = walls["normal"][patch_to_wall_ids]
+
+        patches_points = np.empty((n_patches,
+                               len(patches["conn"][0]),
+                               patches["verts"].shape[-1]))
+
+        for patchID in range(n_patches):
+            patches_points[patchID] = patches["verts"][patches["conn"][patchID]]
+
+
         # create radiosity object
         return cls(
             walls_points, walls_normal, walls_up_vector,
