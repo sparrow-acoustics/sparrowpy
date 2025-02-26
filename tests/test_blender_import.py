@@ -13,8 +13,12 @@ def test_geometry_loading(path):
     assert not geom_w["patch"]
     assert geom_w["wall"]["conn"].shape[0]==6
     assert geom_w["wall"]["normal"].shape[0]==geom_w["wall"]["conn"].shape[0]
+    assert geom_w["wall"]["up"].shape[0]==geom_w["wall"]["conn"].shape[0]
     assert geom_w["wall"]["verts"].shape[0]==8
     assert geom_w["wall"]["normal"].shape[1]==3
+    assert geom_w["wall"]["up"].shape[1]==3
+    for i in range(geom_w["wall"]["conn"].shape[0]):
+        npt.assert_almost_equal(np.inner(geom_w["wall"]["up"][i],geom_w["wall"]["normal"][i]),0)
 
 
     geom_wp= bh.read_geometry_file(path, auto_walls=True,

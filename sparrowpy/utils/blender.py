@@ -52,7 +52,7 @@ def read_geometry_file(blend_file: Path,
             wall vertex list ["verts"], polygon vertex mapping ["conn"],
             normals["normal"], and material names ["material"].
 
-        patch:
+        "patch":
             patch vertex list ["verts"], polygon vertex mapping ["conn"],
             patch-to-wall mapping ["wall_ID"]
 
@@ -160,9 +160,11 @@ def generate_connectivity_wall(mesh: bmesh):
     out_mesh = {"verts": np.array([v.co for v in mesh.verts]),
                 "conn":[],
                 "normal":np.array([]),
+                "up":np.array([]),
                 "material": np.array([])}
 
     normals=[]
+    upvecs=[]
 
     for f in mesh.faces:
         if len(bpy.context.object.material_slots)!=0:
@@ -179,7 +181,11 @@ def generate_connectivity_wall(mesh: bmesh):
 
         normals.append(np.array(f.normal))
 
+        ## PLACEHOLDER VALUES
+        upvecs.append(np.array(f.verts[1].co-f.verts[0].co))
+
     out_mesh["normal"]=np.array(normals)
+    out_mesh["up"]=np.array(upvecs)
 
     return out_mesh
 
