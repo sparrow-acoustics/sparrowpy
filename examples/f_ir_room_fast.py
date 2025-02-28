@@ -217,15 +217,16 @@ def run_ir_generation(
         # change dims
 
     dirac_weighted = np.zeros_like(np.atleast_3d(dirac_filtered_sig.time)[0, 0])
-    factor_s = sampling_rate_dirac*delta_reducHist # >1!
+    factor_s = int(sampling_rate_dirac*delta_reducHist) # maybe check >1! and not float!
     print(f"Factor_s: {factor_s}")
-    for ix in range(len(hist_reduced)):
-        low = int(ix*factor_s)
-        high = int((ix+1)*factor_s)
+    for ix in range(len(dirac_weighted)):
+        low = int(ix/factor_s)*factor_s
+        high = int(ix/factor_s)*factor_s + factor_s - 1 #-1 right?
         div = sum(
             np.atleast_3d(dirac_filtered_sig.time)[3, 0, low:high]**2) # forLoop use ix2
-        dirac_weighted[low:high] = dirac_filtered_sig.time[3, 0, low] *\
-            np.sqrt(hist_reduced[ix]/div)
+        dirac_weighted[ix] = dirac_filtered_sig.time[3, 0, ix] * np.sqrt(
+            hist_reduced[int(ix / factor_s)] / div)
+        print(div)
         #if(divide_BW): energy?
             #dirac_weighted[low:high] *=
     #if divide_BW: sum over frequency bands
