@@ -96,12 +96,13 @@ class DRadiosityFast():
             patch_to_wall_ids)
     @classmethod
     def from_file(cls, blend_filename: str, patch_size=1.0,
-                       auto_walls=True):
+                       auto_walls=True, auto_patches=True):
         """Create a Radiosity object ffrom a blender file.
 
         """
         geom_data = blender.read_geometry_file(blend_filename,
-                                           auto_walls=auto_walls)
+                                           auto_walls=auto_walls,
+                                           patches_from_model=auto_patches)
 
         walls   = geom_data["wall"]
 
