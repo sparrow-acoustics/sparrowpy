@@ -183,6 +183,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
         ## PLACEHOLDER VALUES
         upvecs.append(np.array(f.verts[1].co-f.verts[0].co))
+        upvecs[-1]=upvecs[-1]/np.linalg.norm(upvecs[-1])
 
     out_mesh["normal"]=np.array(normals)
     out_mesh["up"]=np.array(upvecs)
