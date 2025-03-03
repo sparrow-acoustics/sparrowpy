@@ -116,6 +116,7 @@ class DRadiosityFast():
 
         for wallID in range(len(walls_normal)):
             walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
+            walls_up_vector[wallID] = walls["up"][wallID]
 
         if bool(geom_data["patch"]):
             patches = geom_data["patch"]
