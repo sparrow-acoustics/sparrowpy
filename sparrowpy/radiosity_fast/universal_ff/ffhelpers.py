@@ -30,7 +30,7 @@ def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """
     xmat = np.empty((len(x),len(x)))
 
-    if x[-1]-x[0]==0:
+    if np.abs(x[-1]-x[0])<1e-6:
         b = np.zeros(len(x))
     else:
         for i,xi in enumerate(x):
