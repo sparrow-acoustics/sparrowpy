@@ -326,8 +326,7 @@ def run_ir_generation(
         dirac_weighted = np.sum(dirac_weighted, axis=0) # sum over spectrum
 
     else:
-        dirac_filtered_sig = pf.Signal(dirac_sig.time, sampling_rate_dirac)
-        dirac_weighted = np.zeros_like(dirac_filtered_sig.time[0])
+        dirac_weighted = np.zeros_like(dirac_sig.time[0])
         ###  MISSING CODE ###
         ###  reduced copy from above
 
