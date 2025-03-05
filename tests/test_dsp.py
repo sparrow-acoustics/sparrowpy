@@ -60,4 +60,8 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal]:
     assert isinstance(IR_bands_sig, pf.Signal)
     assert isinstance(IR_sum_full_sig, pf.Signal)
 
+    ### TODO: Combining dirac_weighted_no_filter() with dirac_weighted_with_filter()
+    ### TODO: Check similarities if temporal resolution is reduced of the IR output
+    ### TODO: EDC calculation
+
     return IR_sig, IR_bands_sig, IR_sum_full_sig

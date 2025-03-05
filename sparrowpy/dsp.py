@@ -164,8 +164,8 @@ def generate_dirac_sequence_raven(
     pf.Signal
         Signal of the generated dirac impulse sequence.
     """
-    #if sampling_rate_dirac < 48000:    # FIXME: TEST
-    #   raise ValueError("Sampling rate too low, incaccurate results.")  # FIXME: TEST
+    if sampling_rate_dirac < 48000:
+        raise ValueError("Sampling rate too low, incaccurate results.")
 
     diracNonZeros = []  # list of time data of each dirac impulse
     rng = np.random.default_rng()
@@ -226,8 +226,8 @@ def dirac_band_filter(
     tuple[pf.Signal, list[float]]
         Filtered dirac sequences and corresponding center frequencies.
     """
-    #if dirac_sig.sampling_rate < 48000:    # FIXME: TEST
-    #    raise ValueError("Sampling rate too low, bad filtered results.") # FIXME: TEST
+    if dirac_sig.sampling_rate < 48000:
+        raise ValueError("Sampling rate too low, bad filtered results.")
 
     filters = pf.dsp.filter.fractional_octave_bands(
         signal=None,

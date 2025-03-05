@@ -13,9 +13,9 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal, pf.Signal]:
     room_volume = X * Y * Z
 
     ir_length_s = 1
-    sampling_rate = 250    # 1/delta_t (below 48kHz)
+    sampling_rate = 4000    # 1/delta_t (below 48kHz)
     patch_size = 1
-    max_order_k = 80
+    max_order_k = 100
 
     hist_data = sp.dsp.run_energy_simulation_room(
         dimensions=[X, Y, Z],
@@ -35,15 +35,13 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal, pf.Signal]:
     assert hist_sum.ndim
     hist_sig = pf.Signal(hist_sum, sampling_rate)
 
-    ### TODO: CHECK histogram_resolution_reduction
-
     dirac_sig = sp.dsp.generate_dirac_sequence_raven(
         room_volume=room_volume,
         speed_of_sound=speed_of_sound,
         ir_length_s_stop=ir_length_s,
-        sampling_rate_dirac=48000)  # FIXME: TEST
+        sampling_rate_dirac=48000)
     assert isinstance(dirac_sig, pf.Signal)
-    #assert dirac_sig.sampling_rate == 48000    # FIXME: TEST
+    assert dirac_sig.sampling_rate == 48000
     print(dirac_sig.time.shape)
     print(dirac_sig.time.ndim)
 
