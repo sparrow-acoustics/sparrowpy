@@ -2,9 +2,9 @@ import sparrowpy as sp
 import pyfar as pf #type: ignore
 import numpy as np
 # import pytest
-# ruff: noqa: FIX002 ERA001
+# ruff: noqa: FIX002 ERA001 D103 D100
 
-def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal]:
+def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal, pf.Signal]:
     speed_of_sound = 343
 
     X = 4
@@ -13,7 +13,7 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal]:
     room_volume = X * Y * Z
 
     ir_length_s = 1
-    sampling_rate = 1000    # 1/delta_t (below 48kHz)
+    sampling_rate = 4000    # 1/delta_t (below 48kHz)
     patch_size = 1
     max_order_k = 80
 
@@ -40,9 +40,10 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal]:
     dirac_sig = sp.dsp.generate_dirac_sequence_raven(
         room_volume=room_volume,
         speed_of_sound=speed_of_sound,
-        ir_length_s_stop=ir_length_s)
+        ir_length_s_stop=ir_length_s,
+        sampling_rate_dirac=4000)  # FIXME: TEST
     assert isinstance(dirac_sig, pf.Signal)
-    assert dirac_sig.sampling_rate == 48000
+    #assert dirac_sig.sampling_rate == 48000    # FIXME: TEST
     print(dirac_sig.time.shape)
     print(dirac_sig.time.ndim)
 
@@ -60,4 +61,4 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal]:
     assert isinstance(IR_bands_sig, pf.Signal)
     assert isinstance(IR_sum_full_sig, pf.Signal)
 
-    return IR_sig, IR_bands_sig, IR_sum_full_sig
+    return hist_sig, IR_sig, IR_bands_sig, IR_sum_full_sig

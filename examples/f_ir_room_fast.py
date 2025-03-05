@@ -1,4 +1,4 @@
-# %% Histogram generation
+# %% CONFIG
 import numpy as np
 import pyfar as pf  # type: ignore
 import sparrowpy as sp
@@ -6,7 +6,10 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 # print(pf.plot.shortcuts())
 # ruff: noqa: D100 ERA001 W605
+import f_validated_dsp as dsp
 
+
+# %% Histogram generation
 def run_energy_simulation(
     dimensions, patch_size, ir_length_s, sampling_rate, max_order_k, source, receiver,
     ) -> np.ndarray:
@@ -440,3 +443,17 @@ check_what_pf_sig = run_ir_generation(
     keep_original_hist=False,
     delta_reducHist=delta_reduced_histogram,
 )
+
+
+# %% Run the test and use output for comparison
+hist_sig, IR_sig, IR_bands_sig, IR_sum_full_sig = dsp.test_dsp_walkthrough()
+pf.plot.time(IR_sum_full_sig, dB=True, log_prefix=20, label="IR w filter")  #amplitude
+pf.plot.time(IR_sig,          dB=True, log_prefix=20, label="IR w/ filter") #amplitude
+pf.plot.time(hist_sig,        dB=True, log_prefix=10, label="Energy histogram") #energy
+plt.legend()
+plt.show()
+
+print("END")
+
+
+# %%

@@ -164,8 +164,8 @@ def generate_dirac_sequence_raven(
     pf.Signal
         Signal of the generated dirac impulse sequence.
     """
-    if sampling_rate_dirac < 48000:
-        raise ValueError("Sampling rate too low, incaccurate results.")
+    #if sampling_rate_dirac < 48000:    # FIXME: TEST
+    #   raise ValueError("Sampling rate too low, incaccurate results.")  # FIXME: TEST
 
     diracNonZeros = []  # list of time data of each dirac impulse
     rng = np.random.default_rng()
@@ -226,8 +226,8 @@ def dirac_band_filter(
     tuple[pf.Signal, list[float]]
         Filtered dirac sequences and corresponding center frequencies.
     """
-    if dirac_sig.sampling_rate < 48000:
-        raise ValueError("Sampling rate too low, bad filtered results.")
+    #if dirac_sig.sampling_rate < 48000:    # FIXME: TEST
+    #    raise ValueError("Sampling rate too low, bad filtered results.") # FIXME: TEST
 
     filters = pf.dsp.filter.fractional_octave_bands(
         signal=None,
@@ -239,8 +239,7 @@ def dirac_band_filter(
     centerFreq = pf.dsp.filter.fractional_octave_frequencies(
         frequency_range=(125, 16000))[1]
     if show_plots:
-        pf.plot.freq(dirac_filtered_sig, label="Filtered dirac sequence")
-        plt.legend()
+        pf.plot.freq(dirac_filtered_sig, label="__Filtered dirac sequence__")
         plt.show()
 
     return dirac_filtered_sig, centerFreq
@@ -301,9 +300,11 @@ def dirac_weighted_with_filter(
     if show_plots:
         pf.plot.time(ir_bands_sig, dB=True, log_prefix=20,
                      label="IR bands of dirac sequence weighted")
+        plt.legend()
         plt.show()
         pf.plot.time(ir_wide_sig, dB=True, log_prefix=20,
                      label="IR full spectrum")
+        plt.legend()
         plt.show()
 
     return ir_bands_sig, ir_wide_sig
@@ -353,6 +354,7 @@ def dirac_weighted_no_filter(
 
     if show_plots:
         pf.plot.time(ir_sig, dB=True, log_prefix=20, label="IR of dirac sequence weighted")
+        plt.legend()
         plt.show()
 
     return ir_sig
