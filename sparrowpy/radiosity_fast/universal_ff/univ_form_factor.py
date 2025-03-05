@@ -171,7 +171,7 @@ def stokes_integration(
                         subsecj[k] = form_mat[i][segj[k]]
 
                     # compute polynomial coefficients
-                    quadfactors = helpers.poly_estimation(x=xj, y=subsecj)
+                    quadfactors = helpers.poly_estimation_Lagrange(x=xj, y=subsecj)
                     # analytical integration of the approx polynomials
                     inner_integral[i][dim] += helpers.poly_integration(
                                                         c=quadfactors,x=xj)
@@ -185,7 +185,7 @@ def stokes_integration(
             if xi[-1]-xi[0]!=0:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                quadfactors = helpers.poly_estimation(x=xi, y=subseci)
+                quadfactors = helpers.poly_estimation_Lagrange(x=xi, y=subseci)
                 outer_integral += helpers.poly_integration(c=quadfactors,x=xi)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
