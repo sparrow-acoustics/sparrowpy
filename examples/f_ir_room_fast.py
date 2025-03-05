@@ -124,8 +124,8 @@ def run_csv_comparison(f1_string, sampling_rate1, f2_string, sampling_rate2,
     if conv_to_energy_data2:
         txt_data2 = np.array([txt_data2[i] ** 2 for i in range(len(txt_data2))])
         print("Data of File 2 of IR is converted back to energy")
-        
-        
+
+
     if res_reduction_data2:
         print(f"Length of Signal 1: {txt_data1.shape[0]/sampling_rate1}s")
         print(f"Length of Signal 2: {txt_data2.shape[0]/sampling_rate2}s" +
@@ -237,6 +237,7 @@ def run_ir_generation(
         delta_reducHist = 1/sampling_rate
         factor_delta = 1
         hist_reduced = hist_sum
+        hist_reduced_sig = pf.Signal(hist_reduced, 1 / delta_reducHist)
 
     # noise sequence with poisson distribution
     rng = np.random.default_rng()

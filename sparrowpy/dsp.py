@@ -14,7 +14,7 @@ def run_energy_simulation_room(
     source,
     receiver,
     speed_of_sound=343,
-) -> np.ndarray:
+    ) -> np.ndarray:
     """
     Calculate the histogram for a room with dimensions.
 
@@ -175,14 +175,17 @@ def generate_dirac_sequence_raven(
     time_step = 1/sampling_rate_dirac
     for time in np.arange(time_start, ir_length_s_stop, time_step):
         time_of_itr = time
-        while (delta :=\
-            (1/(min(µ_t * pow(time, 2), 10000)) * np.log(1/rng.uniform(1e-10, 1)))) <\
-                time_of_itr+time_step-time:
+        while (
+            delta := (1 / (min(µ_t * pow(time, 2), 10000)) * np.log(1 / rng.uniform(1e-10, 1)))
+            ) <  time_of_itr + time_step - time:
+
             time += delta
             diracNonZeros.append(rng.choice([-time, time], p=[0.5,0.5]))
             # +1 or -1 dirac is chosen randomly with equal probability
 
-    dirac_values = np.zeros(ir_length_s_stop*time_step)
+    dirac_values = np.zeros(int(ir_length_s_stop/time_step))
+    if (ir_length_s_stop/time_step)%1 > 0:
+        raise ValueError("dirac_values quantity not integer.")
     for time in diracNonZeros:
         ix = int(abs(time) / time_step)
         if dirac_values[ix] == 0:
@@ -236,19 +239,20 @@ def dirac_band_filter(
     centerFreq = pf.dsp.filter.fractional_octave_frequencies(
         frequency_range=(125, 16000))[1]
     if show_plots:
-        pf.plot.freq(dirac_filtered_sig, legend="Filtered dirac sequence")
+        pf.plot.freq(dirac_filtered_sig, label="Filtered dirac sequence")
         plt.legend()
         plt.show()
 
     return dirac_filtered_sig, centerFreq
 
 
-def dirac_weighted_with_filters(
+
+def dirac_weighted_with_filter(
     dirac_filt_sig,
     centerFreq,
     histogram,
     show_plots=True,
-)   -> tuple[pf.Signal, pf.Signal]:
+    )   -> tuple[pf.Signal, pf.Signal]:
     """Filtered dirac sequence weighted with histogram energy.
 
     Parameters
@@ -278,14 +282,15 @@ def dirac_weighted_with_filters(
 
     for filt_ix in range(dirac_weighted.shape[0]):
         print(f"Filter number: {filt_ix}")
-        for sample_i in range(dirac_weighted.shape[1]):
+        for sample_i in range(dirac_weighted.shape[1]): # check maxdim-1?
             low = int(sample_i / factor_s) * factor_s
             high = int(sample_i / factor_s) * factor_s + factor_s - 1
             div = sum(dirac_filt_sig.time[filt_ix, 0, low:high] ** 2)
+            div_safe = div if div else 1e-10
 
             dirac_weighted[filt_ix, sample_i] = (
                 dirac_filt_sig.time[filt_ix, 0, sample_i]
-                * np.sqrt(histogram[int(sample_i / factor_s)] / div)
+                * np.sqrt(histogram.time[..., int(sample_i / factor_s)][0] / div_safe)
                 * np.sqrt(bw_size[filt_ix] / (dirac_filt_sig.sampling_rate / 2))
             )
     ir_bands_sig = pf.Signal(dirac_weighted,
@@ -305,11 +310,11 @@ def dirac_weighted_with_filters(
 
 
 
-def dirac_weighted_no_filters(
+def dirac_weighted_no_filter(
     dirac_sig,
     histogram,
     show_plots=True,
-)   -> pf.Signal:
+    ) -> pf.Signal:
     """Original dirac sequence weighted with histogram energy.
 
     Parameters
@@ -327,18 +332,23 @@ def dirac_weighted_no_filters(
         Weighted diracs -> IR Amplitude.
     """
     ####check dims of dirac_sig for access to time
+    if dirac_sig.time.ndim > 2 or dirac_sig.time.shape[0] > 1:
+        raise ValueError("Dirac signal invalid. Input sequence already filtered?")
+
     factor_s = int(dirac_sig.sampling_rate/histogram.sampling_rate)
     print(f"Filtered diracs sampling rate ({dirac_sig.sampling_rate})"+
         f"\ndivided by the energy histogram resolution to: {factor_s}")
 
-    dirac_weighted = np.zeros_like(dirac_sig.time[0])
+    dirac_weighted = np.zeros(dirac_sig.time.shape[dirac_sig.time.ndim-1])
+                        # 2dim array (size) _ prev ok: np.zeros_like(dirac_sig.time[0])
     for sample_i in range(len(dirac_weighted)):
         low = int(sample_i / factor_s) * factor_s
         high = int(sample_i / factor_s) * factor_s + factor_s - 1
-        div = sum(dirac_sig.time[0, low:high] ** 2)
+        div = np.sum(dirac_sig.time[..., low:high] ** 2)
+        div_safe = div if div else 1e-10
 
-        dirac_weighted[sample_i] = (dirac_sig.time[0, sample_i]
-            * np.sqrt(histogram[int(sample_i / factor_s)] / div))
+        dirac_weighted[sample_i] = (dirac_sig.time[..., sample_i][0]
+            * np.sqrt(histogram.time[..., int(sample_i / factor_s)][0] / div_safe))
     ir_sig = pf.Signal(dirac_weighted, dirac_sig.sampling_rate)
 
     if show_plots:
