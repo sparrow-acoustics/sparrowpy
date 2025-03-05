@@ -13,7 +13,7 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal, pf.Signal]:
     room_volume = X * Y * Z
 
     ir_length_s = 1
-    sampling_rate = 4000    # 1/delta_t (below 48kHz)
+    sampling_rate = 250    # 1/delta_t (below 48kHz)
     patch_size = 1
     max_order_k = 80
 
@@ -41,7 +41,7 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal, pf.Signal]:
         room_volume=room_volume,
         speed_of_sound=speed_of_sound,
         ir_length_s_stop=ir_length_s,
-        sampling_rate_dirac=4000)  # FIXME: TEST
+        sampling_rate_dirac=48000)  # FIXME: TEST
     assert isinstance(dirac_sig, pf.Signal)
     #assert dirac_sig.sampling_rate == 48000    # FIXME: TEST
     print(dirac_sig.time.shape)

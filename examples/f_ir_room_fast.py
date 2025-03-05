@@ -448,8 +448,10 @@ check_what_pf_sig = run_ir_generation(
 # %% Run the test and use output for comparison
 hist_sig, IR_sig, IR_bands_sig, IR_sum_full_sig = dsp.test_dsp_walkthrough()
 pf.plot.time(IR_sum_full_sig, dB=True, log_prefix=20, label="IR w filter")  #amplitude
-pf.plot.time(IR_sig,          dB=True, log_prefix=20, label="IR w/ filter") #amplitude
-pf.plot.time(hist_sig,        dB=True, log_prefix=10, label="Energy histogram") #energy
+pf.plot.time(IR_sig, dB=True, log_prefix=20,
+             label=f"IR w/ filter {IR_sig.sampling_rate/1000}k") #amplitude
+pf.plot.time(hist_sig, dB=True, log_prefix=10,
+             label=f"Histogram {hist_sig.sampling_rate/1000}k") #energy
 plt.legend()
 plt.show()
 

@@ -283,7 +283,7 @@ def dirac_weighted_with_filter(
         print(f"Filter number: {filt_ix}")
         for sample_i in range(dirac_weighted.shape[1]): # check maxdim-1?
             low = int(sample_i / factor_s) * factor_s
-            high = int(sample_i / factor_s) * factor_s + factor_s - 1
+            high = int(sample_i / factor_s) * factor_s + factor_s
             div = sum(dirac_filt_sig.time[filt_ix, 0, low:high] ** 2)
             div_safe = div if div else 1e-10
 
@@ -344,7 +344,7 @@ def dirac_weighted_no_filter(
                         # 2dim array (size) _ prev ok: np.zeros_like(dirac_sig.time[0])
     for sample_i in range(len(dirac_weighted)):
         low = int(sample_i / factor_s) * factor_s
-        high = int(sample_i / factor_s) * factor_s + factor_s - 1
+        high = int(sample_i / factor_s) * factor_s + factor_s
         div = np.sum(dirac_sig.time[..., low:high] ** 2)
         div_safe = div if div else 1e-10
 
