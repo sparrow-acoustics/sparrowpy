@@ -6,12 +6,12 @@ import numba
 # integration
 ################# 1D , polynomial
 @numba.njit()
-def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Estimate polynomial coefficients based on sample points.
 
     Computes coefficients of a polynomial curve passing through points (x,y)
     the order of the polynomial depends on the number of sample points
-    input in the function.
+    input in the function. Uses the Lagrange method to estimate the polynomial.
         ex. a polynomial P estimated with 4 sample points:
             P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
 
@@ -38,6 +38,46 @@ def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
                 xmat[i,len(x)-1-o] = xi**o
 
         b = inner(np.linalg.inv(xmat), y)
+
+    return b
+
+@numba.njit()
+def poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
+    """Estimate polynomial coefficients based on sample points.
+
+    Computes coefficients of a polynomial curve passing through points (x,y)
+    the order of the polynomial depends on the number of sample points
+    input in the function. Uses info about the sample points and the
+    Taylor expansion of the natural logarithm to get an estimation
+        ex. a polynomial P estimated with 4 sample points:
+            P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
+
+    Parameters
+    ----------
+    x: np.ndarray
+        sample x-values
+    o: float
+        order of the Taylor expansion
+
+    Returns
+    -------
+    b: np.ndarray
+        polynomial coefficients
+
+    """
+    b = np.zeros((o+1,))
+    if np.abs(x[-1]-x[0])>1e-6:
+
+        pascal = 
+        a = x[0]+(x[1]-x[0])/2
+        k = np.zeros((o+1,))
+        k[0] = np.log(a)
+        for n in range(1,o+1):
+            k[n] = -1**(n-1)/(n*a**n) * (x-a)**n
+
+        for j in range(o+1):
+            for i in range(j,o+1):
+                b[j] += (1+j) *-1**(2+i+j) * k[i] * a**(i-j)
 
     return b
 
@@ -137,10 +177,12 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
         y[k] = cc[1]
 
 
-    coefs = poly_estimation(x,y)
+    coefs = poly_estimation_Lagrange(x,y)
     area = poly_integration(coefs,x) # area between curve and ps[-1] - ps[0]
 
     return area
+
+
 
 ####################################################
 # sampling
