@@ -42,7 +42,7 @@ def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return b
 
 @numba.njit()
-def poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
+def poly_estimation_Taylor(x: np.ndarray, o: int) -> np.ndarray:
     """Estimate polynomial coefficients based on sample points.
 
     Computes coefficients of a polynomial curve passing through points (x,y)
@@ -56,7 +56,7 @@ def poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
     ----------
     x: np.ndarray
         sample x-values
-    o: float
+    o: int
         order of the Taylor expansion
 
     Returns
@@ -68,16 +68,16 @@ def poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
     b = np.zeros((o+1,))
     if np.abs(x[-1]-x[0])>1e-6:
 
-        pascal = 
+        pascal = pascal_array(o+1)
         a = x[0]+(x[1]-x[0])/2
         k = np.zeros((o+1,))
         k[0] = np.log(a)
         for n in range(1,o+1):
-            k[n] = -1**(n-1)/(n*a**n) * (x-a)**n
+            k[n] = -1**(n-1)/(n*a**n)
 
         for j in range(o+1):
             for i in range(j,o+1):
-                b[j] += (1+j) *-1**(2+i+j) * k[i] * a**(i-j)
+                b[j] += pascal[j,i] *-1**(2+i+j) * k[i] * a**(i-j)
 
     return b
 
@@ -108,6 +108,45 @@ def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     for i in range(len(c)):
         out += c[i] * x[-1]**(len(c)-i) / (len(c)-i)
         out -= c[i] * x[0]**(len(c)-i) / (len(c)-i)
+
+    return out
+
+@numba.njit()
+def poly_derivation(c: np.ndarray, x: float, deg: int)-> float:
+    """Integrate a polynomial curve.
+
+    polynomial defined defined between x[0] and x[-1]
+    with coefficients c
+        ex. for a quadratic curve P2:
+            P2(x) = c[0]*x**2 + c[1]*x + c[2]
+
+    Parameters
+    ----------
+    c: np.ndarray
+        polynomial coefficients
+    x: float
+        eval point
+    deg: int
+        degree of derivation
+
+    Returns
+    -------
+    out: float
+        polynomial derivative
+
+    """
+    out = 0
+
+    for d in range(deg):
+        c=np.delete(c,-1)
+        if c.shape[0]!=0:
+            for i in range(c.shape[0]):
+                c[i]*=c.shape[0]-i
+        else:
+            break
+
+    if c.shape[0]!=0:
+        out = np.sum(x*c)
 
     return out
 
@@ -182,22 +221,26 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
 
     return area
 
+@numba.njit()
 def pascal_array(order: int):
-    """Compute Pascal's triangle as a np.array up to given order.
+    """
+    Compute Pascal's triangle as a np.array up to given order.
 
     Parameters
     ----------
     order: int
         number of rows of Pascal's triangle to compute.
 
-    Returns:
-    --------
+    Returns
+    -------
     triangle: np.array(order,order)
-        Pascal's triangle (lower triangular matrix)."""
+        Pascal's triangle (lower triangular matrix).
+
+    """
 
     triangle = np.zeros((order,order))
+    triangle[:,0] = 1
 
-    triangle = triangle[:,0] = 1
     for i in range(1,order):
         triangle[i,1:i+1] = triangle[i-1,1:i+1] + triangle[i-1,0:i]
 
