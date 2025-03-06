@@ -166,7 +166,7 @@ def stokes_integration(
 
                 xj = j_bpoints[segj][:,dim]
 
-                if xj[-1]-xj[0]!=0:
+                if np.abs(xj[-1]-xj[0])>1e-6:
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
@@ -182,7 +182,7 @@ def stokes_integration(
 
             xi = i_bpoints[segi][:,dim]
 
-            if xi[-1]-xi[0]!=0:
+            if np.abs(xi[-1]-xi[0])>1e-6:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
                 quadfactors = helpers.poly_estimation_Lagrange(x=xi, y=subseci)
@@ -264,10 +264,10 @@ def nusselt_analog(surf_origin, surf_normal,
         segmt = connectivity[jj]
 
         if (np.linalg.norm(np.cross(projPts[segmt[-1]],projPts[segmt[0]]))
-                                                                    > 1e-20):
+                                                                    > 1e-6):
 
             # if the points on the segment span less than 90 degrees
-            if np.dot( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:
+            if np.dot( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 1e-6:
                 curved_area += helpers.area_under_curve(plnPts[segmt],order=2)
 
             # if points span over 90º, additional sampling is required
