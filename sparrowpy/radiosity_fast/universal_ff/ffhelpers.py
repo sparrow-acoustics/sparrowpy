@@ -41,7 +41,7 @@ def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     return b
 
-@numba.njit()
+@numba.njit(parallel=True)
 def poly_estimation_piecewise(x: np.ndarray, y: int, o=2) -> np.ndarray:
     """Estimate polynomial coefficients based on sample points.
 
@@ -64,16 +64,16 @@ def poly_estimation_piecewise(x: np.ndarray, y: int, o=2) -> np.ndarray:
         polynomial coefficients
 
     """
-    bb = np.zeros((len(x)-1, len(x)))
+    bb = np.zeros((len(x)-1, o+1))
 
-    for i in range(x.shape[0]-2):
-        bb[i] = poly_estimation_Lagrange(x[i:i+o+1], y[i:i+o+1])
+    for i in numba.prange(x.shape[0]-2):
+        bb[i,:] = poly_estimation_Lagrange(x[i:i+o+1], y[i:i+o+1])
 
-    bb[-1]=bb[-2]
+    bb[-1,:]=bb[-2,:]
 
     return bb
 
-@numba.njit()
+@numba.njit(parallel=False)
 def poly_integration_piecewise(c: np.ndarray, x: np.ndarray)-> float:
     """Integrate a polynomial curve.
 
@@ -97,8 +97,8 @@ def poly_integration_piecewise(c: np.ndarray, x: np.ndarray)-> float:
     """
     out=0
 
-    for i in range(c.shape[0]):
-        out+=poly_integration(c[i:i+1], x[i:i+1])
+    for i in numba.prange(c.shape[0]):
+        out+=poly_integration(c[i], x[i:i+2])
 
     return out
 
@@ -555,7 +555,7 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
         vector tangent to spherical surface
 
     """
-    if np.dot(v0,v1)!=0:
+    if np.abs(np.dot(v0,v1))>1e-20:
         scale = np.sqrt( np.square(
                             np.linalg.norm(np.cross(v0,v1))/np.dot(v0,v1) ) +
                          np.square( np.linalg.norm(v0) ) )
