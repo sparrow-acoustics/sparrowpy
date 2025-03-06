@@ -42,13 +42,12 @@ def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return b
 
 @numba.njit()
-def poly_estimation_Taylor(x: np.ndarray, o: int) -> np.ndarray:
+def poly_estimation_piecewise(x: np.ndarray, y: int, o=2) -> np.ndarray:
     """Estimate polynomial coefficients based on sample points.
 
     Computes coefficients of a polynomial curve passing through points (x,y)
     the order of the polynomial depends on the number of sample points
-    input in the function. Uses info about the sample points and the
-    Taylor expansion of the natural logarithm to get an estimation
+    input in the function. Uses the Lagrange method to estimate the polynomial.
         ex. a polynomial P estimated with 4 sample points:
             P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
 
@@ -56,8 +55,8 @@ def poly_estimation_Taylor(x: np.ndarray, o: int) -> np.ndarray:
     ----------
     x: np.ndarray
         sample x-values
-    o: int
-        order of the Taylor expansion
+    y: np.ndarray
+        sample y-values
 
     Returns
     -------
@@ -65,21 +64,43 @@ def poly_estimation_Taylor(x: np.ndarray, o: int) -> np.ndarray:
         polynomial coefficients
 
     """
-    b = np.zeros((o+1,))
-    if np.abs(x[-1]-x[0])>1e-6:
+    bb = np.zeros((len(x)-1, len(x)))
 
-        pascal = pascal_array(o+1)
-        a = x[0]+(x[1]-x[0])/2
-        k = np.zeros((o+1,))
-        k[0] = np.log(a)
-        for n in range(1,o+1):
-            k[n] = -1**(n-1)/(n*a**n)
+    for i in range(x.shape[0]-2):
+        bb[i] = poly_estimation_Lagrange(x[i:i+o+1], y[i:i+o+1])
 
-        for j in range(o+1):
-            for i in range(j,o+1):
-                b[j] += pascal[j,i] *-1**(2+i+j) * k[i] * a**(i-j)
+    bb[-1]=bb[-2]
 
-    return b
+    return bb
+
+@numba.njit()
+def poly_integration_piecewise(c: np.ndarray, x: np.ndarray)-> float:
+    """Integrate a polynomial curve.
+
+    polynomial defined defined between x[0] and x[-1]
+    with coefficients c
+        ex. for a quadratic curve P2:
+            P2(x) = c[0]*x**2 + c[1]*x + c[2]
+
+    Parameters
+    ----------
+    c: np.ndarray
+        polynomial coefficients
+    x: np.ndarray
+        sample points
+
+    Returns
+    -------
+    out: float
+        polynomial integral
+
+    """
+    out=0
+
+    for i in range(c.shape[0]):
+        out+=poly_integration(c[i:i+1], x[i:i+1])
+
+    return out
 
 @numba.njit()
 def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
