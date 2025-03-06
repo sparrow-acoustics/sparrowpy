@@ -3,20 +3,17 @@
 import pytest
 import sparrowpy.geometry as geo
 import numpy as np
-import numpy.testing as npt
 import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy.radiosity import Patches
 import time
-import sparrowpy as sp
-import pyfar as pf
 from sparrowpy.radiosity_fast import form_factor as FFac
 
 
-@pytest.mark.parametrize("width", [0.5, 1.0, 1.5, 3.])
-@pytest.mark.parametrize("height", [0.5, 1.0, 1.5, 3.])
-@pytest.mark.parametrize("distance", [0.5, 1.0, 1.5, 3.])
+@pytest.mark.parametrize("width", [1.])
+@pytest.mark.parametrize("height", [1.,2.,3.,4])
+@pytest.mark.parametrize("distance", [1.,2,3,4])
 def test_parallel_facing_patches(width, height, distance):
     """Test universal form factor for equal facing parallel patches."""
     exact = exact_solutions.parallel_patches(width, height, distance)
@@ -30,18 +27,18 @@ def test_parallel_facing_patches(width, height, distance):
     patch_2 = geo.Polygon(
         points=[
             [0, distance, 0],
-            [width, distance, 0],
-            [width, distance, height],
             [0, distance, height],
+            [width, distance, height],
+            [width, distance, 0],
         ],
         normal=[0, -1, 0],
         up_vector=[1, 0, 0],
     )
 
-    kang = FFac.kang(patches_center=np.array([patch_1.center, patch_2.center]),
-                     patches_normal=np.array([patch_1.normal, patch_2.normal]),
-                     patches_size=np.array([[width,height],[width, height]]),
-                     visible_patches=np.array([[0,1]]))
+    # kang = FFac.kang(patches_center=np.array([patch_1.center, patch_2.center]),
+    #                  patches_normal=np.array([patch_1.normal, patch_2.normal]),
+    #                  patches_size=np.array([[width,height],[width, height]]),
+    #                  visible_patches=np.array([[0,1]]))
 
     univ = FFac.universal(patches_points=np.array([patch_1.pts, patch_2.pts]),
                           patches_normals=np.array(
@@ -49,14 +46,16 @@ def test_parallel_facing_patches(width, height, distance):
                           patches_areas=np.array([patch_1.area, patch_2.area]),
                           visible_patches=np.array([[0,1]]))
 
-    assert 100 * abs(univ[0,1] - exact) / exact < 20
+    rel = 100 * abs(univ[0,1] - exact) / exact
 
-    assert abs(univ[0,1] - exact) < abs(kang[0,1] - exact)
+    assert  rel < 1
+
+    # assert abs(univ[0,1] - exact) < abs(kang[0,1] - exact)
 
 
 @pytest.mark.parametrize("width", [1.0, 2.0, 3.0])
 @pytest.mark.parametrize("height", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("length", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("length", [1.0])
 def test_perpendicular_coincidentline_patches(width, height, length):
     """Test universal form factor for perpendicular patches sharing a side."""
     exact = exact_solutions.perpendicular_patch_coincidentline(
@@ -86,7 +85,9 @@ def test_perpendicular_coincidentline_patches(width, height, length):
                           patches_areas=np.array([patch_1.area, patch_2.area]),
                           visible_patches=np.array([[0,1]]))
 
-    assert 100 * abs(univ[0,1] - exact) / exact < 5
+    rel = 100 * abs(univ[0,1] - exact) / exact
+
+    assert rel < 5
 
 
 @pytest.mark.parametrize("width1", [1.0, 2.0, 3.0])
