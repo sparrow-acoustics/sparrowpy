@@ -546,7 +546,7 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
 ####################################################
 # checks
 @numba.njit()
-def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
+def coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
     """Flag true if two patches have any common points.
 
     Parameters
@@ -567,16 +567,9 @@ def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
 
     for i in numba.prange(p0.shape[0]):
         for j in numba.prange(p1.shape[0]):
-            count=0
-            for k in numba.prange(p0.shape[1]):
-                if p0[i,k]==p1[j,k]:
-                    count+=1
-                else:
-                    pass
-
-            if count == p0.shape[1]:
+            if np.linalg.norm(p0[i]-p1[j])<thres:
                 flag=True
-            else:
-                pass
+                break
+
 
     return flag
