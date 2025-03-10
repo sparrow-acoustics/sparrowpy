@@ -534,12 +534,8 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
         vector tangent to spherical surface
 
     """
-    if np.dot(v0,v1)!=0:
-        scale = np.sqrt( np.square(
-                            np.linalg.norm(np.cross(v0,v1))/np.dot(v0,v1) ) +
-                         np.square( np.linalg.norm(v0) ) )
-
-        vout = v1*scale - v0
+    if np.abs(np.dot(v0,v1))>1e-10:
+        vout = (v1-v0)-np.dot((v1-v0),v0)/np.dot(v0,v0)*v0
         vout /= np.linalg.norm(vout)
 
     else:
