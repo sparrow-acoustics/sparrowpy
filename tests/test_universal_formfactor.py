@@ -180,7 +180,7 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
 
     patch = source_cast(src=source, rpatch=patch, absor=absor_factor)
 
-    receiver_cast(receiver, patch, absor_factor, sr, c)
+    receiver_cast(receiver, patch, sr, c)
 
 
 def source_cast(src, rpatch, absor):
