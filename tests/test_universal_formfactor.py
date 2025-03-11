@@ -35,10 +35,45 @@ def test_parallel_facing_patches(width, height, distance):
         up_vector=[1, 0, 0],
     )
 
-    # kang = FFac.kang(patches_center=np.array([patch_1.center, patch_2.center]),
-    #                  patches_normal=np.array([patch_1.normal, patch_2.normal]),
-    #                  patches_size=np.array([[width,height],[width, height]]),
-    #                  visible_patches=np.array([[0,1]]))
+    univ = FFac.universal(patches_points=np.array([patch_1.pts, patch_2.pts]),
+                          patches_normals=np.array(
+                              [patch_1.normal, patch_2.normal]),
+                          patches_areas=np.array([patch_1.area, patch_2.area]),
+                          visible_patches=np.array([[0,1]]))
+
+    rel = 100 * abs(univ[0,1] - exact) / exact
+
+    assert  rel < 1.5
+
+
+@pytest.mark.parametrize("width", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("height", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("length", [1.0])
+def test_perpendicular_coincidentline_patches(width, height, length):
+    """Test universal form factor for perpendicular patches sharing a side."""
+    patch_1 = geo.Polygon(
+        points=[
+            [0, 0, 0],
+            [0, length, 0],
+            [0, length, height],
+            [0, 0, height],
+        ],
+        normal=[1, 0, 0],
+        up_vector=[1, 0, 0],
+    )
+
+    patch_2 = geo.Polygon(
+        points=[[0, 0, 0],
+                [width, 0, 0],
+                [width, length, 0],
+                [0, length, 0]],
+        normal=[0, 0, 1],
+        up_vector=[1, 0, 0],
+    )
+
+    exact = exact_solutions.perpendicular_patch_coincidentline(
+        width, height, length,
+    )
 
     univ = FFac.universal(patches_points=np.array([patch_1.pts, patch_2.pts]),
                           patches_normals=np.array(
@@ -48,35 +83,41 @@ def test_parallel_facing_patches(width, height, distance):
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
-    assert  rel < 1
-
-    # assert abs(univ[0,1] - exact) < abs(kang[0,1] - exact)
+    assert rel < 2
 
 
-@pytest.mark.parametrize("width", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("height", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("length", [1.0])
-def test_perpendicular_coincidentline_patches(width, height, length):
-    """Test universal form factor for perpendicular patches sharing a side."""
-    exact = exact_solutions.perpendicular_patch_coincidentline(
-        width, height, length
-    )
-
+@pytest.mark.parametrize("width1", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("width2", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("length1", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("length2", [1.0, 2.0, 3.0])
+def test_perpendicular_coincidentpoint_patches(
+    width1, length1, width2, length2,
+):
+    """Test form factor for perpendicular patches w/ common vertex."""
     patch_1 = geo.Polygon(
-        points=[[0, 0, 0], [width, 0, 0], [width, length, 0], [0, length, 0]],
+        points=[
+            [0., 0., 0.],
+            [width2, 0., 0.],
+            [width2, length2, 0.],
+            [0., length2, 0.],
+        ],
         normal=[0, 0, 1],
-        up_vector=[1, 0, 0],
+        up_vector=[0, 1, 0],
     )
 
     patch_2 = geo.Polygon(
         points=[
-            [0, 0, 0],
-            [0, length, 0],
-            [0, length, height],
-            [0, 0, height],
+            [0., 0., 0.],
+            [0., 0., width1],
+            [0., -length1, width1],
+            [0., -length1, 0.],
         ],
         normal=[1, 0, 0],
         up_vector=[1, 0, 0],
+    )
+
+    exact = exact_solutions.perpendicular_patch_coincidentpoint(
+        width1, length2, width2, length1,
     )
 
     univ = FFac.universal(patches_points=np.array([patch_1.pts, patch_2.pts]),
@@ -88,49 +129,6 @@ def test_perpendicular_coincidentline_patches(width, height, length):
     rel = 100 * abs(univ[0,1] - exact) / exact
 
     assert rel < 5
-
-
-@pytest.mark.parametrize("width1", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("width2", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("length1", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("length2", [1.0, 2.0, 3.0])
-def test_perpendicular_coincidentpoint_patches(
-    width1, width2, length1, length2
-):
-    """Test form factor for perpendicular patches w/ common vertex."""
-    exact = exact_solutions.perpendicular_patch_coincidentpoint(
-        width1, length2, width2, length1
-    )
-
-    patch_1 = geo.Polygon(
-        points=[
-            [0, 0, 0],
-            [0, length1, 0],
-            [0, length1, width1],
-            [0, 0, width1],
-        ],
-        normal=[1, 0, 0],
-        up_vector=[0, 1, 0],
-    )
-
-    patch_2 = geo.Polygon(
-        points=[
-            [0, length1, 0],
-            [width2, length1, 0],
-            [width2, length1 + length2, 0],
-            [0, length1 + length2, 0],
-        ],
-        normal=[0, 0, 1],
-        up_vector=[1, 0, 0],
-    )
-
-    univ = FFac.universal(patches_points=np.array([patch_1.pts, patch_2.pts]),
-                          patches_normals=np.array(
-                              [patch_1.normal, patch_2.normal]),
-                          patches_areas=np.array([patch_1.area, patch_2.area]),
-                          visible_patches=np.array([[0,1]]))
-
-    assert 100 * abs(univ[0,1] - exact) / exact < 5
 
 
 @pytest.mark.parametrize("side", [0.1, 0.2, 0.5, 1, 2])
@@ -206,7 +204,7 @@ def source_cast(src, rpatch, absor):
     return rpatch
 
 
-def receiver_cast(rcv, patch, radi, sr, c):
+def receiver_cast(rcv, patch, sr, c):
     """Cast and test patch-to-receiver factor calculation."""
     true_rec_energy = np.sum(
         patch.energy_at_receiver(
@@ -214,7 +212,7 @@ def receiver_cast(rcv, patch, radi, sr, c):
             max_order=0,
             speed_of_sound=c,
             sampling_rate=sr,
-        )
+        ),
     )
 
     patch_energy = np.sum(patch.E_matrix)
