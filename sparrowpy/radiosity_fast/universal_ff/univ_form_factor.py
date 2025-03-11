@@ -42,8 +42,7 @@ def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
     if helpers.coincidence_check(receiver_pts, source_pts):
         out = nusselt_integration(
                     patch_i=source_pts, patch_i_normal=source_normal,
-                    patch_i_area=source_area, patch_j=receiver_pts,
-                    patch_j_normal=receiver_normal, patch_j_area=receiver_area,
+                    patch_j=receiver_pts, patch_j_normal=receiver_normal,
                     nsamples=64)
     else:
         out = stokes_integration(patch_i=source_pts, patch_j=receiver_pts,
@@ -309,7 +308,6 @@ def nusselt_analog(surf_origin, surf_normal,
 @numba.njit(parallel=True)
 def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
                         patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
-                        patch_i_area: np.ndarray, patch_j_area: np.ndarray,
                         nsamples=2, random=False) -> float:
     """Estimate the form factor based on the Nusselt analogue.
 
@@ -363,7 +361,7 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
                                patch_points=patch_j,
                                patch_normal=patch_j_normal )
 
-    out *= patch_i_area / ( np.pi * len(p0_array)*patch_j_area)
+    out *= 1 / ( np.pi * len(p0_array) )
 
     return out
 
