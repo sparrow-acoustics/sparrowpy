@@ -95,12 +95,12 @@ class DRadiosityFast():
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
     @classmethod
-    def from_file(cls, blend_filename: str, patch_size=1.0,
+    def from_file(cls, filename: str, patch_size=1.0,
                        auto_walls=True, auto_patches=True):
         """Create a Radiosity object ffrom a blender file.
 
         """
-        geom_data = blender.read_geometry_file(blend_filename,
+        geom_data = blender.read_geometry_file(filename,
                                            auto_walls=auto_walls,
                                            patches_from_model=auto_patches)
 
@@ -208,7 +208,7 @@ class DRadiosityFast():
             self._form_factors_tilde = \
                 form_factor._form_factors_with_directivity_dim(
                 self.visibility_matrix, self.form_factors, n_bins,
-                self.patches_center,
+                self.patches_center, self.patches_area,
                 self._air_attenuation, absorption,
                 absorption_index,
                 self._patch_to_wall_ids, scattering,
