@@ -363,7 +363,7 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
                                patch_points=patch_j,
                                patch_normal=patch_j_normal )
 
-    out *= patch_i_area / ( np.pi * len(p0_array) * patch_j_area )
+    out *= patch_i_area / ( np.pi * len(p0_array)*patch_j_area)
 
     return out
 
