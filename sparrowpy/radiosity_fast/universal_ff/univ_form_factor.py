@@ -165,7 +165,7 @@ def stokes_integration(
 
                 xj = j_bpoints[segj][:,dim]
 
-                if np.abs(xj[-1]-xj[0])>1e-5:
+                if np.abs(xj[-1]-xj[0])>1e-3:
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
@@ -181,7 +181,7 @@ def stokes_integration(
 
             xi = i_bpoints[segi][:,dim]
 
-            if np.abs(xi[-1]-xi[0])>1e-5:
+            if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
                 quadfactors = helpers.poly_estimation_Lagrange(x=xi, y=subseci)

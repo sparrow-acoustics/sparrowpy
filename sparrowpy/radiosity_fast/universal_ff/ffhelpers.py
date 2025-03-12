@@ -41,67 +41,6 @@ def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     return b
 
-@numba.njit(parallel=True)
-def poly_estimation_piecewise(x: np.ndarray, y: int, o=2) -> np.ndarray:
-    """Estimate polynomial coefficients based on sample points.
-
-    Computes coefficients of a polynomial curve passing through points (x,y)
-    the order of the polynomial depends on the number of sample points
-    input in the function. Uses the Lagrange method to estimate the polynomial.
-        ex. a polynomial P estimated with 4 sample points:
-            P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
-
-    Parameters
-    ----------
-    x: np.ndarray
-        sample x-values
-    y: np.ndarray
-        sample y-values
-
-    Returns
-    -------
-    b: np.ndarray
-        polynomial coefficients
-
-    """
-    bb = np.zeros((len(x)-1, o+1))
-
-    for i in numba.prange(x.shape[0]-2):
-        bb[i,:] = poly_estimation_Lagrange(x[i:i+o+1], y[i:i+o+1])
-
-    bb[-1,:]=bb[-2,:]
-
-    return bb
-
-@numba.njit(parallel=False)
-def poly_integration_piecewise(c: np.ndarray, x: np.ndarray)-> float:
-    """Integrate a polynomial curve.
-
-    polynomial defined defined between x[0] and x[-1]
-    with coefficients c
-        ex. for a quadratic curve P2:
-            P2(x) = c[0]*x**2 + c[1]*x + c[2]
-
-    Parameters
-    ----------
-    c: np.ndarray
-        polynomial coefficients
-    x: np.ndarray
-        sample points
-
-    Returns
-    -------
-    out: float
-        polynomial integral
-
-    """
-    out=0
-
-    for i in numba.prange(c.shape[0]):
-        out+=poly_integration(c[i], x[i:i+2])
-
-    return out
-
 @numba.njit()
 def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     """Integrate a polynomial curve.
@@ -129,45 +68,6 @@ def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     for i in range(len(c)):
         out += c[i] * x[-1]**(len(c)-i) / (len(c)-i)
         out -= c[i] * x[0]**(len(c)-i) / (len(c)-i)
-
-    return out
-
-@numba.njit()
-def poly_derivation(c: np.ndarray, x: float, deg: int)-> float:
-    """Integrate a polynomial curve.
-
-    polynomial defined defined between x[0] and x[-1]
-    with coefficients c
-        ex. for a quadratic curve P2:
-            P2(x) = c[0]*x**2 + c[1]*x + c[2]
-
-    Parameters
-    ----------
-    c: np.ndarray
-        polynomial coefficients
-    x: float
-        eval point
-    deg: int
-        degree of derivation
-
-    Returns
-    -------
-    out: float
-        polynomial derivative
-
-    """
-    out = 0
-
-    for d in range(deg):
-        c=np.delete(c,-1)
-        if c.shape[0]!=0:
-            for i in range(c.shape[0]):
-                c[i]*=c.shape[0]-i
-        else:
-            break
-
-    if c.shape[0]!=0:
-        out = np.sum(x*c)
 
     return out
 
@@ -338,10 +238,6 @@ def sample_regular(el: np.ndarray, npoints=10):
         list of sample points in patch el
 
     """
-    # TO DO: check that patch satisfies conditions for proper sampling
-    # TO DO: if patch has >4 sides,
-    #           subdivide into triangular patches and process independently ?
-
     u = el[1]-el[0]
     v = el[-1]-el[0]
 

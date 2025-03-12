@@ -249,7 +249,7 @@ def _form_factors_with_directivity(
     return form_factors_tilde
 
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def _form_factors_with_directivity_dim(
         visibility_matrix, form_factors, n_bins, patches_center,
         patches_area,
