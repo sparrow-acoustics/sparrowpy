@@ -3,7 +3,7 @@ import numpy as np
 
 def perpendicular_patch_coincidentline(w, h, length):
     """
-    returns the exact form factor solution of two rectangular patches,
+    Returns the exact form factor solution of two rectangular patches,
     The patches are orthogonal and share a side of length l
     w and h correspond to the width of each of the patches.
     """
@@ -31,7 +31,7 @@ def perpendicular_patch_coincidentline(w, h, length):
 
 def perpendicular_patch_coincidentpoint(aa,bb,cc,dd):
     """
-    returns the exact form factor solution of two rectangular patches,
+    Returns the exact form factor solution of two rectangular patches,
     The patches are orthogonal and share a vertex.
     """
 
@@ -73,7 +73,7 @@ def perpendicular_patch_coincidentpoint(aa,bb,cc,dd):
 
 def perpendicular_patch_floating(aa,bb,cc,dd,ee):
     """
-    returns the exact form factor solution of two rectangular patches.
+    Returns the exact form factor solution of two rectangular patches.
     The patches are orthogonal.
     """
 
@@ -99,7 +99,7 @@ def perpendicular_patch_floating(aa,bb,cc,dd,ee):
 
 def parallel_patches(a,b,c):
     """
-    returns the exact form factor solution of parallel patches
+    Returns the exact form factor solution of parallel patches
     facing each other both patches have a length a and width b.
     They have a distance c from each other.
     """
