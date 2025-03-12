@@ -3,7 +3,6 @@ import numpy as np
 import pyfar as pf
 from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_order as ee_order
-from sparrowpy.utils import blender
 
 
 class DRadiosityFast():
@@ -94,60 +93,6 @@ class DRadiosityFast():
             walls_points, walls_normal, walls_up_vector,
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
-    @classmethod
-    def from_file(cls, filename: str, patch_size=1.0,
-                       auto_walls=True, auto_patches=True):
-        """Create a Radiosity object ffrom a blender file.
-
-        """
-        geom_data = blender.read_geometry_file(filename,
-                                           auto_walls=auto_walls,
-                                           patches_from_model=auto_patches)
-
-        walls   = geom_data["wall"]
-
-        ## save wall information
-        walls_normal = walls["normal"]
-        walls_up_vector = np.empty_like(walls["up"])
-
-        walls_points=np.empty((len(walls["conn"]),
-                               len(walls["conn"][0]),
-                               walls["verts"].shape[-1]))
-
-        for wallID in range(len(walls_normal)):
-            walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
-            walls_up_vector[wallID] = walls["up"][wallID]
-
-        if bool(geom_data["patch"]):
-            patches = geom_data["patch"]
-
-            ## save patch information
-            n_patches = len(patches["map"])
-
-            patch_to_wall_ids = patches["map"]
-
-            patches_normal = walls["normal"][patch_to_wall_ids]
-
-            patches_points = np.empty((n_patches,
-                                len(patches["conn"][0]),
-                                patches["verts"].shape[-1]))
-
-            for patchID in range(n_patches):
-                patches_points[patchID] = patches["verts"][
-                                                patches["conn"][patchID]
-                                                ]
-
-        else:
-            (
-            patches_points, patches_normal,
-            n_patches, patch_to_wall_ids) = geometry.process_patches(
-            walls_points, walls_normal, patch_size, len(walls_normal))
-
-        # create radiosity object
-        return cls(
-            walls_points, walls_normal, walls_up_vector,
-            patches_points, patches_normal, patch_size, n_patches,
-            patch_to_wall_ids)
 
     def bake_geometry(self, ff_method='universal', algorithm='order'):
         """Bake the geometry by calculating all the form factors.
@@ -208,7 +153,7 @@ class DRadiosityFast():
             self._form_factors_tilde = \
                 form_factor._form_factors_with_directivity_dim(
                 self.visibility_matrix, self.form_factors, n_bins,
-                self.patches_center, self.patches_area,
+                self.patches_center,
                 self._air_attenuation, absorption,
                 absorption_index,
                 self._patch_to_wall_ids, scattering,
