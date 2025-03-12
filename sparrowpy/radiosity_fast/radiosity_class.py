@@ -318,7 +318,7 @@ class DRadiosityFast():
 
             # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
-                # scattering_index = np.array(self._scattering_index)
+
             receiver_idx = geometry.get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
                 self._patch_to_wall_ids)

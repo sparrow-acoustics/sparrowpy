@@ -1,7 +1,8 @@
 """Functions for computation of visibility matrix/factors."""
 import numpy as np
 import numba
-from sparrowpy.radiosity_fast.universal_ff.ffhelpers import rotation_matrix,inner
+from sparrowpy.radiosity_fast.universal_ff.ffhelpers import (
+    rotation_matrix, inner)
 
 @numba.njit()
 def basic_visibility(vis_point: np.ndarray,
@@ -153,7 +154,8 @@ def point_in_polygon(point3d: np.ndarray,
     pt = inner(matrix=rotmat,vector=point3d)[0:point3d.shape[0]-1]
     poly = np.empty((polygon3d.shape[0],2))
     for i in numba.prange(polygon3d.shape[0]):
-        poly[i] = inner(matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
+        poly[i] = inner(
+            matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
 
 
     # winding number algorithm
