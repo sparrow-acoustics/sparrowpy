@@ -45,19 +45,19 @@ def kang(
         if dot_product == 0:  # orthogonal
 
             if np.abs(source_normal[0]) > 1e-5:
-                idx_source = set([2, 1])
+                idx_source = {2, 1}
                 dl = source_center[2]
                 dm = source_center[1]
                 dd_l = patches_size[i_source, 2]
                 dd_m = patches_size[i_source, 1]
             elif np.abs(source_normal[1]) > 1e-5:
-                idx_source = set([2, 0])
+                idx_source = {2, 0}
                 dl = source_center[2]
                 dm = source_center[0]
                 dd_l = patches_size[i_source, 2]
                 dd_m = patches_size[i_source, 0]
             elif np.abs(source_normal[2]) > 1e-5:
-                idx_source = set([0, 1])
+                idx_source = {0, 1}
                 dl = source_center[1]
                 dm = source_center[0]
                 dd_l = patches_size[i_source, 1]
@@ -197,7 +197,7 @@ def universal(patches_points: np.ndarray, patches_normals: np.ndarray,
         j = int(visible_patches[visID, 1])
         form_factors[i,j] = calc_form_factor(
                     patches_points[i], patches_normals[i], patches_areas[i],
-                    patches_points[j], patches_normals[j], patches_areas[j])
+                    patches_points[j], patches_normals[j])
 
     return form_factors
 

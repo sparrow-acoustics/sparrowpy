@@ -474,6 +474,9 @@ def coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
     p1 : numpy.ndarray(# vertices, 3)
         another patch
 
+    thres: float
+        threshold value for distance between points
+
     Returns
     -------
     flag: bool

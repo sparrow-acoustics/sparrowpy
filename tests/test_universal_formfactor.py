@@ -175,7 +175,7 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
     )
 
     patch.init_energy_exchange(
-        0, 0.1, source, sampling_rate=sr, speed_of_sound=c
+        0, 0.1, source, sampling_rate=sr, speed_of_sound=c,
     )
 
     patch = source_cast(src=source, rpatch=patch, absor=absor_factor)
@@ -199,7 +199,7 @@ def source_cast(src, rpatch, absor):
     print(
         "nusselt approach runtime: "
         + str(tf_nusselt * 1000)
-        + "ms \n #################################"
+        + "ms \n #################################",
     )
     return rpatch
 
@@ -218,7 +218,7 @@ def receiver_cast(rcv, patch, sr, c):
     patch_energy = np.sum(patch.E_matrix)
 
     nuss = form_factor.pt_solution(
-            point=rcv.position, patch_points=patch.pts, mode="receiver"
+            point=rcv.position, patch_points=patch.pts, mode="receiver",
             ) * patch_energy
 
     rel_error_nuss = abs(true_rec_energy - nuss) / true_rec_energy * 100
