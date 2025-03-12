@@ -331,6 +331,7 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
 @numba.njit()
 def calculate_normals(points: np.ndarray):
+    """Calculate normals of plane defined by input points."""
 
     normals = np.empty((points.shape[0],3))
 
