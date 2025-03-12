@@ -60,3 +60,39 @@ def test_dsp_walkthrough() -> tuple[pf.Signal, pf.Signal, pf.Signal, pf.Signal]:
     assert isinstance(IR_sum_full_sig, pf.Signal)
 
     return hist_sig, IR_sig, IR_bands_sig, IR_sum_full_sig
+
+
+def test_histogram_reduction(
+    hist_sig,
+    sampling_rate_new,
+    ) -> pf.Signal:
+    sine_sig = pf.signals.sine(
+        frequency=1000,
+        n_samples=96000,
+        amplitude=1,
+        sampling_rate=48000)
+    noise_white_sig = pf.signals.noise(
+        n_samples=96000,
+        spectrum='white',
+        rms=2,
+        sampling_rate=48000)
+    noise_pink_sig = pf.signals.noise(
+        n_samples=96000,
+        spectrum="pink",
+        rms=2,
+        sampling_rate=48000)
+    #energy sum of all samples
+    #power 1/n and rms (1/n)^2
+    assert abs(pf.dsp.rms(sine_sig) - 1/np.sqrt(2)) < 0.01
+    assert abs(pf.dsp.rms(noise_white_sig) - 2) < 0.01
+    assert abs(pf.dsp.rms(noise_pink_sig) - 2) < 0.01
+    assert abs(pf.dsp.power(sine_sig) - 1/np.sqrt(2)/np.sqrt(2)) < 0.01
+    assert abs(pf.dsp.power(noise_pink_sig) - np.sqrt(2)) < 0.01
+    assert abs(pf.dsp.power(noise_pink_sig) - np.sqrt(2)) < 0.01
+
+    hist_red_sig = sp.dsp.histogram_resolution_reduction(hist_sig, sampling_rate_new)
+    ##assert hist_red_sig.sampling_rate == sampling_rate_new
+    ##assert pf.dsp.energy(hist_red_sig) == pf.dsp.energy(hist_sig)
+    ##assert pf.dsp.power(hist_red_sig) == pf.dsp.power(hist_sig)
+    ##assert pf.dsp.rms(hist_red_sig) == pf.dsp.rms(hist_sig)
+    return hist_red_sig

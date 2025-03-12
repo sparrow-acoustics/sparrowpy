@@ -85,8 +85,7 @@ def run_energy_simulation_room(
 
 
 def histogram_resolution_reduction(
-    histogram,
-    sampling_rate,
+    histogram_sig,
     sampling_rate_new,
     show_plots=True,
     ) -> pf.Signal:
@@ -96,25 +95,36 @@ def histogram_resolution_reduction(
 
     Parameters
     ----------
-    histogram : NDArray[n_receivers, n_patches, n_(freq)bins, E_matrix_total '-1'shape]
-        Histogram of the radiosity model.
-    sampling_rate : float
-        Sampling rate of the original histogram.
+    histogram_sig : pf.Signal
+        Histogram of the radiosity model for the reduction in resolution.
     sampling_rate_new : float
         Sampling rate of the new histogram.
     show_plots : bool, optional
         Show data plots.
     """
+    sampling_rate = histogram_sig.sampling_rate
     if sampling_rate_new > sampling_rate:
          raise ValueError("New sampling rate is higher than the original one!")
 
     factor_delta = sampling_rate / sampling_rate_new
     print(f"Reduction in histogram resolution: {factor_delta}")
+
+    data = histogram_sig.time
+    data_shape = data.shape
+    num_datasets = sum(data_shape[:-1])
     hist_reduced = []
-    index_values = range(0, len(histogram), int(factor_delta))
-    for ix in index_values:
-        hist_reduced.append(sum(histogram[ix : ix + int(factor_delta)]))
-    hist_reduced_sig = pf.Signal(hist_reduced, sampling_rate_new)
+    index_values = range(0, data_shape[-1], int(factor_delta))
+    data = data.reshape(-1, data_shape[-1])
+    if data.shape[0] > num_datasets:
+        raise ValueError("Reshaping not correct!")
+
+    for ix_set in range(num_datasets):
+        for ix in index_values:
+            hist_reduced.append(np.sum(data[ix_set, ix : ix + int(factor_delta)]))
+
+    hist_reduced_shaped = np.asarray(hist_reduced).reshape(data_shape)
+    hist_reduced_sig = pf.Signal(hist_reduced_shaped, sampling_rate_new)
+
 
     if show_plots:
         pf.plot.time(

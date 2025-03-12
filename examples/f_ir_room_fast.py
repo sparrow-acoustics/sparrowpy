@@ -454,8 +454,18 @@ pf.plot.time(hist_sig, dB=True, log_prefix=10,
              label=f"Histogram {hist_sig.sampling_rate/1000}k") #energy
 plt.legend()
 plt.show()
+print(f"RMS of Signal IR_sum_full: {pf.dsp.rms(IR_sum_full_sig)}")
+print(f"RMS of Signal IR_sig: {pf.dsp.rms(IR_sig)}")
+hist_sig.time = hist_sig.time**0.5
+print(f"RMS of Signal Histogram_sig: {pf.dsp.rms(hist_sig)}")
+
+IR_red_sig = dsp.test_histogram_reduction(IR_sig, 8000)
+print(f"RMS of Signal IR_red_sig: {pf.dsp.rms(IR_red_sig)}")
 
 print("END")
 
 
-# %%
+# %% quick exec of reduction
+debug_sig = dsp.test_histogram_reduction(pf.Signal, 8000)
+
+
