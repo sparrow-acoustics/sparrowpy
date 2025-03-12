@@ -36,19 +36,30 @@ def test_init_from_file(filename):
 def test_init_comparison(filename, sample_walls):
     radifile = sp.DRadiosityFast.from_file(filename)
     radipoly = sp.DRadiosityFast.from_polygon(sample_walls, patch_size=1)
-    npt.assert_equal(radifile.patches_points.shape, radipoly.patches_points.shape)
-    npt.assert_equal(radifile.patches_area.shape, radipoly.patches_area.shape)
-    npt.assert_equal(radifile.patches_center.shape, radipoly.patches_center.shape)
-    npt.assert_equal(radifile.patches_size.shape, radipoly.patches_size.shape)
-    npt.assert_equal(radifile.patches_normal.shape, radipoly.patches_normal.shape)
+    npt.assert_equal(radifile.patches_points.shape,
+                     radipoly.patches_points.shape)
+    npt.assert_equal(radifile.patches_area.shape,
+                     radipoly.patches_area.shape)
+    npt.assert_equal(radifile.patches_center.shape,
+                     radipoly.patches_center.shape)
+    npt.assert_equal(radifile.patches_size.shape,
+                     radipoly.patches_size.shape)
+    npt.assert_equal(radifile.patches_normal.shape,
+                     radipoly.patches_normal.shape)
 
-    radifile = sp.DRadiosityFast.from_file(filename, patch_size=.5, auto_patches=False)
+    radifile = sp.DRadiosityFast.from_file(filename, patch_size=.5,
+                                           auto_patches=False)
     radipoly = sp.DRadiosityFast.from_polygon(sample_walls, patch_size=.5)
-    npt.assert_equal(radifile.patches_points.shape, radipoly.patches_points.shape)
-    npt.assert_equal(radifile.patches_area.shape, radipoly.patches_area.shape)
-    npt.assert_equal(radifile.patches_center.shape, radipoly.patches_center.shape)
-    npt.assert_equal(radifile.patches_size.shape, radipoly.patches_size.shape)
-    npt.assert_equal(radifile.patches_normal.shape, radipoly.patches_normal.shape)
+    npt.assert_equal(radifile.patches_points.shape,
+                     radipoly.patches_points.shape)
+    npt.assert_equal(radifile.patches_area.shape,
+                     radipoly.patches_area.shape)
+    npt.assert_equal(radifile.patches_center.shape,
+                     radipoly.patches_center.shape)
+    npt.assert_equal(radifile.patches_size.shape,
+                     radipoly.patches_size.shape)
+    npt.assert_equal(radifile.patches_normal.shape,
+                     radipoly.patches_normal.shape)
 
 
 def test_check_visibility(sample_walls):
