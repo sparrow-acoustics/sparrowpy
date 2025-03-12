@@ -151,20 +151,11 @@ def generate_connectivity_wall(mesh: bmesh):
                     "material": list(n_polygons)
                     })
         mesh in reduced data representation.
-            "verts":    vertex (node) list
-            "conn":     vertex to polygon mapping,
-            "normal":   normal list
-            "material": material list
 
     """
-    out_mesh = {"verts": np.array([v.co for v in mesh.verts]),
-                "conn":[],
-                "normal":np.array([]),
-                "up":np.array([]),
-                "material": np.array([])}
+    out_mesh = {"conn":[], "verts": np.array([])}
 
-    normals=[]
-    upvecs=[]
+    out_mesh["verts"] = np.array([v.co for v in mesh.verts])
 
     for f in mesh.faces:
         if len(bpy.context.object.material_slots)!=0:

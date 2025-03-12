@@ -554,7 +554,7 @@ def test_radiosity_to_from_dict():
     assert radi_reconstructed.sampling_rate == radi.sampling_rate
     assert len(radi_reconstructed.patch_list) == len(radi.patch_list)
     for patch, patch_reconstructed in zip(
-            radi.patch_list, radi_reconstructed.patch_list):
+            radi.patch_list, radi_reconstructed.patch_list, strict=True):
         np.testing.assert_array_equal(
             patch.pts, patch_reconstructed.pts)
         np.testing.assert_array_equal(
@@ -612,7 +612,7 @@ def test_radiosity_read_write(tmpdir):
     assert radi_reconstructed.sampling_rate == radi.sampling_rate
     assert len(radi_reconstructed.patch_list) == len(radi.patch_list)
     for patch, patch_reconstructed in zip(
-            radi.patch_list, radi_reconstructed.patch_list):
+            radi.patch_list, radi_reconstructed.patch_list, strict=True):
         np.testing.assert_array_equal(
             patch.pts, patch_reconstructed.pts)
         np.testing.assert_array_equal(
