@@ -15,6 +15,7 @@ from . import testing
 from . import radiosity_fast
 from . import brdf
 from . import utils
+from . import dsp
 
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     'testing',
     'brdf',
     'utils',
+    'dsp',
 ]

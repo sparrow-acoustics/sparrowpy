@@ -123,3 +123,8 @@ docs/_static/css/custom.css
 docs/resources/logos/pyfar_logos_fixed_size_sparrowpy.png
 docs/resources/logos/pyfar_logos_fixed_size_pyfar.png
 *.pdf
+
+# ignore filip stuff and change file
+examples/stuff.py
+examples/sim_data/f_hist_room_4_5_3_1_48k.csv
+.gitignore
