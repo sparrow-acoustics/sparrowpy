@@ -152,6 +152,56 @@ def test_ff_energy_conservation(
         err = 1-np.sum(radi._form_factors_tilde[i])
         assert err < 1e-2
 
+
+@pytest.mark.parametrize("width", [1.0, 2.0, 3.0, 4.])
+def test_different_areas(
+    width,
+):
+    """Test form factor for perpendicular patches w/ common vertex."""
+
+    patch1 = np.array([[0.,0.,0.],
+                       [width,0.,0.],
+                       [width,1.,0.],
+                       [0.,1.,0.]])
+
+    patch2 = np.array([[0.,0.,1.],
+                       [0.,1.,1.],
+                       [width,1.,1.],
+                       [width,0.,1.]])
+
+    ff = FFac.universal(patches_points=np.array([patch1,patch2,patch2,patch1]),
+                        patches_normals=np.array([[0.,0.,1.],[0.,0.,-1.],[0.,0.,-1.],[0.,0.,1.]]),
+                        patches_areas=np.array([width,1.,1.,width]),
+                        visible_patches=np.array([[0,1],[2,3]]))
+
+    ff_tilde = FFac._form_factors_with_directivity_dim(
+                            visibility_matrix=np.array([[False,True,False,False],
+                                                  [False,False,False,False],
+                                                  [False,False,False,True],
+                                                  [False,False,False,False]]),
+                            form_factors=ff,
+                            n_bins=1,
+                            patches_center=np.array([[width/2, .5, 0.],
+                                                     [.5,.5,1.],
+                                                     [.5,.5,1.],
+                                                     [width/2, .5, 0.]]),
+                            patches_area=np.array([width,1.,1.,width]),
+                            air_attenuation=None,
+                            absorption=None,
+                            absorption_index=None,
+                            patch_to_wall_ids=[0,1,1,0],
+                            scattering=None,
+                            scattering_index=None,
+                            sources=None,
+                            receivers=None,
+    )
+
+    assert ff_tilde[0,1,0,0]==ff_tilde[1,0,0,0]/width
+    assert ff_tilde[2,3,0,0]/width==ff_tilde[3,2,0,0]
+    assert np.abs(ff_tilde[0,1,0,0]-ff_tilde[3,2,0,0])<1e-9
+    assert np.abs(ff_tilde[2,3,0,0]-ff_tilde[1,0,0,0])<1e-9
+
+
 @pytest.mark.parametrize("side", [0.1, 0.2, 0.5, 1, 2])
 @pytest.mark.parametrize(
     "source",
