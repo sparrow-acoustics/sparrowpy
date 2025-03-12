@@ -7,8 +7,8 @@ import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy.radiosity import Patches
-import time
 from sparrowpy.radiosity_fast import form_factor as FFac
+import sparrowpy as sp
 
 
 @pytest.mark.parametrize("width", [1.])
@@ -130,6 +130,27 @@ def test_perpendicular_coincidentpoint_patches(
 
     assert rel < 5
 
+@pytest.mark.parametrize("X", [2.0, 3.0])
+@pytest.mark.parametrize("Y", [1.0, 2.0])
+@pytest.mark.parametrize("Z", [2.0])
+def test_ff_energy_conservation(
+    X,Y,Z,
+):
+    """Test form factor for perpendicular patches w/ common vertex."""
+
+    walls = sp.testing.shoebox_room_stub(X, Y, Z)
+
+    radi = sp.DRadiosityFast.from_polygon(walls, patch_size=1.)
+
+    radi.bake_geometry(ff_method="universal",algorithm="order")
+
+
+    err = radi.n_patches-np.sum(radi._form_factors_tilde)
+    assert err/radi.n_patches < 1e-2
+
+    for i in range(radi.n_patches):
+        err = 1-np.sum(radi._form_factors_tilde[i])
+        assert err < 1e-2
 
 @pytest.mark.parametrize("side", [0.1, 0.2, 0.5, 1, 2])
 @pytest.mark.parametrize(
@@ -185,9 +206,7 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
 
 def source_cast(src, rpatch, absor):
     """Cast and test source-to-patch factor calculation."""
-    t0 = time.time()
     nuss = form_factor.pt_solution(point=src.position, patch_points=rpatch.pts)
-    tf_nusselt = time.time() - t0
 
     true = sum(rpatch.E_matrix[rpatch.E_matrix != 0])
 
@@ -195,13 +214,6 @@ def source_cast(src, rpatch, absor):
 
     assert rel_error_nuss < 1.0
 
-    print("nusselt approach error: " + str(rel_error_nuss) + "%")
-    print(
-        "nusselt approach runtime: "
-        + str(tf_nusselt * 1000)
-        + "ms \n #################################",
-        + "ms \n #################################",
-    )
     return rpatch
 
 
