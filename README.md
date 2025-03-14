@@ -31,8 +31,13 @@ Use pip to install sparrowpy
 
 (Requires Python >3.9)
 
-if numba is installed the code will be precompiled and will run faster.
+if numba is installed the code will be precompiled and will run faster. We strongly recommend to use numba to accelerate the simulations significantly
 
+    pip install sparrowpy[fast]
+
+or
+
+    pip install sparrowpy
     pip install numba
 
 you can also use blender for geometry import, then install bpy
