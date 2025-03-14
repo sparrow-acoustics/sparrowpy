@@ -133,7 +133,10 @@ def kang(
                 dm_prime = source_center[0]
                 dn_prime = source_center[2]
                 dd_l = patches_size[i_source, 1]
-                dd_n = patches_size[i_source, 2]
+                if patches_size.shape[1] > 2:
+                    dd_n = patches_size[i_source, 2]
+                else:
+                    dd_n = patches_size[i_source, 1]
             elif np.abs(receiver_normal[1]) > 1e-5:
                 dl = receiver_center[0]
                 dm = receiver_center[1]
@@ -142,7 +145,10 @@ def kang(
                 dm_prime = source_center[1]
                 dn_prime = source_center[2]
                 dd_l = patches_size[i_source, 0]
-                dd_n = patches_size[i_source, 2]
+                if patches_size.shape[1] > 2:
+                    dd_n = patches_size[i_source, 2]
+                else:
+                    dd_n = patches_size[i_source, 1]
             elif np.abs(receiver_normal[2]) > 1e-5:
                 dl = receiver_center[1]
                 dm = receiver_center[2]

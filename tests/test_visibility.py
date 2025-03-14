@@ -3,6 +3,7 @@ import pytest
 import sparrowpy.radiosity_fast.visibility_helpers as vh
 import numpy as np
 import sparrowpy.radiosity_fast.geometry as geom
+bpy = pytest.importorskip("bpy")
 import sparrowpy.utils.blender as bh
 import matplotlib.pyplot as plt
 
@@ -65,6 +66,7 @@ def test_basic_visibility(point, origin, plpt, pln):
         solution = 0
 
     assert solution==out
+
 
 @pytest.mark.parametrize("model", [
     "./tests/test_data/cube_simple.blend",
