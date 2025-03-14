@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Project for data formats in acoustics."
 readme = "README.md"
 license = {file = "LICENSE"}
-requires-python = "==3.11.*"
+requires-python = ">=3.9"
 authors = [
     { name = "The pyfar developers", email = "info@pyfar.org" },
 ]
@@ -18,20 +18,24 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     'numpy<2',
     'scipy',
     'matplotlib',
     'pyfar',
-    'numba',  # can be made optional later on
-    'bpy',  # can be made optional later on
-    'tqdm',  # can be made optional later on
     'sofar',
 ]
 
 [project.optional-dependencies]
+blender = ['bpy',]
+fast = ['numba',]
+progress = ['tqdm']
 deploy = [
     "twine",
     "wheel",
@@ -56,7 +60,7 @@ docs = [
     "sphinx-favicon",
     "sphinx-reredirects",
 ]
-dev = ["sparrowpy[deploy,tests,docs]"]
+dev = ["sparrowpy[deploy,tests,docs,fast]"]
 
 [project.urls]
 Tracker = "https://github.com/ahms5/sparrowpy/issues"

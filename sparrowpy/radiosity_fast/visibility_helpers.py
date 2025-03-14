@@ -1,10 +1,16 @@
 """Functions for computation of visibility matrix/factors."""
 import numpy as np
-import numba
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
+
 from sparrowpy.radiosity_fast.universal_ff.ffhelpers import (
     rotation_matrix, inner)
 
-@numba.njit()
+
 def basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
                      surf_points: np.ndarray, surf_normal: np.ndarray,
@@ -66,7 +72,7 @@ def basic_visibility(vis_point: np.ndarray,
 
     return is_visible
 
-@numba.njit()
+
 def project_to_plane(origin: np.ndarray, point: np.ndarray,
                      plane_pt: np.ndarray, plane_normal: np.ndarray,
                      epsilon=1e-6, check_normal=True):
@@ -120,7 +126,7 @@ def project_to_plane(origin: np.ndarray, point: np.ndarray,
 
     return int_point
 
-@numba.njit()
+
 def point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
                      eta=1e-6) -> bool:
@@ -153,14 +159,14 @@ def point_in_polygon(point3d: np.ndarray,
 
     pt = inner(matrix=rotmat,vector=point3d)[0:point3d.shape[0]-1]
     poly = np.empty((polygon3d.shape[0],2))
-    for i in numba.prange(polygon3d.shape[0]):
+    for i in prange(polygon3d.shape[0]):
         poly[i] = inner(
             matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
 
 
     # winding number algorithm
     count = 0
-    for i in numba.prange(poly.shape[0]):
+    for i in prange(poly.shape[0]):
         a1 = poly[(i+1)%poly.shape[0]]
         a0 = poly[i%poly.shape[0]]
         side = a1-a0
@@ -188,4 +194,9 @@ def point_in_polygon(point3d: np.ndarray,
 
     return out
 
+
+if numba is not None:
+    basic_visibility = numba.njit()(basic_visibility)
+    project_to_plane = numba.njit()(project_to_plane)
+    point_in_polygon = numba.njit()(point_in_polygon)
 

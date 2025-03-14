@@ -29,7 +29,21 @@ Use pip to install sparrowpy
 
     pip install sparrowpy
 
-(Requires Python 3.11)
+(Requires Python >3.9)
+
+if numba is installed the code will be precompiled and will run faster.
+
+    pip install numba
+
+you can also use blender for geometry import, then install bpy
+
+    pip install bpy
+
+to show progress bars install tqdm
+
+    pip install tqdm
+
+by default this packages are not installed
 
 Audio file reading/writing is supported through [SoundFile](https://python-soundfile.readthedocs.io), which is based on
 [libsndfile](http://www.mega-nerd.com/libsndfile/). On Windows and OS X, it will be installed automatically.

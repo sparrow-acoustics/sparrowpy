@@ -2,8 +2,12 @@
 import sys
 import os
 from pathlib import Path
-import bpy
-import bmesh
+try:
+    import bpy
+    import bmesh
+except ImportError:
+    bpy = None
+    bmesh = None
 import numpy as np
 
 
@@ -48,6 +52,10 @@ def read_geometry_file(blend_file: Path, angular_tolerance=3.):
 
 
     """
+    if bpy is None:
+        raise ImportError(
+            "Blender is not installed. Please install "
+            "Blender to use this function.")
     if os.path.splitext(blend_file)[-1] == ".blend":
         bpy.ops.wm.open_mainfile(filepath=str(blend_file))
     elif os.path.splitext(blend_file)[-1] ==".stl":
@@ -91,9 +99,14 @@ def read_geometry_file(blend_file: Path, angular_tolerance=3.):
 
 def ensure_object_mode():
     """Ensure Blender is in Object Mode."""
+    if bpy is None:
+        raise ImportError(
+            "Blender is not installed. Please install "
+            "Blender to use this function.")
     if bpy.context.object:
         if bpy.context.object.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
+
 
 def generate_connectivity(mesh: bmesh):
     """Generate node list and surf connectivity matrix.
@@ -112,6 +125,10 @@ def generate_connectivity(mesh: bmesh):
         mesh in reduced data representation.
 
     """
+    if bmesh is None:
+        raise ImportError(
+            "Blender is not installed. Please install "
+            "Blender to use this function.")
     out_mesh = {"conn":[], "verts": np.array([])}
 
     out_mesh["verts"] = np.array([v.co for v in mesh.verts])

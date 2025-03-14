@@ -1,12 +1,17 @@
 """Module for form factor calculation."""
 import numpy as np
 import sparrowpy.radiosity_fast.universal_ff.ffhelpers as helpers
-import numba
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
+
 
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### patch-to-patch
-@numba.njit()
 def calc_form_factor(
         receiving_pts: np.ndarray, receiving_normal: np.ndarray,
         source_pts: np.ndarray, source_normal: np.ndarray) -> float:
@@ -48,9 +53,9 @@ def calc_form_factor(
 
     return out
 
+
 #######################################################################################
 ### Stokes integration
-@numba.njit()
 def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
     """
     Returns the form function value for the stokes form factor integration
@@ -80,7 +85,7 @@ def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
 
     return result
 
-@numba.njit(parallel=True)
+
 def load_stokes_entries(
         i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
     """
@@ -105,13 +110,13 @@ def load_stokes_entries(
 
     form_mat = np.zeros((i_bpoints.shape[0] , j_bpoints.shape[0]))
 
-    for i in numba.prange(i_bpoints.shape[0]):
-        for j in numba.prange(j_bpoints.shape[0]):
+    for i in prange(i_bpoints.shape[0]):
+        for j in prange(j_bpoints.shape[0]):
             form_mat[i,j] = stokes_ffunction(i_bpoints[i],j_bpoints[j])
 
     return form_mat
 
-@numba.njit(parallel=False)
+
 def stokes_integration(
         patch_i: np.ndarray, patch_j: np.ndarray, source_area: float,
         approx_order=4) -> float:
@@ -199,7 +204,7 @@ def stokes_integration(
 
 ###############################################################################
 ### Nusselt analog integration
-@numba.njit(parallel=False)
+
 def nusselt_analog(
         surf_origin, surf_normal, patch_points, patch_normal) -> float:
     """
@@ -241,14 +246,14 @@ def nusselt_analog(
     projPts = np.empty_like( boundary_points )
     plnPts = np.empty( shape=(len(boundary_points),2) )
 
-    for ii in numba.prange(len(boundary_points)):
+    for ii in prange(len(boundary_points)):
         # patch j points projected on the hemisphere
         sphPts[ii] = (boundary_points[ii]-surf_origin)/np.linalg.norm(
             boundary_points[ii]-surf_origin)
 
     rotmat = helpers.rotation_matrix(n_in=surf_normal)
 
-    for ii in numba.prange(len(sphPts)):
+    for ii in prange(len(sphPts)):
         # points on the hemisphere projected onto
         plnPts[ii,:] = helpers.inner(matrix=rotmat,vector=sphPts[ii])[:-1]
         projPts[ii,:-1] = plnPts[ii,:]
@@ -262,7 +267,7 @@ def nusselt_analog(
     leftseg=np.empty((3,2))
     rightseg=np.empty((3,2))
 
-    for jj in numba.prange(connectivity.shape[0]):
+    for jj in prange(connectivity.shape[0]):
 
         segmt = connectivity[jj]
 
@@ -310,7 +315,7 @@ def nusselt_analog(
 
     return big_poly + hand*curved_area
 
-@numba.njit(parallel=True)
+
 def nusselt_integration(
         patch_i: np.ndarray, patch_j: np.ndarray, patch_i_normal: np.ndarray,
         patch_j_normal: np.ndarray, nsamples=2, random=False) -> float:
@@ -349,7 +354,7 @@ def nusselt_integration(
 
     out = 0
 
-    for i in numba.prange(p0_array.shape[0]):
+    for i in prange(p0_array.shape[0]):
         out += nusselt_analog(
             surf_origin=p0_array[i], surf_normal=patch_i_normal,
             patch_points=patch_j, patch_normal=patch_j_normal)
@@ -363,7 +368,6 @@ def nusselt_integration(
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### point-to-patch and patch-to-point
-@numba.njit(parallel=True)
 def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     """
     Calculates the "form factor" between a point (source or receiver) and
@@ -410,3 +414,13 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
     factor = interior_angle_sum - (len(patch_points)-2)*np.pi
 
     return factor / (np.pi*source_area)
+
+
+if numba is not None:
+    calc_form_factor = numba.njit()(calc_form_factor)
+    stokes_ffunction = numba.njit()(stokes_ffunction)
+    pt_solution= numba.njit(parallel=True)(pt_solution)
+    nusselt_integration = numba.njit(parallel=True)(nusselt_integration)
+    nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
+    load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
+    stokes_integration = numba.njit(parallel=False)(stokes_integration)

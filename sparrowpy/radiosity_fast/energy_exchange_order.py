@@ -1,10 +1,15 @@
 """Recursive Energy exchange functions for the fast radiosity solver."""
-import numba
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
 import numpy as np
 from . import geometry
 
 
-@numba.njit(parallel=True)
+
 def _add_directional(
         energy_0, source_position: np.ndarray,
         patches_center: np.ndarray, n_bins:float, patch_to_wall_ids:np.ndarray,
@@ -47,7 +52,7 @@ def _add_directional(
     n_patches = patches_center.shape[0]
     n_directions = receivers.shape[1]
     energy_0_directivity = np.zeros((n_patches, n_directions, n_bins))
-    for i in numba.prange(n_patches):
+    for i in prange(n_patches):
         wall_id_i = int(patch_to_wall_ids[i])
         scattering_factor = geometry.get_scattering_data_source(
             source_position, patches_center[i],
@@ -60,7 +65,6 @@ def _add_directional(
     return energy_0_directivity
 
 
-@numba.njit()
 def energy_exchange_init_energy(
         n_samples, energy_0_directivity, distance_0,
         speed_of_sound, histogram_time_resolution):
@@ -90,14 +94,13 @@ def energy_exchange_init_energy(
     n_directions = energy_0_directivity.shape[1]
     n_bins = energy_0_directivity.shape[2]
     E_matrix_total = np.zeros((n_patches, n_directions, n_bins, n_samples))
-    for i in numba.prange(n_patches):
+    for i in prange(n_patches):
         n_delay_samples = int(
             distance_0[i]/speed_of_sound/histogram_time_resolution)
         E_matrix_total[i, :, :, n_delay_samples] += energy_0_directivity[i]
     return E_matrix_total
 
 
-@numba.njit()
 def energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
         form_factors_tilde,
@@ -167,7 +170,6 @@ def energy_exchange(
     return E_matrix_total
 
 
-@numba.njit()
 def _collect_receiver_energy(
         E_matrix_total, patch_receiver_distance,
         speed_of_sound, histogram_time_resolution, air_attenuation):
@@ -197,7 +199,7 @@ def _collect_receiver_energy(
     n_patches = E_matrix_total.shape[0]
     n_bins = E_matrix_total.shape[1]
 
-    for i in numba.prange(n_patches):
+    for i in prange(n_patches):
         n_delay_samples = int(np.ceil(
             patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
         for j in range(n_bins):
@@ -206,3 +208,9 @@ def _collect_receiver_energy(
                 n_delay_samples)
 
     return E_mat_out
+
+if numba is not None:
+    _add_directional = numba.njit(parallel=True)(_add_directional)
+    energy_exchange_init_energy = numba.njit()(energy_exchange_init_energy)
+    _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
+    energy_exchange = numba.njit()(energy_exchange)
