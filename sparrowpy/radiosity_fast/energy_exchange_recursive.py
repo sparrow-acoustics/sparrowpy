@@ -1,10 +1,14 @@
 """Recursive Energy exchange functions for the fast radiosity solver."""
-import numba
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
 import numpy as np
 from . import geometry
 
 
-@numba.njit(parallel=True)
 def _init_energy_1(
         energy_0, distance_0, source_position: np.ndarray,
         patches_center: np.ndarray, visible_patches: np.ndarray,
@@ -58,7 +62,7 @@ def _init_energy_1(
     n_patches = patches_center.shape[0]
     energy_1 = np.zeros((n_patches, n_patches, n_bins))
     distance_1 = np.zeros((n_patches, n_patches))
-    for ii in numba.prange(visible_patches.shape[0]):
+    for ii in prange(visible_patches.shape[0]):
         for jj in range(2):
             if jj == 0:
                 i = visible_patches[ii, 0]
@@ -88,8 +92,6 @@ def _init_energy_1(
     return (energy_1, distance_1)
 
 
-
-@numba.njit()
 def _energy_exchange(
         ir, i_freq, h, i, energy, distance, form_factors_tilde, distance_1,
         patch_receiver_distance, patch_receiver_energy, speed_of_sound,
@@ -115,7 +117,6 @@ def _energy_exchange(
                     threshold, max_distance, current_depth+1, max_depth)
 
 
-@numba.njit()
 def _collect_receiver_energy(
         ir, i_freq,energy, distance, patch_receiver_distance,
         patch_receiver_energy,
@@ -131,7 +132,6 @@ def _collect_receiver_energy(
 
 
 
-@numba.njit()
 def _calculate_energy_exchange_second_order(
         ir, energy_0, distance_0, energy_1, distance_1,
         patch_receiver_distance, patch_receiver_energy ,speed_of_sound,
@@ -154,14 +154,13 @@ def _calculate_energy_exchange_second_order(
                         patch_receiver_energy[j, i_freq],
                         speed_of_sound, histogram_time_resolution)
 
-@numba.njit(parallel=True)
 def _calculate_energy_exchange_recursive(
         ir, energy_1, distance_1,distance_i_j, form_factors_tilde,
         n_patches, patch_receiver_distance, patch_receiver_energy,
         speed_of_sound, histogram_time_resolution,
         threshold=1e-12, max_time=0.1, max_depth=-1):
     max_distance = max_time*speed_of_sound
-    for i_freq in numba.prange(energy_1.shape[-1]):
+    for i_freq in prange(energy_1.shape[-1]):
         for h in range(n_patches):
             for i in range(n_patches):
                 if energy_1[h, i, i_freq] > 0:
@@ -175,3 +174,12 @@ def _calculate_energy_exchange_recursive(
                         threshold=threshold, max_distance=max_distance,
                         current_depth=1, max_depth=max_depth)
 
+
+if numba is not None:
+    _init_energy_1 = numba.njit(parallel=True)(_init_energy_1)
+    _calculate_energy_exchange_recursive = numba.njit(parallel=True)(
+        _calculate_energy_exchange_recursive)
+    _calculate_energy_exchange_second_order = numba.njit()(
+        _calculate_energy_exchange_second_order)
+    _energy_exchange = numba.njit()(_energy_exchange)
+    _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
