@@ -50,6 +50,8 @@ tests = [
     "ruff==0.9.*",
     "coverage",
     "watermark",
+    "sparrowpy[fast]",
+    "sparrowpy[blender]",
 ]
 docs = [
     "sphinx",
@@ -60,7 +62,7 @@ docs = [
     "sphinx-favicon",
     "sphinx-reredirects",
 ]
-dev = ["sparrowpy[deploy,tests,docs,fast]"]
+dev = ["sparrowpy[deploy,tests,docs]"]
 
 [project.urls]
 Tracker = "https://github.com/ahms5/sparrowpy/issues"
