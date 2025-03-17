@@ -40,7 +40,7 @@ or
     pip install sparrowpy
     pip install numba
 
-you can also use blender for geometry import. Note that blender has strong requirements on the python version see [pypi](https://pypi.org/project/bpy/). You can install it via pip
+you can also use blender for geometry import. Note that blender has strong requirements on the python version, see [pypi](https://pypi.org/project/bpy/). You can install it via pip
 
     pip install bpy
 
