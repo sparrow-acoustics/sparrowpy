@@ -4,8 +4,8 @@ import sparrowpy.radiosity_fast.visibility_helpers as vh
 import numpy as np
 import sparrowpy.radiosity_fast.geometry as geom
 bpy = pytest.importorskip("bpy")
-import sparrowpy.utils.blender as bh
-import matplotlib.pyplot as plt
+import sparrowpy.utils.blender as bh  # noqa: E402
+import matplotlib.pyplot as plt  # noqa: E402
 
 @pytest.mark.parametrize("origin", [np.array([0.,1.,3.])])
 @pytest.mark.parametrize("point", [np.array([0.,1.,-1])])
