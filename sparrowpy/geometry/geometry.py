@@ -6,7 +6,7 @@ except ImportError:
     numba = None
     prange = range
 import numpy as np
-import sparrowpy.radiosity_fast.visibility_helpers as vh
+import sparrowpy.geometry.visibility_helpers as vh
 
 
 def get_scattering_data_receiver_index(

@@ -1,7 +1,7 @@
 import numpy.testing as npt
 import pytest
 bpy = pytest.importorskip("bpy")
-import sparrowpy.utils.blender as bh  # noqa: E402
+import sparrowpy.geometry.blender as bh  # noqa: E402
 
 
 @pytest.mark.parametrize("path",

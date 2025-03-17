@@ -5,14 +5,14 @@ import numpy as np
 import numpy.testing as npt
 import pyfar as pf
 import pytest
-import sparrowpy.sound_object as so
+import sparrowpy.geometry as geo
 
 
 def test_directivity_ms():
     """Test DirectivityMS class."""
     path = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ITA_Dodecahedron.sofa')
-    directivity = so.DirectivityMS(path)
+    directivity = geo.DirectivityMS(path)
     assert directivity.data.cshape[0] == directivity.receivers.cshape[0]
     assert isinstance(directivity.data, pf.FrequencyData)
     assert isinstance(directivity.receivers, pf.Coordinates)
@@ -22,7 +22,7 @@ def test_get_directivity():
     """Test get_directivity function."""
     path = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ITA_Dodecahedron.sofa')
-    directivity = so.DirectivityMS(path)
+    directivity = geo.DirectivityMS(path)
     target_pos_G = [-1, 0, -2]
     pos_G = [0, 0, 2]
     up_G = [0, 1, 0]
@@ -32,9 +32,9 @@ def test_get_directivity():
 
 
 @pytest.mark.parametrize('function', [
-    (so.SoundObject),
-    (so.SoundSource),
-    (so.Receiver) ])
+    (geo.SoundObject),
+    (geo.SoundSource),
+    (geo.Receiver) ])
 def test_sound_object(function):
     """Test SoundObject class."""
     sound_object = function([0, 0, 0], [2, 0, 0], [0, 0, 2])
@@ -44,9 +44,9 @@ def test_sound_object(function):
 
 
 @pytest.mark.parametrize('function', [
-    (so.SoundObject),
-    (so.SoundSource),
-    (so.Receiver) ])
+    (geo.SoundObject),
+    (geo.SoundSource),
+    (geo.Receiver) ])
 @pytest.mark.parametrize(('position', 'view', 'up'), [
     ('a', [1, 0, 0], [0, 0, 1]),
     ([0, 0, 0], [1, 0, 0], 1),
@@ -60,7 +60,7 @@ def test_sound_object_error(function, position, view, up):
 
 def test_sound_source_defaults():
     """Test SoundSource class."""
-    sound_source = so.SoundSource([0, 0, 0], [2, 0, 0], [0, 0, 2])
+    sound_source = geo.SoundSource([0, 0, 0], [2, 0, 0], [0, 0, 2])
     npt.assert_equal(sound_source.sound_power, 1)
     npt.assert_equal(sound_source.directivity, None)
 
@@ -72,7 +72,7 @@ def test_sound_source_defaults():
 def test_sound_source_errors(directivity, sound_power):
     """Test SoundSource class."""
     with pytest.raises((ValueError, AssertionError)):
-        so.SoundSource(
+        geo.SoundSource(
             [0, 0, 0], [2, 0, 0], [0, 0, 2], directivity, sound_power)
 
 
@@ -82,7 +82,7 @@ def test__get_metrics():
     pos_G = [0, 0, 2]
     up_G = [0, 1, 0]
     view_G = [-0.707106781186548, 0, 0.707106781186548]
-    (azimuth_deg, elevation_deg) = so._get_metrics(
+    (azimuth_deg, elevation_deg) = geo._get_metrics(
         pos_G, view_G, up_G, target_pos_G)
     assert azimuth_deg == -120.96375653207352
     assert elevation_deg == 0

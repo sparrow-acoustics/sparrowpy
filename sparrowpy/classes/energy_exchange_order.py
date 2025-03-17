@@ -5,8 +5,9 @@ try:
 except ImportError:
     numba = None
     prange = range
+
 import numpy as np
-from . import geometry
+import sparrowpy as sp
 
 
 
@@ -54,7 +55,7 @@ def _add_directional(
     energy_0_directivity = np.zeros((n_patches, n_directions, n_bins))
     for i in prange(n_patches):
         wall_id_i = int(patch_to_wall_ids[i])
-        scattering_factor = geometry.get_scattering_data_source(
+        scattering_factor = sp.geometry.get_scattering_data_source(
             source_position, patches_center[i],
             sources, wall_id_i, scattering, scattering_index)
 

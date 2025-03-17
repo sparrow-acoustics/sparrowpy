@@ -4,8 +4,8 @@ Geometry and wall directivity functionality in the radiosity package.
 """
 import numpy as np
 import numpy.testing as npt
-import sparrowpy.geometry as geo
-from sparrowpy.sound_object import Receiver, SoundSource
+import sparrowpy.geometry.Polygon as geo
+from sparrowpy.geometry import Receiver, SoundSource
 
 
 def test_polygon_defaults():

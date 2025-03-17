@@ -99,7 +99,7 @@ def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
 
 
         ## initialize radiosity class
-        radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
+        radi = sp.radiosity_fast.RadiosityFast.from_polygon(walls, patch_size)
 
         source_brdf = pf.Coordinates(0, 0, 1, weights=1)
         receivers_brdf = pf.Coordinates(0, 0, 1, weights=1)
@@ -167,7 +167,7 @@ def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
     ])
 def test_reciprocity_s2p_p2r(src,rec,method="universal"):
     """Check if radiosity implementation has source-receiver reciprocity."""
-    wall = [sp.geometry.Polygon(
+    wall = [sp.Polygon.Polygon(
             [[0, -1, -1], [0, -1, 1],
             [0, 1, 1], [0, 1, -1]],
             [0, 0, 1], [1, 0, 0])]
@@ -182,11 +182,11 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
 
     for i in range(2):
         if i == 0:
-            src_ = sp.geometry.SoundSource(src[0],src[1], src[2])
-            rec_ = sp.geometry.Receiver(rec[0],rec[1], rec[2])
+            src_ = sp.Polygon.SoundSource(src[0],src[1], src[2])
+            rec_ = sp.Polygon.Receiver(rec[0],rec[1], rec[2])
         elif i == 1:
-            src_ = sp.geometry.SoundSource(rec[0],rec[1], rec[2])
-            rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
+            src_ = sp.Polygon.SoundSource(rec[0],rec[1], rec[2])
+            rec_ = sp.Polygon.Receiver(src[0],src[1], src[2])
 
         if method == "universal":
             e_s,_ = sp.radiosity_fast.source_energy._init_energy_universal(
@@ -237,7 +237,7 @@ def run_basicscene(scene, src_pos, freqs, algorithm, method):
     sc_rec = pf.Coordinates(0, 0, 1)
 
     ## initialize radiosity class
-    radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
+    radi = sp.radiosity_fast.RadiosityFast.from_polygon(walls, patch_size)
 
     data_scattering = pf.FrequencyData(
         np.ones((sc_src.csize,sc_rec.csize,freqs.size)), freqs)

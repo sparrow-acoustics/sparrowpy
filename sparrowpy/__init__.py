@@ -7,23 +7,24 @@ __email__ = ''
 __version__ = '0.1.0'
 
 
-from . import geometry
-from . import radiosity
-from . import sound_object
-from .radiosity_fast.radiosity_class import DRadiosityFast
-from . import testing
-from . import radiosity_fast
-from . import brdf
-from . import utils
+from .classesKang.RadiosityKang import RadiosityKang, Patches
+from .classesKang.DirectionalRadiosityKang import DirectionalRadiosityKang, PatchesDirectional
+from .classes.Radiosity import RadiosityFast
 
+from . import form_factor
+from . import geometry
+from . import brdf
+from . import testing
 
 __all__ = [
+    'RadiosityKang',
+    'Patches',
+    'DirectionalRadiosityKang',
+    'PatchesDirectional',
+    'RadiosityFast',
+    'RadiosityKang',
+    'form_factor',
     'geometry',
-    'radiosity',
-    'sound_object',
-    'DRadiosityFast',
-    'radiosity_fast',
-    'testing',
     'brdf',
-    'utils',
+    'testing',
 ]

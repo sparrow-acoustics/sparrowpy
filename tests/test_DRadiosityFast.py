@@ -8,7 +8,7 @@ import sparrowpy as sp
 
 
 def test_init(sample_walls):
-    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.RadiosityFast.from_polygon(sample_walls, 0.2)
     npt.assert_almost_equal(radiosity.patches_points.shape, (150, 4, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (150))
     npt.assert_almost_equal(radiosity.patches_center.shape, (150, 3))
@@ -17,7 +17,7 @@ def test_init(sample_walls):
 
 
 def test_check_visibility(sample_walls):
-    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.RadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity._visibility_matrix.shape, (150, 150))
     # npt.assert_array_equal(
@@ -29,16 +29,16 @@ def test_check_visibility(sample_walls):
 
 
 def test_check_visibility_wrapper(sample_walls):
-    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.RadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
-    visibility_matrix = sp.radiosity_fast.geometry.check_visibility(
+    visibility_matrix = sp.geometry.check_visibility(
         radiosity.patches_center, radiosity.patches_normal,
         radiosity.patches_points)
     npt.assert_almost_equal(radiosity._visibility_matrix, visibility_matrix)
 
 
 def test_compute_form_factors(sample_walls):
-    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.RadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
     radiosity.bake_geometry(ff_method='universal')
@@ -68,7 +68,7 @@ def test_form_factors_directivity_for_diffuse(
     wall_receiver = sample_walls[walls[1]]
     walls = [wall_source, wall_receiver]
 
-    radiosity = sp.DRadiosityFast.from_polygon(
+    radiosity = sp.RadiosityFast.from_polygon(
         walls, patch_size)
     data, sources, receivers = sofa_data_diffuse
     radiosity.set_wall_scattering(
@@ -93,7 +93,7 @@ def test_form_factors_directivity_for_diffuse(
 
 
 def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
-    radiosity = sp.DRadiosityFast.from_polygon(
+    radiosity = sp.RadiosityFast.from_polygon(
         sample_walls, 0.2)
     (data, sources, receivers) = sofa_data_diffuse
     radiosity.set_wall_scattering(np.arange(6), data, sources, receivers)
@@ -113,7 +113,7 @@ def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
 
 
 def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
-    radiosity = sp.DRadiosityFast.from_polygon(
+    radiosity = sp.RadiosityFast.from_polygon(
         sample_walls, 0.2)
     (data, sources, receivers) = sofa_data_diffuse
     radiosity.set_wall_scattering([0, 1, 2], data, sources, receivers)
@@ -136,7 +136,7 @@ def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
 
 
 def test_set_wall_absorption(sample_walls):
-    radiosity = sp.DRadiosityFast.from_polygon(
+    radiosity = sp.RadiosityFast.from_polygon(
         sample_walls, 0.2)
     radiosity.set_wall_absorption(
         np.arange(6), pf.FrequencyData([0.1, 0.2], [500, 1000]))
@@ -145,7 +145,7 @@ def test_set_wall_absorption(sample_walls):
 
 
 def test_set_wall_absorption_different(sample_walls):
-    radiosity = sp.DRadiosityFast.from_polygon(
+    radiosity = sp.RadiosityFast.from_polygon(
         sample_walls, 0.2)
     radiosity.set_wall_absorption(
         [0, 1, 2], pf.FrequencyData([0.1, 0.1], [500, 1000]))
@@ -158,7 +158,7 @@ def test_set_wall_absorption_different(sample_walls):
 
 
 def test_set_air_attenuation(sample_walls):
-    radiosity = sp.DRadiosityFast.from_polygon(
+    radiosity = sp.RadiosityFast.from_polygon(
         sample_walls, 0.2)
     radiosity.set_air_attenuation(pf.FrequencyData([0.1, 0.2], [500, 1000]))
     npt.assert_array_equal(radiosity._air_attenuation, [0.1, 0.2])

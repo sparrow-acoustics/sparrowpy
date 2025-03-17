@@ -1,16 +1,16 @@
 """Test radiosity module."""
 import numpy as np
 import numpy.testing as npt
-import sparrowpy.geometry as geo
-import sparrowpy.radiosity as radiosity
-from sparrowpy.sound_object import SoundSource
+import sparrowpy.geometry.Polygon as geo
+from sparrowpy import RadiosityKang
+from sparrowpy.geometry import SoundSource
 
 
 def test_patches():
     """Test Patches class."""
     poly = geo.Polygon(
         [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]], [0, 1, 0], [0, 0, 1])
-    patches = radiosity.Patches(poly, 0.1, [], 0)
+    patches = RadiosityKang.Patches(poly, 0.1, [], 0)
     assert len(patches.patches) == 100
     for patch in patches.patches:
         # check if area is always same
@@ -25,7 +25,7 @@ def test_patches_dim2():
     """Test Patches class with 2D polygon."""
     poly = geo.Polygon(
         [[0, 0, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1]], [0, 1, 0], [1, 0, 0])
-    patches = radiosity.Patches(poly, 0.1, [], 0)
+    patches = RadiosityKang.Patches(poly, 0.1, [], 0)
     assert len(patches.patches) == 100
     for patch in patches.patches:
         # check if area is always same
@@ -40,10 +40,10 @@ def test_form_factor():
     """Test form_factor function."""
     poly1 = geo.Polygon(
         [[0, 0, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1]], [0, 1, 0], [1, 0, 0])
-    patches1 = radiosity.Patches(poly1, 0.2, [1], 0)
+    patches1 = RadiosityKang.Patches(poly1, 0.2, [1], 0)
     poly2 = geo.Polygon(
         [[2, 0, 0], [2, 1, 0], [2, 1, 1], [2, 0, 1]], [2, 1, 0], [1, 0, 0])
-    patches2 = radiosity.Patches(poly2, 0.2, [0], 1)
+    patches2 = RadiosityKang.Patches(poly2, 0.2, [0], 1)
     patches1.calculate_form_factor([patches1, patches2])
 
 
@@ -62,9 +62,9 @@ def test_calculate_form_factors():
     B_wall = geo.Polygon(
         [[0, Y, 0], [X, Y, 0], [X, Y, Z], [0, Y, Z]], [1, 0, 0], [0, -1, 0])
 
-    ground_patches = radiosity.Patches(ground, patch_size, [1, 2], 0)
-    A_wall_patches = radiosity.Patches(A_wall, patch_size, [0, 2], 1)
-    B_wall_patches = radiosity.Patches(B_wall, patch_size, [0, 1], 2)
+    ground_patches = RadiosityKang.Patches(ground, patch_size, [1, 2], 0)
+    A_wall_patches = RadiosityKang.Patches(A_wall, patch_size, [0, 2], 1)
+    B_wall_patches = RadiosityKang.Patches(B_wall, patch_size, [0, 1], 2)
 
     patches_list = [ground_patches, A_wall_patches, B_wall_patches]
 
@@ -79,7 +79,7 @@ def test_init_energy_matrix():
     patch_size = 2
     ground = geo.Polygon(
         [[0, 0, 0], [X, 0, 0], [X, Y, 0], [0, Y, 0]], [1, 0, 0], [0, 0, 1])
-    ground_patches = radiosity.Patches(ground, patch_size, [1, 2], 0)
+    ground_patches = RadiosityKang.Patches(ground, patch_size, [1, 2], 0)
     max_order_k = 2
     ir_length_s = 1
     sampling_rate = 1000

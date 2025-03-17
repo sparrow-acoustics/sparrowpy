@@ -1,6 +1,7 @@
 """Analytical solution for form factors for testing."""
 import numpy as np
 
+
 def perpendicular_patch_coincidentline(w, h, length):
     """
     Returns the exact form factor solution of two rectangular patches,

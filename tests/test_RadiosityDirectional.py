@@ -7,8 +7,8 @@ import numpy.testing as npt
 import pyfar as pf
 import pytest
 import sparrowpy.geometry as geo
-import sparrowpy.radiosity as radiosity
-from sparrowpy.sound_object import Receiver, SoundSource
+import sparrowpy as sp
+from sparrowpy.geometry import Receiver, SoundSource
 
 
 create_reference_files = False
@@ -36,7 +36,7 @@ def test_radiosity_directional_reference(max_order_k):
     source = SoundSource([10, 6, 1], [0, 1, 0], [0, 0, 1])
 
     ## new approach
-    radi = radiosity.DirectionalRadiosity(
+    radi = sp.DirectionalRadiosityKang(
         [ground, A_wall, B_wall], patch_size, max_order_k, ir_length_s,
         path_sofa, speed_of_sound=343, sampling_rate=sampling_rate)
 
@@ -88,7 +88,7 @@ def test_radiosity_directional_reference_read_write(max_order_k, tmpdir):
     source = SoundSource([10, 6, 1], [0, 1, 0], [0, 0, 1])
 
     ## new approach
-    radi = radiosity.DirectionalRadiosity(
+    radi = sp.DirectionalRadiosityKang(
         [ground, A_wall, B_wall], patch_size, max_order_k, ir_length_s,
         path_sofa, speed_of_sound=343, sampling_rate=sampling_rate)
 
@@ -98,7 +98,7 @@ def test_radiosity_directional_reference_read_write(max_order_k, tmpdir):
 
     radi.run(source)
     radi.write(os.path.join(tmpdir, 'radiosity.far'))
-    radi = radiosity.DirectionalRadiosity.from_read(
+    radi = sp.DirectionalRadiosityKang.from_read(
         os.path.join(tmpdir, 'radiosity.far'))
 
     receiver = Receiver([20, 2, 1], [0, 1, 0], [0, 0, 1])
@@ -126,7 +126,7 @@ def test_init_energy_exchange(sample_walls, i_wall):
     """Test vs references for energy_exchange."""
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ihta.E_sec_2.sofa')
-    patches = radiosity.PatchesDirectional.from_sofa(
+    patches = sp.PatchesDirectional.from_sofa(
         sample_walls[i_wall], 0.2, [], 0, path_sofa)
     max_order_k = 3
     ir_length_s = 5
@@ -162,7 +162,7 @@ def test_init_energy_exchange_directional_omni(
         f'reference_matrix_directional_patch_size{patch_size}.far')
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ihta.E_sec_2.sofa')
-    patches = radiosity.PatchesDirectional.from_sofa(
+    patches = sp.PatchesDirectional.from_sofa(
         sample_walls[i_wall], patch_size, [], 0, path_sofa)
     patches.directivity_data.freq = np.ones_like(
         patches.directivity_data.freq)
@@ -206,9 +206,9 @@ def test_directional_specular_reflections(
         f'reference_specular_reflections_{patch_size}.far')
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data', 'specular_gaussian5.sofa')
-    patch_1 = radiosity.PatchesDirectional.from_sofa(
+    patch_1 = sp.PatchesDirectional.from_sofa(
         wall_source, patch_size, [1], 0, path_sofa)
-    patch_2 = radiosity.PatchesDirectional.from_sofa(
+    patch_2 = sp.PatchesDirectional.from_sofa(
         wall_receiver, patch_size, [0], 1, path_sofa)
     source = SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1])
     patches = [patch_1, patch_2]
@@ -251,12 +251,12 @@ def test_PatchDirectional_to_from_dict(sample_walls):
     wall_source = sample_walls[perpendicular_walls[0]]
     path_sofa = os.path.join(
         os.path.dirname(__file__), 'test_data', 'specular_gaussian5.sofa')
-    patch_1 = radiosity.PatchesDirectional.from_sofa(
+    patch_1 = sp.PatchesDirectional.from_sofa(
         wall_source, patch_size, [1], 0, path_sofa)
     patch_1.init_energy_exchange(
         1, 1, SoundSource([0.5, 0.5, 0.5], [0, 1, 0], [0, 0, 1]),
         sampling_rate, speed_of_sound)
-    reconstructed_patch = radiosity.PatchesDirectional.from_dict(
+    reconstructed_patch = sp.PatchesDirectional.from_dict(
         patch_1.to_dict())
     assert reconstructed_patch.directivity_data == patch_1.directivity_data
     assert all(
@@ -305,7 +305,7 @@ def test_RadiosityDirectional_to_from_dict():
     source = SoundSource([10, 6, 1], [0, 1, 0], [0, 0, 1])
 
     # new approach
-    radi = radiosity.DirectionalRadiosity(
+    radi = sp.DirectionalRadiosityKang(
         [ground, A_wall, B_wall], patch_size, max_order_k, ir_length_s,
         path_sofa, speed_of_sound=343, sampling_rate=sampling_rate)
 
@@ -315,10 +315,10 @@ def test_RadiosityDirectional_to_from_dict():
 
     radi.run(source)
     radi_dict = radi.to_dict()
-    radi_reconstructed = radiosity.Radiosity.from_dict(radi_dict)
+    radi_reconstructed = sp.RadiosityKang.from_dict(radi_dict)
 
     # test
-    assert isinstance(radi_reconstructed, radiosity.Radiosity)
+    assert isinstance(radi_reconstructed, sp.RadiosityKang)
     assert radi_reconstructed.patch_size == radi.patch_size
     assert radi_reconstructed.max_order_k == radi.max_order_k
     assert radi_reconstructed.ir_length_s == radi.ir_length_s
@@ -368,7 +368,7 @@ def test_RadiosityDirectional_read_write(tmpdir):
     source = SoundSource([10, 6, 1], [0, 1, 0], [0, 0, 1])
 
     # new approach
-    radi = radiosity.DirectionalRadiosity(
+    radi = sp.DirectionalRadiosityKang(
         [ground, A_wall, B_wall], patch_size, max_order_k, ir_length_s,
         path_sofa, speed_of_sound=343, sampling_rate=sampling_rate)
 
@@ -379,10 +379,10 @@ def test_RadiosityDirectional_read_write(tmpdir):
     radi.run(source)
     json_path = os.path.join(tmpdir, 'radi.json')
     radi.write(json_path)
-    radi_reconstructed = radiosity.DirectionalRadiosity.from_read(json_path)
+    radi_reconstructed = sp.DirectionalRadiosityKang.from_read(json_path)
 
     # test
-    assert isinstance(radi_reconstructed, radiosity.DirectionalRadiosity)
+    assert isinstance(radi_reconstructed, sp.DirectionalRadiosityKang)
     assert radi_reconstructed.patch_size == radi.patch_size
     assert radi_reconstructed.max_order_k == radi.max_order_k
     assert radi_reconstructed.ir_length_s == radi.ir_length_s

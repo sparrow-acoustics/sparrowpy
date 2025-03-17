@@ -1,11 +1,12 @@
 """Module for the radiosity simulation."""
 import numpy as np
 import pyfar as pf
-from . import form_factor, source_energy, receiver_energy, geometry
-from . import energy_exchange_order as ee_order
+from . import source_energy, receiver_energy
+# from ..radiosity_fast import energy_exchange_order as ee_order
+import sparrowpy as sp
 
 
-class DRadiosityFast():
+class RadiosityFast():
     """Radiosity object for directional scattering coefficients."""
 
     _walls_points: np.ndarray
@@ -86,7 +87,7 @@ class DRadiosityFast():
         # create patches
         (
             patches_points, patches_normal,
-            n_patches, patch_to_wall_ids) = geometry.process_patches(
+            n_patches, patch_to_wall_ids) = sp.geometry.process_patches(
             walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
@@ -106,7 +107,7 @@ class DRadiosityFast():
 
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry.check_visibility(
+        self._visibility_matrix = sp.geometry.check_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
@@ -122,7 +123,7 @@ class DRadiosityFast():
         self._visible_patches = visible_patches
 
         if ff_method == 'universal':
-            self._form_factors = form_factor.universal(
+            self._form_factors = sp.form_factor.universal(
                 self.patches_points, self.patches_normal,
                 self.patches_area, self._visible_patches)
         else:
@@ -264,7 +265,7 @@ class DRadiosityFast():
             # access histograms with correct scattering weighting
             receivers_array = np.array([s.cartesian for s in self._receivers])
 
-            receiver_idx = geometry.get_scattering_data_receiver_index(
+            receiver_idx = sp.geometry.get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
                 self._patch_to_wall_ids)
 
@@ -402,7 +403,7 @@ class DRadiosityFast():
     @property
     def walls_area(self):
         """Return the area of the walls."""
-        return geometry._calculate_area(self._walls_points)
+        return sp.geometry._calculate_area(self._walls_points)
 
     @property
     def walls_points(self):
@@ -417,7 +418,7 @@ class DRadiosityFast():
     @property
     def walls_center(self):
         """Return the center of the walls."""
-        return geometry._calculate_center(self._walls_points)
+        return sp.geometry._calculate_center(self._walls_points)
 
     @property
     def walls_up_vector(self):
@@ -427,17 +428,17 @@ class DRadiosityFast():
     @property
     def patches_area(self):
         """Return the area of the patches."""
-        return geometry._calculate_area(self._patches_points)
+        return sp.geometry._calculate_area(self._patches_points)
 
     @property
     def patches_center(self):
         """Return the center of the patches."""
-        return geometry._calculate_center(self._patches_points)
+        return sp.geometry._calculate_center(self._patches_points)
 
     @property
     def patches_size(self):
         """Return the size of the patches."""
-        return geometry._calculate_size(self._patches_points)
+        return sp.geometry._calculate_size(self._patches_points)
 
     @property
     def patches_points(self):
