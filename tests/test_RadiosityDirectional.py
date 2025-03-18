@@ -379,7 +379,8 @@ def test_RadiosityDirectional_read_write(tmpdir):
     radi.run(source)
     json_path = os.path.join(tmpdir, 'radi.json')
     radi.write(json_path)
-    radi_reconstructed = radiosity.DirectionalRadiosityKang.from_read(json_path)
+    radi_reconstructed = radiosity.DirectionalRadiosityKang.from_read(
+        json_path)
 
     # test
     assert isinstance(radi_reconstructed, radiosity.DirectionalRadiosityKang)
