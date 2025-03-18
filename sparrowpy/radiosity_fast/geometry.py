@@ -1,10 +1,14 @@
 """Geometry functions for the radiosity fast solver."""
-import numba
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
 import numpy as np
 import sparrowpy.radiosity_fast.visibility_helpers as vh
 
 
-@numba.njit()
 def get_scattering_data_receiver_index(
         pos_i:np.ndarray, pos_j:np.ndarray,
         receivers:np.ndarray, wall_id_i:np.ndarray,
@@ -44,7 +48,6 @@ def get_scattering_data_receiver_index(
 
 
 
-@numba.njit()
 def get_scattering_data(
         pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,
         sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
@@ -90,7 +93,6 @@ def get_scattering_data(
 
 
 
-@numba.njit()
 def get_scattering_data_source(
         pos_h:np.ndarray, pos_i:np.ndarray,
         sources:np.ndarray, wall_id_i:np.ndarray,
@@ -125,8 +127,6 @@ def get_scattering_data_source(
     return scattering[scattering_index[wall_id_i], source_idx]
 
 
-
-@numba.njit(parallel=True)
 def check_visibility(
         patches_center:np.ndarray,
         surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
@@ -158,7 +158,7 @@ def check_visibility(
                 indexes.append((i_source, i_receiver))
                 visibility_matrix[i_source,i_receiver]=True
     indexes = np.array(indexes)
-    for i in numba.prange(indexes.shape[0]):
+    for i in prange(indexes.shape[0]):
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
 
@@ -176,7 +176,7 @@ def check_visibility(
 
     return visibility_matrix
 
-@numba.njit()
+
 def _create_patches(polygon_points:np.ndarray, max_size):
     """Create patches from a polygon."""
     size = np.empty(polygon_points.shape[1])
@@ -217,22 +217,20 @@ def _create_patches(polygon_points:np.ndarray, max_size):
     return patches_points
 
 
-@numba.njit()
 def _calculate_center(points):
     return np.sum(points, axis=-2) / points.shape[-2]
 
-@numba.njit()
+
 def _calculate_size(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
     vec2 = points[..., 1, :]-points[..., 2, :]
     return np.abs(vec1-vec2)
 
-@numba.njit()
-def _calculate_area(points):
 
+def _calculate_area(points):
     area = np.zeros(points.shape[0])
 
-    for i in numba.prange(points.shape[0]):
+    for i in prange(points.shape[0]):
         for tri in range(points.shape[1]-2):
             area[i] +=  .5 * np.linalg.norm(
                 np.cross(
@@ -243,7 +241,7 @@ def _calculate_area(points):
 
     return area
 
-@numba.njit()
+
 def process_patches(
         polygon_points_array: np.ndarray,
         walls_normal: np.ndarray,
@@ -296,7 +294,6 @@ def process_patches(
     return (patches_points, patches_normal, n_patches, patch_to_wall_ids)
 
 
-@numba.njit()
 def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     """Calculate the total number of patches.
 
@@ -351,3 +348,19 @@ def calculate_normals(points: np.ndarray):
         normals[i]/=np.linalg.norm(normals[i])
 
     return normals
+
+
+if numba is not None:
+    get_scattering_data_receiver_index = numba.njit()(
+        get_scattering_data_receiver_index)
+    total_number_of_patches = numba.njit()(total_number_of_patches)
+    process_patches = numba.njit()(process_patches)
+    _calculate_area = numba.njit()(_calculate_area)
+    _calculate_center = numba.njit()(_calculate_center)
+    _calculate_size = numba.njit()(_calculate_size)
+    _create_patches = numba.njit()(_create_patches)
+    get_scattering_data = numba.njit()(get_scattering_data)
+    get_scattering_data_source = numba.njit()(get_scattering_data_source)
+    check_visibility = numba.njit(parallel=True)(check_visibility)
+    calculate_normals = numba.njit()(calculate_normals)
+

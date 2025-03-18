@@ -1,7 +1,8 @@
 import numpy.testing as npt
 import pytest
-import numpy as np
-import sparrowpy.utils.blender as bh
+bpy = pytest.importorskip("bpy")
+import sparrowpy.utils.blender as bh  # noqa: E402
+import numpy as np # noqa: E402
 
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube_simple.blend","./tests/test_data/cube.stl"])

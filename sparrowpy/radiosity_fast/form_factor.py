@@ -1,12 +1,16 @@
 """Form factor calculation for radiosity."""
-import numba
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
 import numpy as np
 from . import geometry
 from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import (
                                                             calc_form_factor )
 
 
-@numba.njit(parallel=True)
 def kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
         patches_size:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
@@ -32,7 +36,7 @@ def kang(
     """
     n_patches = patches_center.shape[0]
     form_factors = np.zeros((n_patches, n_patches))
-    for i in numba.prange(visible_patches.shape[0]):
+    for i in prange(visible_patches.shape[0]):
         i_source = int(visible_patches[i, 0])
         i_receiver = int(visible_patches[i, 1])
         source_center = patches_center[i_source]
@@ -129,7 +133,10 @@ def kang(
                 dm_prime = source_center[0]
                 dn_prime = source_center[2]
                 dd_l = patches_size[i_source, 1]
-                dd_n = patches_size[i_source, 2]
+                if patches_size.shape[1] > 2:
+                    dd_n = patches_size[i_source, 2]
+                else:
+                    dd_n = patches_size[i_source, 1]
             elif np.abs(receiver_normal[1]) > 1e-5:
                 dl = receiver_center[0]
                 dm = receiver_center[1]
@@ -138,7 +145,10 @@ def kang(
                 dm_prime = source_center[1]
                 dn_prime = source_center[2]
                 dd_l = patches_size[i_source, 0]
-                dd_n = patches_size[i_source, 2]
+                if patches_size.shape[1] > 2:
+                    dd_n = patches_size[i_source, 2]
+                else:
+                    dd_n = patches_size[i_source, 1]
             elif np.abs(receiver_normal[2]) > 1e-5:
                 dl = receiver_center[1]
                 dm = receiver_center[2]
@@ -160,7 +170,7 @@ def kang(
         form_factors[i_source, i_receiver] = ff
     return form_factors
 
-@numba.njit(parallel=True)
+
 def universal(patches_points: np.ndarray, patches_normals: np.ndarray,
               patches_areas: np.ndarray, visible_patches:np.ndarray):
     """Calculate the form factors between patches (universal method).
@@ -192,7 +202,7 @@ def universal(patches_points: np.ndarray, patches_normals: np.ndarray,
     n_patches = patches_areas.shape[0]
     form_factors = np.zeros((n_patches, n_patches))
 
-    for visID in numba.prange(visible_patches.shape[0]):
+    for visID in prange(visible_patches.shape[0]):
         i = int(visible_patches[visID, 0])
         j = int(visible_patches[visID, 1])
         form_factors[i,j] = calc_form_factor(
@@ -201,7 +211,7 @@ def universal(patches_points: np.ndarray, patches_normals: np.ndarray,
 
     return form_factors
 
-@numba.njit(parallel=True)
+
 def _form_factors_with_directivity(
         visibility_matrix, form_factors, n_bins, patches_center,
         air_attenuation,
@@ -212,7 +222,7 @@ def _form_factors_with_directivity(
     form_factors_tilde = np.zeros((n_patches, n_patches, n_patches, n_bins))
     # loop over previous patches, current and next patch
 
-    for ii in numba.prange(n_patches**3):
+    for ii in prange(n_patches**3):
         h = ii % n_patches
         i = int(ii/n_patches) % n_patches
         j = int(ii/n_patches**2) % n_patches
@@ -248,7 +258,6 @@ def _form_factors_with_directivity(
     return form_factors_tilde
 
 
-@numba.njit(parallel=True)
 def _form_factors_with_directivity_dim(
         visibility_matrix, form_factors, n_bins, patches_center,
         air_attenuation,
@@ -260,7 +269,7 @@ def _form_factors_with_directivity_dim(
     form_factors_tilde = np.zeros((n_patches, n_patches, n_directions, n_bins))
     # loop over previous patches, current and next patch
 
-    for ii in numba.prange(n_patches**2):
+    for ii in prange(n_patches**2):
         i = ii % n_patches
         j = int(ii/n_patches) % n_patches
         visible_ij = visibility_matrix[
@@ -291,3 +300,12 @@ def _form_factors_with_directivity_dim(
                     i, j, :, :] * (1-absorption[source_wall_idx])
 
     return form_factors_tilde
+
+
+if numba is not None:
+    _form_factors_with_directivity_dim = numba.njit(parallel=True)(
+        _form_factors_with_directivity_dim)
+    kang = numba.njit(parallel=True)(kang)
+    universal = numba.njit(parallel=True)(universal)
+    _form_factors_with_directivity = numba.njit(parallel=True)(
+        _form_factors_with_directivity)

@@ -2,8 +2,12 @@
 import sys
 import os
 from pathlib import Path
-import bpy
-import bmesh # type: ignore
+try:
+    import bpy
+    import bmesh
+except ImportError:
+    bpy = None
+    bmesh = None
 import numpy as np
 
 class DotDict(dict):
@@ -57,6 +61,10 @@ def read_geometry_file(blend_file: Path,
             patch-to-wall mapping ["wall_ID"]
 
     """
+    if bpy is None:
+        raise ImportError(
+            "Blender is not installed. Please install "
+            "Blender to use this function.")
     if os.path.splitext(blend_file)[-1] == ".blend":
         bpy.ops.wm.open_mainfile(filepath=str(blend_file))
     elif os.path.splitext(blend_file)[-1] ==".stl":
@@ -126,9 +134,14 @@ def read_geometry_file(blend_file: Path,
 
 def ensure_object_mode():
     """Ensure Blender is in Object Mode."""
+    if bpy is None:
+        raise ImportError(
+            "Blender is not installed. Please install "
+            "Blender to use this function.")
     if bpy.context.object:
         if bpy.context.object.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
+
 
 def generate_connectivity_wall(mesh: bmesh):
     """Summarize characteristics of polygons in a given mesh.
@@ -157,6 +170,10 @@ def generate_connectivity_wall(mesh: bmesh):
             "material": material list
 
     """
+    if bmesh is None:
+        raise ImportError(
+            "Blender is not installed. Please install "
+            "Blender to use this function.")
     out_mesh = {"verts": np.array([v.co for v in mesh.verts]),
                 "conn":[],
                 "normal":np.array([]),
