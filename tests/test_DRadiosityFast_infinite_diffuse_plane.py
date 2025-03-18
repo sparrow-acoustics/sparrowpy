@@ -56,7 +56,7 @@ def run_energy_diff_specular_ratio(
             [1, 0, 0], [0, 0, 1])
 
     #simulation parameters
-    radi = sp.radiosity_fast.DRadiosityFast.from_polygon(
+    radi = sp.radiosity_fast.DirectionalRadiosityFast.from_polygon(
         [plane], patch_size)
 
     brdf_sources = pf.Coordinates(0, 0, 1, weights=1)
