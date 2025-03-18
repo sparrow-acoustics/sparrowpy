@@ -38,7 +38,7 @@ or
     pip install sparrowpy
     pip install numba
 
-you can also use blender for geometry import. Note that blender has strong requirements on the python version, see [pypi](https://pypi.org/project/bpy/). You can install it via pip
+Geometry import via blender or STL files will be supported in a future release, an install of the Blender API. Note that blender has strong requirements on the python version, see [pypi](https://pypi.org/project/bpy/). You can install it via pip
 
     pip install bpy
 
@@ -56,4 +56,4 @@ If the installation fails, please check out the [help section](https://pyfar-gal
 Contributing
 ============
 
-Check out the [contributing guidelines](https://pyfar.readthedocs.io/en/stable/contributing.html) if you want to become part of pyfar.
+Check out the [contributing guidelines](https://sparrowpy.readthedocs.io/en/latest/contributing.html) if you want to become part of sparrowpy.
