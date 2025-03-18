@@ -1,5 +1,5 @@
 <h1 align="center">
-<img src="https://github.com/pyfar/gallery/raw/main/docs/resources/logos/pyfar_logos_fixed_size_sparrowpy.png" width="300">
+<img src="https://github.com/sparrow-acoustics/sparrowpy/raw/main/docs/_static/logo.png" width="300">
 </h1><br>
 
 
@@ -29,7 +29,7 @@ Use pip to install sparrowpy
 
     pip install sparrowpy
 
-(Requires Python >3.9)
+(Requires Python >= 3.9)
 
 if numba is installed the code will be precompiled and will run faster. We strongly recommend to use numba to accelerate the simulations significantly
 
