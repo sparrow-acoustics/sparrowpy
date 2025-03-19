@@ -326,7 +326,6 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
     return patch_nums[x_idx]*patch_nums[y_idx]
 
-@numba.njit()
 def calculate_normals(points: np.ndarray):
     """Calculate normal vectors of planes defined by a list of vertices.
 
