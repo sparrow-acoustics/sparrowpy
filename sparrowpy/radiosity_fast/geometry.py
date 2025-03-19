@@ -326,6 +326,28 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
     return patch_nums[x_idx]*patch_nums[y_idx]
 
+def calculate_normals(points: np.ndarray):
+    """Calculate normal vectors of planes defined by a list of vertices.
+
+    Parameters
+    ----------
+    points: np.ndarray
+        array of n polygonal faces defined by m vertices.
+
+    Returns
+    -------
+    normals: np.ndarray
+        list of normals in 3d for each of the polygons in points.
+    """
+
+    normals = np.empty((points.shape[0],3))
+
+    for i in numba.prange(points.shape[0]):
+        normals[i]=np.cross(points[i][1]-points[i][0],points[i][2]-points[i][0])
+        normals[i]/=np.linalg.norm(normals[i])
+
+    return normals
+
 
 if numba is not None:
     get_scattering_data_receiver_index = numba.njit()(
@@ -339,4 +361,5 @@ if numba is not None:
     get_scattering_data = numba.njit()(get_scattering_data)
     get_scattering_data_source = numba.njit()(get_scattering_data_source)
     check_visibility = numba.njit(parallel=True)(check_visibility)
+    calculate_normals = numba.njit()(calculate_normals)
 
