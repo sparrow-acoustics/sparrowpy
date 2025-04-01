@@ -3,11 +3,16 @@ import matplotlib as mpl
 import numpy as np
 import pyfar as pf
 import sofar as sf
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(x):
+        """Dummy tqdm function."""
+        return x
 from sparrowpy.geometry import Polygon, SoundSource
 
 
-class Patches(Polygon):
+class PatchesKang(Polygon):
     """Class representing patches of a polygon."""
 
     patches: list[Polygon]
@@ -498,7 +503,7 @@ class Patches(Polygon):
         return energy_response
 
 
-class PatchesDirectional(Patches):
+class PatchesDirectionalKang(PatchesKang):
     """Class representing patches with directional scattering behaviour."""
 
     directivity_data: np.ndarray
@@ -545,7 +550,7 @@ class PatchesDirectional(Patches):
             absorption = np.zeros_like(data.frequencies)+0.1
         if sound_attenuation_factor is None:
             sound_attenuation_factor = np.zeros_like(data.frequencies)
-        Patches.__init__(
+        PatchesKang.__init__(
             self, polygon, max_size, other_wall_ids, wall_id,
             scattering=np.ones_like(data.frequencies),
             absorption=absorption,
@@ -587,7 +592,7 @@ class PatchesDirectional(Patches):
     def to_dict(self) -> dict:
         """Convert this object to dictionary. Used for read write."""
         return {
-            **Patches.to_dict(self),
+            **PatchesKang.to_dict(self),
             'directivity_data': self.directivity_data.freq,
             'directivity_data_frequencies': self.directivity_data.frequencies,
             'directivity_sources': self.directivity_sources.cartesian,
@@ -646,7 +651,7 @@ class PatchesDirectional(Patches):
             speed of sound in m/s.
 
         """
-        Patches.init_energy_exchange(
+        PatchesKang.init_energy_exchange(
             self, max_order_k, ir_length_s, source, sampling_rate,
             speed_of_sound=speed_of_sound)
         test = self.E_matrix.copy()
@@ -915,7 +920,7 @@ def _calc_incident_direction(position, normal, up_vector, target_position):
         azimuth, elevation, 1)
 
 
-class Radiosity():
+class RadiosityKang():
     """Radiosity object simulation."""
 
     speed_of_sound: float
@@ -923,7 +928,7 @@ class Radiosity():
     sampling_rate: int
     patch_size: float
     ir_length_s: float
-    patch_list: list[Patches]
+    patch_list: list[PatchesKang]
 
     def __init__(
             self, walls, patch_size, max_order_k, ir_length_s,
@@ -962,7 +967,7 @@ class Radiosity():
         n_patches = len(walls)
         for i, wall in enumerate(walls):
             index_list = [j for j in range(n_patches) if j != i]
-            patches = wall if isinstance(wall, Patches) else Patches(
+            patches = wall if isinstance(wall, PatchesKang) else PatchesKang(
                 wall, self.patch_size, index_list, i,absorption=absorption)
             patch_list.append(patches)
 
@@ -990,7 +995,7 @@ class Radiosity():
     def from_dict(cls, input_dict: dict):
         """Create an object from a dictionary. Used for read write."""
         patch_list = [
-            Patches.from_dict(patch) for patch in input_dict['patches']]
+            PatchesKang.from_dict(patch) for patch in input_dict['patches']]
         source = None
         if input_dict is not None:
             source = SoundSource(
@@ -1057,13 +1062,13 @@ class Radiosity():
         return cls.from_dict(data)
 
 
-class DirectionalRadiosity():
+class DirectionalRadiosityKang():
     """Radiosity object for directional scattering coefficients."""
 
     def __init__(
             self, polygon_list, patch_size, max_order_k, ir_length_s,
             sofa_path, speed_of_sound=346.18, sampling_rate=1000, source=None):
-        """Create a Radiosoty object for directional scattering coefficents.
+        """Create a Radiosity object for directional scattering coefficients.
 
         Parameters
         ----------
@@ -1099,8 +1104,8 @@ class DirectionalRadiosity():
             index_list = [j for j in range(n_points) if j != i]
             path = sofa_path[i] if isinstance(sofa_path, list) else sofa_path
             patches = polygon_list[i] if isinstance(
-                polygon_list[i], PatchesDirectional) else \
-                    PatchesDirectional.from_sofa(
+                polygon_list[i], PatchesDirectionalKang) else \
+                    PatchesDirectionalKang.from_sofa(
                     polygon_list[i], self.patch_size, index_list, i, path)
             patch_list.append(patches)
 
@@ -1144,7 +1149,7 @@ class DirectionalRadiosity():
     def from_dict(cls, input_dict: dict):
         """Create an object from a dictionary. Used for read write."""
         patch_list = [
-            PatchesDirectional.from_dict(patch) for patch in input_dict[
+            PatchesDirectionalKang.from_dict(patch) for patch in input_dict[
                 'patches']]
         source = None
         if input_dict['source_position'] is not None:

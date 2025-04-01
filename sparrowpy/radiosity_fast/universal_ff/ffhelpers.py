@@ -1,6 +1,12 @@
 """universal form factor helper methods."""
 import numpy as np
-import numba
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
+
 
 ###################################################
 # integration
@@ -41,7 +47,7 @@ def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     return b
 
-@numba.njit()
+
 def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     """Integrate a polynomial curve.
 
@@ -72,7 +78,6 @@ def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     return out
 
 ################# surface areas
-@numba.njit()
 def polygon_area(pts: np.ndarray) -> float:
     """Calculate the area of a convex n-sided polygon.
 
@@ -95,7 +100,7 @@ def polygon_area(pts: np.ndarray) -> float:
 
     return area
 
-@numba.njit()
+
 def area_under_curve(ps: np.ndarray, order=2) -> float:
     """Calculate the area under a polynomial curve.
 
@@ -170,7 +175,6 @@ def pascal_array(order: int):
 ####################################################
 # sampling
 ################# surface
-@numba.njit()
 def sample_random(el: np.ndarray, npoints=100):
     """Randomly sample points on the surface of a patch.
 
@@ -214,7 +218,7 @@ def sample_random(el: np.ndarray, npoints=100):
 
     return ptlist
 
-@numba.njit()
+
 def sample_regular(el: np.ndarray, npoints=10):
     """Sample points on the surface of a patch using a regular distribution.
 
@@ -283,14 +287,13 @@ def sample_regular(el: np.ndarray, npoints=10):
 
     out = np.empty((len(ptlist), len(ptlist[0])))
 
-    for i in numba.prange(len(ptlist)):
-        for j in numba.prange(len(ptlist[0])):
+    for i in prange(len(ptlist)):
+        for j in prange(len(ptlist[0])):
             out[i][j] = ptlist[i][j]
 
     return out
 
 ################# boundary
-@numba.njit()
 def sample_border(el: np.ndarray, npoints=3):
     """Sample points on the boundary of a patch at fractional intervals.
 
@@ -339,7 +342,7 @@ def sample_border(el: np.ndarray, npoints=3):
 
 ####################################################
 # geometry
-@numba.njit()
+
 def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
     """Compute the inner product between a matrix and a vector to please njit.
 
@@ -359,12 +362,12 @@ def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
     """
     out = np.empty(matrix.shape[0])
 
-    for i in numba.prange(matrix.shape[0]):
+    for i in prange(matrix.shape[0]):
         out[i] = np.dot(matrix[i],vector)
 
     return out
 
-@numba.njit()
+
 def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     """Compute a rotation matrix from a given input and output directions.
 
@@ -393,7 +396,7 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     #check if all the vector entries coincide
     counter = int(0)
 
-    for i in numba.prange(n_in.shape[0]):
+    for i in prange(n_in.shape[0]):
         if n_in[i] == n_out[i]:
             counter+=1
         else:
@@ -430,7 +433,7 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
 
     return matrix
 
-@numba.njit()
+
 def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
     """Compute a vector tangent to a spherical surface based on two points.
 
@@ -459,6 +462,7 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
         vout = v1/np.linalg.norm(v1)
 
     return vout
+
 
 ####################################################
 # checks
@@ -493,3 +497,17 @@ def coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
 
 
     return flag
+
+
+if numba is not None:
+    poly_estimation_Lagrange = numba.njit()(poly_estimation_Lagrange)
+    poly_integration = numba.njit()(poly_integration)
+    polygon_area = numba.njit()(polygon_area)
+    sample_random = numba.njit()(sample_random)
+    sample_regular = numba.njit()(sample_regular)
+    sample_border = numba.njit()(sample_border)
+    inner = numba.njit()(inner)
+    rotation_matrix = numba.njit()(rotation_matrix)
+    calculate_tangent_vector = numba.njit()(calculate_tangent_vector)
+    area_under_curve = numba.njit()(area_under_curve)
+    coincidence_check = numba.njit()(coincidence_check)

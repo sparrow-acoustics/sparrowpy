@@ -6,7 +6,8 @@ import numpy as np
 import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
-from sparrowpy.radiosity import Patches
+from sparrowpy.radiosity import PatchesKang
+import time
 from sparrowpy.radiosity_fast import form_factor as FFac
 import sparrowpy as sp
 
@@ -237,7 +238,7 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
         up_vector=[1, 0, 0],
     )
 
-    patch = Patches(
+    patch = PatchesKang(
         polygon=patch_pos,
         max_size=patchsize * side,
         other_wall_ids=[],

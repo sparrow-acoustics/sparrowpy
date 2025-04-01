@@ -5,7 +5,7 @@ from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_order as ee_order
 
 
-class DRadiosityFast():
+class DirectionalRadiosityFast():
     """Radiosity object for directional scattering coefficients."""
 
     _walls_points: np.ndarray

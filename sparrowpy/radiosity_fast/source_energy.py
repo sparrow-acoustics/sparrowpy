@@ -1,10 +1,16 @@
 """Calculate initial energy from the source to the patch."""
-import numba
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
+
 import numpy as np
 from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import (
     pt_solution as patch2point)
 
-@numba.njit(parallel=True)
+
 def _init_energy_kang(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_normal: np.ndarray, air_attenuation:np.ndarray,
@@ -37,7 +43,7 @@ def _init_energy_kang(
     n_patches = patches_center.shape[0]
     energy = np.empty((n_patches, n_bins))
     distance_out = np.empty((n_patches, ))
-    for j in numba.prange(n_patches):
+    for j in prange(n_patches):
         source_pos = source_position.copy()
         receiver_pos = patches_center[j, :].copy()
         receiver_normal = patches_normal[j, :].copy()
@@ -100,7 +106,6 @@ def _init_energy_kang(
     return (energy, distance_out)
 
 
-@numba.njit(parallel=True)
 def _init_energy_universal(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_points: np.ndarray, air_attenuation:np.ndarray,
@@ -131,7 +136,7 @@ def _init_energy_universal(
     n_patches = patches_center.shape[0]
     energy = np.empty((n_patches, n_bins))
     distance_out = np.empty((n_patches, ))
-    for j in numba.prange(n_patches):
+    for j in prange(n_patches):
         source_pos = source_position.copy()
         receiver_pos = patches_center[j, :].copy()
         receiver_pts = patches_points[j, :, :].copy()
@@ -147,3 +152,8 @@ def _init_energy_universal(
                 point=source_pos, patch_points=receiver_pts, mode="source")
 
     return (energy, distance_out)
+
+
+if numba is not None:
+    _init_energy_universal = numba.njit(parallel=True)(_init_energy_universal)
+    _init_energy_kang = numba.njit(parallel=True)(_init_energy_kang)

@@ -99,7 +99,8 @@ def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
 
 
         ## initialize radiosity class
-        radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
+        radi = sp.radiosity_fast.DirectionalRadiosityFast.from_polygon(
+            walls, patch_size)
 
         source_brdf = pf.Coordinates(0, 0, 1, weights=1)
         receivers_brdf = pf.Coordinates(0, 0, 1, weights=1)
@@ -237,7 +238,8 @@ def run_basicscene(scene, src_pos, freqs, algorithm, method):
     sc_rec = pf.Coordinates(0, 0, 1)
 
     ## initialize radiosity class
-    radi = sp.radiosity_fast.DRadiosityFast.from_polygon(walls, patch_size)
+    radi = sp.radiosity_fast.DirectionalRadiosityFast.from_polygon(
+        walls, patch_size)
 
     data_scattering = pf.FrequencyData(
         np.ones((sc_src.csize,sc_rec.csize,freqs.size)), freqs)
