@@ -11,7 +11,8 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-      - uses: docker://pandoc/core:3.5
+      - name: Install pandoc
+        uses: pandoc/actions/setup@v1
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
