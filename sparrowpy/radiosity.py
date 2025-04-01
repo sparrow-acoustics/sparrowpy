@@ -446,6 +446,52 @@ class PatchesKang(Polygon):
         return self.form_factors[
             source_path_id, i_receiver_ff + i_receiver_offset]
 
+    def plot_energy_patches_time(
+            self, time, ax, show_colorbar=True):
+        """Plot the energy colormap of all patches at a certain time.
+
+        Parameters
+        ----------
+        time : float
+            The time point in which the energy is being investigated. 
+        ax : matplotlib.axes.Axes
+            The axes to plot on. 
+        show_colorbar : bool
+            Whether to display the colorbar. 
+
+        Returns
+        -------
+        None
+            Displays a plot of the energy colormap of all patches at a certain time. Does not return a particular value. 
+
+        .. image:: tests/patches_time.png
+            :alt: Energy colormap of patches at a certain time
+            :width: 500px
+        """
+        data = self.E_matrix
+
+        sample = time * self.E_sampling_rate
+
+        energy_patches = pltpatches.energy_matrix_patches(data)
+        # this already goes through each frequency bin
+
+        energy_patches_time = pltpatches.energy_patches_time(energy_patches,sample)
+        # this gives the energy for each frequency bin 
+
+        # pltpatches.patches 
+
+        # find the points of the patches 
+                
+        patches_points = np.zeros((len(self.patches), 4, 3))
+
+        for idx, patch in enumerate(self.patches):
+            points = patch.pts
+            patches_points[idx] = points
+
+        for i_frequency in range(self.n_bins):
+            energy = energy_patches_time[i_frequency,:]
+            pltpatches.patches(patches_points, energy, ax, show_colorbar)
+
     def energy_at_receiver(
             self, max_order, receiver,
             speed_of_sound, sampling_rate):
@@ -1050,7 +1096,7 @@ class RadiosityKang():
             ir[:, delay_dir] += direct_sound
 
         return ir
-
+    
     def write(self, filename, compress=True):
         """Write the object to a far file."""
         pf.io.write(filename, compress=compress, **self.to_dict())

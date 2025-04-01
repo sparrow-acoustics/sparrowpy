@@ -30,6 +30,7 @@ dependencies = [
     'matplotlib',
     'pyfar',
     'sofar',
+    'mplstereonet',
 ]
 
 [project.optional-dependencies]
