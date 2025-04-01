@@ -66,6 +66,7 @@ docs = [
     "nbsphinx",
     "sphinx_gallery",
     "nbsphinx_link",
+    "ipython",
 ]
 dev = ["sparrowpy[deploy,tests,docs]"]
 
