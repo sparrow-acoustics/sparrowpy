@@ -153,7 +153,7 @@ class DirectionalRadiosityFast():
             self._form_factors_tilde = \
                 form_factor._form_factors_with_directivity_dim(
                 self.visibility_matrix, self.form_factors, n_bins,
-                self.patches_center,
+                self.patches_center, self.patches_area,
                 self._air_attenuation, absorption,
                 absorption_index,
                 self._patch_to_wall_ids, scattering,

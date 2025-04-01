@@ -207,14 +207,14 @@ def universal(patches_points: np.ndarray, patches_normals: np.ndarray,
         j = int(visible_patches[visID, 1])
         form_factors[i,j] = calc_form_factor(
                     patches_points[i], patches_normals[i], patches_areas[i],
-                    patches_points[j], patches_normals[j], patches_areas[j])
+                    patches_points[j], patches_normals[j])
 
     return form_factors
 
 
 def _form_factors_with_directivity(
         visibility_matrix, form_factors, n_bins, patches_center,
-        air_attenuation,
+        patches_area, air_attenuation,
         absorption, absorption_index, patch_to_wall_ids,
         scattering, scattering_index, sources, receivers):
     """Calculate the form factors with directivity."""
@@ -234,7 +234,8 @@ def _form_factors_with_directivity(
             difference_receiver = patches_center[i]-patches_center[j]
             wall_id_i = int(patch_to_wall_ids[i])
             difference_receiver /= np.linalg.norm(difference_receiver)
-            ff = form_factors[i, j] if i<j else form_factors[j, i]
+            ff = form_factors[i, j] if i<j else (form_factors[j, i]
+                                                 *patches_area[i]/patches_area[j])
 
             distance = np.linalg.norm(difference_receiver)
             form_factors_tilde[h, i, j, :] = ff
@@ -260,6 +261,7 @@ def _form_factors_with_directivity(
 
 def _form_factors_with_directivity_dim(
         visibility_matrix, form_factors, n_bins, patches_center,
+        patches_area,
         air_attenuation,
         absorption, absorption_index, patch_to_wall_ids,
         scattering, scattering_index, sources, receivers):
@@ -278,7 +280,8 @@ def _form_factors_with_directivity_dim(
             difference_receiver = patches_center[i]-patches_center[j]
             wall_id_i = int(patch_to_wall_ids[i])
             difference_receiver /= np.linalg.norm(difference_receiver)
-            ff = form_factors[i, j] if i<j else form_factors[j, i]
+            ff = form_factors[i, j] if i<j else (form_factors[j, i]
+                                                 *patches_area[j]/patches_area[i])
 
             distance = np.linalg.norm(difference_receiver)
             form_factors_tilde[i, j, :, :] = ff
