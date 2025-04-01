@@ -4,14 +4,14 @@
 
 [![PyPI version](https://badge.fury.io/py/sparrowpy.svg)](https://badge.fury.io/py/sparrowpy)
 [![Documentation Status](https://readthedocs.org/projects/sparrowpy/badge/?version=latest)](https://sparrowpy.readthedocs.io/en/latest/?badge=latest)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://github.com/sparrow-acoustics/sparrowpy/blob/main/examples/fast_radiosity.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sparrow-acoustics/sparrowpy/main?urlpath=%2Fdoc%2Ftree%2Fexamples%2Ffast_radiosity.ipynb)
 
 Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds.
 
 Getting Started
 ===============
 
-Follow our [example notebooks](https://github.com/sparrow-acoustics/sparrowpy/tree/main/examples) to get a sense of the structure and functions of sparrowpy.
+Follow our [example notebooks](https://sparrowpy.readthedocs.io/en/latest/examples.html) to get a sense of the structure and functions of sparrowpy.
 
 Installation
 ============
@@ -24,12 +24,7 @@ Use pip to install sparrowpy
 
 if numba is installed the code will be precompiled and will run faster. We strongly recommend to use numba to accelerate the simulations significantly
 
-    pip install sparrowpy[fast]
-
-or
-
-    pip install sparrowpy
-    pip install numba
+    pip install sparrowpy numba
 
 Geometry import via blender or STL files will be supported in a future release, an install of the Blender API. Note that blender has strong requirements on the python version, see [pypi](https://pypi.org/project/bpy/). You can install it via pip
 
