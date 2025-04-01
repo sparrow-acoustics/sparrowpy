@@ -62,6 +62,9 @@ docs = [
     "sphinx-design",
     "sphinx-favicon",
     "sphinx-reredirects",
+    "nbsphinx",
+    "sphinx_gallery",
+    "nbsphinx_link",
 ]
 dev = ["sparrowpy[deploy,tests,docs]"]
 

@@ -28,10 +28,11 @@ extensions = [
     'autodocsumm',
     'sphinx_design',
     'sphinx_favicon',
-    'sphinx_reredirects',
     'sphinx_mdinclude',
+    'nbsphinx',
+    'nbsphinx_link',
 ]
-
+suppress_warnings = ["config.cache"]
 # show tocs for classes and functions of modules using the autodocsumm
 # package
 autodoc_default_options = {'autosummary': True}
@@ -138,10 +139,6 @@ html_context = {
    "default_mode": "light"
 }
 
-# redirect index to pyfar.html
-redirects = {
-     "index": "sparrowpy.html"
-}
 
 # -- download navbar and style files from gallery -----------------------------
 branch = 'main'
@@ -149,7 +146,6 @@ link = f'https://github.com/pyfar/gallery/raw/{branch}/docs/'
 folders_in = [
     '_static/css/custom.css',
     '_static/favicon.ico',
-    '_static/header.rst',
     'resources/logos/pyfar_logos_fixed_size_sparrowpy.png',
     ]
 
@@ -165,21 +161,3 @@ def download_files_from_gallery(link, folders_in):
                     shutil.copyfileobj(res, out_file)
 
 download_files_from_gallery(link, folders_in)
-# if logo does not exist, use pyfar logo
-if not os.path.exists(html_logo):
-    download_files_from_gallery(
-        link, ['resources/logos/pyfar_logos_fixed_size_pyfar.png'])
-    shutil.copyfile(
-        'resources/logos/pyfar_logos_fixed_size_pyfar.png', html_logo)
-
-# replace sparrowpy hard link to internal link
-with open("_static/header.rst", "rt") as fin:
-    with open("header.rst", "wt") as fout:
-        lines = [line.replace(f'https://{project}.readthedocs.io', project) for line in fin]
-        contains_project = any(project in line for line in lines)
-
-        fout.writelines(lines)
-
-        # add project to the list of projects if not in header
-        if not contains_project:
-            fout.write(f'   {project} <{project}>\n')
