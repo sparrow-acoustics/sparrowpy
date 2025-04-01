@@ -5,7 +5,7 @@ import pyfar as pf
 import sofar as sf
 
 
-class DirectivityMS():
+class _DirectivityMS():
     """Directivity class for FreeFieldDirectivityTF convention."""
 
     data: pf.FrequencyData
@@ -142,12 +142,12 @@ class SoundObject():
 class SoundSource(SoundObject):
     """Acoustic sound source inhered from SoundObject."""
 
-    directivity: DirectivityMS
+    directivity: _DirectivityMS
     sound_power: float
 
     def __init__(
             self, position: np.ndarray, view: np.ndarray,
-            up: np.ndarray, directivity: DirectivityMS = None,
+            up: np.ndarray, directivity: _DirectivityMS = None,
             sound_power: float = 1) -> None:
         """Init sound source.
 
@@ -168,7 +168,7 @@ class SoundSource(SoundObject):
         super(SoundSource, self).__init__(position, view, up)
         self.sound_power = float(sound_power)
         if directivity is not None:
-            assert isinstance(directivity, DirectivityMS)
+            assert isinstance(directivity, _DirectivityMS)
         self.directivity = directivity
 
     def plot(self, ax, **kwargs):
