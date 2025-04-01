@@ -1,7 +1,7 @@
 Radiosity fast
 --------------
 
-This class represents and optimized radiosity implementation. It includes
+This class represents an optimized radiosity implementation. It includes
 the following features:
 
 - It is optimized for speed
