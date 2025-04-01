@@ -4,8 +4,8 @@ Geometry and wall directivity functionality in the radiosity package.
 """
 import numpy as np
 import numpy.testing as npt
-import sparapy.geometry as geo
-from sparapy.sound_object import Receiver, SoundSource
+import sparrowpy.geometry as geo
+from sparrowpy.sound_object import Receiver, SoundSource
 
 
 def test_polygon_defaults():
@@ -88,7 +88,7 @@ def test_environment_defaults():
     source = SoundSource([0, 0, 0], [1, 0, 0], [0, 0, 1])
     receiver = Receiver([0, 0, 0], [1, 0, 0], [0, 0, 1])
     # test all parameter
-    env = geo.Environment([polygon], source, receiver)
+    env = geo.Environment([polygon], source, receiver, speed_of_sound=346.18)
     assert env.polygons == [polygon]
     assert env.speed_of_sound == 346.18
     assert env.receiver == receiver
@@ -125,7 +125,7 @@ def test_polygon_from_dict():
     polygon_dict = {
         'pts': points.tolist(),
         'up_vector': up_vector.tolist(),
-        'normal': normal.tolist()
+        'normal': normal.tolist(),
     }
 
     # Act

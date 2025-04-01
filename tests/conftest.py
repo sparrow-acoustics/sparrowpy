@@ -1,6 +1,7 @@
 """Fixtures for the tests in the tests/ directory."""
-import sparapy as sp
+import sparrowpy as sp
 import pyfar as pf
+import numpy as np
 import pytest
 
 
@@ -22,7 +23,7 @@ def brdf_s_0(tmp_path_factory):
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
     sp.brdf.create_from_scattering(
-        filename, coords, coords, pf.FrequencyData(0, [100]))
+        coords, coords, pf.FrequencyData(0, [100]), file_path=filename)
     return filename
 
 
@@ -44,11 +45,38 @@ def brdf_s_1(tmp_path_factory):
     coords = pf.samplings.sph_gaussian(sh_order=1)
     coords = coords[coords.z > 0]
     sp.brdf.create_from_scattering(
-        filename, coords, coords, pf.FrequencyData(1, [100]))
+        coords, coords, pf.FrequencyData(1, [100]), file_path=filename)
     return filename
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_walls():
     """Return a list of 6 walls, which form a cube."""
     return sp.testing.shoebox_room_stub(1, 1, 1)
+
+
+@pytest.fixture
+def sofa_data_diffuse():
+    """Return a list of 6 walls, which form a cube."""
+    gaussian = pf.samplings.sph_gaussian(sh_order=1)
+    gaussian = gaussian[gaussian.z>0]
+    sources = gaussian.copy()
+    receivers = gaussian.copy()
+    frequencies = np.array([125, 250, 500, 1000])
+    brdf = sp.brdf.create_from_scattering(
+        sources, receivers,
+        pf.FrequencyData(np.ones_like(frequencies), frequencies))
+    return (brdf, sources, receivers)
+
+@pytest.fixture
+def basicscene():
+    scene = {}
+    scene["patch_size"] = .2
+    scene["ir_length_s"] = 1.
+    scene["sampling_rate"] = 100
+    scene["max_order_k"] = 10
+    scene["speed_of_sound"] = 343
+    scene["absorption"] = 0.1
+    scene["walls"] = sp.testing.shoebox_room_stub(1, 1, 1)
+
+    return scene

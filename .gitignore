@@ -120,7 +120,9 @@ docs/header.rst
 docs/_static/favicon.ico
 docs/_static/header.rst
 docs/_static/css/custom.css
+docs/resources/logos/pyfar_logos_fixed_size_sparrowpy.png
 docs/resources/logos/pyfar_logos_fixed_size_pyfar.png
 
 # saved plots from testing
 tests/test_plot_data/output/*.png
+*.pdf
