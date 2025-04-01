@@ -11,7 +11,6 @@ except ImportError:
 ###################################################
 # integration
 ################# 1D , polynomial
-@numba.njit()
 def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Estimate polynomial coefficients based on sample points.
 
@@ -147,30 +146,6 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
 
     return area
 
-@numba.njit()
-def pascal_array(order: int):
-    """
-    Compute Pascal's triangle as a np.array up to given order.
-
-    Parameters
-    ----------
-    order: int
-        number of rows of Pascal's triangle to compute.
-
-    Returns
-    -------
-    triangle: np.array(order,order)
-        Pascal's triangle (lower triangular matrix).
-
-    """
-
-    triangle = np.zeros((order,order))
-    triangle[:,0] = 1
-
-    for i in range(1,order):
-        triangle[i,1:i+1] = triangle[i-1,1:i+1] + triangle[i-1,0:i]
-
-    return triangle
 
 ####################################################
 # sampling
@@ -466,7 +441,6 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
 
 ####################################################
 # checks
-@numba.njit()
 def coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
     """Flag true if two patches have any common points.
 
