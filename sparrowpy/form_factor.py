@@ -14,7 +14,7 @@ except ImportError:
 ### patch-to-patch
 def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
                      source_area: np.ndarray, receiver_pts: np.ndarray,
-                     receiver_normal: np.ndarray, receiver_area: np.ndarray,
+                     receiver_normal: np.ndarray,
                      ) -> float:
     """Return the form factor based on input patches geometry.
 
@@ -47,8 +47,7 @@ def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
     if helpers.coincidence_check(receiver_pts, source_pts):
         out = nusselt_integration(
                     patch_i=source_pts, patch_i_normal=source_normal,
-                    patch_i_area=source_area, patch_j=receiver_pts,
-                    patch_j_normal=receiver_normal, patch_j_area=receiver_area,
+                    patch_j=receiver_pts, patch_j_normal=receiver_normal,
                     nsamples=64)
     else:
         out = stokes_integration(patch_i=source_pts, patch_j=receiver_pts,
@@ -170,12 +169,13 @@ def stokes_integration(
 
                 xj = j_bpoints[segj][:,dim]
 
-                if xj[-1]-xj[0]!=0:
+                if np.abs(xj[-1]-xj[0])>1e-3:
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
                     # compute polynomial coefficients
-                    quadfactors = helpers.poly_estimation(x=xj, y=subsecj)
+                    quadfactors = helpers.poly_estimation_Lagrange(x=xj,
+                                                                   y=subsecj)
                     # analytical integration of the approx polynomials
                     inner_integral[i][dim] += helpers.poly_integration(
                                                         c=quadfactors,x=xj)
@@ -186,10 +186,10 @@ def stokes_integration(
 
             xi = i_bpoints[segi][:,dim]
 
-            if xi[-1]-xi[0]!=0:
+            if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                quadfactors = helpers.poly_estimation(x=xi, y=subseci)
+                quadfactors = helpers.poly_estimation_Lagrange(x=xi, y=subseci)
                 outer_integral += helpers.poly_integration(c=quadfactors,x=xi)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
@@ -267,10 +267,10 @@ def nusselt_analog(surf_origin, surf_normal,
         segmt = connectivity[jj]
 
         if (np.linalg.norm(np.cross(projPts[segmt[-1]],projPts[segmt[0]]))
-                                                                    > 1e-20):
+                                                                    > 1e-6):
 
             # if the points on the segment span less than 90 degrees
-            if np.dot( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 0:
+            if np.dot( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 1e-6:
                 curved_area += helpers.area_under_curve(plnPts[segmt],order=2)
 
             # if points span over 90º, additional sampling is required
@@ -311,7 +311,6 @@ def nusselt_analog(surf_origin, surf_normal,
 
 def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
                         patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
-                        patch_i_area: np.ndarray, patch_j_area: np.ndarray,
                         nsamples=2, random=False) -> float:
     """Estimate the form factor based on the Nusselt analogue.
 
@@ -365,7 +364,7 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
                                patch_points=patch_j,
                                patch_normal=patch_j_normal )
 
-    out *= patch_i_area / ( np.pi * len(p0_array) * patch_j_area )
+    out *= 1 / ( np.pi * len(p0_array) )
 
     return out
 
