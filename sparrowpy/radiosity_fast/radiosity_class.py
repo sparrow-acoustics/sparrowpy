@@ -110,15 +110,13 @@ class DirectionalRadiosityFast():
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
-        visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
-        i_counter = 0
-        for i_source in range(self.n_patches):
-            for i_receiver in range(self.n_patches):
-                if not self.visibility_matrix[i_source, i_receiver]:
-                    continue
-                visible_patches[i_counter, 0] = i_source
-                visible_patches[i_counter, 1] = i_receiver
-                i_counter += 1
+        visible_patches = np.empty((n_combinations, 2), dtype=np.uint16)
+
+        visible_patches[:, 0] = self._visibility_matrix.nonzero()[0].astype(
+                                                                    np.uint16)
+        visible_patches[:, 1] = self._visibility_matrix.nonzero()[1].astype(
+                                                                    np.uint16)
+
         self._visible_patches = visible_patches
 
         if ff_method == 'universal':
