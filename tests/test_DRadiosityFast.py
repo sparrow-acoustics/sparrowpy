@@ -10,7 +10,7 @@ import sparrowpy as sp
 create_reference_files = False
 
 def test_init_from_polygon(sample_walls):
-    radiosity = sp.DRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
     npt.assert_almost_equal(radiosity.patches_points.shape, (150, 4, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (150))
     npt.assert_almost_equal(radiosity.patches_center.shape, (150, 3))
@@ -22,7 +22,7 @@ def test_init_from_polygon(sample_walls):
     "tests/test_data/cube.stl",
     ])
 def test_init_from_file(filename):
-    radiosity = sp.DRadiosityFast.from_file(filename,np.sqrt(2))
+    radiosity = sp.DirectionalRadiosityFast.from_file(filename,np.sqrt(2))
     npt.assert_almost_equal(radiosity.patches_points.shape, (12, 3, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (12))
     npt.assert_almost_equal(radiosity.patches_center.shape, (12, 3))
@@ -34,8 +34,8 @@ def test_init_from_file(filename):
     "tests/test_data/sample_walls.blend",
     ])
 def test_init_comparison(filename, sample_walls):
-    radifile = sp.DRadiosityFast.from_file(filename)
-    radipoly = sp.DRadiosityFast.from_polygon(sample_walls, patch_size=1)
+    radifile = sp.DirectionalRadiosityFast.from_file(filename)
+    radipoly = sp.DirectionalRadiosityFast.from_polygon(sample_walls, patch_size=1)
     npt.assert_equal(radifile.patches_points.shape,
                      radipoly.patches_points.shape)
     npt.assert_equal(radifile.patches_area.shape,
@@ -47,9 +47,9 @@ def test_init_comparison(filename, sample_walls):
     npt.assert_equal(radifile.patches_normal.shape,
                      radipoly.patches_normal.shape)
 
-    radifile = sp.DRadiosityFast.from_file(filename, patch_size=.5,
+    radifile = sp.DirectionalRadiosityFast.from_file(filename, patch_size=.5,
                                            auto_patches=False)
-    radipoly = sp.DRadiosityFast.from_polygon(sample_walls, patch_size=.5)
+    radipoly = sp.DirectionalRadiosityFast.from_polygon(sample_walls, patch_size=.5)
     npt.assert_equal(radifile.patches_points.shape,
                      radipoly.patches_points.shape)
     npt.assert_equal(radifile.patches_area.shape,
