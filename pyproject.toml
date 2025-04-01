@@ -1,7 +1,7 @@
 [project]
 name = "sparrowpy"
 version = "0.1.0"
-description = "Project for data formats in acoustics."
+description = "Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds."
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.9"

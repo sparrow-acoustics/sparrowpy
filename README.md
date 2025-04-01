@@ -6,7 +6,8 @@
 [![PyPI version](https://badge.fury.io/py/sparrowpy.svg)](https://badge.fury.io/py/sparrowpy)
 [![Documentation Status](https://readthedocs.org/projects/sparrowpy/badge/?version=latest)](https://sparrowpy.readthedocs.io/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pyfar/gallery/main?labpath=docs/gallery/interactive/pyfar_introduction.ipynb)
-Python Boilerplate contains all the boilerplate you need to create a Python package.
+
+Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds
 
 Getting Started
 ===============
