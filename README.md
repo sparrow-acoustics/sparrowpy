@@ -5,6 +5,9 @@
 [![PyPI version](https://badge.fury.io/py/sparrowpy.svg)](https://badge.fury.io/py/sparrowpy)
 [![Documentation Status](https://readthedocs.org/projects/sparrowpy/badge/?version=latest)](https://sparrowpy.readthedocs.io/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sparrow-acoustics/sparrowpy/main?urlpath=%2Fdoc%2Ftree%2Fexamples%2Ffast_radiosity.ipynb)
+![pytest](https://github.com/github/docs/actions/workflows/tests.yml/badge.svg)
+![ruff](https://github.com/github/docs/actions/workflows/ruff.yml/badge.svg)
+![examples](https://github.com/github/docs/actions/workflows/test_examples.yml/badge.svg)
 
 Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds.
 
