@@ -140,7 +140,7 @@ def test_ff_energy_conservation(
 
     walls = sp.testing.shoebox_room_stub(X, Y, Z)
 
-    radi = sp.DRadiosityFast.from_polygon(walls, patch_size=1.)
+    radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size=1.)
 
     radi.bake_geometry(ff_method="universal",algorithm="order")
 
