@@ -35,7 +35,8 @@ def test_init_from_file(filename):
     ])
 def test_init_comparison(filename, sample_walls):
     radifile = sp.DirectionalRadiosityFast.from_file(filename)
-    radipoly = sp.DirectionalRadiosityFast.from_polygon(sample_walls, patch_size=1)
+    radipoly = sp.DirectionalRadiosityFast.from_polygon(sample_walls,
+                                                        patch_size=1)
     npt.assert_equal(radifile.patches_points.shape,
                      radipoly.patches_points.shape)
     npt.assert_equal(radifile.patches_area.shape,
@@ -49,7 +50,8 @@ def test_init_comparison(filename, sample_walls):
 
     radifile = sp.DirectionalRadiosityFast.from_file(filename, patch_size=.5,
                                            auto_patches=False)
-    radipoly = sp.DirectionalRadiosityFast.from_polygon(sample_walls, patch_size=.5)
+    radipoly = sp.DirectionalRadiosityFast.from_polygon(sample_walls,
+                                                        patch_size=.5)
     npt.assert_equal(radifile.patches_points.shape,
                      radipoly.patches_points.shape)
     npt.assert_equal(radifile.patches_area.shape,
