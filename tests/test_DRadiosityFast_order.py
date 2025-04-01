@@ -24,7 +24,7 @@ def test_form_factors_directivity_for_diffuse(
     wall_receiver = sample_walls[walls[1]]
     walls = [wall_source, wall_receiver]
 
-    radiosity = sp.DRadiosityFast.from_polygon(
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
         walls, patch_size)
     data, sources, receivers = sofa_data_diffuse
     radiosity.set_wall_scattering(
@@ -73,7 +73,7 @@ def test_order_vs_analytic(patch_size):
         sources, receivers, pf.FrequencyData(1, frequencies))
     walls = sp.testing.shoebox_room_stub(X, Y, Z)
 
-    radiosity = sp.DRadiosityFast.from_polygon(
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
         walls, patch_size)
 
     radiosity.set_wall_scattering(

@@ -6,7 +6,7 @@ from . import energy_exchange_order as ee_order
 from sparrowpy.utils import blender
 
 
-class DRadiosityFast():
+class DirectionalRadiosityFast():
     """Radiosity object for directional scattering coefficients."""
 
     _walls_points: np.ndarray
