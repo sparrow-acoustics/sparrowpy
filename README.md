@@ -36,7 +36,10 @@ to show progress bars install tqdm
 
 by default these packages are not installed
 
-Audio file reading/writing is supported through [SoundFile](https://python-soundfile.readthedocs.io), which is based on
+Troubleshooting
+===============
+
+Audio file reading/writing in pyfar is supported through [SoundFile](https://python-soundfile.readthedocs.io), which is based on
 [libsndfile](http://www.mega-nerd.com/libsndfile/). On Windows and OS X, it will be installed automatically.
 On Linux, you need to install libsndfile using your distribution’s package manager, for example ``sudo apt-get install libsndfile1``.
 If the installation fails, please check out the [help section](https://pyfar-gallery.readthedocs.io/en/latest/help).
