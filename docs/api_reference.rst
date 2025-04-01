@@ -20,6 +20,7 @@ Modules
    modules/sparrowpy.geometry
    modules/sparrowpy.sound_object
    modules/sparrowpy.brdf
+   modules/sparrowpy.plot
 
 
 .. _examples gallery: https://pyfar-gallery.readthedocs.io/en/latest/examples_gallery.html
