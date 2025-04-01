@@ -7,7 +7,7 @@ except ImportError:
     numba = None
     prange = range
 
-from sparrowpy.radiosity_fast.universal_ff.ffhelpers import (
+from sparrowpy.utils.ffhelpers import (
     rotation_matrix, inner)
 
 
