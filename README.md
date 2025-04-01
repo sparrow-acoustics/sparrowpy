@@ -7,7 +7,7 @@
 [![Documentation Status](https://readthedocs.org/projects/sparrowpy/badge/?version=latest)](https://sparrowpy.readthedocs.io/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pyfar/gallery/main?labpath=docs/gallery/interactive/pyfar_introduction.ipynb)
 
-Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds
+Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds.
 
 Getting Started
 ===============
