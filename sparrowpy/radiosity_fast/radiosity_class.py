@@ -5,7 +5,6 @@ from . import form_factor, source_energy, receiver_energy, geometry
 from . import energy_exchange_order as ee_order
 from sparrowpy.utils import blender
 
-
 class DirectionalRadiosityFast():
     """Radiosity object for directional scattering coefficients."""
 
@@ -208,7 +207,7 @@ class DirectionalRadiosityFast():
             self._form_factors_tilde = \
                 form_factor._form_factors_with_directivity_dim(
                 self.visibility_matrix, self.form_factors, n_bins,
-                self.patches_center,
+                self.patches_center, self.patches_area,
                 self._air_attenuation, absorption,
                 absorption_index,
                 self._patch_to_wall_ids, scattering,

@@ -11,12 +11,12 @@ except ImportError:
 ###################################################
 # integration
 ################# 1D , polynomial
-def poly_estimation(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Estimate polynomial coefficients based on sample points.
 
     Computes coefficients of a polynomial curve passing through points (x,y)
     the order of the polynomial depends on the number of sample points
-    input in the function.
+    input in the function. Uses the Lagrange method to estimate the polynomial.
         ex. a polynomial P estimated with 4 sample points:
             P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
 
@@ -141,10 +141,11 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
         y[k] = cc[1]
 
 
-    coefs = poly_estimation(x,y)
+    coefs = poly_estimation_Lagrange(x,y)
     area = poly_integration(coefs,x) # area between curve and ps[-1] - ps[0]
 
     return area
+
 
 ####################################################
 # sampling
@@ -216,10 +217,6 @@ def sample_regular(el: np.ndarray, npoints=10):
         list of sample points in patch el
 
     """
-    # TO DO: check that patch satisfies conditions for proper sampling
-    # TO DO: if patch has >4 sides,
-    #           subdivide into triangular patches and process independently ?
-
     u = el[1]-el[0]
     v = el[-1]-el[0]
 
@@ -432,12 +429,8 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
         vector tangent to spherical surface
 
     """
-    if np.dot(v0,v1)!=0:
-        scale = np.sqrt( np.square(
-                            np.linalg.norm(np.cross(v0,v1))/np.dot(v0,v1) ) +
-                         np.square( np.linalg.norm(v0) ) )
-
-        vout = v1*scale - v0
+    if np.abs(np.dot(v0,v1))>1e-10:
+        vout = (v1-v0)-np.dot((v1-v0),v0)/np.dot(v0,v0)*v0
         vout /= np.linalg.norm(vout)
 
     else:
@@ -448,7 +441,7 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
 
 ####################################################
 # checks
-def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
+def coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
     """Flag true if two patches have any common points.
 
     Parameters
@@ -459,6 +452,9 @@ def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
     p1 : numpy.ndarray(# vertices, 3)
         another patch
 
+    thres: float
+        threshold value for distance between points
+
     Returns
     -------
     flag: bool
@@ -467,25 +463,18 @@ def coincidence_check(p0: np.ndarray, p1: np.ndarray) -> bool:
     """
     flag = False
 
-    for i in prange(p0.shape[0]):
-        for j in prange(p1.shape[0]):
-            count=0
-            for k in prange(p0.shape[1]):
-                if p0[i,k]==p1[j,k]:
-                    count+=1
-                else:
-                    pass
-
-            if count == p0.shape[1]:
+    for i in numba.prange(p0.shape[0]):
+        for j in numba.prange(p1.shape[0]):
+            if np.linalg.norm(p0[i]-p1[j])<thres:
                 flag=True
-            else:
-                pass
+                break
+
 
     return flag
 
 
 if numba is not None:
-    poly_estimation = numba.njit()(poly_estimation)
+    poly_estimation_Lagrange = numba.njit()(poly_estimation_Lagrange)
     poly_integration = numba.njit()(poly_integration)
     polygon_area = numba.njit()(polygon_area)
     sample_random = numba.njit()(sample_random)
