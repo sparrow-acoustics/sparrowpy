@@ -13,7 +13,6 @@ from . import geometry
 def _add_directional(
         energy_0, source_position: np.ndarray,
         patches_center: np.ndarray, n_bins:float, patch_to_wall_ids:np.ndarray,
-        absorption:np.ndarray, absorption_index:np.ndarray,
         sources: np.ndarray, receivers: np.ndarray,
         scattering: np.ndarray, scattering_index: np.ndarray):
     """Add scattering and absorption to the initial energy from the source.
@@ -30,10 +29,6 @@ def _add_directional(
         number of frequency bins.
     patch_to_wall_ids : np.ndarray
         indexes from each patch to the wall of shape (n_patches)
-    absorption : np.ndarray
-        absorption factor of shape (n_walls, n_bins)
-    absorption_index : np.ndarray
-        mapping from the wall id to absorption database index (n_walls)
     sources : np.ndarray
         source positions of shape (n_walls, n_sources, 3)
     receivers : np.ndarray
@@ -58,9 +53,8 @@ def _add_directional(
             source_position, patches_center[i],
             sources, wall_id_i, scattering, scattering_index)
 
-        absorption_factor = 1-absorption[absorption_index[wall_id_i], :]
         energy_0_directivity[i, :, :] = energy_0[i] \
-            * absorption_factor * scattering_factor
+            * scattering_factor
 
     return energy_0_directivity
 

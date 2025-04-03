@@ -225,7 +225,7 @@ class Polygon():
 
 
 
-class Environment():
+class _Environment():
     """Define a Geometry with Walls, Source and Receiver."""
 
     speed_of_sound: float

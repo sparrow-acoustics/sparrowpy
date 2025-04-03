@@ -12,65 +12,56 @@ create_reference_files = False
     np.array([500,1000,2000]),
     ])
 @pytest.mark.parametrize('receivers', [
-    np.array([.25,.25,.25]),
-    np.array([ np.array([.25,.25,.25]),
-               np.array([.45,.45,.45]),
-               np.array([.75,.75,.75]) ]),
-    ])
+    pf.Coordinates(
+        [.25,.45,.75],
+        [.45,.45,.45],
+        [.75,.75,.75],
+    ),
+])
 def test_multi_receiver(basicscene, frequencies,
-                        receivers, method="universal"):
+                        receivers):
     """Check validity of multiple receiver output."""
-    algo= "order"
 
-    src = np.array([.5,.5, .5])
+    src = pf.Coordinates(.5, .5, .5)
 
-    radi = run_basicscene(basicscene, src_pos=src, freqs=frequencies,
-                          algorithm=algo, method=method)
+    radi = run_basicscene(
+        basicscene, src_pos=src, freqs=frequencies,
+    )
 
-    big_histo = radi.collect_receiver_energy(receiver_pos=receivers,
-                                  speed_of_sound=basicscene["speed_of_sound"],
-                                   histogram_time_resolution=1/basicscene["sampling_rate"],
-                                   method=method,
-                                   )
+    big_histo = radi.collect_energy_receiver_mono(
+        receivers=receivers,
+    )
 
     # assert correct dimensions of output histogram
-    if receivers.ndim==1:
-        n_recs = 1
-    else:
-        n_recs = receivers.shape[0]
+    n_recs = receivers.cshape[0]
 
-    assert big_histo.shape[0] == n_recs
-    assert big_histo.shape[1] == radi._n_patches
-    assert big_histo.shape[2] == frequencies.shape[0]
+    assert big_histo.cshape[0] == n_recs
+    assert big_histo.cshape[1] == frequencies.shape[0]
 
     # assert big histogram entries same as histograms for individual receiver
-    if n_recs > 1:
-        for i in range(n_recs):
-            small_histo = radi.collect_receiver_energy(
-                                    receiver_pos=receivers[i],
-                                    speed_of_sound=basicscene["speed_of_sound"],
-                                    histogram_time_resolution=1/basicscene["sampling_rate"],
-                                    method=method,
-                                    )
+    for i in range(n_recs):
+        small_histo = radi.collect_energy_receiver_mono(
+            receivers=receivers[i],
+            )
 
-            npt.assert_array_almost_equal(big_histo[i], small_histo[0])
-
+        npt.assert_array_almost_equal(
+            big_histo[i].time, small_histo[0].time)
 
 
 @pytest.mark.parametrize('src', [
-    [2.,1.5,1.5],
+    pf.Coordinates(2, 1.5, 1.5),
     ])
 @pytest.mark.parametrize('rec', [
-    [.5,1,2.5],
-    [1,2.5,1.5],
+    pf.Coordinates(.5, 1, 2.5),
+    pf.Coordinates(1, 2.5, 1.5),
     ])
 @pytest.mark.parametrize('order', [
-    10,20,
+    10, 20,
     ])
 @pytest.mark.parametrize('ps', [
-    .5,1.5,
+    .5, 1.5,
     ])
-def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
+def test_reciprocity_shoebox(src,rec,order,ps):
     """Test if radiosity results are reciprocal in shoebox room."""
     X = 3
     Y = 3
@@ -80,26 +71,25 @@ def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
     sampling_rate = 200
     max_order_k = order
     speed_of_sound = 343
-    irs_new = []
+    etcs_new = []
     frequencies = np.array([1000])
     absorption = 0.
     walls = sp.testing.shoebox_room_stub(X, Y, Z)
-    algo= "order"
 
     sc_src = pf.Coordinates(0, 0, 1)
     sc_rec = pf.Coordinates(0, 0, 1)
 
     for i in range(2):
         if i == 0:
-            src_ = np.array(src)
-            rec_ = np.array(rec)
+            src_ = src
+            rec_ = rec
         elif i == 1:
-            src_ = np.array(rec)
-            rec_ = np.array(src)
+            src_ = rec
+            rec_ = src
 
 
         ## initialize radiosity class
-        radi = sp.radiosity_fast.DirectionalRadiosityFast.from_polygon(
+        radi = sp.DirectionalRadiosityFast.from_polygon(
             walls, patch_size)
 
         source_brdf = pf.Coordinates(0, 0, 1, weights=1)
@@ -108,10 +98,13 @@ def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
             source_brdf,
             receivers_brdf,
             pf.FrequencyData(
-                np.ones((frequencies.size)), frequencies))
+                np.ones((frequencies.size)), frequencies),
+            pf.FrequencyData(
+                np.zeros((frequencies.size))+absorption, frequencies),
+            )
 
         # set directional scattering data
-        radi.set_wall_scattering(
+        radi.set_wall_brdf(
             np.arange(len(walls)), brdf, sc_src, sc_rec)
 
         # set air absorption
@@ -120,40 +113,28 @@ def test_reciprocity_shoebox(src,rec,order,ps, method="universal"):
                 np.zeros_like(frequencies),
                 frequencies))
 
-        # set absorption coefficient
-        radi.set_wall_absorption(
-            np.arange(len(walls)),
-            pf.FrequencyData(
-                np.zeros_like(frequencies)+absorption,
-                frequencies))
 
         # run simulation
-        radi.bake_geometry(ff_method=method,algorithm=algo)
+        radi.bake_geometry()
 
-        radi.init_source_energy(src_,ff_method=method,algorithm=algo)
+        radi.init_source_energy(src_)
 
         radi.calculate_energy_exchange(
                             speed_of_sound=speed_of_sound,
-                            histogram_time_resolution=1/sampling_rate,
-                            histogram_length=ir_length_s, algorithm=algo,
-                            max_depth=max_order_k,
+                            etc_time_resolution=1/sampling_rate,
+                            etc_duration=ir_length_s,
+                            max_reflection_order=max_order_k,
                             )
 
-        ir = np.sum(
-            radi.collect_receiver_energy(receiver_pos=rec_,
-                                        speed_of_sound=speed_of_sound,
-                                        histogram_time_resolution=1/sampling_rate,
-                                        method=method, propagation_fx=True,
-                                        ),
-                    axis=1)[0][0]
+        etc = radi.collect_energy_receiver_mono(rec_)
 
         # test energy at receiver
-        irs_new.append(ir)
+        etcs_new.append(etc.time[0])
 
-    irs_new = np.array(irs_new)
+    etcs_new = np.array(etcs_new)
 
-    npt.assert_array_almost_equal(np.sum(irs_new[1]), np.sum(irs_new[0]))
-    npt.assert_array_almost_equal(irs_new[1], irs_new[0])
+    npt.assert_array_almost_equal(np.sum(etcs_new[1]), np.sum(etcs_new[0]))
+    npt.assert_array_almost_equal(etcs_new[1], etcs_new[0])
 
 
 @pytest.mark.parametrize('src', [
@@ -225,7 +206,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
     npt.assert_array_almost_equal(energy[0], energy[1])
 
 
-def run_basicscene(scene, src_pos, freqs, algorithm, method):
+def run_basicscene(scene, src_pos, freqs):
     patch_size = scene["patch_size"]
     ir_length_s = scene["ir_length_s"]
     sampling_rate = scene["sampling_rate"]
@@ -234,42 +215,41 @@ def run_basicscene(scene, src_pos, freqs, algorithm, method):
     absorption = scene["absorption"]
     walls = scene["walls"]
 
-    sc_src = pf.Coordinates(0, 0, 1)
-    sc_rec = pf.Coordinates(0, 0, 1)
+    sc_src = pf.Coordinates(0, 0, 1, weights=1)
+    sc_rec = pf.Coordinates(0, 0, 1, weights=1)
 
     ## initialize radiosity class
-    radi = sp.radiosity_fast.DirectionalRadiosityFast.from_polygon(
+    radi = sp.DirectionalRadiosityFast.from_polygon(
         walls, patch_size)
 
-    data_scattering = pf.FrequencyData(
-        np.ones((sc_src.csize,sc_rec.csize,freqs.size)), freqs)
+    s = pf.FrequencyData(np.ones((freqs.size)), freqs)
+    alpha = pf.FrequencyData(np.zeros((freqs.size))+absorption, freqs)
+    brdf = sp.brdf.create_from_scattering(
+        sc_src,
+        sc_rec,
+        s,
+        alpha,
+        )
 
     # set directional scattering data
-    radi.set_wall_scattering(
-        np.arange(len(walls)), data_scattering, sc_src, sc_rec)
+    radi.set_wall_brdf(
+        np.arange(len(walls)), brdf, sc_src, sc_rec)
 
     # set air absorption
     radi.set_air_attenuation(
         pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies),
-            data_scattering.frequencies))
-
-    # set absorption coefficient
-    radi.set_wall_absorption(
-        np.arange(len(walls)),
-        pf.FrequencyData(
-            np.zeros_like(data_scattering.frequencies)+absorption,
-            data_scattering.frequencies))
+            np.zeros_like(brdf.frequencies),
+            brdf.frequencies))
 
     # run simulation
-    radi.bake_geometry(ff_method=method,algorithm=algorithm)
+    radi.bake_geometry()
 
-    radi.init_source_energy(src_pos,ff_method=method,algorithm=algorithm)
+    radi.init_source_energy(src_pos)
 
     radi.calculate_energy_exchange(
             speed_of_sound=speed_of_sound,
-            histogram_time_resolution=1/sampling_rate,
-            histogram_length=ir_length_s, algorithm=algorithm,
-            max_depth=max_order_k )
+            etc_time_resolution=1/sampling_rate,
+            etc_duration=ir_length_s,
+            max_reflection_order=max_order_k)
 
     return radi

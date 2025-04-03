@@ -9,8 +9,9 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
-  # apt_packages:
-  #   - libsndfile1
+  apt_packages:
+    - pandoc
+    - libsndfile1
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
