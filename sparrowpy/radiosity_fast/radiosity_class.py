@@ -67,15 +67,6 @@ class DirectionalRadiosityFast():
             list of patches
         patch_size : float
             maximal patch size in meters.
-        max_order_k : int
-            max order of energy exchange iterations.
-        ir_length_s : float
-            length of ir in seconds.
-        sofa_path : Path, string, list of Path, list of string
-            path of directional scattering coefficients or list of path
-            for each Patch.
-        source : SoundSource, optional
-            Source object, by default None, can be added later.
 
         """
         # save wall information
@@ -100,9 +91,11 @@ class DirectionalRadiosityFast():
         Parameters
         ----------
         ff_method : str, optional
-            _description_, by default 'universal'
+            defines the form factor calculation method, by default 'universal'.
+            No other methods are implemented yet.
         algorithm : str, optional
-            _description_, by default 'order'
+            defines the algorithm used for Radiosity, by default 'order'.
+            No other algorithms are implemented yet.
 
         """
         # Check the visibility between patches.
@@ -165,7 +158,23 @@ class DirectionalRadiosityFast():
     def init_source_energy(
             self, source_position:np.ndarray,
             ff_method="universal", algorithm='order'):
-        """Initialize the source energy."""
+        """Initializes the energy of the source at the patches.
+
+        Note that the geometry must be baked before calling this function.
+        The source is assumed visible to all patches.
+
+        Parameters
+        ----------
+        source_position : np.ndarray
+            _description_
+        ff_method : str, optional
+            defines the form factor calculation method, by default 'universal'.
+            No other methods are implemented yet.
+        algorithm : str, optional
+            defines the algorithm used for Radiosity, by default 'order'.
+            No other algorithms are implemented yet.
+
+        """
         source_position = np.array(source_position)
         patch_to_wall_ids = self._patch_to_wall_ids
         absorption = np.atleast_2d(np.array(self._absorption))
@@ -199,7 +208,26 @@ class DirectionalRadiosityFast():
             histogram_time_resolution,
             histogram_length, algorithm='order',
             max_depth=-1, recalculate=False):
-        """Calculate the energy exchange between patches."""
+        """Calculate the energy exchange between patches.
+
+        Parameters
+        ----------
+        speed_of_sound : float
+            speed of sound in m/s.
+        histogram_time_resolution : float
+            time resolution of the histogram, e.g. 1/1000.
+        histogram_length : float
+            duration of the histogram in seconds.
+        algorithm : str, optional
+            defines the algorithm used for Radiosity, by default 'order'.
+            No other algorithms are implemented yet.
+        max_depth : int, optional
+            maximum reflection order the be calculated.
+            e.g. 0 means the first first order reflection, by default -1
+        recalculate : bool, optional
+            wether to recalculate or not, by default False.
+
+        """
         n_samples = int(histogram_length/histogram_time_resolution)
 
         patches_center = self.patches_center
@@ -233,7 +261,31 @@ class DirectionalRadiosityFast():
     def collect_receiver_energy(self, receiver_pos,
             speed_of_sound, histogram_time_resolution,
             method="universal", propagation_fx=False):
-        """Collect patch histograms as detected by receiver."""
+        """Collect patch histograms as detected by receiver.
+
+        Parameters
+        ----------
+        receiver_pos : np.ndarray
+            receiver positions in cartesian coordinates of
+            shape (n_receivers, 3).
+        speed_of_sound : float
+            speed of sound in m/s.
+        histogram_time_resolution : float
+            time resolution of the histogram, e.g. 1/1000.
+        method : str, optional
+            defines the algorithm used for Radiosity, by default 'order'.
+            No other algorithms are implemented yet.
+        propagation_fx : bool, optional
+            if true the sound propagation from patch to receiver is applied
+            in the final histogram, by default False.
+
+        Returns
+        -------
+        histogram_out : np.ndarray
+            the final energy histogram of shape
+            (n_receivers, n_patches, n_bins, n_samples)
+
+        """
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
         n_patches = self.n_patches
@@ -291,6 +343,8 @@ class DirectionalRadiosityFast():
     def set_wall_absorption(self, wall_indexes, absorption:pf.FrequencyData):
         """Set the wall absorption.
 
+        It this is not called before baking, a default value of 0.0 is used.
+
         Parameters
         ----------
         wall_indexes : list[int]
@@ -312,6 +366,8 @@ class DirectionalRadiosityFast():
     def set_air_attenuation(self, air_attenuation:pf.FrequencyData):
         """Set air attenuation factor in Np/m.
 
+        If not called, no air attenuation is applied.
+
         Parameters
         ----------
         air_attenuation : pf.FrequencyData
@@ -325,7 +381,11 @@ class DirectionalRadiosityFast():
             self, wall_indexes:list[int],
             scattering:pf.FrequencyData, sources:pf.Coordinates,
             receivers:pf.Coordinates):
-        """Set the wall scattering.
+        """Set the wall scattering (brdf).
+
+        See :py:mod:`~sparrowpy.brdf` for more information. Make sure the
+        absorption is ether included in the brdf or set independently via
+        wall.
 
         Parameters
         ----------
