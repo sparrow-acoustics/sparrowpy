@@ -342,8 +342,9 @@ class DirectionalRadiosityFast():
     def set_wall_brdf(
             self,
             wall_indexes:list[int],
-            brdf:pf.FrequencyData, sources:pf.Coordinates,
-            receivers:pf.Coordinates):
+            brdf:pf.FrequencyData,
+            brdf_sources:pf.Coordinates,
+            brdf_receivers:pf.Coordinates):
         """Set the wall scattering.
 
         Parameters
@@ -352,15 +353,15 @@ class DirectionalRadiosityFast():
             list of walls for the scattering data
         brdf : pf.FrequencyData
             brdf data of cshape (n_sources, n_receivers)
-        sources : pf.Coordinates
+        brdf_sources : pf.Coordinates
             source coordinates
-        receivers : pf.Coordinates
+        brdf_receivers : pf.Coordinates
             receiver coordinates
 
         """
-        assert (sources.z >= 0).all(), \
+        assert (brdf_sources.z >= 0).all(), \
             "Sources must be in the positive half space"
-        assert (receivers.z >= 0).all(), \
+        assert (brdf_receivers.z >= 0).all(), \
             "Receivers must be in the positive half space"
         self._check_set_frequency(brdf.frequencies)
         if self._brdf_sources is None:
@@ -375,7 +376,7 @@ class DirectionalRadiosityFast():
         for i in wall_indexes:
             sources_rot, receivers_rot = _rotate_coords_to_normal(
                 self.walls_normal[i], self.walls_up_vector[i],
-                sources, receivers)
+                brdf_sources, brdf_receivers)
             self._brdf_sources[i] = sources_rot
             self._brdf_receivers[i] = receivers_rot
 
