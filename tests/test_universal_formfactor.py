@@ -2,7 +2,7 @@
 import pytest
 import sparrowpy.geometry as geo
 import numpy as np
-import sparrowpy.form_factor.universal_methods as form_factor_uni
+import sparrowpy.form_factor.universial as form_factor_uni
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy import PatchesKang

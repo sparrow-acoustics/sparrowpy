@@ -7,7 +7,7 @@ except ImportError:
     prange = range
 
 import numpy as np
-from sparrowpy.form_factor.universal_methods import (
+from sparrowpy.form_factor.universial import (
     pt_solution as patch2point)
 
 
