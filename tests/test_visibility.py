@@ -1,6 +1,5 @@
 import numpy.testing as npt
 import pytest
-import sparrowpy.radiosity_fast.visibility_helpers as vh
 import numpy as np
 import sparrowpy.radiosity_fast.geometry as geom
 bpy = pytest.importorskip("bpy")
@@ -15,7 +14,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 def test_point_plane_projection(origin: np.ndarray, point: np.ndarray,
                                 plpt: np.ndarray, pln: np.ndarray, solution):
     """Ensure correct projection of rays into plane."""
-    out = vh.project_to_plane(origin, point, plpt, pln)
+    out = geom.project_to_plane(origin, point, plpt, pln)
 
     npt.assert_array_equal(solution,out)
 
@@ -31,7 +30,7 @@ def test_point_plane_projection(origin: np.ndarray, point: np.ndarray,
 @pytest.mark.parametrize("pln", [np.array([0.,0.,1.])])
 def test_point_in_polygon(point, plpt, pln):
     """Ensure correct projection of rays into plane."""
-    out = vh.point_in_polygon(point3d=point, polygon3d=plpt, plane_normal=pln)
+    out = geom.point_in_polygon(point3d=point, polygon3d=plpt, plane_normal=pln)
 
     if abs(point[0]) > 1. or abs(point[1]) > 1:
         solution = False
@@ -56,7 +55,7 @@ def test_point_in_polygon(point, plpt, pln):
     ])
 def test_basic_visibility(point, origin, plpt, pln):
     """Test basic_visibility function."""
-    out = vh.basic_visibility(eval_point=point,vis_point=origin,
+    out = geom.basic_visibility(eval_point=point,vis_point=origin,
                               surf_points=plpt,surf_normal=pln)
 
     if (abs(point[0])/(-point[2]+1) > 1. or

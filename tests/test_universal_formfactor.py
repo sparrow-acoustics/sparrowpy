@@ -3,7 +3,7 @@
 import pytest
 import sparrowpy.geometry as geo
 import numpy as np
-import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
+import sparrowpy.form_factor.universal as form_factor
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy import PatchesKang
