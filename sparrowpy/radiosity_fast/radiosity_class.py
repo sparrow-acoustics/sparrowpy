@@ -348,7 +348,7 @@ class DirectionalRadiosityFast():
         ----------
         wall_indexes : list[int]
             list of walls for the scattering data
-        absorption : pf.FrequencyData
+        absorption : pyfar.FrequencyData
             absorption coefficient of cshape (1, )
 
         """
@@ -369,7 +369,7 @@ class DirectionalRadiosityFast():
 
         Parameters
         ----------
-        air_attenuation : pf.FrequencyData
+        air_attenuation : pyfar.FrequencyData
             Air attenuation factor in Np/m.
 
         """
@@ -384,17 +384,18 @@ class DirectionalRadiosityFast():
 
         See :py:mod:`~sparrowpy.brdf` for more information. Make sure the
         absorption is either included in the brdf or set independently via
-        wall.
+        wall using
+        :py:func:`~sparrowpy.DirectionalRadiosityFast.set_wall_absorption`.
 
         Parameters
         ----------
         wall_indexes : list[int]
             list of walls for the scattering data
-        scattering : pf.FrequencyData
+        scattering : pyfar.FrequencyData
             scattering data of cshape (n_sources, n_receivers)
-        sources : pf.Coordinates
+        sources : pyfar.Coordinates
             source coordinates
-        receivers : pf.Coordinates
+        receivers : pyfar.Coordinates
             receiver coordinates
 
         """
