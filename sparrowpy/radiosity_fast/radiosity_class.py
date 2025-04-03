@@ -225,8 +225,7 @@ class DirectionalRadiosityFast():
             maximum reflection order the be calculated.
             e.g. 0 means the first first order reflection, by default -1
         recalculate : bool, optional
-            wether to recalculate or not, by default False.
-
+            whether to recalculate or not, by default False.
         """
         n_samples = int(histogram_length/histogram_time_resolution)
 
@@ -384,7 +383,7 @@ class DirectionalRadiosityFast():
         """Set the wall scattering (brdf).
 
         See :py:mod:`~sparrowpy.brdf` for more information. Make sure the
-        absorption is ether included in the brdf or set independently via
+        absorption is either included in the brdf or set independently via
         wall.
 
         Parameters
