@@ -347,18 +347,26 @@ class DirectionalRadiosityFast():
             brdf:pf.FrequencyData,
             incoming_directions:pf.Coordinates,
             outgoing_directions:pf.Coordinates):
-        """Set the wall scattering.
+        """Set the wall BRDF representing scattering and absorption.
+
+        For the incoming and outgoing directions, the radius is ignored
+        as it only represents a direction. The BRDF assumes an up vector
+        of (1, 0, 0) and a normal vector of (0, 0, 1). Therefore, the
+        incoming and outgoing directions must not have negative z-components.
+        For each wall, the incoming and outgoing directions are rotated
+        to align with the given wall's normal vector and up vector.
 
         Parameters
         ----------
         wall_indexes : list[int]
-            list of walls for the scattering data
+            List of wall indices for the given BRDF data.
         brdf : pf.FrequencyData
-            brdf data of cshape (n_sources, n_receivers)
+            BRDF data with shape
+            (n_incoming_directions, n_outgoing_directions).
         incoming_directions : pf.Coordinates
-            source coordinates
+            Incoming directions of the BRDF data.
         outgoing_directions : pf.Coordinates
-            receiver coordinates
+            Outgoing directions of the BRDF data.
 
         """
         assert (incoming_directions.z >= 0).all(), \
