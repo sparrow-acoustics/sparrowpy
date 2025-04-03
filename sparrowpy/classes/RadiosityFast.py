@@ -163,7 +163,7 @@ class DirectionalRadiosityFast():
         # create radiosity object
         return cls(
             walls_points, walls_normal, walls_up_vector,
-            patches_points, patches_normal, patch_size, n_patches,
+            patches_points, patches_normal, n_patches,
             patch_to_wall_ids)
 
     def bake_geometry(self):
