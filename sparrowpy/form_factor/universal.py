@@ -169,9 +169,6 @@ def sample_random(el: np.ndarray, npoints=100):
         list of sample points in patch el
 
     """
-    # TO DO: check that patch satisfies conditions for proper sampling
-    # TO DO: if patch has >4 sides,
-    #           subdivide into triangular patches and process independently ?
 
     ptlist=np.zeros((npoints,3))
 
@@ -184,7 +181,7 @@ def sample_random(el: np.ndarray, npoints=100):
 
         inside = s+t <= 1
 
-        # if sample falls outside of triangular patch, it is "reflected" inside
+        # if sample falls outside of triangular patch, it is "reflected" back inside
         if len(el)==3 and not inside:
             s = 1-s
             t = 1-t
@@ -345,8 +342,6 @@ def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
 
 def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     """Compute a rotation matrix from a given input and output directions.
-
-    TO DO: expand to N-D arrays
 
     Parameters
     ----------
