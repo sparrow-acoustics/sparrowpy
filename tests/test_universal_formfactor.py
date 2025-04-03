@@ -6,7 +6,7 @@ import numpy as np
 import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
-from sparrowpy.radiosity import PatchesKang
+from sparrowpy import PatchesKang
 from sparrowpy.radiosity_fast import form_factor as FFac
 import sparrowpy as sp
 
@@ -142,7 +142,7 @@ def test_ff_energy_conservation(
 
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size=1.)
 
-    radi.bake_geometry(ff_method="universal",algorithm="order")
+    radi.bake_geometry()
 
 
     err = radi.n_patches-np.sum(radi._form_factors_tilde)
@@ -187,8 +187,6 @@ def test_different_areas(
                                                      [width/2, .5, 0.]]),
                             patches_area=np.array([width,1.,1.,width]),
                             air_attenuation=None,
-                            absorption=None,
-                            absorption_index=None,
                             patch_to_wall_ids=[0,1,1,0],
                             scattering=None,
                             scattering_index=None,

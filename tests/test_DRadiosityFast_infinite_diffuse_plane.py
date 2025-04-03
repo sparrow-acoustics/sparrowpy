@@ -45,8 +45,8 @@ def run_energy_diff_specular_ratio(
     reflection_len =  (receiver - source_is).radius[0]
     speed_of_sound = 343
     sampling_rate = 1
-    max_histogram_length = reflection_len/speed_of_sound
-    max_histogram_length=1
+    etc_duration = reflection_len/speed_of_sound
+    etc_duration=1
 
     plane = sp.geometry.Polygon(
             [[-width/2, -length/2, 0],
@@ -56,7 +56,7 @@ def run_energy_diff_specular_ratio(
             [1, 0, 0], [0, 0, 1])
 
     #simulation parameters
-    radi = sp.radiosity_fast.DirectionalRadiosityFast.from_polygon(
+    radi = sp.DirectionalRadiosityFast.from_polygon(
         [plane], patch_size)
 
     brdf_sources = pf.Coordinates(0, 0, 1, weights=1)
@@ -68,7 +68,7 @@ def run_energy_diff_specular_ratio(
         pf.FrequencyData(0, [100]),
     )
 
-    radi.set_wall_scattering(
+    radi.set_wall_brdf(
         np.arange(1), brdf, brdf_sources, brdf_receivers)
 
     # set air absorption
@@ -77,27 +77,17 @@ def run_energy_diff_specular_ratio(
             np.zeros_like(brdf.frequencies),
             brdf.frequencies))
 
-    # set absorption coefficient
-    radi.set_wall_absorption(
-        np.arange(1),
-        pf.FrequencyData(
-            np.zeros_like(brdf.frequencies)+0,
-            brdf.frequencies))
-
     # initialize source energy at each patch
-    radi.init_source_energy(source.cartesian[0], algorithm='order')
+    radi.init_source_energy(source)
 
     # gather energy at receiver
     radi.calculate_energy_exchange(
         speed_of_sound=speed_of_sound,
-        histogram_time_resolution=1/sampling_rate,
-        histogram_length=max_histogram_length,
-        algorithm='order', max_depth=0)
-    ir_fast = radi.collect_receiver_energy(
-        receiver.cartesian[0], speed_of_sound=speed_of_sound,
-        histogram_time_resolution=1/sampling_rate,
-        propagation_fx=True)
-    I_diffuse = pf.Signal(ir_fast, sampling_rate=sampling_rate)
+        etc_time_resolution=1/sampling_rate,
+        etc_duration=etc_duration,
+        max_reflection_order=0)
+
+    I_diffuse = radi.collect_energy_receiver_mono(receiver)
 
     I_specular = 1/(4*np.pi*reflection_len**2)
     return np.sum(I_diffuse.time)/I_specular

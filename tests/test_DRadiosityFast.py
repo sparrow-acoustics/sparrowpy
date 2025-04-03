@@ -41,7 +41,7 @@ def test_compute_form_factors(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
-    radiosity.bake_geometry(ff_method='universal')
+    radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
 
 
@@ -71,12 +71,9 @@ def test_form_factors_directivity_for_diffuse(
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
         walls, patch_size)
     data, sources, receivers = sofa_data_diffuse
-    radiosity.set_wall_scattering(
+    radiosity.set_wall_brdf(
         np.arange(len(walls)), data, sources, receivers)
     radiosity.set_air_attenuation(
-        pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
-    radiosity.set_wall_absorption(
-        np.arange(len(walls)),
         pf.FrequencyData(np.zeros_like(data.frequencies), data.frequencies))
     radiosity.bake_geometry()
 
@@ -96,19 +93,19 @@ def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
         sample_walls, 0.2)
     (data, sources, receivers) = sofa_data_diffuse
-    radiosity.set_wall_scattering(np.arange(6), data, sources, receivers)
+    radiosity.set_wall_brdf(np.arange(6), data, sources, receivers)
     # check shape of scattering matrix
-    assert len(radiosity._scattering) == 1
-    npt.assert_almost_equal(radiosity._scattering[0].shape, (4, 4, 4))
-    npt.assert_array_equal(radiosity._scattering[0], 1)
-    npt.assert_array_equal(radiosity._scattering_index, 0)
+    assert len(radiosity._brdf) == 1
+    npt.assert_almost_equal(radiosity._brdf[0].shape, (4, 4, 4))
+    npt.assert_array_equal(radiosity._brdf[0], 1)
+    npt.assert_array_equal(radiosity._brdf_index, 0)
     # check source and receiver direction
     for i in range(6):
         assert (np.sum(
-            radiosity._sources[i].cartesian*radiosity.walls_normal[i,:],
+            radiosity._brdf_sources[i].cartesian*radiosity.walls_normal[i,:],
             axis=-1)>0).all()
         assert (np.sum(
-            radiosity._receivers[i].cartesian*radiosity.walls_normal[i,:],
+            radiosity._brdf_receivers[i].cartesian*radiosity.walls_normal[i,:],
             axis=-1)>0).all()
 
 
@@ -116,45 +113,23 @@ def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
         sample_walls, 0.2)
     (data, sources, receivers) = sofa_data_diffuse
-    radiosity.set_wall_scattering([0, 1, 2], data, sources, receivers)
-    radiosity.set_wall_scattering([3, 4, 5], data, sources, receivers)
+    radiosity.set_wall_brdf([0, 1, 2], data, sources, receivers)
+    radiosity.set_wall_brdf([3, 4, 5], data, sources, receivers)
     # check shape of scattering matrix
-    assert len(radiosity._scattering) == 2
+    assert len(radiosity._brdf) == 2
     for i in range(2):
-        npt.assert_almost_equal(radiosity._scattering[i].shape, (4, 4, 4))
-        npt.assert_array_equal(radiosity._scattering[i], 1)
-    npt.assert_array_equal(radiosity._scattering_index[:3], 0)
-    npt.assert_array_equal(radiosity._scattering_index[3:], 1)
+        npt.assert_almost_equal(radiosity._brdf[i].shape, (4, 4, 4))
+        npt.assert_array_equal(radiosity._brdf[i], 1)
+    npt.assert_array_equal(radiosity._brdf_index[:3], 0)
+    npt.assert_array_equal(radiosity._brdf_index[3:], 1)
     # check source and receiver direction
     for i in range(6):
         assert (np.sum(
-            radiosity._sources[i].cartesian*radiosity.walls_normal[i,:],
+            radiosity._brdf_sources[i].cartesian*radiosity.walls_normal[i,:],
             axis=-1)>0).all()
         assert (np.sum(
-            radiosity._receivers[i].cartesian*radiosity.walls_normal[i,:],
+            radiosity._brdf_receivers[i].cartesian*radiosity.walls_normal[i,:],
             axis=-1)>0).all()
-
-
-def test_set_wall_absorption(sample_walls):
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls, 0.2)
-    radiosity.set_wall_absorption(
-        np.arange(6), pf.FrequencyData([0.1, 0.2], [500, 1000]))
-    npt.assert_array_equal(radiosity._absorption[0], [0.1, 0.2])
-    npt.assert_array_equal(radiosity._absorption_index, 0)
-
-
-def test_set_wall_absorption_different(sample_walls):
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls, 0.2)
-    radiosity.set_wall_absorption(
-        [0, 1, 2], pf.FrequencyData([0.1, 0.1], [500, 1000]))
-    radiosity.set_wall_absorption(
-        [3, 4, 5], pf.FrequencyData([0.2, 0.2], [500, 1000]))
-    npt.assert_array_equal(radiosity._absorption[0], [0.1, 0.1])
-    npt.assert_array_equal(radiosity._absorption[1], [0.2, 0.2])
-    npt.assert_array_equal(radiosity._absorption_index[:3], 0)
-    npt.assert_array_equal(radiosity._absorption_index[3:], 1)
 
 
 def test_set_air_attenuation(sample_walls):
