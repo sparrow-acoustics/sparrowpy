@@ -30,7 +30,9 @@ def test_point_plane_projection(origin: np.ndarray, point: np.ndarray,
 @pytest.mark.parametrize("pln", [np.array([0.,0.,1.])])
 def test_point_in_polygon(point, plpt, pln):
     """Ensure correct projection of rays into plane."""
-    out = geom._point_in_polygon(point3d=point, polygon3d=plpt, plane_normal=pln)
+    out = geom._point_in_polygon(point3d=point,
+                                 polygon3d=plpt,
+                                 plane_normal=pln)
 
     if abs(point[0]) > 1. or abs(point[1]) > 1:
         solution = False
