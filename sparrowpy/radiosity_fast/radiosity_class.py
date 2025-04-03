@@ -223,9 +223,10 @@ class DirectionalRadiosityFast():
             No other algorithms are implemented yet.
         max_depth : int, optional
             maximum reflection order the be calculated.
-            e.g. 0 means the first first order reflection, by default -1
+            e.g. 0 means the first order reflection, by default -1
         recalculate : bool, optional
-            whether to recalculate or not, by default False.
+            whether or not to recalculate energy propagation from source
+            position, by default False.
         """
         n_samples = int(histogram_length/histogram_time_resolution)
 
@@ -342,7 +343,7 @@ class DirectionalRadiosityFast():
     def set_wall_absorption(self, wall_indexes, absorption:pf.FrequencyData):
         """Set the wall absorption.
 
-        It this is not called before baking, a default value of 0.0 is used.
+        If this is not called before baking, a default value of 0.0 is used.
 
         Parameters
         ----------
