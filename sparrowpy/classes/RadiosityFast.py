@@ -12,10 +12,10 @@ class DirectionalRadiosityFast():
     _walls_points: np.ndarray
     _walls_normal: np.ndarray
     _walls_up_vector: np.ndarray
-    _patch_to_wall_ids: np.ndarray
     _patches_points: np.ndarray
     _patches_normal: np.ndarray
     _n_patches: int
+    _patch_to_wall_ids: np.ndarray
 
     # geometrical data
     _visibility_matrix: np.ndarray
@@ -25,7 +25,7 @@ class DirectionalRadiosityFast():
 
     # general data for material and medium data
     _n_bins: int
-    _frequencies = np.ndarray
+    _frequencies: np.ndarray
     _brdf: np.ndarray
     _brdf_index: np.ndarray
     _brdf_sources: list[pf.Coordinates]
@@ -56,13 +56,31 @@ class DirectionalRadiosityFast():
         self._patches_normal = patches_normal
         self._n_patches = n_patches
         self._patch_to_wall_ids = patch_to_wall_ids
+
+        # geometrical data
+        self._visibility_matrix = None
+        self._visible_patches = None
+        self._form_factors = None
+        self._form_factors_tilde = None
+
+        # general data for material and medium data
         self._n_bins = None
         self._frequencies = None
         self._brdf = None
         self._brdf_index = None
         self._brdf_sources = None
         self._brdf_receivers = None
+
         self._air_attenuation = None
+        self._speed_of_sound = None
+
+        # etc metadata
+        self._etc_time_resolution = None
+        self._etc_duration = None
+
+        # etc results
+        self._distance_patches_to_source = None
+        self._energy_init_etc = None
         self._energy_exchange_etc = None
 
     @classmethod
