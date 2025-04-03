@@ -1,5 +1,6 @@
-"""universal form factor helper methods."""
+"""methods for universal form factor calculation."""
 import numpy as np
+import sparrowpy.geometry as helpers
 try:
     import numba
     prange = numba.prange
@@ -8,475 +9,427 @@ except ImportError:
     prange = range
 
 
-###################################################
-# integration
-################# 1D , polynomial
-def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """Estimate polynomial coefficients based on sample points.
-
-    Computes coefficients of a polynomial curve passing through points (x,y)
-    the order of the polynomial depends on the number of sample points
-    input in the function. Uses the Lagrange method to estimate the polynomial.
-        ex. a polynomial P estimated with 4 sample points:
-            P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
+#/////////////////////////////////////////////////////////////////////////////////////#
+#######################################################################################
+### patch-to-patch
+def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
+                     source_area: np.ndarray, receiver_pts: np.ndarray,
+                     receiver_normal: np.ndarray,
+                     ) -> float:
+    """Return the form factor based on input patches geometry.
 
     Parameters
     ----------
-    x: np.ndarray
-        sample x-values
-    y: np.ndarray
-        sample y-values
+    receiver_pts: np.ndarray
+        receiver patch vertex coordinates (n_vertices,3)
 
-    Returns
-    -------
-    b: np.ndarray
-        polynomial coefficients
+    receiver_normal: np.ndarray
+        receiver patch normal (3,)
 
-    """
-    xmat = np.empty((len(x),len(x)))
+    receiver_area: float
+        receiver patch area
 
-    if np.abs(x[-1]-x[0])<1e-6:
-        b = np.zeros(len(x))
-    else:
-        for i,xi in enumerate(x):
-            for o in range(len(x)):
-                xmat[i,len(x)-1-o] = xi**o
+    source_pts: np.ndarray
+        source patch vertex coordinates (n_vertices,3)
 
-        b = inner(np.linalg.inv(xmat), y)
+    source_normal: np.ndarray
+        source patch normal (3,)
 
-    return b
-
-
-def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
-    """Integrate a polynomial curve.
-
-    polynomial defined defined between x[0] and x[-1]
-    with coefficients c
-        ex. for a quadratic curve P2:
-            P2(x) = c[0]*x**2 + c[1]*x + c[2]
-
-    Parameters
-    ----------
-    c: np.ndarray
-        polynomial coefficients
-    x: np.ndarray
-        sample points
+    source_area: float
+        source patch area
 
     Returns
     -------
     out: float
-        polynomial integral
+        form factor
 
     """
+    if helpers.coincidence_check(receiver_pts, source_pts):
+        out = nusselt_integration(
+                    patch_i=source_pts, patch_i_normal=source_normal,
+                    patch_j=receiver_pts, patch_j_normal=receiver_normal,
+                    nsamples=64)
+    else:
+        out = stokes_integration(patch_i=source_pts, patch_j=receiver_pts,
+                                 patch_i_area=source_area,  approx_order=4)
+
+    return out
+
+#######################################################################################
+### Stokes integration
+def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
+    """Return the form function value for the stokes form factor integration.
+
+    Parameters
+    ----------
+    p0: np.ndarray
+        a point in space (3,)
+        in the stokes integration of the form factor,
+        a point on a patch's boundary
+
+    p1: np.ndarray
+        a point in space (3,)
+        in the stokes integration of the form factor,
+        a point on a different patch's boundary
+
+    Returns
+    -------
+    result: float
+        form function value
+
+    """
+    n = np.linalg.norm(p1-p0)
+
+    result = np.log(n)
+
+    return result
+
+
+def load_stokes_entries(
+    i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
+    """Load all the stokes form function values between two patches.
+
+    Parameters
+    ----------
+    i_bpoints: np.ndarray
+        list of points in patch i boundary (n_boundary_points_i , 3)
+
+    j_bpoints: np.ndarray
+        list of points in patch j boundary (n_boundary_points_j , 3)
+
+    Returns
+    -------
+    form_mat: np.ndarray
+        f function value matrix (n_boundary_points_i , n_boundary_points_j)
+
+    """
+    form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)))
+
+    for i in prange(i_bpoints.shape[0]):
+        for j in prange(j_bpoints.shape[0]):
+            form_mat[i][j] = stokes_ffunction(i_bpoints[i],j_bpoints[j])
+
+    return form_mat
+
+
+def stokes_integration(
+    patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float,
+    approx_order=4) -> float:
+    """Calculate an estimation of the form factor between two patches.
+
+    Computationally integrates a modified form function over
+    the boundaries of both patches.
+    The modified form function follows Stokes' theorem.
+
+    The modified form function integral is calculated using a
+    polynomial approximation based on sampled values.
+
+    Parameters
+    ----------
+    patch_i : np.ndarray
+        vertex coordinates of patch i (n_vertices, 3)
+
+    patch_i_area: float
+       area of patch i
+
+    patch_j : np.ndarray
+        vertex coordinates of patch j (n_vertices, 3)
+
+    source_area: float
+        area of the source patch
+
+    approx_order: int
+        polynomial order of the form function integration estimation
+
+    Returns
+    -------
+    float
+    form factor between two patches
+
+    """
+    i_bpoints, i_conn = helpers.sample_border(patch_i, npoints=approx_order+1)
+    j_bpoints, j_conn = helpers.sample_border(patch_j, npoints=approx_order+1)
+
+    subsecj = np.zeros((j_conn.shape[1]))
+    subseci = np.zeros((i_conn.shape[1]))
+    form_mat = np.zeros((i_bpoints.shape[0],j_bpoints.shape[0]))
+
+    # first compute and store form function sample values
+    form_mat = load_stokes_entries(i_bpoints, j_bpoints)
+
+    # double polynomial integration (per dimension (x,y,z))
+    outer_integral = 0
+    inner_integral = np.zeros((len(i_bpoints),len(j_bpoints[0])))
+
+    for dim in range(len(j_bpoints[0])): # for each dimension
+        # integrate form function over each point on patch i boundary
+
+        for i in range(len(i_bpoints)):   # for each point in patch i boundary
+            for segj in j_conn:     # for each segment segj in patch j boundary
+
+                xj = j_bpoints[segj][:,dim]
+
+                if np.abs(xj[-1]-xj[0])>1e-3:
+                    for k in range(len(segj)):
+                        subsecj[k] = form_mat[i][segj[k]]
+
+                    # compute polynomial coefficients
+                    quadfactors = helpers.poly_estimation_Lagrange(x=xj,
+                                                                   y=subsecj)
+                    # analytical integration of the approx polynomials
+                    inner_integral[i][dim] += helpers.poly_integration(
+                                                        c=quadfactors,x=xj)
+
+
+        # integrate previously computed integral over patch i
+        for segi in i_conn:   # for each segment segi in patch i boundary
+
+            xi = i_bpoints[segi][:,dim]
+
+            if np.abs(xi[-1]-xi[0])>1e-3:
+                for k in range(len(segi)):
+                    subseci[k] = inner_integral[segi[k]][dim]
+                quadfactors = helpers.poly_estimation_Lagrange(x=xi, y=subseci)
+                outer_integral += helpers.poly_integration(c=quadfactors,x=xi)
+
+    return np.abs(outer_integral/(2*np.pi*patch_i_area))
+
+
+#######################################################################################
+### Nusselt analog integration
+def nusselt_analog(surf_origin, surf_normal,
+                   patch_points, patch_normal) -> float:
+    """Calculate the Nusselt analog for a single point.
+
+    Projects a given receiver patch onto a hemisphere centered around a point
+    on a source patch surface.
+    The hemispherical projection is then projected onto the source patch plane.
+    The area of this projection relative to the unit circle area is the
+    differential form factor between the two patches.
+
+    Parameters
+    ----------
+    surf_origin : np.ndarray
+        point on source patch for differential form factor evaluation (3,)
+        (global origin)
+
+    surf_normal : np.ndarray
+        normal of source patch (3,)
+
+    patch_points : np.ndarray
+        vertex coordinates of the receiver patch (n_vertices, 3)
+
+    patch_normal: np.ndarray
+        normal of receiver patch (3,)
+
+    Returns
+    -------
+    Nusselt analog factor
+    (differential form factor)
+
+    """
+    boundary_points, connectivity = helpers.sample_border(patch_points,
+                                                          npoints=3)
+
+    hand = np.sign(np.dot(
+                np.cross(patch_points[1]-patch_points[0],
+                         patch_points[2]-patch_points[1]), patch_normal) )
+
+    curved_area = 0
+
+    sphPts = np.empty_like( boundary_points )
+    projPts = np.empty_like( boundary_points )
+    plnPts = np.empty( shape=(len(boundary_points),2) )
+
+    for ii in prange(len(boundary_points)):
+        # patch j points projected on the hemisphere
+        sphPts[ii] = ( (boundary_points[ii]-surf_origin) /
+                        np.linalg.norm(boundary_points[ii]-surf_origin) )
+
+    rotmat = helpers.rotation_matrix(n_in=surf_normal)
+
+    for ii in prange(len(sphPts)):
+        # points on the hemisphere projected onto patch plane
+        plnPts[ii,:] = helpers.inner(matrix=rotmat,vector=sphPts[ii])[:-1]
+        projPts[ii,:-1] = plnPts[ii,:]
+        projPts[ii,-1] = 0.
+
+
+    big_poly = helpers.polygon_area(projPts[0::2])
+
+    segmt=np.empty_like(connectivity[0])
+
+    leftseg=np.empty((3,2))
+    rightseg=np.empty((3,2))
+
+    for jj in prange(connectivity.shape[0]):
+
+        segmt = connectivity[jj]
+
+        if (np.linalg.norm(np.cross(projPts[segmt[-1]],projPts[segmt[0]]))
+                                                                    > 1e-6):
+
+            # if the points on the segment span less than 90 degrees
+            if np.dot( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 1e-6:
+                curved_area += helpers.area_under_curve(plnPts[segmt],order=2)
+
+            # if points span over 90º, additional sampling is required
+            else:
+                mpoint = ( sphPts[segmt[0]] +
+                          (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2 )
+
+                # midpoint on the arc projected on the hemisphere
+                marc = mpoint/np.linalg.norm(mpoint)
+                a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
+                b = marc + (sphPts[segmt[-1]] - marc) / 2
+
+                mpoint = helpers.inner(matrix=rotmat,vector=mpoint)[:-1]
+                marc = helpers.inner(matrix=rotmat,vector=marc)[:-1]
+                a = a/np.linalg.norm(a)
+                a = helpers.inner(matrix=rotmat,vector=a)[:-1]
+
+                b = b/np.linalg.norm(b)
+                b = helpers.inner(matrix=rotmat,vector=b)[:-1]
+
+                linArea = (np.linalg.norm(plnPts[segmt[-1]]-plnPts[segmt[0]])
+                                              * np.linalg.norm(mpoint-marc)/2)
+
+                leftseg[0] = plnPts[segmt[0]]
+                leftseg[1] = a
+                leftseg[2] = marc
+
+                rightseg[0] = marc
+                rightseg[1] = b
+                rightseg[2] = plnPts[segmt[-1]]
+
+
+                left =  helpers.area_under_curve(leftseg, order=2)
+                right = helpers.area_under_curve(rightseg, order=2)
+                curved_area += (linArea * np.sign(left) + left + right)
+
+    return big_poly + hand*curved_area
+
+def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
+                        patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
+                        nsamples=2, random=False) -> float:
+    """Estimate the form factor based on the Nusselt analogue.
+
+    Integrates the differential form factor (Nusselt analogue output)
+    over the surface of the source patch
+
+    Parameters
+    ----------
+    patch_i: np.ndarray
+        vertex coordinates of the source patch
+
+    patch_j: np.ndarray
+        vertex coordinates of the receiver patch
+
+    patch_i_normal: np.ndarray
+        source patch normal (3,)
+
+    patch_j_normal: np.ndarray
+        receiver patch normal (3,)
+
+    patch_i_area: float
+        source patch area
+
+    patch_j_area: float
+        receiver patch area
+
+    nsamples: int
+        number of receiver surface samples for integration
+
+    random: bool
+        determines the distribution of the samples on patch_i surface
+        if True, the samples are randomly distributed in a uniform way
+        if False, a regular sampling of the surface is performed
+
+    Returns
+    -------
+    out: float
+        form factor between patches i and j
+
+    """
+    if random:
+        p0_array = helpers.sample_random(patch_i,nsamples)
+    else:
+        p0_array = helpers.sample_regular(patch_i,nsamples)
+
     out = 0
 
-    for i in range(len(c)):
-        out += c[i] * x[-1]**(len(c)-i) / (len(c)-i)
-        out -= c[i] * x[0]**(len(c)-i) / (len(c)-i)
+    for i in prange(p0_array.shape[0]):
+        out += nusselt_analog( surf_origin=p0_array[i],
+                               surf_normal=patch_i_normal,
+                               patch_points=patch_j,
+                               patch_normal=patch_j_normal )
+
+    out *= 1 / ( np.pi * len(p0_array) )
 
     return out
 
-################# surface areas
-def polygon_area(pts: np.ndarray) -> float:
-    """Calculate the area of a convex n-sided polygon.
+
+#/////////////////////////////////////////////////////////////////////////////////////#
+#######################################################################################
+### point-to-patch and patch-to-point
+def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
+    """Calculate the geometric factor between a point and a patch.
+
+    applies a modified version of the Nusselt analogue,
+    transformed for a -point- source rather than differential surface element.
 
     Parameters
     ----------
-    pts: np.ndarray
-        list of 3D points which define the vertices of the polygon
+    point: np.ndarray
+        source or receiver point
+
+    patch_points: np.ndarray
+        vertex coordinates of the patch
+
+    mode: string
+        determines if point is acting as a source ('source')
+        or as a receiver ('receiver')
 
     Returns
     -------
-    area: float
-        area of polygon defined by pts
+    geometric factor
 
     """
-    area = 0
+    if mode == 'receiver':
+        source_area = helpers.polygon_area(patch_points)
+    elif mode == 'source':
+        source_area = 4
 
-    for tri in range(pts.shape[0]-2):
-        area  +=  .5 * np.linalg.norm(
-                            np.cross(pts[tri+1] - pts[0], pts[tri+2]-pts[0]) )
+    npoints = len(patch_points)
 
-    return area
+    interior_angle_sum = 0
 
-
-def area_under_curve(ps: np.ndarray, order=2) -> float:
-    """Calculate the area under a polynomial curve.
-
-    Curve sampled by a finite number of points ps on a common plane.
-
-    Parameters
-    ----------
-    ps : np.ndarray
-        sample points
-
-    order : int
-        polynomial order of the curve
-
-    Returns
-    -------
-    area: float
-        area under curve
-
-    """
-    # the order of the curve may be overwritten depending on the sample size
-    order = min(order,len(ps)-1)
-
-    # the vector between first and last sample (y==0) (new space's x axis)
-    f  = ps[-1] - ps[0]
-
-    rotation_matrix = np.array([[f[0],f[1]],[-f[1],f[0]]])/np.linalg.norm(f)
-
-    x = np.zeros(order+1)
-    y = np.zeros(order+1)
-
-    for k in range(1,order+1):
-
-        c = ps[k] - ps[0]  # translate point towards new origin
-
-        # rotate point around origin to align with new axis
-        cc = inner(matrix=rotation_matrix,vector=c)
-
-        x[k] = cc[0]
-        y[k] = cc[1]
-
-
-    coefs = poly_estimation_Lagrange(x,y)
-    area = poly_integration(coefs,x) # area between curve and ps[-1] - ps[0]
-
-    return area
-
-
-####################################################
-# sampling
-################# surface
-def sample_random(el: np.ndarray, npoints=100):
-    """Randomly sample points on the surface of a patch.
-
-    ! currently only supports triangular, rectangular, or parallelogram patches
-
-    Parameters
-    ----------
-    el : geometry.Polygon object
-        patch to sample
-
-    npoints : int
-        number of sample points to generate
-
-    Returns
-    -------
-    ptlist: np.ndarray
-        list of sample points in patch el
-
-    """
-
-    ptlist=np.zeros((npoints,3))
-
-    u = el[1]-el[0]
-    v = el[-1]-el[0]
+    patch_onsphere = np.zeros_like(patch_points)
 
     for i in range(npoints):
-        s = np.random.uniform()
-        t = np.random.uniform()
+        patch_onsphere[i]= ( (patch_points[i]-point) /
+                              np.linalg.norm(patch_points[i]-point) )
 
-        inside = s+t <= 1
+    for i in range(npoints):
 
-        # if sample falls outside of triangular patch, it is "reflected" back inside
-        if len(el)==3 and not inside:
-            s = 1-s
-            t = 1-t
+        v0 = helpers.calculate_tangent_vector(patch_onsphere[i],
+                                              patch_onsphere[(i-1)%npoints])
+        v1 = helpers.calculate_tangent_vector(patch_onsphere[i],
+                                              patch_onsphere[(i+1)%npoints])
 
-        ptlist[i] = s*u + t*v + el[0]
+        interior_angle_sum += np.arccos(np.dot(v0,v1))
 
-    return ptlist
+    factor = interior_angle_sum - (len(patch_points)-2)*np.pi
 
-
-def sample_regular(el: np.ndarray, npoints=10):
-    """Sample points on the surface of a patch using a regular distribution.
-
-    over the directions defined by the patches' sides
-
-    ! currently only supports triangular, rectangular, or parallelogram patches
-    ! may not return exact number of requested points
-                -- depends on the divisibility of the patch
-
-    Parameters
-    ----------
-    el : geometry.Polygon object
-        patch to sample
-
-    npoints : int
-        number of sample points to generate
-
-    Returns
-    -------
-    out: np.ndarray
-        list of sample points in patch el
-
-    """
-    u = el[1]-el[0]
-    v = el[-1]-el[0]
-
-    if len(el)==3:
-        a = 2
-    else:
-        a = 1
-
-    npointsx = int( round(np.linalg.norm(u) / np.linalg.norm(v) *
-                                                np.sqrt(a*npoints)) )
-    npointsz = int( round(np.linalg.norm(v) / np.linalg.norm(u) *
-                                                np.sqrt(a*npoints)) )
-
-    if npointsz==0:
-        npointsz = 1
-    if npointsx==0:
-        npointsx = 1
-
-    ptlist=[]
-
-    tt = np.linspace(0,1-1/npointsx,npointsx)
-    sstep =  1/(npointsx*2)
-    tt += sstep
-
-    tz = np.linspace(0,1-1/npointsz,npointsz)
-    sstepz =  1/(npointsz*2)
-    tz += sstepz
-
-    thres = np.sqrt(sstepz**2+sstep**2)/2
-
-    jj = 0
-
-    for i,s in enumerate(tt):
-        if len(el)==3:
-            jj = i
-
-        for t in tz[0:len(tz)-round(npointsz/npointsx*jj)]:
-
-            inside = s+t <= 1-thres
-            if not(len(el)==3 and not inside):
-                ptlist.append(s*u + t*v + el[0])
-
-
-    out = np.empty((len(ptlist), len(ptlist[0])))
-
-    for i in prange(len(ptlist)):
-        for j in prange(len(ptlist[0])):
-            out[i][j] = ptlist[i][j]
-
-    return out
-
-################# boundary
-def sample_border(el: np.ndarray, npoints=3):
-    """Sample points on the boundary of a patch at fractional intervals.
-
-    returns an array of points on the patch boundary (pts)
-                                        and a connectivity array (conn)
-    which stores a list of ordered indices of the points
-    found on the same boundary segment.
-
-    Parameters
-    ----------
-    el : geometry.Polygon object
-        patch to sample
-
-    npoints : int
-        number of sample points per boundary segment (minimum 2)
-
-    Returns
-    -------
-    pts: np.ndarray
-        boundary sample points
-
-    conn: np.ndarray(int)
-        indices of pts corresponding to boundary segments
-        (each row corresponds to the points in a single segment)
-
-    """
-    n_div = npoints - 1
-
-    pts  = np.empty((len(el)*(npoints-1),len(el[0])))
-    conn = np.empty((len(el),npoints), dtype=np.int8)
-
-    for i in range(len(el)):
-
-        conn[i][0]= (i*n_div)%(n_div*len(el))
-        conn[i][-1]= (i*n_div+n_div)%(n_div*len(el))
-
-        for ii in range(0,n_div):
-
-            pts[i*n_div+ii,:]= (el[i] + ii*(el[(i+1)%len(el)]-el[i])/n_div)
-
-            conn[i][ii]=(i*n_div+ii)%(n_div*len(el))
-
-
-    return pts,conn.astype(np.int8)
-
-
-####################################################
-# geometry
-
-def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
-    """Compute the inner product between a matrix and a vector to please njit.
-
-    Parameters
-    ----------
-    matrix : numpy.ndarray(n,n)
-        input matrix
-
-    vector : numpy.ndarray(n,)
-        vector
-
-    Returns
-    -------
-    out: np.ndarray(n,)
-        matrix*vector inner product
-
-    """
-    out = np.empty(matrix.shape[0])
-
-    for i in prange(matrix.shape[0]):
-        out[i] = np.dot(matrix[i],vector)
-
-    return out
-
-
-def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
-    """Compute a rotation matrix from a given input and output directions.
-
-    Parameters
-    ----------
-    n_in : numpy.ndarray(3,)
-        input vector
-
-    n_out : numpy.ndarray(3,)
-        direction to which n_in is to be rotated
-
-    Returns
-    -------
-    matrix: np.ndarray
-        rotation matrix
-
-    """
-    if n_out.shape[0] == 0:
-        n_out = np.zeros_like(n_in)
-        n_out[-1] = 1.
-    else:
-        n_out = n_out
-
-    #check if all the vector entries coincide
-    counter = int(0)
-
-    for i in prange(n_in.shape[0]):
-        if n_in[i] == n_out[i]:
-            counter+=1
-        else:
-            counter=counter
-
-    # if input vector is the same as output return identity matrix
-    if counter == n_in.shape[0]:
-
-        matrix = np.eye( len(n_in) , dtype=np.float64)
-
-    else:
-
-        a = n_in / np.linalg.norm(n_in)
-        a = np.reshape(a, len(n_in) )
-
-        b = n_out / np.linalg.norm(n_out)
-        b = np.reshape(b, len(n_in) )
-
-        c = np.dot(a,b)
-
-        if c!=-1:
-            v = np.cross(a,b)
-            s = np.linalg.norm(v)
-            kmat = np.array([[0, -v[2], v[1]],
-                             [v[2], 0, -v[0]],
-                             [-v[1], v[0], 0]])
-
-            matrix =  ( np.eye( len(n_in) ) +
-                       kmat +
-                       kmat.dot(kmat) * ((1 - c) / (s ** 2)) )
-
-        else: # in case the in and out vectors have symmetrical directions
-            matrix = np.array([[-1.,0.,0.],[0.,1.,0.],[0.,0.,-1.]])
-
-    return matrix
-
-
-def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
-    """Compute a vector tangent to a spherical surface based on two points.
-
-    The tangent vector has is evaluated on point v0
-    and its tangent arc on the sphere joins points v0 and v1
-
-    Parameters
-    ----------
-    v0 : numpy.ndarray(3,)
-        point on which to calculate tangent vector
-
-    v1 : numpy.ndarray(3,)
-        point on sphere to which tangent vector poinst
-
-    Returns
-    -------
-    vout: np.ndarray
-        vector tangent to spherical surface
-
-    """
-    if np.abs(np.dot(v0,v1))>1e-10:
-        vout = (v1-v0)-np.dot((v1-v0),v0)/np.dot(v0,v0)*v0
-        vout /= np.linalg.norm(vout)
-
-    else:
-        vout = v1/np.linalg.norm(v1)
-
-    return vout
-
-
-####################################################
-# checks
-def coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
-    """Flag true if two patches have any common points.
-
-    Parameters
-    ----------
-    p0 : numpy.ndarray(# vertices, 3)
-        patch
-
-    p1 : numpy.ndarray(# vertices, 3)
-        another patch
-
-    thres: float
-        threshold value for distance between points
-
-    Returns
-    -------
-    flag: bool
-        flag of coincident points on both patches
-
-    """
-    flag = False
-
-    for i in numba.prange(p0.shape[0]):
-        for j in numba.prange(p1.shape[0]):
-            if np.linalg.norm(p0[i]-p1[j])<thres:
-                flag=True
-                break
-
-
-    return flag
+    return factor / (np.pi*source_area)
 
 
 if numba is not None:
-    poly_estimation_Lagrange = numba.njit()(poly_estimation_Lagrange)
-    poly_integration = numba.njit()(poly_integration)
-    polygon_area = numba.njit()(polygon_area)
-    sample_random = numba.njit()(sample_random)
-    sample_regular = numba.njit()(sample_regular)
-    sample_border = numba.njit()(sample_border)
-    inner = numba.njit()(inner)
-    rotation_matrix = numba.njit()(rotation_matrix)
-    calculate_tangent_vector = numba.njit()(calculate_tangent_vector)
-    area_under_curve = numba.njit()(area_under_curve)
-    coincidence_check = numba.njit()(coincidence_check)
+    calc_form_factor = numba.njit()(calc_form_factor)
+    pt_solution = numba.njit(parallel=True)(pt_solution)
+    nusselt_integration = numba.njit(parallel=False)(nusselt_integration)
+    stokes_integration = numba.njit(parallel=False)(stokes_integration)
+    nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
+    stokes_ffunction = numba.njit()(stokes_ffunction)
+    load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
+
