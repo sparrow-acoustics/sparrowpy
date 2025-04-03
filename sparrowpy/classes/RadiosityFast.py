@@ -1,8 +1,9 @@
 """Module for the radiosity simulation."""
 import numpy as np
 import pyfar as pf
+from sparrowpy.form_factor import form_factor
 from sparrowpy.radiosity_fast import (
-    form_factor, source_energy, receiver_energy, geometry)
+    source_energy, receiver_energy, geometry)
 from sparrowpy.radiosity_fast import energy_exchange_order as ee_order
 
 

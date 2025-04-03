@@ -7,7 +7,7 @@ except ImportError:
     prange = range
 import numpy as np
 from sparrowpy.radiosity_fast import geometry
-from .universal import ( calc_form_factor )
+from sparrowpy.form_factor.universal import ( calc_form_factor )
 
 
 def kang(
