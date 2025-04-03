@@ -1,6 +1,6 @@
 """methods for universal form factor calculation."""
 import numpy as np
-import sparrowpy.geometry as helpers
+import sparrowpy.radiosity_fast.geometry as helpers
 try:
     import numba
     prange = numba.prange
