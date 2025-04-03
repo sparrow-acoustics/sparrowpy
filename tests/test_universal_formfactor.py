@@ -1,9 +1,8 @@
 """Test the universal form factor module."""
-
 import pytest
 import sparrowpy.geometry as geo
 import numpy as np
-import sparrowpy.form_factor.universal as form_factor
+import sparrowpy.form_factor.universal_methods as form_factor_uni
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy import PatchesKang
@@ -256,7 +255,8 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
 
 def source_cast(src, rpatch, absor):
     """Cast and test source-to-patch factor calculation."""
-    nuss = form_factor.pt_solution(point=src.position, patch_points=rpatch.pts)
+    nuss = form_factor_uni.pt_solution(point=src.position,
+                                       patch_points=rpatch.pts)
 
     true = sum(rpatch.E_matrix[rpatch.E_matrix != 0])
 
@@ -280,7 +280,7 @@ def receiver_cast(rcv, patch, sr, c):
 
     patch_energy = np.sum(patch.E_matrix)
 
-    nuss = form_factor.pt_solution(
+    nuss = form_factor_uni.pt_solution(
             point=rcv.position, patch_points=patch.pts, mode="receiver",
             ) * patch_energy
 
