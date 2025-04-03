@@ -909,7 +909,8 @@ def _point_in_polygon(point3d: np.ndarray,
     # and remove z dimension for convenience
     rotmat = _rotation_matrix(n_in=plane_normal)
 
-    pt = _matrix_vector_product(matrix=rotmat,vector=point3d)[0:point3d.shape[0]-1]
+    pt = _matrix_vector_product(matrix=rotmat,
+                                vector=point3d)[0:point3d.shape[0]-1]
     poly = np.empty((polygon3d.shape[0],2))
     for i in prange(polygon3d.shape[0]):
         poly[i] = _matrix_vector_product(
