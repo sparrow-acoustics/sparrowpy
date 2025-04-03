@@ -191,7 +191,8 @@ def stokes_integration(
             if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                quadfactors = helpers._poly_estimation_Lagrange(x=xi, y=subseci)
+                quadfactors = helpers._poly_estimation_Lagrange(x=xi,
+                                                                y=subseci)
                 outer_integral += helpers._poly_integration(c=quadfactors,x=xi)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
@@ -287,8 +288,10 @@ def nusselt_analog(surf_origin, surf_normal,
                 a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
                 b = marc + (sphPts[segmt[-1]] - marc) / 2
 
-                mpoint = helpers._matrix_vector_product(matrix=rotmat,vector=mpoint)[:-1]
-                marc = helpers._matrix_vector_product(matrix=rotmat,vector=marc)[:-1]
+                mpoint = helpers._matrix_vector_product(matrix=rotmat,
+                                                        vector=mpoint)[:-1]
+                marc = helpers._matrix_vector_product(matrix=rotmat,
+                                                      vector=marc)[:-1]
                 a = a/np.linalg.norm(a)
                 a = helpers._matrix_vector_product(matrix=rotmat,vector=a)[:-1]
 
