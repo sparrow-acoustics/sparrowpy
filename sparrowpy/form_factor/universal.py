@@ -44,7 +44,7 @@ def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
         form factor
 
     """
-    if helpers.coincidence_check(receiver_pts, source_pts):
+    if helpers._coincidence_check(receiver_pts, source_pts):
         out = nusselt_integration(
                     patch_i=source_pts, patch_i_normal=source_normal,
                     patch_j=receiver_pts, patch_j_normal=receiver_normal,
@@ -147,8 +147,10 @@ def stokes_integration(
     form factor between two patches
 
     """
-    i_bpoints, i_conn = helpers.sample_border(patch_i, npoints=approx_order+1)
-    j_bpoints, j_conn = helpers.sample_border(patch_j, npoints=approx_order+1)
+    i_bpoints, i_conn = helpers._sample_boundary_regular(patch_i,
+                                                         npoints=approx_order+1)
+    j_bpoints, j_conn = helpers._sample_boundary_regular(patch_j,
+                                                         npoints=approx_order+1)
 
     subsecj = np.zeros((j_conn.shape[1]))
     subseci = np.zeros((i_conn.shape[1]))
@@ -174,10 +176,10 @@ def stokes_integration(
                         subsecj[k] = form_mat[i][segj[k]]
 
                     # compute polynomial coefficients
-                    quadfactors = helpers.poly_estimation_Lagrange(x=xj,
+                    quadfactors = helpers._poly_estimation_Lagrange(x=xj,
                                                                    y=subsecj)
                     # analytical integration of the approx polynomials
-                    inner_integral[i][dim] += helpers.poly_integration(
+                    inner_integral[i][dim] += helpers._poly_integration(
                                                         c=quadfactors,x=xj)
 
 
@@ -189,8 +191,8 @@ def stokes_integration(
             if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                quadfactors = helpers.poly_estimation_Lagrange(x=xi, y=subseci)
-                outer_integral += helpers.poly_integration(c=quadfactors,x=xi)
+                quadfactors = helpers._poly_estimation_Lagrange(x=xi, y=subseci)
+                outer_integral += helpers._poly_integration(c=quadfactors,x=xi)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
@@ -228,8 +230,9 @@ def nusselt_analog(surf_origin, surf_normal,
     (differential form factor)
 
     """
-    boundary_points, connectivity = helpers.sample_border(patch_points,
-                                                          npoints=3)
+    boundary_points, connectivity = helpers._sample_boundary_regular(
+                                                            patch_points,
+                                                            npoints=3)
 
     hand = np.sign(np.dot(
                 np.cross(patch_points[1]-patch_points[0],
@@ -246,11 +249,12 @@ def nusselt_analog(surf_origin, surf_normal,
         sphPts[ii] = ( (boundary_points[ii]-surf_origin) /
                         np.linalg.norm(boundary_points[ii]-surf_origin) )
 
-    rotmat = helpers.rotation_matrix(n_in=surf_normal)
+    rotmat = helpers._rotation_matrix(n_in=surf_normal)
 
     for ii in prange(len(sphPts)):
         # points on the hemisphere projected onto patch plane
-        plnPts[ii,:] = helpers.inner(matrix=rotmat,vector=sphPts[ii])[:-1]
+        plnPts[ii,:] = helpers._matrix_vector_product(matrix=rotmat,
+                                                      vector=sphPts[ii])[:-1]
         projPts[ii,:-1] = plnPts[ii,:]
         projPts[ii,-1] = 0.
 
@@ -271,7 +275,7 @@ def nusselt_analog(surf_origin, surf_normal,
 
             # if the points on the segment span less than 90 degrees
             if np.dot( plnPts[segmt[-1]], plnPts[segmt[0]] ) >= 1e-6:
-                curved_area += helpers.area_under_curve(plnPts[segmt],order=2)
+                curved_area += helpers._area_under_curve(plnPts[segmt],order=2)
 
             # if points span over 90º, additional sampling is required
             else:
@@ -283,13 +287,13 @@ def nusselt_analog(surf_origin, surf_normal,
                 a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
                 b = marc + (sphPts[segmt[-1]] - marc) / 2
 
-                mpoint = helpers.inner(matrix=rotmat,vector=mpoint)[:-1]
-                marc = helpers.inner(matrix=rotmat,vector=marc)[:-1]
+                mpoint = helpers._matrix_vector_product(matrix=rotmat,vector=mpoint)[:-1]
+                marc = helpers._matrix_vector_product(matrix=rotmat,vector=marc)[:-1]
                 a = a/np.linalg.norm(a)
-                a = helpers.inner(matrix=rotmat,vector=a)[:-1]
+                a = helpers._matrix_vector_product(matrix=rotmat,vector=a)[:-1]
 
                 b = b/np.linalg.norm(b)
-                b = helpers.inner(matrix=rotmat,vector=b)[:-1]
+                b = helpers._matrix_vector_product(matrix=rotmat,vector=b)[:-1]
 
                 linArea = (np.linalg.norm(plnPts[segmt[-1]]-plnPts[segmt[0]])
                                               * np.linalg.norm(mpoint-marc)/2)
@@ -303,8 +307,8 @@ def nusselt_analog(surf_origin, surf_normal,
                 rightseg[2] = plnPts[segmt[-1]]
 
 
-                left =  helpers.area_under_curve(leftseg, order=2)
-                right = helpers.area_under_curve(rightseg, order=2)
+                left =  helpers._area_under_curve(leftseg, order=2)
+                right = helpers._area_under_curve(rightseg, order=2)
                 curved_area += (linArea * np.sign(left) + left + right)
 
     return big_poly + hand*curved_area
@@ -352,9 +356,9 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
 
     """
     if random:
-        p0_array = helpers.sample_random(patch_i,nsamples)
+        p0_array = helpers._surf_sample_random(patch_i,nsamples)
     else:
-        p0_array = helpers.sample_regular(patch_i,nsamples)
+        p0_array = helpers._surf_sample_regulargrid(patch_i,nsamples)
 
     out = 0
 
@@ -412,9 +416,9 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
 
     for i in range(npoints):
 
-        v0 = helpers.calculate_tangent_vector(patch_onsphere[i],
+        v0 = helpers._sphere_tangent_vector(patch_onsphere[i],
                                               patch_onsphere[(i-1)%npoints])
-        v1 = helpers.calculate_tangent_vector(patch_onsphere[i],
+        v1 = helpers._sphere_tangent_vector(patch_onsphere[i],
                                               patch_onsphere[(i+1)%npoints])
 
         interior_angle_sum += np.arccos(np.dot(v0,v1))
