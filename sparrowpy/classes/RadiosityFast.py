@@ -28,8 +28,8 @@ class DirectionalRadiosityFast():
     _frequencies: np.ndarray
     _brdf: np.ndarray
     _brdf_index: np.ndarray
-    _brdf_sources: list[pf.Coordinates]
-    _brdf_receivers: list[pf.Coordinates]
+    _brdf_incoming_directions: list[pf.Coordinates]
+    _brdf_outgoing_directions: list[pf.Coordinates]
 
     _air_attenuation: np.ndarray
     _speed_of_sound: float
@@ -68,8 +68,8 @@ class DirectionalRadiosityFast():
         self._frequencies = None
         self._brdf = None
         self._brdf_index = None
-        self._brdf_sources = None
-        self._brdf_receivers = None
+        self._brdf_incoming_directions = None
+        self._brdf_outgoing_directions = None
 
         self._air_attenuation = None
         self._speed_of_sound = None
@@ -137,11 +137,11 @@ class DirectionalRadiosityFast():
             self.patches_area, self._visible_patches)
 
         # Calculate the form factors with directivity.
-        if self._brdf_sources is not None:
+        if self._brdf_incoming_directions is not None:
             sources_array = np.array(
-                [s.cartesian for s in self._brdf_sources])
+                [s.cartesian for s in self._brdf_incoming_directions])
             receivers_array = np.array(
-                [s.cartesian for s in self._brdf_receivers])
+                [s.cartesian for s in self._brdf_outgoing_directions])
             scattering_index = np.array(self._brdf_index)
             scattering = np.array(self._brdf)
         else:
@@ -166,8 +166,10 @@ class DirectionalRadiosityFast():
         """Initialize the source energy."""
         source_position = source.cartesian
         patch_to_wall_ids = self._patch_to_wall_ids
-        sources = np.array([s.cartesian for s in self._brdf_sources])
-        receivers = np.array([s.cartesian for s in self._brdf_receivers])
+        sources = np.array(
+            [s.cartesian for s in self._brdf_incoming_directions])
+        receivers = np.array(
+            [s.cartesian for s in self._brdf_outgoing_directions])
         scattering = np.array(self._brdf)
         scattering_index = self._brdf_index
         patches_center = self.patches_center
@@ -300,7 +302,7 @@ class DirectionalRadiosityFast():
 
             # access histograms with correct scattering weighting
             receivers_array = np.array(
-                [s.cartesian for s in self._brdf_receivers])
+                [s.cartesian for s in self._brdf_outgoing_directions])
 
             receiver_idx = geometry.get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
@@ -343,8 +345,8 @@ class DirectionalRadiosityFast():
             self,
             wall_indexes:list[int],
             brdf:pf.FrequencyData,
-            brdf_sources:pf.Coordinates,
-            brdf_receivers:pf.Coordinates):
+            incoming_directions:pf.Coordinates,
+            outgoing_directions:pf.Coordinates):
         """Set the wall scattering.
 
         Parameters
@@ -353,32 +355,32 @@ class DirectionalRadiosityFast():
             list of walls for the scattering data
         brdf : pf.FrequencyData
             brdf data of cshape (n_sources, n_receivers)
-        brdf_sources : pf.Coordinates
+        incoming_directions : pf.Coordinates
             source coordinates
-        brdf_receivers : pf.Coordinates
+        outgoing_directions : pf.Coordinates
             receiver coordinates
 
         """
-        assert (brdf_sources.z >= 0).all(), \
+        assert (incoming_directions.z >= 0).all(), \
             "Sources must be in the positive half space"
-        assert (brdf_receivers.z >= 0).all(), \
+        assert (outgoing_directions.z >= 0).all(), \
             "Receivers must be in the positive half space"
         self._check_set_frequency(brdf.frequencies)
-        if self._brdf_sources is None:
-            self._brdf_sources = np.empty(
+        if self._brdf_incoming_directions is None:
+            self._brdf_incoming_directions = np.empty(
                 (self.n_walls), dtype=pf.Coordinates)
-            self._brdf_receivers = np.empty(
+            self._brdf_outgoing_directions = np.empty(
                 (self.n_walls), dtype=pf.Coordinates)
             self._brdf_index = np.empty((self.n_walls), dtype=np.int64)
             self._brdf_index.fill(-1)
             self._brdf = []
 
         for i in wall_indexes:
-            sources_rot, receivers_rot = _rotate_coords_to_normal(
+            incoming_rot, outgoing_rot = _rotate_coords_to_normal(
                 self.walls_normal[i], self.walls_up_vector[i],
-                brdf_sources, brdf_receivers)
-            self._brdf_sources[i] = sources_rot
-            self._brdf_receivers[i] = receivers_rot
+                incoming_directions, outgoing_directions)
+            self._brdf_incoming_directions[i] = incoming_rot
+            self._brdf_outgoing_directions[i] = outgoing_rot
 
         self._brdf.append(brdf.freq*np.pi)
         self._brdf_index[wall_indexes] = len(self._brdf)-1

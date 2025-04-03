@@ -102,10 +102,12 @@ def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
     # check source and receiver direction
     for i in range(6):
         assert (np.sum(
-            radiosity._brdf_sources[i].cartesian*radiosity.walls_normal[i,:],
+            radiosity._brdf_incoming_directions[i].cartesian * \
+                radiosity.walls_normal[i,:],
             axis=-1)>0).all()
         assert (np.sum(
-            radiosity._brdf_receivers[i].cartesian*radiosity.walls_normal[i,:],
+            radiosity._brdf_outgoing_directions[i].cartesian * \
+                radiosity.walls_normal[i,:],
             axis=-1)>0).all()
 
 
@@ -125,10 +127,12 @@ def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
     # check source and receiver direction
     for i in range(6):
         assert (np.sum(
-            radiosity._brdf_sources[i].cartesian*radiosity.walls_normal[i,:],
+            radiosity._brdf_incoming_directions[i].cartesian * \
+                radiosity.walls_normal[i,:],
             axis=-1)>0).all()
         assert (np.sum(
-            radiosity._brdf_receivers[i].cartesian*radiosity.walls_normal[i,:],
+            radiosity._brdf_outgoing_directions[i].cartesian * \
+                radiosity.walls_normal[i,:],
             axis=-1)>0).all()
 
 
