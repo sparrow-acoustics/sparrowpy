@@ -262,7 +262,7 @@ def _form_factors_with_directivity_dim(
         visibility_matrix, form_factors, n_bins, patches_center,
         patches_area,
         air_attenuation,
-        absorption, absorption_index, patch_to_wall_ids,
+        patch_to_wall_ids,
         scattering, scattering_index, sources, receivers):
     """Calculate the form factors with directivity."""
     n_patches = patches_center.shape[0]
@@ -295,11 +295,6 @@ def _form_factors_with_directivity_dim(
                     scattering, scattering_index)
                 form_factors_tilde[i, j, :, :] = form_factors_tilde[
                     i, j, :, :] * scattering_factor
-
-            if absorption is not None:
-                source_wall_idx = absorption_index[wall_id_i]
-                form_factors_tilde[i, j, :, :] = form_factors_tilde[
-                    i, j, :, :] * (1-absorption[source_wall_idx])
 
     return form_factors_tilde
 

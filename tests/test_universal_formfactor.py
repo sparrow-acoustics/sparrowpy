@@ -6,7 +6,7 @@ import numpy as np
 import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
-from sparrowpy.radiosity import PatchesKang
+from sparrowpy import PatchesKang
 from sparrowpy.form_factor import form_factor as FFac
 import sparrowpy as sp
 
@@ -142,7 +142,7 @@ def test_ff_energy_conservation(
 
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size=1.)
 
-    radi.bake_geometry(ff_method="universal",algorithm="order")
+    radi.bake_geometry()
 
 
     err = radi.n_patches-np.sum(radi._form_factors_tilde)
@@ -169,31 +169,31 @@ def test_different_areas(
                        [width,1.,1.],
                        [width,0.,1.]])
 
-    ff = FFac.universal(patches_points=np.array([patch1,patch2,patch2,patch1]),
-                        patches_normals=np.array([[0.,0.,1.],[0.,0.,-1.],[0.,0.,-1.],[0.,0.,1.]]),
-                        patches_areas=np.array([width,1.,1.,width]),
-                        visible_patches=np.array([[0,1],[2,3]]))
+    ff = FFac.universal(
+        patches_points=np.array([patch1,patch2,patch2,patch1]),
+        patches_normals=np.array(
+            [[0.,0.,1.],[0.,0.,-1.],[0.,0.,-1.],[0.,0.,1.]]),
+        patches_areas=np.array([width,1.,1.,width]),
+        visible_patches=np.array([[0,1],[2,3]]))
 
     ff_tilde = FFac._form_factors_with_directivity_dim(
-                            visibility_matrix=np.array([[False,True,False,False],
-                                                  [False,False,False,False],
-                                                  [False,False,False,True],
-                                                  [False,False,False,False]]),
-                            form_factors=ff,
-                            n_bins=1,
-                            patches_center=np.array([[width/2, .5, 0.],
-                                                     [.5,.5,1.],
-                                                     [.5,.5,1.],
-                                                     [width/2, .5, 0.]]),
-                            patches_area=np.array([width,1.,1.,width]),
-                            air_attenuation=None,
-                            absorption=None,
-                            absorption_index=None,
-                            patch_to_wall_ids=[0,1,1,0],
-                            scattering=None,
-                            scattering_index=None,
-                            sources=None,
-                            receivers=None,
+        visibility_matrix=np.array([[False,True,False,False],
+                                [False,False,False,False],
+                                [False,False,False,True],
+                                [False,False,False,False]]),
+        form_factors=ff,
+        n_bins=1,
+        patches_center=np.array([[width/2, .5, 0.],
+                                    [.5,.5,1.],
+                                    [.5,.5,1.],
+                                    [width/2, .5, 0.]]),
+        patches_area=np.array([width,1.,1.,width]),
+        air_attenuation=None,
+        patch_to_wall_ids=[0,1,1,0],
+        scattering=None,
+        scattering_index=None,
+        sources=None,
+        receivers=None,
     )
 
     assert ff_tilde[0,1,0,0]==ff_tilde[1,0,0,0]/width
