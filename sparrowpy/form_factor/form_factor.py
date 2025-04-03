@@ -6,9 +6,8 @@ except ImportError:
     numba = None
     prange = range
 import numpy as np
-from ..radiosity_fast import geometry
-from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import (
-                                                            calc_form_factor )
+from sparrowpy.radiosity_fast import geometry
+from .universal import ( calc_form_factor )
 
 
 def kang(
