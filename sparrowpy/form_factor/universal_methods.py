@@ -260,7 +260,7 @@ def nusselt_analog(surf_origin, surf_normal,
         projPts[ii,-1] = 0.
 
 
-    big_poly = helpers.polygon_area(projPts[0::2])
+    big_poly = helpers._polygon_area(projPts[0::2])
 
     segmt=np.empty_like(connectivity[0])
 
@@ -403,7 +403,7 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
 
     """
     if mode == 'receiver':
-        source_area = helpers.polygon_area(patch_points)
+        source_area = helpers._polygon_area(patch_points)
     elif mode == 'source':
         source_area = 4
 

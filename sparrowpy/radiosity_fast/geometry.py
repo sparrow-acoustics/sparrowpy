@@ -287,13 +287,7 @@ def _calculate_area(points):
     area = np.zeros(points.shape[0])
 
     for i in prange(points.shape[0]):
-        for tri in range(points.shape[1]-2):
-            area[i] +=  .5 * np.linalg.norm(
-                np.cross(
-                    points[i, tri+1,:] - points[i, 0,:],
-                    points[i, tri+2,:]-points[i, 0,:],
-                    ),
-                )
+        area[i] = _polygon_area(points[i])
 
     return area
 
@@ -473,7 +467,7 @@ def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     return out
 
 ################# surface areas
-def polygon_area(pts: np.ndarray) -> float:
+def _polygon_area(pts: np.ndarray) -> float:
     """Calculate the area of a convex n-sided polygon.
 
     Parameters
@@ -577,7 +571,8 @@ def _surf_sample_random(el: np.ndarray, npoints=100):
 
         inside = s+t <= 1
 
-        # if sample falls outside of triangular patch, it is "reflected" back inside
+        # if sample falls outside of triangular patch,
+        # it is "reflected" back inside
         if len(el)==3 and not inside:
             s = 1-s
             t = 1-t
@@ -1001,7 +996,7 @@ if numba is not None:
     _calculate_normals = numba.njit()(_calculate_normals)
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
     _poly_integration = numba.njit()(_poly_integration)
-    polygon_area = numba.njit()(polygon_area)
+    _polygon_area = numba.njit()(_polygon_area)
     _surf_sample_random = numba.njit()(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
