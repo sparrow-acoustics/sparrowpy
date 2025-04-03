@@ -7,7 +7,7 @@ import sparrowpy.radiosity_fast.universal_ff.univ_form_factor as form_factor
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy.radiosity import PatchesKang
-from sparrowpy.radiosity_fast import form_factor as FFac
+from sparrowpy.form_factor import form_factor as FFac
 import sparrowpy as sp
 
 

@@ -6,7 +6,7 @@ except ImportError:
     numba = None
     prange = range
 import numpy as np
-from . import geometry
+from ..radiosity_fast import geometry
 from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import (
                                                             calc_form_factor )
 
