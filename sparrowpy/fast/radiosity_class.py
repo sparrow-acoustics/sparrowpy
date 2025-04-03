@@ -1,8 +1,9 @@
 """Module for the radiosity simulation."""
 import numpy as np
 import pyfar as pf
-from . import form_factor, source_energy, receiver_energy, geometry
-from . import energy_exchange_order as ee_order
+from sparrowpy.radiosity_fast import (
+    form_factor, source_energy, receiver_energy, geometry)
+from sparrowpy.radiosity_fast import energy_exchange_order as ee_order
 
 
 class DirectionalRadiosityFast():
@@ -11,12 +12,14 @@ class DirectionalRadiosityFast():
     _walls_points: np.ndarray
     _walls_normal: np.ndarray
     _walls_up_vector: np.ndarray
+    _patch_to_wall_ids: np.ndarray
     _patches_points: np.ndarray
     _patches_normal: np.ndarray
     _patch_size: float
     _n_patches: int
     _speed_of_sound: float
 
+    # geometrical data
     _visibility_matrix: np.ndarray
     _visible_patches: np.ndarray
     _form_factors: np.ndarray
@@ -25,16 +28,12 @@ class DirectionalRadiosityFast():
     # general data for material data
     _n_bins: int
     _frequencies = np.ndarray
-    # absorption data
-    _absorption: np.ndarray
-    _absorption_index: np.ndarray
-    _scattering: np.ndarray
-    _scattering_index: np.ndarray
-    _sources: list[pf.Coordinates]
-    _receivers: list[pf.Coordinates]
+    _brdf: np.ndarray
+    _brdf_index: np.ndarray
+    _brdf_sources: list[pf.Coordinates]
+    _brdf_receivers: list[pf.Coordinates]
 
     _air_attenuation: np.ndarray
-    _patch_to_wall_ids: np.ndarray
 
 
     def __init__(
@@ -52,10 +51,12 @@ class DirectionalRadiosityFast():
         self._patch_to_wall_ids = patch_to_wall_ids
         self._n_bins = None
         self._frequencies = None
-        self._sources = None
-        self._receivers = None
-        self._absorption = None
+        self._brdf = None
+        self._brdf_index = None
+        self._brdf_sources = None
+        self._brdf_receivers = None
         self._air_attenuation = None
+
     @classmethod
     def from_polygon(
             cls, polygon_list, patch_size):
@@ -67,15 +68,6 @@ class DirectionalRadiosityFast():
             list of patches
         patch_size : float
             maximal patch size in meters.
-        max_order_k : int
-            max order of energy exchange iterations.
-        ir_length_s : float
-            length of ir in seconds.
-        sofa_path : Path, string, list of Path, list of string
-            path of directional scattering coefficients or list of path
-            for each Patch.
-        source : SoundSource, optional
-            Source object, by default None, can be added later.
 
         """
         # save wall information
@@ -94,15 +86,8 @@ class DirectionalRadiosityFast():
             patches_points, patches_normal, patch_size, n_patches,
             patch_to_wall_ids)
 
-    def bake_geometry(self, ff_method='universal', algorithm='order'):
+    def bake_geometry(self):
         """Bake the geometry by calculating all the form factors.
-
-        Parameters
-        ----------
-        ff_method : str, optional
-            _description_, by default 'universal'
-        algorithm : str, optional
-            _description_, by default 'order'
 
         """
         # Check the visibility between patches.
@@ -121,19 +106,18 @@ class DirectionalRadiosityFast():
                 i_counter += 1
         self._visible_patches = visible_patches
 
-        if ff_method == 'universal':
-            self._form_factors = form_factor.universal(
-                self.patches_points, self.patches_normal,
-                self.patches_area, self._visible_patches)
-        else:
-            raise NotImplementedError()
+        self._form_factors = form_factor.universal(
+            self.patches_points, self.patches_normal,
+            self.patches_area, self._visible_patches)
 
         # Calculate the form factors with directivity.
-        if self._sources is not None:
-            sources_array = np.array([s.cartesian for s in self._sources])
-            receivers_array = np.array([s.cartesian for s in self._receivers])
-            scattering_index = np.array(self._scattering_index)
-            scattering = np.array(self._scattering)
+        if self._brdf_sources is not None:
+            sources_array = np.array(
+                [s.cartesian for s in self._brdf_sources])
+            receivers_array = np.array(
+                [s.cartesian for s in self._brdf_receivers])
+            scattering_index = np.array(self._brdf_index)
+            scattering = np.array(self._brdf)
         else:
             sources_array = None
             receivers_array = None
@@ -149,58 +133,47 @@ class DirectionalRadiosityFast():
 
         n_bins = 1 if self._n_bins is None else self._n_bins
 
-        if algorithm == 'order':
-            self._form_factors_tilde = \
-                form_factor._form_factors_with_directivity_dim(
-                self.visibility_matrix, self.form_factors, n_bins,
-                self.patches_center, self.patches_area,
-                self._air_attenuation, absorption,
-                absorption_index,
-                self._patch_to_wall_ids, scattering,
-                scattering_index,
-                sources_array, receivers_array)
-        else:
-            raise NotImplementedError()
+        self._form_factors_tilde = \
+            form_factor._form_factors_with_directivity_dim(
+            self.visibility_matrix, self.form_factors, n_bins,
+            self.patches_center, self.patches_area,
+            self._air_attenuation, absorption,
+            absorption_index,
+            self._patch_to_wall_ids, scattering,
+            scattering_index,
+            sources_array, receivers_array)
 
     def init_source_energy(
-            self, source_position:np.ndarray,
-            ff_method="universal", algorithm='order'):
+            self, source_position:np.ndarray):
         """Initialize the source energy."""
         source_position = np.array(source_position)
         patch_to_wall_ids = self._patch_to_wall_ids
-        absorption = np.atleast_2d(np.array(self._absorption))
-        absorption_index = self._absorption_index
-        sources = np.array([s.cartesian for s in self._sources])
-        receivers = np.array([s.cartesian for s in self._receivers])
-        scattering = np.array(self._scattering)
-        scattering_index = self._scattering_index
+        sources = np.array([s.cartesian for s in self._brdf_sources])
+        receivers = np.array([s.cartesian for s in self._brdf_receivers])
+        scattering = np.array(self._brdf)
+        scattering_index = self._brdf_index
         patches_center = self.patches_center
-        if ff_method == "universal":
-            energy_0, distance_0 = source_energy._init_energy_universal(
-                source_position, patches_center, self.patches_points,
-                self._air_attenuation, self.n_bins)
-        else:
-            raise NotImplementedError()
-
-        if algorithm == 'order':
-            energy_0_dir = ee_order._add_directional(
-                energy_0, source_position,
-                patches_center, self._n_bins, patch_to_wall_ids,
-                absorption, absorption_index,
-                sources, receivers,
-                scattering, scattering_index)
-            self.energy_0_dir = energy_0_dir
-            self.distance_0 = distance_0
-        else:
-            raise NotImplementedError()
+        energy_0, distance_0 = source_energy._init_energy_universal(
+            source_position, patches_center, self.patches_points,
+            self._air_attenuation, self.n_bins)
+        energy_0_dir = ee_order._add_directional(
+            energy_0, source_position,
+            patches_center, self._n_bins, patch_to_wall_ids,
+            sources, receivers,
+            scattering, scattering_index)
+        self.energy_0_dir = energy_0_dir
+        self.distance_0 = distance_0
 
     def calculate_energy_exchange(
             self, speed_of_sound,
-            histogram_time_resolution,
-            histogram_length, algorithm='order',
-            max_depth=-1, recalculate=False):
-        """Calculate the energy exchange between patches."""
-        n_samples = int(histogram_length/histogram_time_resolution)
+            etc_time_resolution,
+            etc_duration,
+            max_reflection_order=-1,
+            recalculate=False):
+        """Calculate the energy exchange between patches.
+        # todo? make first order to first reflection.
+        """
+        n_samples = int(etc_duration/etc_time_resolution)
 
         patches_center = self.patches_center
         distance_0 = self.distance_0
@@ -212,27 +185,72 @@ class DirectionalRadiosityFast():
                 distance_i_j[i, j] = np.linalg.norm(
                     patches_center[i, :]-patches_center[j, :])
 
-        if algorithm == 'order':
-            energy_0_dir = self.energy_0_dir
+        energy_0_dir = self.energy_0_dir
 
-            if not hasattr(self, 'E_matrix_total') or recalculate:
-                if max_depth < 1:
-                    self.E_matrix_total = ee_order.energy_exchange_init_energy(
-                        n_samples, energy_0_dir, distance_0,
-                        speed_of_sound, histogram_time_resolution,
-                        )
-                else:
-                    self.E_matrix_total = ee_order.energy_exchange(
-                        n_samples, energy_0_dir, distance_0, distance_i_j,
-                        self._form_factors_tilde,
-                        speed_of_sound, histogram_time_resolution, max_depth,
-                        self._visible_patches)
-        else:
-            raise NotImplementedError()
+        if not hasattr(self, 'E_matrix_total') or recalculate:
+            if max_reflection_order < 1:
+                self.E_matrix_total = ee_order.energy_exchange_init_energy(
+                    n_samples, energy_0_dir, distance_0,
+                    speed_of_sound, etc_time_resolution,
+                    )
+            else:
+                self.E_matrix_total = ee_order.energy_exchange(
+                    n_samples, energy_0_dir, distance_0, distance_i_j,
+                    self._form_factors_tilde,
+                    speed_of_sound, etc_time_resolution,
+                    max_reflection_order,
+                    self._visible_patches)
 
-    def collect_receiver_energy(self, receiver_pos,
-            speed_of_sound, histogram_time_resolution,
-            method="universal", propagation_fx=False):
+        self.etc_time_resolution = etc_time_resolution
+        self.speed_of_sound = speed_of_sound
+
+    def collect_energy_receiver_mono(self, receivers):
+        """Collect the energy at the receivers.
+
+        Parameters
+        ----------
+        receivers : pf.Coordinates
+            receiver Coordinates in of cshape (n_receivers).
+
+        Returns
+        -------
+        etc : pf.TimeData
+            energy collected at the receiver in cshape
+            (n_receivers, n_bins)
+        """
+        etc = self.collect_energy_receiver_patchwise(self, receivers)
+        etc.time = np.sum(etc.time, axis=1)
+        return etc
+
+    def collect_energy_receiver_patchwise(self, receivers):
+        """Collect the energy for each patch at the receivers without summing
+        up the patches.
+
+        Parameters
+        ----------
+        receivers : pf.Coordinates
+            receiver Coordinates in of cshape (n_receivers).
+
+        Returns
+        -------
+        etc : pf.TimeData
+            energy collected at the receiver in cshape
+            (n_receivers, n_patches, n_bins)
+        """
+        if not isinstance(receivers, pf.Coordinates):
+            raise ValueError(
+                "Receiver positions must be of type pf.Coordinates")
+        if receivers.cdim != 1:
+            raise ValueError(
+                "Receiver positions must be of shape (n_receivers, 3)")
+        etc_data = self._collect_energy_patches(
+            receivers.cartesian, propagation_fx=True)
+        times = np.arange(etc_data.shape[-1]) * self.etc_time_resolution
+        return pf.TimeData(etc_data, times)
+
+    def _collect_energy_patches(
+            self, receiver_pos,
+            propagation_fx=False):
         """Collect patch histograms as detected by receiver."""
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
@@ -244,8 +262,8 @@ class DirectionalRadiosityFast():
         n_receivers = receiver_pos.shape[0]
 
         patches_center = self.patches_center
-        patches_receiver_distance = np.empty([n_receivers,
-                                            self.n_patches,patches_center.shape[-1]])
+        patches_receiver_distance = np.empty(
+            [n_receivers, self.n_patches,patches_center.shape[-1]])
 
         E_matrix = np.empty((n_patches, n_bins, self.E_matrix_total.shape[-1]))
         histogram_out = np.empty(
@@ -254,15 +272,13 @@ class DirectionalRadiosityFast():
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
 
-            if method == "universal":
-                # geometrical weighting
-                patch_receiver_energy = receiver_energy._universal(
-                        receiver_pos[i], patches_points)
-            else:
-                raise NotImplementedError()
+            # geometrical weighting
+            patch_receiver_energy = receiver_energy._universal(
+                    receiver_pos[i], patches_points)
 
             # access histograms with correct scattering weighting
-            receivers_array = np.array([s.cartesian for s in self._receivers])
+            receivers_array = np.array(
+                [s.cartesian for s in self._brdf_receivers])
 
             receiver_idx = geometry.get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
@@ -281,33 +297,13 @@ class DirectionalRadiosityFast():
                 histogram_out[i] = ee_order._collect_receiver_energy(
                         E_matrix,
                         np.linalg.norm(patches_receiver_distance, axis=1),
-                                    speed_of_sound, histogram_time_resolution,
+                                    self.speed_of_sound,
+                                    self.etc_time_resolution,
                                     air_attenuation=air_attenuation)
             else:
                 histogram_out[i] = E_matrix
 
         return histogram_out
-
-    def set_wall_absorption(self, wall_indexes, absorption:pf.FrequencyData):
-        """Set the wall absorption.
-
-        Parameters
-        ----------
-        wall_indexes : list[int]
-            list of walls for the scattering data
-        absorption : pf.FrequencyData
-            absorption coefficient of cshape (1, )
-
-        """
-        self._check_set_frequency(absorption.frequencies)
-        if self._absorption is None:
-            self._absorption_index = np.empty((self.n_walls), dtype=np.int64)
-            self._absorption_index.fill(-1)
-            self._absorption = []
-
-        self._absorption.append(np.atleast_1d(absorption.freq.squeeze()))
-        self._absorption_index[wall_indexes] = len(self._absorption)-1
-
 
     def set_air_attenuation(self, air_attenuation:pf.FrequencyData):
         """Set air attenuation factor in Np/m.
@@ -321,9 +317,10 @@ class DirectionalRadiosityFast():
         self._check_set_frequency(air_attenuation.frequencies)
         self._air_attenuation = np.atleast_1d(air_attenuation.freq.squeeze())
 
-    def set_wall_scattering(
-            self, wall_indexes:list[int],
-            scattering:pf.FrequencyData, sources:pf.Coordinates,
+    def set_wall_brdf(
+            self,
+            wall_indexes:list[int],
+            brdf:pf.FrequencyData, sources:pf.Coordinates,
             receivers:pf.Coordinates):
         """Set the wall scattering.
 
@@ -331,8 +328,8 @@ class DirectionalRadiosityFast():
         ----------
         wall_indexes : list[int]
             list of walls for the scattering data
-        scattering : pf.FrequencyData
-            scattering data of cshape (n_sources, n_receivers)
+        brdf : pf.FrequencyData
+            brdf data of cshape (n_sources, n_receivers)
         sources : pf.Coordinates
             source coordinates
         receivers : pf.Coordinates
@@ -343,23 +340,23 @@ class DirectionalRadiosityFast():
             "Sources must be in the positive half space"
         assert (receivers.z >= 0).all(), \
             "Receivers must be in the positive half space"
-        self._check_set_frequency(scattering.frequencies)
-        if self._sources is None:
-            self._sources = np.empty((self.n_walls), dtype=pf.Coordinates)
-            self._receivers = np.empty((self.n_walls), dtype=pf.Coordinates)
-            self._scattering_index = np.empty((self.n_walls), dtype=np.int64)
-            self._scattering_index.fill(-1)
-            self._scattering = []
+        self._check_set_frequency(brdf.frequencies)
+        if self._brdf_sources is None:
+            self._brdf_sources = np.empty((self.n_walls), dtype=pf.Coordinates)
+            self._brdf_receivers = np.empty((self.n_walls), dtype=pf.Coordinates)
+            self._brdf_index = np.empty((self.n_walls), dtype=np.int64)
+            self._brdf_index.fill(-1)
+            self._brdf = []
 
         for i in wall_indexes:
             sources_rot, receivers_rot = _rotate_coords_to_normal(
                 self.walls_normal[i], self.walls_up_vector[i],
                 sources, receivers)
-            self._sources[i] = sources_rot
-            self._receivers[i] = receivers_rot
+            self._brdf_sources[i] = sources_rot
+            self._brdf_receivers[i] = receivers_rot
 
-        self._scattering.append(scattering.freq*np.pi)
-        self._scattering_index[wall_indexes] = len(self._scattering)-1
+        self._brdf.append(brdf.freq*np.pi)
+        self._brdf_index[wall_indexes] = len(self._brdf)-1
 
     def _check_set_frequency(self, frequencies:np.ndarray):
         """Check if the frequency data matches the radiosity object."""
