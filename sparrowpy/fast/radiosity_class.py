@@ -15,9 +15,7 @@ class DirectionalRadiosityFast():
     _patch_to_wall_ids: np.ndarray
     _patches_points: np.ndarray
     _patches_normal: np.ndarray
-    _patch_size: float
     _n_patches: int
-    _speed_of_sound: float
 
     # geometrical data
     _visibility_matrix: np.ndarray
@@ -25,7 +23,7 @@ class DirectionalRadiosityFast():
     _form_factors: np.ndarray
     _form_factors_tilde: np.ndarray
 
-    # general data for material data
+    # general data for material and medium data
     _n_bins: int
     _frequencies = np.ndarray
     _brdf: np.ndarray
@@ -34,11 +32,21 @@ class DirectionalRadiosityFast():
     _brdf_receivers: list[pf.Coordinates]
 
     _air_attenuation: np.ndarray
+    _speed_of_sound: float
+
+    # etc metadata
+    _etc_time_resolution: float
+    _etc_duration: float
+
+    # etc results
+    _distance_patches_to_source: np.ndarray
+    _energy_init_etc: np.ndarray
+    _energy_exchange_etc: np.ndarray
 
 
     def __init__(
             self, walls_points, walls_normal, walls_up_vector,
-            patches_points, patches_normal, patch_size, n_patches,
+            patches_points, patches_normal, n_patches,
             patch_to_wall_ids):
         """Create a Radiosity object for directional implementation."""
         self._walls_points = walls_points
@@ -46,7 +54,6 @@ class DirectionalRadiosityFast():
         self._walls_up_vector = walls_up_vector
         self._patches_points = patches_points
         self._patches_normal = patches_normal
-        self._patch_size = patch_size
         self._n_patches = n_patches
         self._patch_to_wall_ids = patch_to_wall_ids
         self._n_bins = None
@@ -56,6 +63,7 @@ class DirectionalRadiosityFast():
         self._brdf_sources = None
         self._brdf_receivers = None
         self._air_attenuation = None
+        self._energy_exchange_etc = None
 
     @classmethod
     def from_polygon(
@@ -83,7 +91,7 @@ class DirectionalRadiosityFast():
         # create radiosity object
         return cls(
             walls_points, walls_normal, walls_up_vector,
-            patches_points, patches_normal, patch_size, n_patches,
+            patches_points, patches_normal, n_patches,
             patch_to_wall_ids)
 
     def bake_geometry(self):
@@ -124,29 +132,21 @@ class DirectionalRadiosityFast():
             scattering_index = None
             scattering = None
 
-        if self._absorption is None:
-            absorption = None
-            absorption_index = None
-        else:
-            absorption = np.atleast_2d(np.array(self._absorption))
-            absorption_index = np.array(self._absorption_index)
-
         n_bins = 1 if self._n_bins is None else self._n_bins
 
         self._form_factors_tilde = \
             form_factor._form_factors_with_directivity_dim(
             self.visibility_matrix, self.form_factors, n_bins,
             self.patches_center, self.patches_area,
-            self._air_attenuation, absorption,
-            absorption_index,
+            self._air_attenuation,
             self._patch_to_wall_ids, scattering,
             scattering_index,
             sources_array, receivers_array)
 
     def init_source_energy(
-            self, source_position:np.ndarray):
+            self, source:pf.Coordinates):
         """Initialize the source energy."""
-        source_position = np.array(source_position)
+        source_position = source.cartesian
         patch_to_wall_ids = self._patch_to_wall_ids
         sources = np.array([s.cartesian for s in self._brdf_sources])
         receivers = np.array([s.cartesian for s in self._brdf_receivers])
@@ -161,8 +161,8 @@ class DirectionalRadiosityFast():
             patches_center, self._n_bins, patch_to_wall_ids,
             sources, receivers,
             scattering, scattering_index)
-        self.energy_0_dir = energy_0_dir
-        self.distance_0 = distance_0
+        self._energy_init_etc = energy_0_dir
+        self._distance_patches_to_source = distance_0
 
     def calculate_energy_exchange(
             self, speed_of_sound,
@@ -176,7 +176,7 @@ class DirectionalRadiosityFast():
         n_samples = int(etc_duration/etc_time_resolution)
 
         patches_center = self.patches_center
-        distance_0 = self.distance_0
+        distance_0 = self._distance_patches_to_source
         n_patches = self.n_patches
         distance_i_j = np.empty((n_patches, n_patches))
 
@@ -185,24 +185,26 @@ class DirectionalRadiosityFast():
                 distance_i_j[i, j] = np.linalg.norm(
                     patches_center[i, :]-patches_center[j, :])
 
-        energy_0_dir = self.energy_0_dir
+        energy_0_dir = self._energy_init_etc
 
-        if not hasattr(self, 'E_matrix_total') or recalculate:
+        if self._energy_exchange_etc is None or recalculate:
             if max_reflection_order < 1:
-                self.E_matrix_total = ee_order.energy_exchange_init_energy(
-                    n_samples, energy_0_dir, distance_0,
-                    speed_of_sound, etc_time_resolution,
-                    )
+                self._energy_exchange_etc = \
+                    ee_order.energy_exchange_init_energy(
+                        n_samples, energy_0_dir, distance_0,
+                        speed_of_sound, etc_time_resolution,
+                        )
             else:
-                self.E_matrix_total = ee_order.energy_exchange(
+                self._energy_exchange_etc = ee_order.energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
                     speed_of_sound, etc_time_resolution,
                     max_reflection_order,
                     self._visible_patches)
 
-        self.etc_time_resolution = etc_time_resolution
-        self.speed_of_sound = speed_of_sound
+        self._etc_time_resolution = etc_time_resolution
+        self._speed_of_sound = speed_of_sound
+        self._etc_duration = etc_duration
 
     def collect_energy_receiver_mono(self, receivers):
         """Collect the energy at the receivers.
@@ -218,7 +220,7 @@ class DirectionalRadiosityFast():
             energy collected at the receiver in cshape
             (n_receivers, n_bins)
         """
-        etc = self.collect_energy_receiver_patchwise(self, receivers)
+        etc = self.collect_energy_receiver_patchwise(receivers)
         etc.time = np.sum(etc.time, axis=1)
         return etc
 
@@ -245,7 +247,7 @@ class DirectionalRadiosityFast():
                 "Receiver positions must be of shape (n_receivers, 3)")
         etc_data = self._collect_energy_patches(
             receivers.cartesian, propagation_fx=True)
-        times = np.arange(etc_data.shape[-1]) * self.etc_time_resolution
+        times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
 
     def _collect_energy_patches(
@@ -265,9 +267,11 @@ class DirectionalRadiosityFast():
         patches_receiver_distance = np.empty(
             [n_receivers, self.n_patches,patches_center.shape[-1]])
 
-        E_matrix = np.empty((n_patches, n_bins, self.E_matrix_total.shape[-1]))
-        histogram_out = np.empty(
-            (n_receivers, n_patches, n_bins, self.E_matrix_total.shape[-1]) )
+        E_matrix = np.empty(
+            (n_patches, n_bins, self._energy_exchange_etc.shape[-1]))
+        histogram_out = np.empty((
+            n_receivers, n_patches, n_bins,
+            self._energy_exchange_etc.shape[-1]))
 
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
@@ -288,7 +292,7 @@ class DirectionalRadiosityFast():
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[k,:]= (self.E_matrix_total[k,receiver_idx[k],:]
+                E_matrix[k,:]= (self._energy_exchange_etc[k,receiver_idx[k],:]
                                                     * patch_receiver_energy[k])
 
             if propagation_fx:
@@ -298,7 +302,7 @@ class DirectionalRadiosityFast():
                         E_matrix,
                         np.linalg.norm(patches_receiver_distance, axis=1),
                                     self.speed_of_sound,
-                                    self.etc_time_resolution,
+                                    self._etc_time_resolution,
                                     air_attenuation=air_attenuation)
             else:
                 histogram_out[i] = E_matrix
@@ -447,11 +451,6 @@ class DirectionalRadiosityFast():
     def patches_normal(self):
         """Return the normal of the patches."""
         return self._patches_normal
-
-    @property
-    def patch_size(self):
-        """Return the size of the patches."""
-        return self._patch_size
 
     @property
     def speed_of_sound(self):
