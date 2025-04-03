@@ -47,7 +47,6 @@ def get_scattering_data_receiver_index(
     return receiver_idx
 
 
-
 def get_scattering_data(
         pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,
         sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
@@ -90,7 +89,6 @@ def get_scattering_data(
         (receivers[wall_id_i, :]-difference_receiver)**2, axis=-1))
     return scattering[scattering_index[wall_id_i],
         source_idx, receiver_idx, :]
-
 
 
 def get_scattering_data_source(
@@ -326,7 +324,7 @@ def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
     return patch_nums[x_idx]*patch_nums[y_idx]
 
-def calculate_normals(points: np.ndarray):
+def _calculate_normals(points: np.ndarray):
     """Calculate normals of plane defined by 3 or more input points."""
 
     normals = np.empty((points.shape[0],3))
@@ -340,8 +338,8 @@ def calculate_normals(points: np.ndarray):
 ###################################################
 # integration
 ################# 1D , polynomial
-def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """Estimate polynomial coefficients based on sample points.
+def _poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Calculate Lagrange polynomial coefficients based on sample points.
 
     Computes coefficients of a polynomial curve passing through points (x,y)
     the order of the polynomial depends on the number of sample points
@@ -371,12 +369,12 @@ def poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
             for o in range(len(x)):
                 xmat[i,len(x)-1-o] = xi**o
 
-        b = inner(np.linalg.inv(xmat), y)
+        b = _matrix_vector_product(np.linalg.inv(xmat), y)
 
     return b
 
 
-def poly_integration(c: np.ndarray, x: np.ndarray)-> float:
+def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     """Integrate a polynomial curve.
 
     polynomial defined defined between x[0] and x[-1]
@@ -429,7 +427,7 @@ def polygon_area(pts: np.ndarray) -> float:
     return area
 
 
-def area_under_curve(ps: np.ndarray, order=2) -> float:
+def _area_under_curve(ps: np.ndarray, order=2) -> float:
     """Calculate the area under a polynomial curve.
 
     Curve sampled by a finite number of points ps on a common plane.
@@ -464,14 +462,14 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
         c = ps[k] - ps[0]  # translate point towards new origin
 
         # rotate point around origin to align with new axis
-        cc = inner(matrix=rotation_matrix,vector=c)
+        cc = _matrix_vector_product(matrix=rotation_matrix,vector=c)
 
         x[k] = cc[0]
         y[k] = cc[1]
 
 
-    coefs = poly_estimation_Lagrange(x,y)
-    area = poly_integration(coefs,x) # area between curve and ps[-1] - ps[0]
+    coefs = _poly_estimation_Lagrange(x,y)
+    area = _poly_integration(coefs,x) # area between curve and ps[-1] - ps[0]
 
     return area
 
@@ -479,7 +477,7 @@ def area_under_curve(ps: np.ndarray, order=2) -> float:
 ####################################################
 # sampling
 ################# surface
-def sample_random(el: np.ndarray, npoints=100):
+def _surf_sample_random(el: np.ndarray, npoints=100):
     """Randomly sample points on the surface of a patch.
 
     ! currently only supports triangular, rectangular, or parallelogram patches
@@ -520,7 +518,7 @@ def sample_random(el: np.ndarray, npoints=100):
     return ptlist
 
 
-def sample_regular(el: np.ndarray, npoints=10):
+def _surf_sample_regulargrid(el: np.ndarray, npoints=10):
     """Sample points on the surface of a patch using a regular distribution.
 
     over the directions defined by the patches' sides
@@ -595,7 +593,7 @@ def sample_regular(el: np.ndarray, npoints=10):
     return out
 
 ################# boundary
-def sample_border(el: np.ndarray, npoints=3):
+def _sample_boundary_regular(el: np.ndarray, npoints=3):
     """Sample points on the boundary of a patch at fractional intervals.
 
     returns an array of points on the patch boundary (pts)
@@ -644,7 +642,7 @@ def sample_border(el: np.ndarray, npoints=3):
 ####################################################
 # geometry
 
-def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
+def _matrix_vector_product(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
     """Compute the inner product between a matrix and a vector to please njit.
 
     Parameters
@@ -669,7 +667,7 @@ def inner(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
     return out
 
 
-def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
+def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     """Compute a rotation matrix from a given input and output directions.
 
     Parameters
@@ -733,11 +731,11 @@ def rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     return matrix
 
 
-def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
+def _sphere_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
     """Compute a vector tangent to a spherical surface based on two points.
 
-    The tangent vector has is evaluated on point v0
-    and its tangent arc on the sphere joins points v0 and v1
+    The tangent vector is evaluated on point v0.
+    The respective tangent arc on the sphere joins points v0 and v1.
 
     Parameters
     ----------
@@ -745,7 +743,7 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
         point on which to calculate tangent vector
 
     v1 : numpy.ndarray(3,)
-        point on sphere to which tangent vector poinst
+        point on sphere to which tangent vector "points"
 
     Returns
     -------
@@ -765,7 +763,7 @@ def calculate_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
 
 ####################################################
 # checks
-def coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
+def _coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
     """Flag true if two patches have any common points.
 
     Parameters
@@ -809,16 +807,16 @@ if numba is not None:
     get_scattering_data = numba.njit()(get_scattering_data)
     get_scattering_data_source = numba.njit()(get_scattering_data_source)
     check_visibility = numba.njit(parallel=True)(check_visibility)
-    calculate_normals = numba.njit()(calculate_normals)
-    poly_estimation_Lagrange = numba.njit()(poly_estimation_Lagrange)
-    poly_integration = numba.njit()(poly_integration)
+    _calculate_normals = numba.njit()(_calculate_normals)
+    _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
+    _poly_integration = numba.njit()(_poly_integration)
     polygon_area = numba.njit()(polygon_area)
-    sample_random = numba.njit()(sample_random)
-    sample_regular = numba.njit()(sample_regular)
-    sample_border = numba.njit()(sample_border)
-    inner = numba.njit()(inner)
-    rotation_matrix = numba.njit()(rotation_matrix)
-    calculate_tangent_vector = numba.njit()(calculate_tangent_vector)
-    area_under_curve = numba.njit()(area_under_curve)
-    coincidence_check = numba.njit()(coincidence_check)
+    _surf_sample_random = numba.njit()(_surf_sample_random)
+    _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
+    _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
+    _matrix_vector_product = numba.njit()(_matrix_vector_product)
+    _rotation_matrix = numba.njit()(_rotation_matrix)
+    _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
+    _area_under_curve = numba.njit()(_area_under_curve)
+    _coincidence_check = numba.njit()(_coincidence_check)
 
