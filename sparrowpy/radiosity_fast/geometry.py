@@ -8,121 +8,6 @@ except ImportError:
 import numpy as np
 
 
-def get_scattering_data_receiver_index(
-        pos_i:np.ndarray, pos_j:np.ndarray,
-        receivers:np.ndarray, wall_id_i:np.ndarray,
-        ):
-    """Get scattering data depending on previous, current and next position.
-
-    Parameters
-    ----------
-    pos_i : np.ndarray
-        current position of shape (3)
-    pos_j : np.ndarray
-        next position of shape (3)
-    receivers : np.ndarray
-        receiver directions of all walls of shape (n_walls, n_receivers, 3)
-    wall_id_i : np.ndarray
-        current wall id to get write directional data
-
-    Returns
-    -------
-    scattering_factor: float
-        scattering factor from directivity
-
-    """
-    n_patches = pos_i.shape[0] if pos_i.ndim > 1 else 1
-    receiver_idx = np.empty((n_patches), dtype=np.int64)
-
-    for i in range(n_patches):
-        difference_receiver = pos_i[i]-pos_j
-        difference_receiver /= np.linalg.norm(
-            difference_receiver)
-        receiver_idx[i] = np.argmin(np.sum(
-            (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
-            axis=-1)
-
-
-    return receiver_idx
-
-
-def get_scattering_data(
-        pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,
-        sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
-        scattering:np.ndarray, scattering_index:np.ndarray):
-    """Get scattering data depending on previous, current and next position.
-
-    Parameters
-    ----------
-    pos_h : np.ndarray
-        previous position of shape (3)
-    pos_i : np.ndarray
-        current position of shape (3)
-    pos_j : np.ndarray
-        next position of shape (3)
-    sources : np.ndarray
-        source directions of all walls of shape (n_walls, n_sources, 3)
-    receivers : np.ndarray
-        receiver directions of all walls of shape (n_walls, n_receivers, 3)
-    wall_id_i : np.ndarray
-        current wall id to get write directional data
-    scattering : np.ndarray
-        scattering data of shape (n_scattering, n_sources, n_receivers, n_bins)
-    scattering_index : np.ndarray
-        index of the scattering data of shape (n_walls)
-
-    Returns
-    -------
-    scattering_factor: float
-        scattering factor from directivity
-
-    """
-    difference_source = pos_h-pos_i
-    difference_receiver = pos_i-pos_j
-
-    difference_source /= np.linalg.norm(difference_source)
-    difference_receiver /= np.linalg.norm(difference_receiver)
-    source_idx = np.argmin(np.sum(
-        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
-    receiver_idx = np.argmin(np.sum(
-        (receivers[wall_id_i, :]-difference_receiver)**2, axis=-1))
-    return scattering[scattering_index[wall_id_i],
-        source_idx, receiver_idx, :]
-
-
-def get_scattering_data_source(
-        pos_h:np.ndarray, pos_i:np.ndarray,
-        sources:np.ndarray, wall_id_i:np.ndarray,
-        scattering:np.ndarray, scattering_index:np.ndarray):
-    """Get scattering data depending on previous, current position.
-
-    Parameters
-    ----------
-    pos_h : np.ndarray
-        previous position of shape (3)
-    pos_i : np.ndarray
-        current position of shape (3)
-    sources : np.ndarray
-        source directions of all walls of shape (n_walls, n_sources, 3)
-    wall_id_i : np.ndarray
-        current wall id to get write directional data
-    scattering : np.ndarray
-        scattering data of shape (n_scattering, n_sources, n_receivers, n_bins)
-    scattering_index : np.ndarray
-        index of the scattering data of shape (n_walls)
-
-    Returns
-    -------
-    scattering_factor: float
-        scattering factor from directivity
-
-    """
-    difference_source = pos_h-pos_i
-    difference_source /= np.linalg.norm(difference_source)
-    source_idx = np.argmin(np.sum(
-        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
-    return scattering[scattering_index[wall_id_i], source_idx]
-
 
 def check_visibility(
         patches_center:np.ndarray,
@@ -983,16 +868,12 @@ def _coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
 
 
 if numba is not None:
-    get_scattering_data_receiver_index = numba.njit()(
-        get_scattering_data_receiver_index)
     total_number_of_patches = numba.njit()(total_number_of_patches)
     process_patches = numba.njit()(process_patches)
     _calculate_area = numba.njit()(_calculate_area)
     _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
     _create_patches = numba.njit()(_create_patches)
-    get_scattering_data = numba.njit()(get_scattering_data)
-    get_scattering_data_source = numba.njit()(get_scattering_data_source)
     check_visibility = numba.njit(parallel=True)(check_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
