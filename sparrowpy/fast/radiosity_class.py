@@ -342,8 +342,10 @@ class DirectionalRadiosityFast():
             "Receivers must be in the positive half space"
         self._check_set_frequency(brdf.frequencies)
         if self._brdf_sources is None:
-            self._brdf_sources = np.empty((self.n_walls), dtype=pf.Coordinates)
-            self._brdf_receivers = np.empty((self.n_walls), dtype=pf.Coordinates)
+            self._brdf_sources = np.empty(
+                (self.n_walls), dtype=pf.Coordinates)
+            self._brdf_receivers = np.empty(
+                (self.n_walls), dtype=pf.Coordinates)
             self._brdf_index = np.empty((self.n_walls), dtype=np.int64)
             self._brdf_index.fill(-1)
             self._brdf = []
