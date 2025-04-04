@@ -33,8 +33,9 @@ def test_parallel_facing_patches(width, height, distance):
         up_vector=[1, 0, 0],
     )
 
-    univ = form_factor.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
-                                                                  patch_2.pts]),
+    univ = form_factor.patch2patch_ff_universal(
+        patches_points=np.array([patch_1.pts,
+                                 patch_2.pts]),
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
                           patches_areas=np.array([patch_1.area, patch_2.area]),
@@ -74,8 +75,9 @@ def test_perpendicular_coincidentline_patches(width, height, length):
         width, height, length,
     )
 
-    univ = form_factor.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
-                                                                  patch_2.pts]),
+    univ = form_factor.patch2patch_ff_universal(
+        patches_points=np.array([patch_1.pts,
+                                 patch_2.pts]),
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
                           patches_areas=np.array([patch_1.area, patch_2.area]),
@@ -120,8 +122,9 @@ def test_perpendicular_coincidentpoint_patches(
         width1, length2, width2, length1,
     )
 
-    univ = form_factor.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
-                                                                  patch_2.pts]),
+    univ = form_factor.patch2patch_ff_universal(
+        patches_points=np.array([patch_1.pts,
+                                 patch_2.pts]),
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
                           patches_areas=np.array([patch_1.area, patch_2.area]),

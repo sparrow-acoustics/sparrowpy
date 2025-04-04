@@ -301,7 +301,7 @@ class DirectionalRadiosityFast():
             patches_receiver_distance = patches_center - receiver_pos[i]
 
             # geometrical weighting
-            patch_receiver_energy = form_factor._patch2receiver_energy_universal(
+            patch_receiver_energy=form_factor._patch2receiver_energy_universal(
                     receiver_pos[i], patches_points)
 
             # access histograms with correct scattering weighting
