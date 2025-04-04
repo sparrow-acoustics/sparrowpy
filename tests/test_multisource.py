@@ -179,7 +179,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                     n_bins=1,
                                                     )
 
-            e_r = sp.radiosity_fast.receiver_energy._universal(
+            e_r = sp.form_factor.universial.patch2receiver_ff_universal(
                                                     receiver_pos=rec_.position,patches_points=np.array([wall[0].pts]),
                                                     )
 
@@ -194,7 +194,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                         n_bins=1,
                                                         )
 
-            e_r = sp.radiosity_fast.receiver_energy._kang(
+            e_r = sp.form_factor.kang.patch2receiver_ff_kang(
                                                         patch_receiver_distance=np.array([(rec_.position-wall[0].center)]),
                                                         patches_normal=np.array([wall[0].normal]),
                                                         )
