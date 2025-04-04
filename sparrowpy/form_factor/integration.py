@@ -652,25 +652,25 @@ if numba is not None:
         numba.f8(numba.f8[:], numba.f8[:]),
         )(_poly_integration)
     _area_under_curve = numba.njit(
-        numba.f8(numba.f8[:,::1], numba.u1),
+        numba.f8(numba.f8[:,:], numba.u1),
         )(_area_under_curve)
     nusselt_analog = numba.njit(
         numba.f8(numba.f8[:], numba.f8[:],
-                 numba.f8[:,::1], numba.f8[:]),
+                 numba.f8[:,:], numba.f8[:]),
         parallel=False)(nusselt_analog)
     pt_solution = numba.njit(
-        numba.f8(numba.f8[:],numba.f8[:,::1],numba.types.unicode_type),
+        numba.f8(numba.f8[:],numba.f8[:,:],numba.types.unicode_type),
         parallel=True)(pt_solution)
     nusselt_integration = numba.njit(
-        numba.f8(numba.f8[:,::1], numba.f8[:,::1],
+        numba.f8(numba.f8[:,:], numba.f8[:,:],
                  numba.f8[:], numba.f8[:],
                  numba.u2, numba.b1),
         parallel=False)(nusselt_integration)
     load_stokes_entries = numba.njit(
-        numba.f8[:,::1](numba.f8[:,::1], numba.f8[:,::1]),
+        numba.f8[:,:](numba.f8[:,:], numba.f8[:,:]),
         parallel=True)(load_stokes_entries)
     stokes_integration = numba.njit(
-        numba.f8(numba.f8[:,::1], numba.f8[:,::1],
+        numba.f8(numba.f8[:,:], numba.f8[:,:],
                  numba.f8, numba.u1),
         parallel=False)(stokes_integration)
 

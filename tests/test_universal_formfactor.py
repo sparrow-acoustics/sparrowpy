@@ -261,7 +261,7 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
 def source_cast(src, rpatch, absor):
     """Cast and test source-to-patch factor calculation."""
     nuss = form_factor.integration.pt_solution(point=src.position,
-                                       patch_points=rpatch.pts)
+                                       patch_points=rpatch.pts, mode="source")
 
     true = sum(rpatch.E_matrix[rpatch.E_matrix != 0])
 
