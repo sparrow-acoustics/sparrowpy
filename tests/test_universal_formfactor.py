@@ -39,7 +39,7 @@ def test_parallel_facing_patches(width, height, distance):
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
                           patches_areas=np.array([patch_1.area, patch_2.area]),
-                          visible_patches=np.array([[0,1]]))
+                          visible_patches=np.array([[0,1]]).astype(np.uint16))
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
@@ -81,7 +81,7 @@ def test_perpendicular_coincidentline_patches(width, height, length):
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
                           patches_areas=np.array([patch_1.area, patch_2.area]),
-                          visible_patches=np.array([[0,1]]))
+                          visible_patches=np.array([[0,1]]).astype(np.uint16))
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
@@ -128,7 +128,7 @@ def test_perpendicular_coincidentpoint_patches(
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
                           patches_areas=np.array([patch_1.area, patch_2.area]),
-                          visible_patches=np.array([[0,1]]))
+                          visible_patches=np.array([[0,1]]).astype(np.uint16))
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
@@ -178,7 +178,7 @@ def test_different_areas(
         patches_normals=np.array(
             [[0.,0.,1.],[0.,0.,-1.],[0.,0.,-1.],[0.,0.,1.]]),
         patches_areas=np.array([width,1.,1.,width]),
-        visible_patches=np.array([[0,1],[2,3]]))
+        visible_patches=np.array([[0,1],[2,3]]).astype(np.uint16))
 
     ff_tilde = sp.classes.RadiosityFast._form_factors_with_directivity_dim(
         visibility_matrix=np.array([[False,True,False,False],

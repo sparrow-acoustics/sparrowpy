@@ -125,7 +125,7 @@ class DirectionalRadiosityFast():
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
-        visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
+        visible_patches = np.empty((n_combinations, 2), dtype=np.uint16)
         i_counter = 0
         for i_source in range(self.n_patches):
             for i_receiver in range(self.n_patches):

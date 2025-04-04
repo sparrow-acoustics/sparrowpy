@@ -158,12 +158,17 @@ def _patch2receiver_energy_universal(
 
 
 if numba is not None:
-    patch2patch_ff_universal = numba.njit(parallel=True)(
-        patch2patch_ff_universal)
     universal_form_factor = numba.njit(
-        # numba.f8(numba.f8[:,:], numba.f8[:], numba.f8,
-        #          numba.f8[:,:], numba.f8[:]),
+        numba.f8(numba.f8[:,:], numba.f8[:], numba.f8,
+                 numba.f8[:,:], numba.f8[:]),
     )(universal_form_factor)
+    patch2patch_ff_universal = numba.njit(
+        numba.f8[:,:](numba.f8[:,:,::1],
+                        numba.f8[:,::1],
+                        numba.f8[::1],
+                        numba.u2[:,::1]),
+        parallel=True,
+                 )(patch2patch_ff_universal)
     _source2patch_energy_universal = numba.njit(parallel=True)(
         _source2patch_energy_universal)
     _patch2receiver_energy_universal = numba.njit(parallel=True)(
