@@ -16,7 +16,7 @@ from .classes.RadiosityKang import (
     PatchesKang,
     PatchesDirectionalKang)
 from . import testing
-from . import radiosity_fast
+from . import form_factor
 from . import brdf
 from . import utils
 
@@ -29,7 +29,7 @@ __all__ = [
     'geometry',
     'sound_object',
     'DirectionalRadiosityFast',
-    'radiosity_fast',
+    'form_factor',
     'testing',
     'brdf',
     'utils',
