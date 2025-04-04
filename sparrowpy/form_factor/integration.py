@@ -291,46 +291,10 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
 
     return pts,conn.astype(np.int8)
 
-
-####################################################
-# geometry
-
-def _sphere_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
-    """Compute a vector tangent to a spherical surface based on two points.
-
-    The tangent vector is evaluated on point v0.
-    The respective tangent arc on the sphere joins points v0 and v1.
-
-    Parameters
-    ----------
-    v0 : numpy.ndarray(3,)
-        point on which to calculate tangent vector
-
-    v1 : numpy.ndarray(3,)
-        point on sphere to which tangent vector "points"
-
-    Returns
-    -------
-    vout: np.ndarray
-        vector tangent to spherical surface
-
-    """
-    if np.abs(np.dot(v0,v1))>1e-10:
-        vout = (v1-v0)-np.dot((v1-v0),v0)/np.dot(v0,v0)*v0
-        vout /= np.linalg.norm(vout)
-
-    else:
-        vout = v1/np.linalg.norm(v1)
-
-    return vout
-
 if numba is not None:
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
     _poly_integration = numba.njit()(_poly_integration)
-
     _surf_sample_random = numba.njit()(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
-
-    _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
     _area_under_curve = numba.njit()(_area_under_curve)

@@ -1,7 +1,7 @@
 import numpy.testing as npt
 import pytest
 import numpy as np
-import sparrowpy.radiosity_fast.geometry as geom
+import sparrowpy.geometry as geom
 bpy = pytest.importorskip("bpy")
 import sparrowpy.utils.blender as bh  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402

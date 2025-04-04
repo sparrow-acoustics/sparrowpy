@@ -1,4 +1,4 @@
-"""Module for the geometry of the room and the environment."""
+"""Module for scene geometry handling and basic algebraic methods."""
 try:
     import numba
     prange = numba.prange
@@ -679,6 +679,35 @@ def _point_in_polygon(point3d: np.ndarray,
 
     return out
 
+def _sphere_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
+    """Compute a vector tangent to a spherical surface based on two points.
+
+    The tangent vector is evaluated on point v0.
+    The respective tangent arc on the sphere joins points v0 and v1.
+
+    Parameters
+    ----------
+    v0 : numpy.ndarray(3,)
+        point on which to calculate tangent vector
+
+    v1 : numpy.ndarray(3,)
+        point on sphere to which tangent vector "points"
+
+    Returns
+    -------
+    vout: np.ndarray
+        vector tangent to spherical surface
+
+    """
+    if np.abs(np.dot(v0,v1))>1e-10:
+        vout = (v1-v0)-np.dot((v1-v0),v0)/np.dot(v0,v0)*v0
+        vout /= np.linalg.norm(vout)
+
+    else:
+        vout = v1/np.linalg.norm(v1)
+
+    return vout
+
 ####################################################
 # checks
 def _coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-6) -> bool:
@@ -836,5 +865,6 @@ if numba is not None:
     _matrix_vector_product = numba.njit()(_matrix_vector_product)
     _rotation_matrix = numba.njit()(_rotation_matrix)
     _polygon_area = numba.njit()(_polygon_area)
+    _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
 
 

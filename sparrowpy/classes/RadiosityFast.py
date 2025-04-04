@@ -3,7 +3,8 @@ import numpy as np
 import pyfar as pf
 from sparrowpy.form_factor import form_factor
 from sparrowpy.radiosity_fast import (
-    source_energy, receiver_energy, geometry)
+    source_energy, receiver_energy)
+from sparrowpy import ( geometry )
 try:
     import numba
     prange = numba.prange
