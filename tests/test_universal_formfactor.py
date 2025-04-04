@@ -2,11 +2,10 @@
 import pytest
 import sparrowpy.geometry as geo
 import numpy as np
-import sparrowpy.form_factor.universial as form_factor_uni
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy import PatchesKang
-import sparrowpy.form_factor as FFac
+import sparrowpy.form_factor as form_factor
 import sparrowpy as sp
 
 
@@ -34,7 +33,7 @@ def test_parallel_facing_patches(width, height, distance):
         up_vector=[1, 0, 0],
     )
 
-    univ = FFac.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
+    univ = form_factor.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
                                                                   patch_2.pts]),
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
@@ -75,7 +74,7 @@ def test_perpendicular_coincidentline_patches(width, height, length):
         width, height, length,
     )
 
-    univ = FFac.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
+    univ = form_factor.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
                                                                   patch_2.pts]),
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
@@ -121,7 +120,7 @@ def test_perpendicular_coincidentpoint_patches(
         width1, length2, width2, length1,
     )
 
-    univ = FFac.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
+    univ = form_factor.patch2patch_ff_universal(patches_points=np.array([patch_1.pts,
                                                                   patch_2.pts]),
                           patches_normals=np.array(
                               [patch_1.normal, patch_2.normal]),
@@ -171,14 +170,14 @@ def test_different_areas(
                        [width,1.,1.],
                        [width,0.,1.]])
 
-    ff = FFac.patch2patch_ff_universal(
+    ff = form_factor.patch2patch_ff_universal(
         patches_points=np.array([patch1,patch2,patch2,patch1]),
         patches_normals=np.array(
             [[0.,0.,1.],[0.,0.,-1.],[0.,0.,-1.],[0.,0.,1.]]),
         patches_areas=np.array([width,1.,1.,width]),
         visible_patches=np.array([[0,1],[2,3]]))
 
-    ff_tilde = form_factor_uni._form_factors_with_directivity_dim(
+    ff_tilde = sp.classes.RadiosityFast._form_factors_with_directivity_dim(
         visibility_matrix=np.array([[False,True,False,False],
                                 [False,False,False,False],
                                 [False,False,False,True],
@@ -258,7 +257,7 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
 
 def source_cast(src, rpatch, absor):
     """Cast and test source-to-patch factor calculation."""
-    nuss = FFac.integration.pt_solution(point=src.position,
+    nuss = form_factor.integration.pt_solution(point=src.position,
                                        patch_points=rpatch.pts)
 
     true = sum(rpatch.E_matrix[rpatch.E_matrix != 0])
@@ -283,7 +282,7 @@ def receiver_cast(rcv, patch, sr, c):
 
     patch_energy = np.sum(patch.E_matrix)
 
-    nuss = FFac.integration.pt_solution(
+    nuss = form_factor.integration.pt_solution(
             point=rcv.position, patch_points=patch.pts, mode="receiver",
             ) * patch_energy
 

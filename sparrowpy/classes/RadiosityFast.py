@@ -157,7 +157,7 @@ class DirectionalRadiosityFast():
         n_bins = 1 if self._n_bins is None else self._n_bins
 
         self._form_factors_tilde = \
-            form_factor._form_factors_with_directivity_dim(
+            _form_factors_with_directivity_dim(
             self.visibility_matrix, self.form_factors, n_bins,
             self.patches_center, self.patches_area,
             self._air_attenuation,
@@ -308,7 +308,7 @@ class DirectionalRadiosityFast():
             receivers_array = np.array(
                 [s.cartesian for s in self._brdf_outgoing_directions])
 
-            receiver_idx = form_factor.get_scattering_data_receiver_index(
+            receiver_idx = get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
                 self._patch_to_wall_ids)
 
@@ -906,11 +906,6 @@ def get_scattering_data_source(
     source_idx = np.argmin(np.sum(
         (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
-
-
-
-
-
 
 if numba is not None:
     _add_directional = numba.njit(parallel=True)(_add_directional)
