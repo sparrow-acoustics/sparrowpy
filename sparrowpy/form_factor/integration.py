@@ -496,7 +496,7 @@ def _surf_sample_random(el: np.ndarray, npoints=100):
     u = el[1]-el[0]
     v = el[-1]-el[0]
 
-    for i in range(npoints):
+    for i in prange(npoints):
         s = np.random.uniform()
         t = np.random.uniform()
 
@@ -631,17 +631,46 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
             conn[i][ii]=(i*n_div+ii)%(n_div*len(el))
 
 
-    return pts,conn.astype(np.int8)
+    return pts,conn.astype(np.uint16)
 
 if numba is not None:
-    pt_solution = numba.njit(parallel=True)(pt_solution)
-    nusselt_integration = numba.njit(parallel=False)(nusselt_integration)
-    stokes_integration = numba.njit(parallel=False)(stokes_integration)
-    nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
-    load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
-    _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
-    _poly_integration = numba.njit()(_poly_integration)
-    _surf_sample_random = numba.njit()(_surf_sample_random)
-    _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
-    _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
-    _area_under_curve = numba.njit()(_area_under_curve)
+    _surf_sample_random = numba.njit(
+        numba.f8[:,::1](numba.f8[:,::1], numba.u2),
+    )(_surf_sample_random)
+    _surf_sample_regulargrid = numba.njit(
+        numba.f8[:,::1](numba.f8[:,::1], numba.u2),
+    )(_surf_sample_regulargrid)
+    _sample_boundary_regular = numba.njit(
+        numba.types.Tuple(
+            (numba.f8[:,::1],numba.u2[:,::1]),
+            )(numba.f8[:,::1], numba.u2),
+        )(_sample_boundary_regular)
+    _poly_estimation_Lagrange = numba.njit(
+        numba.f8[:](numba.f8[:], numba.f8[:]),
+        )(_poly_estimation_Lagrange)
+    _poly_integration = numba.njit(
+        numba.f8(numba.f8[:], numba.f8[:]),
+        )(_poly_integration)
+    _area_under_curve = numba.njit(
+        numba.f8(numba.f8[:,::1], numba.u1),
+        )(_area_under_curve)
+    nusselt_analog = numba.njit(
+        numba.f8(numba.f8[:], numba.f8[:],
+                 numba.f8[:,::1], numba.f8[:]),
+        parallel=False)(nusselt_analog)
+    pt_solution = numba.njit(
+        numba.f8(numba.f8[:],numba.f8[:,::1],numba.types.unicode_type),
+        parallel=True)(pt_solution)
+    nusselt_integration = numba.njit(
+        numba.f8(numba.f8[:,::1], numba.f8[:,::1],
+                 numba.f8[:], numba.f8[:],
+                 numba.u2, numba.b1),
+        parallel=False)(nusselt_integration)
+    load_stokes_entries = numba.njit(
+        numba.f8[:,::1](numba.f8[:,::1], numba.f8[:,::1]),
+        parallel=True)(load_stokes_entries)
+    stokes_integration = numba.njit(
+        numba.f8(numba.f8[:,::1], numba.f8[:,::1],
+                 numba.f8, numba.u1),
+        parallel=False)(stokes_integration)
+
