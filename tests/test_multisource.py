@@ -59,7 +59,7 @@ def test_multi_receiver(basicscene, frequencies,
     10, 20,
     ])
 @pytest.mark.parametrize('ps', [
-    .5, 1.5,
+    1, 1.5,
     ])
 def test_reciprocity_shoebox(src,rec,order,ps):
     """Test if radiosity results are reciprocal in shoebox room."""
@@ -171,7 +171,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
             rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
 
         if method == "universal":
-            e_s,_ = sp.radiosity_fast.source_energy._init_energy_universal(
+            e_s,_ = sp.form_factor.universal._source2patch_energy_universal(
                                                     source_position=src_.position,
                                                     patches_center=np.array([wall[0].center]),
                                                     patches_points=np.array([wall[0].pts]),
@@ -179,13 +179,13 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                     n_bins=1,
                                                     )
 
-            e_r = sp.radiosity_fast.receiver_energy._universal(
+            e_r = sp.form_factor.universal._patch2receiver_energy_universal(
                                                     receiver_pos=rec_.position,patches_points=np.array([wall[0].pts]),
                                                     )
 
 
         elif method == "kang":
-            e_s,_ = sp.radiosity_fast.source_energy._init_energy_kang(
+            e_s,_ = sp.form_factor.kang._source2patch_energy_kang(
                                                         source_position=src_.position,
                                                         patches_center=np.array([wall[0].center]),
                                                         patches_normal=np.array([wall[0].normal]),
@@ -194,7 +194,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                         n_bins=1,
                                                         )
 
-            e_r = sp.radiosity_fast.receiver_energy._kang(
+            e_r = sp.form_factor.kang._patch2receiver_energy_kang(
                                                         patch_receiver_distance=np.array([(rec_.position-wall[0].center)]),
                                                         patches_normal=np.array([wall[0].normal]),
                                                         )
