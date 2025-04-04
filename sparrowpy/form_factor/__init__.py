@@ -1,5 +1,5 @@
 """Form factor models for Radiosity."""
-from .universial import (
+from .universal import (
     patch2patch_ff_universal,
 )
 from .kang import (
