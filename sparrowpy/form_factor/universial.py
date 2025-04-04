@@ -96,7 +96,54 @@ def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
 
     return form_factor
 
-def patch2receiver_ff_universal(
+def _source2patch_energy_universal(
+        source_position: np.ndarray, patches_center: np.ndarray,
+        patches_points: np.ndarray, air_attenuation:np.ndarray,
+        n_bins:float):
+    """Calculate the initial energy from the source.
+
+    Parameters
+    ----------
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_points : np.ndarray
+        vertices of all patches of shape (n_patches, n_points,3)
+    air_attenuation : np.ndarray
+        air attenuation factor in Np/m (n_bins,)
+    n_bins : float
+        number of frequency bins.
+
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
+
+    """
+    n_patches = patches_center.shape[0]
+    energy = np.empty((n_patches, n_bins))
+    distance_out = np.empty((n_patches, ))
+    for j in prange(n_patches):
+        source_pos = source_position.copy()
+        receiver_pos = patches_center[j, :].copy()
+        receiver_pts = patches_points[j, :, :].copy()
+
+        distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
+
+        if air_attenuation is not None:
+            energy[j,:] = np.exp(
+                -air_attenuation*distance_out[j]) * integration.pt_solution(
+                    point=source_pos, patch_points=receiver_pts, mode="source")
+        else:
+            energy[j,:] = integration.pt_solution(
+                point=source_pos, patch_points=receiver_pts, mode="source")
+
+    return (energy, distance_out)
+
+def _patch2receiver_energy_universal(
         receiver_pos, patches_points):
 
     receiver_factor = np.empty((patches_points.shape[0]))
@@ -321,8 +368,10 @@ if numba is not None:
     patch2patch_ff_universal = numba.njit(parallel=True)(
         patch2patch_ff_universal)
     universal_form_factor = numba.njit()(universal_form_factor)
-    patch2receiver_ff_universal = numba.njit(parallel=True)(
-        patch2receiver_ff_universal)
+    _source2patch_energy_universal = numba.njit(parallel=True)(
+        _source2patch_energy_universal)
+    _patch2receiver_energy_universal = numba.njit(parallel=True)(
+        _patch2receiver_energy_universal)
     _form_factors_with_directivity_dim = numba.njit(parallel=True)(
         _form_factors_with_directivity_dim)
     _form_factors_with_directivity = numba.njit(parallel=True)(

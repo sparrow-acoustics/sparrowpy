@@ -2,8 +2,6 @@
 import numpy as np
 import pyfar as pf
 import sparrowpy.form_factor.universial as form_factor
-from sparrowpy.radiosity_fast import (
-    source_energy)
 from sparrowpy import ( geometry )
 try:
     import numba
@@ -179,7 +177,7 @@ class DirectionalRadiosityFast():
         scattering = np.array(self._brdf)
         scattering_index = self._brdf_index
         patches_center = self.patches_center
-        energy_0, distance_0 = source_energy._init_energy_universal(
+        energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
             self._air_attenuation, self.n_bins)
         energy_0_dir = _add_directional(
@@ -303,7 +301,7 @@ class DirectionalRadiosityFast():
             patches_receiver_distance = patches_center - receiver_pos[i]
 
             # geometrical weighting
-            patch_receiver_energy = form_factor.patch2receiver_ff_universal(
+            patch_receiver_energy = form_factor._patch2receiver_energy_universal(
                     receiver_pos[i], patches_points)
 
             # access histograms with correct scattering weighting
