@@ -168,7 +168,21 @@ def patch2patch_ff_kang(
         form_factors[i_source, i_receiver] = ff
     return form_factors
 
+def patch2receiver_ff_kang(
+        patch_receiver_distance, patches_normal):
+    receiver_factor = np.empty((
+        patch_receiver_distance.shape[0],))
+    for i in range(patch_receiver_distance.shape[0]):
+        R = np.sqrt(np.sum((patch_receiver_distance[i, :]**2)))
 
+        cos_xi = np.abs(np.sum(
+            patches_normal[i, :]*np.abs(patch_receiver_distance[i, :]))) / R
+
+        # Equation 20
+        receiver_factor[i] = cos_xi / (np.pi * R**2)
+
+    return receiver_factor
 
 if numba is not None:
     patch2patch_ff_kang = numba.njit(parallel=True)(patch2patch_ff_kang)
+    patch2receiver_ff_kang = numba.njit()(patch2receiver_ff_kang)

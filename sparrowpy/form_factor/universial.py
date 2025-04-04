@@ -45,13 +45,13 @@ def patch2patch_ff_universal(patches_points: np.ndarray,
     for visID in prange(visible_patches.shape[0]):
         i = int(visible_patches[visID, 0])
         j = int(visible_patches[visID, 1])
-        form_factors[i,j] = calc_form_factor(
+        form_factors[i,j] = universal_form_factor(
                     patches_points[i], patches_normals[i], patches_areas[i],
                     patches_points[j], patches_normals[j])
 
     return form_factors
 
-def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
+def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
                      source_area: np.ndarray, receiver_pts: np.ndarray,
                      receiver_normal: np.ndarray,
                      ) -> float:
@@ -95,6 +95,19 @@ def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
                                              approx_order=4)
 
     return form_factor
+
+def patch2receiver_ff_universal(
+        receiver_pos, patches_points):
+
+    receiver_factor = np.empty((patches_points.shape[0]))
+
+
+    for i in prange(patches_points.shape[0]):
+        receiver_factor[i] = integration.pt_solution(point=receiver_pos,
+                        patch_points=patches_points[i,:], mode="receiver")
+
+    return receiver_factor
+
 
 ## accumulation of propagation effects (air attenuation, scattering)
 
@@ -307,7 +320,9 @@ def get_scattering_data_source(
 if numba is not None:
     patch2patch_ff_universal = numba.njit(parallel=True)(
         patch2patch_ff_universal)
-    calc_form_factor = numba.njit()(calc_form_factor)
+    universal_form_factor = numba.njit()(universal_form_factor)
+    patch2receiver_ff_universal = numba.njit(parallel=True)(
+        patch2receiver_ff_universal)
     _form_factors_with_directivity_dim = numba.njit(parallel=True)(
         _form_factors_with_directivity_dim)
     _form_factors_with_directivity = numba.njit(parallel=True)(
