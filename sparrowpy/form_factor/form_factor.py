@@ -6,9 +6,9 @@ except ImportError:
     numba = None
     prange = range
 import numpy as np
-from sparrowpy.radiosity_fast import geometry
 from sparrowpy.form_factor.universial import ( calc_form_factor )
 
+## form factor matrix assembly
 
 def kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
@@ -211,6 +211,8 @@ def universal(patches_points: np.ndarray, patches_normals: np.ndarray,
     return form_factors
 
 
+## accumulation of propagation effects (air attenuation, scattering)
+
 def _form_factors_with_directivity(
         visibility_matrix, form_factors, n_bins, patches_center,
         patches_area, air_attenuation,
@@ -243,7 +245,7 @@ def _form_factors_with_directivity(
                     h, i, j, :] * np.exp(-air_attenuation * distance)
 
             if scattering is not None:
-                scattering_factor = geometry.get_scattering_data(
+                scattering_factor = get_scattering_data(
                     patches_center[h], patches_center[i], patches_center[j],
                     sources, receivers, wall_id_i,
                     scattering, scattering_index)
@@ -289,7 +291,7 @@ def _form_factors_with_directivity_dim(
                     i, j, :, :] * np.exp(-air_attenuation * distance)
 
             if scattering is not None:
-                scattering_factor = geometry.get_scattering_data_source(
+                scattering_factor = get_scattering_data_source(
                     patches_center[i], patches_center[j],
                     sources, wall_id_i,
                     scattering, scattering_index)
@@ -299,6 +301,125 @@ def _form_factors_with_directivity_dim(
     return form_factors_tilde
 
 
+## scattering data access
+
+def get_scattering_data_receiver_index(
+        pos_i:np.ndarray, pos_j:np.ndarray,
+        receivers:np.ndarray, wall_id_i:np.ndarray,
+        ):
+    """Get scattering data depending on previous, current and next position.
+
+    Parameters
+    ----------
+    pos_i : np.ndarray
+        current position of shape (3)
+    pos_j : np.ndarray
+        next position of shape (3)
+    receivers : np.ndarray
+        receiver directions of all walls of shape (n_walls, n_receivers, 3)
+    wall_id_i : np.ndarray
+        current wall id to get write directional data
+
+    Returns
+    -------
+    scattering_factor: float
+        scattering factor from directivity
+
+    """
+    n_patches = pos_i.shape[0] if pos_i.ndim > 1 else 1
+    receiver_idx = np.empty((n_patches), dtype=np.int64)
+
+    for i in range(n_patches):
+        difference_receiver = pos_i[i]-pos_j
+        difference_receiver /= np.linalg.norm(
+            difference_receiver)
+        receiver_idx[i] = np.argmin(np.sum(
+            (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
+            axis=-1)
+
+
+    return receiver_idx
+
+
+def get_scattering_data(
+        pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,
+        sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
+        scattering:np.ndarray, scattering_index:np.ndarray):
+    """Get scattering data depending on previous, current and next position.
+
+    Parameters
+    ----------
+    pos_h : np.ndarray
+        previous position of shape (3)
+    pos_i : np.ndarray
+        current position of shape (3)
+    pos_j : np.ndarray
+        next position of shape (3)
+    sources : np.ndarray
+        source directions of all walls of shape (n_walls, n_sources, 3)
+    receivers : np.ndarray
+        receiver directions of all walls of shape (n_walls, n_receivers, 3)
+    wall_id_i : np.ndarray
+        current wall id to get write directional data
+    scattering : np.ndarray
+        scattering data of shape (n_scattering, n_sources, n_receivers, n_bins)
+    scattering_index : np.ndarray
+        index of the scattering data of shape (n_walls)
+
+    Returns
+    -------
+    scattering_factor: float
+        scattering factor from directivity
+
+    """
+    difference_source = pos_h-pos_i
+    difference_receiver = pos_i-pos_j
+
+    difference_source /= np.linalg.norm(difference_source)
+    difference_receiver /= np.linalg.norm(difference_receiver)
+    source_idx = np.argmin(np.sum(
+        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+    receiver_idx = np.argmin(np.sum(
+        (receivers[wall_id_i, :]-difference_receiver)**2, axis=-1))
+    return scattering[scattering_index[wall_id_i],
+        source_idx, receiver_idx, :]
+
+
+def get_scattering_data_source(
+        pos_h:np.ndarray, pos_i:np.ndarray,
+        sources:np.ndarray, wall_id_i:np.ndarray,
+        scattering:np.ndarray, scattering_index:np.ndarray):
+    """Get scattering data depending on previous, current position.
+
+    Parameters
+    ----------
+    pos_h : np.ndarray
+        previous position of shape (3)
+    pos_i : np.ndarray
+        current position of shape (3)
+    sources : np.ndarray
+        source directions of all walls of shape (n_walls, n_sources, 3)
+    wall_id_i : np.ndarray
+        current wall id to get write directional data
+    scattering : np.ndarray
+        scattering data of shape (n_scattering, n_sources, n_receivers, n_bins)
+    scattering_index : np.ndarray
+        index of the scattering data of shape (n_walls)
+
+    Returns
+    -------
+    scattering_factor: float
+        scattering factor from directivity
+
+    """
+    difference_source = pos_h-pos_i
+    difference_source /= np.linalg.norm(difference_source)
+    source_idx = np.argmin(np.sum(
+        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+    return scattering[scattering_index[wall_id_i], source_idx]
+
+
+
 if numba is not None:
     _form_factors_with_directivity_dim = numba.njit(parallel=True)(
         _form_factors_with_directivity_dim)
@@ -306,3 +427,7 @@ if numba is not None:
     universal = numba.njit(parallel=True)(universal)
     _form_factors_with_directivity = numba.njit(parallel=True)(
         _form_factors_with_directivity)
+    get_scattering_data_receiver_index = numba.njit()(
+        get_scattering_data_receiver_index)
+    get_scattering_data = numba.njit()(get_scattering_data)
+    get_scattering_data_source = numba.njit()(get_scattering_data_source)
