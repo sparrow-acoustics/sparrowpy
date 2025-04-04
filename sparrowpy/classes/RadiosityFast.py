@@ -410,7 +410,6 @@ class DirectionalRadiosityFast():
             assert (self._frequencies == frequencies).all(), \
                 "Frequencies do not match"
 
-
     @property
     def n_bins(self):
         """Return the number of frequency bins."""
