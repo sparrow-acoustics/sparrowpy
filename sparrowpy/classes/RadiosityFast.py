@@ -1,7 +1,7 @@
 """Module for the radiosity simulation."""
 import numpy as np
 import pyfar as pf
-import sparrowpy.form_factor.universial as form_factor
+import sparrowpy.form_factor.universal as form_factor
 from sparrowpy import ( geometry )
 try:
     import numba

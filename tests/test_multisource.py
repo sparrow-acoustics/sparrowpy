@@ -171,7 +171,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
             rec_ = sp.geometry.Receiver(src[0],src[1], src[2])
 
         if method == "universal":
-            e_s,_ = sp.form_factor.universial._source2patch_energy_universal(
+            e_s,_ = sp.form_factor.universal._source2patch_energy_universal(
                                                     source_position=src_.position,
                                                     patches_center=np.array([wall[0].center]),
                                                     patches_points=np.array([wall[0].pts]),
@@ -179,7 +179,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                     n_bins=1,
                                                     )
 
-            e_r = sp.form_factor.universial._patch2receiver_energy_universal(
+            e_r = sp.form_factor.universal._patch2receiver_energy_universal(
                                                     receiver_pos=rec_.position,patches_points=np.array([wall[0].pts]),
                                                     )
 
