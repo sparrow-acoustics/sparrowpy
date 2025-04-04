@@ -6,7 +6,7 @@ except ImportError:
     numba = None
     prange = range
 import numpy as np
-from sparrowpy.form_factor.universial import pt_solution
+from sparrowpy.form_factor.integration import pt_solution
 
 
 def _kang(

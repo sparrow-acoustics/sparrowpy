@@ -1,7 +1,7 @@
 """Module for the radiosity simulation."""
 import numpy as np
 import pyfar as pf
-from sparrowpy.form_factor import form_factor
+import sparrowpy.form_factor.universial as form_factor
 from sparrowpy.radiosity_fast import (
     source_energy, receiver_energy)
 from sparrowpy import ( geometry )
@@ -138,7 +138,7 @@ class DirectionalRadiosityFast():
                 i_counter += 1
         self._visible_patches = visible_patches
 
-        self._form_factors = form_factor.universal(
+        self._form_factors = form_factor.patch2patch_ff_universal(
             self.patches_points, self.patches_normal,
             self.patches_area, self._visible_patches)
 

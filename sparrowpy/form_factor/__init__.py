@@ -1,10 +1,12 @@
 """Form factor models for Radiosity."""
-from .form_factor import (
-    universal,
-    kang,
+from .universial import (
+    patch2patch_ff_universal,
+)
+from .kang import (
+    patch2patch_ff_kang,
 )
 
 __all__ = [
-    "universal",
-    "kang",
+    "patch2patch_ff_universal",
+    "patch2patch_ff_kang",
 ]
