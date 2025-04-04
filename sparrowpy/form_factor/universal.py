@@ -52,7 +52,7 @@ def patch2patch_ff_universal(patches_points: np.ndarray,
     return form_factors
 
 def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
-                     source_area: np.ndarray, receiver_pts: np.ndarray,
+                     source_area: float, receiver_pts: np.ndarray,
                      receiver_normal: np.ndarray,
                      ) -> float:
     """Return the form factor based on input patches geometry.
@@ -85,9 +85,10 @@ def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
     """
     if geom._coincidence_check(receiver_pts, source_pts):
         form_factor = integration.nusselt_integration(
-                    patch_i=source_pts, patch_i_normal=source_normal,
-                    patch_j=receiver_pts, patch_j_normal=receiver_normal,
-                    nsamples=64)
+                    patch_i=source_pts, patch_j=receiver_pts,
+                    patch_i_normal=source_normal,
+                    patch_j_normal=receiver_normal,
+                    nsamples=64, random=False)
     else:
         form_factor = integration.stokes_integration(patch_i=source_pts,
                                              patch_j=receiver_pts,
@@ -159,7 +160,10 @@ def _patch2receiver_energy_universal(
 if numba is not None:
     patch2patch_ff_universal = numba.njit(parallel=True)(
         patch2patch_ff_universal)
-    universal_form_factor = numba.njit()(universal_form_factor)
+    universal_form_factor = numba.njit(
+        # numba.f8(numba.f8[:,:], numba.f8[:], numba.f8,
+        #          numba.f8[:,:], numba.f8[:]),
+    )(universal_form_factor)
     _source2patch_energy_universal = numba.njit(parallel=True)(
         _source2patch_energy_universal)
     _patch2receiver_energy_universal = numba.njit(parallel=True)(
