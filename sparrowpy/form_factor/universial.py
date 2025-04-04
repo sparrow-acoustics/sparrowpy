@@ -57,35 +57,6 @@ def calc_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
     return out
 
 #######################################################################################
-### Stokes integration
-def stokes_ffunction(p0:np.ndarray, p1: np.ndarray) -> float:
-    """Return the form function value for the stokes form factor integration.
-
-    Parameters
-    ----------
-    p0: np.ndarray
-        a point in space (3,)
-        in the stokes integration of the form factor,
-        a point on a patch's boundary
-
-    p1: np.ndarray
-        a point in space (3,)
-        in the stokes integration of the form factor,
-        a point on a different patch's boundary
-
-    Returns
-    -------
-    result: float
-        form function value
-
-    """
-    n = np.linalg.norm(p1-p0)
-
-    result = np.log(n)
-
-    return result
-
-
 def load_stokes_entries(
     i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
     """Load all the stokes form function values between two patches.
@@ -108,10 +79,9 @@ def load_stokes_entries(
 
     for i in prange(i_bpoints.shape[0]):
         for j in prange(j_bpoints.shape[0]):
-            form_mat[i][j] = stokes_ffunction(i_bpoints[i],j_bpoints[j])
+            form_mat[i][j] = np.log(np.linalg.norm(i_bpoints[i]-j_bpoints[j]))
 
     return form_mat
-
 
 def stokes_integration(
     patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float,
@@ -199,9 +169,6 @@ def stokes_integration(
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
-
-#######################################################################################
-### Nusselt analog integration
 def nusselt_analog(surf_origin, surf_normal,
                    patch_points, patch_normal) -> float:
     """Calculate the Nusselt analog for a single point.
@@ -439,6 +406,5 @@ if numba is not None:
     nusselt_integration = numba.njit(parallel=False)(nusselt_integration)
     stokes_integration = numba.njit(parallel=False)(stokes_integration)
     nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
-    stokes_ffunction = numba.njit()(stokes_ffunction)
     load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
 
