@@ -100,7 +100,7 @@ def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
 def _source2patch_energy_universal(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_points: np.ndarray, air_attenuation:np.ndarray,
-        n_bins:float):
+        n_bins: np.int64):
     """Calculate the initial energy from the source.
 
     Parameters
@@ -169,9 +169,17 @@ if numba is not None:
                         numba.u2[:,::1]),
         parallel=True,
                  )(patch2patch_ff_universal)
-    _source2patch_energy_universal = numba.njit(parallel=True)(
+    _source2patch_energy_universal = numba.njit(
+        numba.types.Tuple((
+            numba.f8[:,:],numba.f8[:],
+        ))(numba.f8[:],numba.f8[:,:],
+           numba.f8[:,:,:],numba.f8[:],
+           numba.int64),
+        parallel=True)(
         _source2patch_energy_universal)
-    _patch2receiver_energy_universal = numba.njit(parallel=True)(
+    _patch2receiver_energy_universal = numba.njit(
+        numba.f8[:](numba.f8[:],numba.f8[:,:,:]),
+        parallel=True)(
         _patch2receiver_energy_universal)
 
 

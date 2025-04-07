@@ -28,7 +28,7 @@ class DirectionalRadiosityFast():
     _form_factors_tilde: np.ndarray
 
     # general data for material and medium data
-    _n_bins: int
+    _n_bins: np.int64
     _frequencies: np.ndarray
     _brdf: np.ndarray
     _brdf_index: np.ndarray
@@ -168,7 +168,7 @@ class DirectionalRadiosityFast():
     def init_source_energy(
             self, source:pf.Coordinates):
         """Initialize the source energy."""
-        source_position = source.cartesian
+        source_position = source.cartesian[0]
         patch_to_wall_ids = self._patch_to_wall_ids
         sources = np.array(
             [s.cartesian for s in self._brdf_incoming_directions])
@@ -510,7 +510,8 @@ def _rotate_coords_to_normal(
 
 def _add_directional(
         energy_0, source_position: np.ndarray,
-        patches_center: np.ndarray, n_bins:float, patch_to_wall_ids:np.ndarray,
+        patches_center: np.ndarray, n_bins:np.int64,
+        patch_to_wall_ids:np.ndarray,
         sources: np.ndarray, receivers: np.ndarray,
         scattering: np.ndarray, scattering_index: np.ndarray):
     """Add scattering and absorption to the initial energy from the source.
