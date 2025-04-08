@@ -439,7 +439,7 @@ def _polygon_area(pts: np.ndarray) -> float:
 
     return area
 
-def _calculate_area(points):
+def _calculate_area(points: np.ndarray):
     area = np.zeros(points.shape[0])
 
     for i in prange(points.shape[0]):
@@ -588,28 +588,34 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
 
     Returns
     -------
-    int_point: np.ndarray(float) (n_dims,) or None
+    int_point: np.ndarray(float) (n_dims,)
         intersection point.
-        None if no intersection point is found
+
+    int_flag: bool
+        flags if an intersection was found
 
     """
+    int_flag = False
+    int_point = np.array([0.,0.,0.])
+
     v = point-origin
     dotprod = np.dot(v,plane_normal)
 
-    cond = dotprod < -epsilon
 
     if not check_normal:
         cond = abs(dotprod) > epsilon
+    else:
+        cond = dotprod < -epsilon
 
     if cond:
         w = point-plane_pt
         fac = -np.divide(np.dot(plane_normal,w), dotprod)
 
         int_point = w + plane_pt + fac*v
-    else:
-        int_point = None
+        int_flag = True
 
-    return int_point
+
+    return int_point, int_flag
 
 def _point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
@@ -639,7 +645,7 @@ def _point_in_polygon(point3d: np.ndarray,
     """
     # rotate all (coplanar) points to a horizontal plane
     # and remove z dimension for convenience
-    rotmat = _rotation_matrix(n_in=plane_normal)
+    rotmat = _rotation_matrix(n_in=plane_normal,n_out=np.array([]))
 
     pt = _matrix_vector_product(matrix=rotmat,
                                 vector=point3d)[0:point3d.shape[0]-1]
@@ -659,12 +665,13 @@ def _point_in_polygon(point3d: np.ndarray,
         # check if line from evaluation point in +x direction
         # intersects polygon side
         nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
-        b = _project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
+        proj_point=(pt+np.array([1.,0.]))
+        b,bf = _project_to_plane(origin=pt, point=proj_point,
                              plane_pt=a1, plane_normal=nl,
-                             check_normal=False)
+                             epsilon=1e-6, check_normal=False)
 
         # check if intersection exists and if is inside side [a0,a1]
-        if (b is not None) and b[0]>pt[0]:
+        if bf and b[0]>pt[0]:
             if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
                                 -np.linalg.norm(a1-a0)) <= eta:
                 if np.dot(b-pt,nl)>0:
@@ -826,13 +833,13 @@ def _basic_visibility(vis_point: np.ndarray,
     if np.abs(np.dot(surf_normal,eval_point-surf_points[0]))>eta:
 
         # check if projected point on surf
-        pt = _project_to_plane(origin=vis_point, point=eval_point,
+        pt,ptf = _project_to_plane(origin=vis_point, point=eval_point,
                             plane_pt=surf_points[0],
                             plane_normal=surf_normal,
                             check_normal=True)
 
         # if intersection point exists
-        if pt is not None:
+        if ptf:
             # if plane is in front of eval point
             if (np.linalg.norm(eval_point-vis_point)>
                                 np.linalg.norm(pt-vis_point)):
@@ -857,21 +864,44 @@ if numba is not None:
         numba.f8[:,:,:](numba.f8[:,:],numba.f8),
     )(_create_patches)
     _process_patches = numba.njit(
-        numba.types.Tuple((numba.f8[:,:,:],numba.f8[:,:],numba.i8, numba.i8[:]))(
-            numba.f8[:,:,:],numba.f8[:,:],numba.f8,numba.i8),
+        numba.types.Tuple(
+            (numba.f8[:,:,:],numba.f8[:,:],numba.i8, numba.i8[:]),
+            )(numba.f8[:,:,:],numba.f8[:,:],numba.f8,numba.i8),
                                   )(_process_patches)
-    _calculate_area = numba.njit()(_calculate_area)
-    _calculate_center = numba.njit()(_calculate_center)
-    _calculate_size = numba.njit()(_calculate_size)
-    _check_visibility = numba.njit(parallel=True)(_check_visibility)
+    _polygon_area = numba.njit(
+        numba.f8(numba.f8[:,:]),
+    )(_polygon_area)
+    _calculate_area = numba.njit(
+        numba.f8[:](numba.f8[:,:,:]),
+    )(_calculate_area)
+    _rotation_matrix = numba.njit(
+        numba.f8[:,:](numba.f8[:],numba.f8[:]),
+    )(_rotation_matrix)
+    _matrix_vector_product = numba.njit(
+        numba.f8[:](numba.f8[:,:],numba.f8[:]),
+    )(_matrix_vector_product)
+    _project_to_plane = numba.njit(
+        numba.types.Tuple((numba.f8[:],numba.b1))(
+            numba.f8[:],numba.f8[:],
+            numba.f8[:],numba.f8[:],
+            numba.f8,numba.b1),
+    )(_project_to_plane)
+    _point_in_polygon = numba.njit(
+        numba.b1(numba.f8[:],numba.f8[:,:],
+                 numba.f8[:],numba.f8),
+    )(_point_in_polygon)
+    _basic_visibility = numba.njit(
+        numba.b1(numba.f8[:],numba.f8[:],
+                 numba.f8[:,:],numba.f8[:],
+                 numba.f8),
+    )(_basic_visibility)
+    _check_visibility = numba.njit(
+        numba.b1[:,:](numba.f8[:,:],numba.f8[:,:],numba.f8[:]),
+        parallel=True)(_check_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
-    _basic_visibility = numba.njit()(_basic_visibility)
-    _project_to_plane = numba.njit()(_project_to_plane)
-    _point_in_polygon = numba.njit()(_point_in_polygon)
-    _matrix_vector_product = numba.njit()(_matrix_vector_product)
-    _rotation_matrix = numba.njit()(_rotation_matrix)
-    _polygon_area = numba.njit()(_polygon_area)
     _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
+    _calculate_center = numba.njit()(_calculate_center)
+    _calculate_size = numba.njit()(_calculate_size)
 
 
