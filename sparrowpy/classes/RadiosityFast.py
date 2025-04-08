@@ -108,7 +108,7 @@ class DirectionalRadiosityFast():
         # create patches
         (
             patches_points, patches_normal,
-            n_patches, patch_to_wall_ids) = geometry.process_patches(
+            n_patches, patch_to_wall_ids) = geometry._process_patches(
             walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
@@ -121,7 +121,7 @@ class DirectionalRadiosityFast():
 
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry.check_visibility(
+        self._visibility_matrix = geometry._check_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
