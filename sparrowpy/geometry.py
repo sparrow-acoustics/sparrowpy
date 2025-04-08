@@ -370,7 +370,7 @@ def _total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
     return patch_nums[x_idx]*patch_nums[y_idx]
 
-def _create_patches(polygon_points:np.ndarray, max_size):
+def _create_patches(polygon_points:np.ndarray, max_size:float):
     """Create patches from a polygon."""
     size = np.empty(polygon_points.shape[1])
     for i in range(polygon_points.shape[1]):
@@ -850,12 +850,19 @@ def _basic_visibility(vis_point: np.ndarray,
 
 
 if numba is not None:
-    _total_number_of_patches = numba.njit()(_total_number_of_patches)
-    _process_patches = numba.njit()(_process_patches)
+    _total_number_of_patches = numba.njit(
+        numba.i8(numba.f8[:,:],numba.f8),
+    )(_total_number_of_patches)
+    _create_patches = numba.njit(
+        numba.f8[:,:,:](numba.f8[:,:],numba.f8),
+    )(_create_patches)
+    _process_patches = numba.njit(
+        numba.types.Tuple((numba.f8[:,:,:],numba.f8[:,:],numba.i8, numba.i8[:]))(
+            numba.f8[:,:,:],numba.f8[:,:],numba.f8,numba.i8),
+                                  )(_process_patches)
     _calculate_area = numba.njit()(_calculate_area)
     _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
-    _create_patches = numba.njit()(_create_patches)
     _check_visibility = numba.njit(parallel=True)(_check_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
