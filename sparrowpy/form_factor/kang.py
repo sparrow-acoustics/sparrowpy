@@ -6,12 +6,10 @@ except ImportError:
     numba = None
     prange = range
 import numpy as np
-from . import geometry
-from sparrowpy.radiosity_fast.universal_ff.univ_form_factor import (
-                                                            calc_form_factor )
 
+## form factor matrix assembly
 
-def kang(
+def patch2patch_ff_kang(
         patches_center:np.ndarray, patches_normal:np.ndarray,
         patches_size:np.ndarray, visible_patches:np.ndarray) -> np.ndarray:
     """Calculate the form factors between patches.
@@ -170,140 +168,117 @@ def kang(
         form_factors[i_source, i_receiver] = ff
     return form_factors
 
-
-def universal(patches_points: np.ndarray, patches_normals: np.ndarray,
-              patches_areas: np.ndarray, visible_patches:np.ndarray):
-    """Calculate the form factors between patches (universal method).
-
-    This method computes form factors between polygonal patches via numerical
-    integration. Support is only guaranteed for convex polygons.
-    Because this function relies on numpy, all patches must have
-    the same number of sides.
+def _source2patch_energy_kang(
+        source_position: np.ndarray, patches_center: np.ndarray,
+        patches_normal: np.ndarray, air_attenuation:np.ndarray,
+        patches_size: float, n_bins:float):
+    """Calculate the initial energy from the source.
 
     Parameters
     ----------
-    patches_points : np.ndarray
-        vertices of all patches of shape (n_patches, n_vertices, 3)
-    patches_normals : np.ndarray
-        normal vectors of all patches of shape (n_patches, 3)
-    patches_areas : np.ndarray
-        areas of all patches of shape (n_patches)
-    visible_patches : np.ndarray
-        index list of all visible patches combinations (n_combinations, 2)
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_normal : np.ndarray
+        normal of all patches of shape (n_patches, 3)
+    air_attenuation : np.ndarray
+        air attenuation factor in Np/m (n_bins,)
+    patches_size : float
+        size of all patches of shape (n_patches, 3)
+    n_bins : float
+        number of frequency bins.
 
     Returns
     -------
-    form_factors : np.ndarray
-        form factors between all patches of shape (n_patches, n_patches)
-        note that just i_source < i_receiver are calculated since
-        patches_areas[i] * ff[i, j] = patches_areas[j] * ff[j, i]
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
 
     """
-    n_patches = patches_areas.shape[0]
-    form_factors = np.zeros((n_patches, n_patches))
-
-    for visID in prange(visible_patches.shape[0]):
-        i = int(visible_patches[visID, 0])
-        j = int(visible_patches[visID, 1])
-        form_factors[i,j] = calc_form_factor(
-                    patches_points[i], patches_normals[i], patches_areas[i],
-                    patches_points[j], patches_normals[j])
-
-    return form_factors
-
-
-def _form_factors_with_directivity(
-        visibility_matrix, form_factors, n_bins, patches_center,
-        patches_area, air_attenuation,
-        absorption, absorption_index, patch_to_wall_ids,
-        scattering, scattering_index, sources, receivers):
-    """Calculate the form factors with directivity."""
     n_patches = patches_center.shape[0]
-    form_factors_tilde = np.zeros((n_patches, n_patches, n_patches, n_bins))
-    # loop over previous patches, current and next patch
+    energy = np.empty((n_patches, n_bins))
+    distance_out = np.empty((n_patches, ))
+    for j in prange(n_patches):
+        source_pos = source_position.copy()
+        receiver_pos = patches_center[j, :].copy()
+        receiver_normal = patches_normal[j, :].copy()
+        receiver_size = patches_size[j, :].copy()
 
-    for ii in prange(n_patches**3):
-        h = ii % n_patches
-        i = int(ii/n_patches) % n_patches
-        j = int(ii/n_patches**2) % n_patches
-        visible_hi = visibility_matrix[
-            h, i] if h < i else visibility_matrix[i, h]
-        visible_ij = visibility_matrix[
-            i, j] if i < j else visibility_matrix[j, i]
-        if visible_hi and visible_ij:
-            difference_receiver = patches_center[i]-patches_center[j]
-            wall_id_i = int(patch_to_wall_ids[i])
-            difference_receiver /= np.linalg.norm(difference_receiver)
-            ff = form_factors[i, j] if i<j else (form_factors[j, i]
-                                                 *patches_area[i]/patches_area[j])
+        if np.abs(receiver_normal[2]) > 0.99:
+            i = 2
+            indexes = [0, 1, 2]
+        elif np.abs(receiver_normal[1]) > 0.99:
+            indexes = [2, 0, 1]
+            i = 1
+        elif np.abs(receiver_normal[0]) > 0.99:
+            i = 0
+            indexes = [1, 2, 0]
+        offset = receiver_pos[i]
+        source_pos[i] = np.abs(source_pos[i] - offset)
+        receiver_pos[i] = np.abs(receiver_pos[i] - offset)
+        dl = receiver_pos[indexes[0]]
+        dm = receiver_pos[indexes[1]]
+        dn = receiver_pos[indexes[2]]
+        dd_l = receiver_size[indexes[0]]
+        dd_m = receiver_size[indexes[1]]
+        S_x = source_pos[indexes[0]]
+        S_y = source_pos[indexes[1]]
+        S_z = source_pos[indexes[2]]
 
-            distance = np.linalg.norm(difference_receiver)
-            form_factors_tilde[h, i, j, :] = ff
-            if air_attenuation is not None:
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * np.exp(-air_attenuation * distance)
+        half_l = dd_l/2
+        half_m = dd_m/2
 
-            if scattering is not None:
-                scattering_factor = geometry.get_scattering_data(
-                    patches_center[h], patches_center[i], patches_center[j],
-                    sources, receivers, wall_id_i,
-                    scattering, scattering_index)
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * scattering_factor
+        sin_phi_delta = (dl + half_l - S_x)/ (np.sqrt(np.square(
+            dl+half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        test1 = (dl - half_l) <= S_x
+        test2 = S_x <= (dl + half_l)
+        k_phi = -1 if test1 and test2 else 1
 
-            if absorption is not None:
-                source_wall_idx = absorption_index[wall_id_i]
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * (1-absorption[source_wall_idx])
+        sin_phi = k_phi * (dl - half_l - S_x) / (np.sqrt(np.square(
+            dl-half_l-S_x) + np.square(dm-S_y) + np.square(dn-S_z)))
+        if (sin_phi_delta-sin_phi) < 1e-11:
+            sin_phi *= -1
 
-    return form_factors_tilde
+        plus  = np.arctan(np.abs((dm+half_m-S_y)/np.abs(S_z)))
+        minus = np.arctan(np.abs((dm-half_m-S_y)/np.abs(S_z)))
 
+        test1 = (dm - half_m) <= S_y
+        test2 = S_y <= (dm + half_m)
+        k_beta = -1 if test1 and test2 else 1
 
-def _form_factors_with_directivity_dim(
-        visibility_matrix, form_factors, n_bins, patches_center,
-        patches_area,
-        air_attenuation,
-        patch_to_wall_ids,
-        scattering, scattering_index, sources, receivers):
-    """Calculate the form factors with directivity."""
-    n_patches = patches_center.shape[0]
-    n_directions = receivers.shape[1] if receivers is not None else 1
-    form_factors_tilde = np.zeros((n_patches, n_patches, n_directions, n_bins))
-    # loop over previous patches, current and next patch
+        beta = np.abs(plus-(k_beta*minus))
+        distance_out[j] = np.sqrt(
+            np.square(dl-S_x) + np.square(dm-S_y) + np.square(dn-S_z))
 
-    for ii in prange(n_patches**2):
-        i = ii % n_patches
-        j = int(ii/n_patches) % n_patches
-        visible_ij = visibility_matrix[
-            i, j] if i < j else visibility_matrix[j, i]
-        if visible_ij:
-            difference_receiver = patches_center[i]-patches_center[j]
-            wall_id_i = int(patch_to_wall_ids[i])
-            difference_receiver /= np.linalg.norm(difference_receiver)
-            ff = form_factors[i, j] if i<j else (form_factors[j, i]
-                                                 *patches_area[j]/patches_area[i])
+        if air_attenuation is not None:
+            energy[j, :] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (
+                4*np.pi) * np.exp(
+                -air_attenuation * distance_out[j])
+        else:
+            energy[j, :] = (np.abs(sin_phi_delta-sin_phi) ) * beta / (
+                4*np.pi)
 
-            distance = np.linalg.norm(difference_receiver)
-            form_factors_tilde[i, j, :, :] = ff
-            if air_attenuation is not None:
-                form_factors_tilde[i, j, :, :] = form_factors_tilde[
-                    i, j, :, :] * np.exp(-air_attenuation * distance)
+    return (energy, distance_out)
 
-            if scattering is not None:
-                scattering_factor = geometry.get_scattering_data_source(
-                    patches_center[i], patches_center[j],
-                    sources, wall_id_i,
-                    scattering, scattering_index)
-                form_factors_tilde[i, j, :, :] = form_factors_tilde[
-                    i, j, :, :] * scattering_factor
+def _patch2receiver_energy_kang(
+        patch_receiver_distance, patches_normal):
+    receiver_factor = np.empty((
+        patch_receiver_distance.shape[0],))
+    for i in range(patch_receiver_distance.shape[0]):
+        R = np.sqrt(np.sum((patch_receiver_distance[i, :]**2)))
 
-    return form_factors_tilde
+        cos_xi = np.abs(np.sum(
+            patches_normal[i, :]*np.abs(patch_receiver_distance[i, :]))) / R
 
+        # Equation 20
+        receiver_factor[i] = cos_xi / (np.pi * R**2)
+
+    return receiver_factor
 
 if numba is not None:
-    _form_factors_with_directivity_dim = numba.njit(parallel=True)(
-        _form_factors_with_directivity_dim)
-    kang = numba.njit(parallel=True)(kang)
-    universal = numba.njit(parallel=True)(universal)
-    _form_factors_with_directivity = numba.njit(parallel=True)(
-        _form_factors_with_directivity)
+    patch2patch_ff_kang = numba.njit(parallel=True)(patch2patch_ff_kang)
+    _source2patch_energy_kang = numba.njit(parallel=True)(
+        _source2patch_energy_kang)
+    _patch2receiver_energy_kang = numba.njit()(_patch2receiver_energy_kang)
