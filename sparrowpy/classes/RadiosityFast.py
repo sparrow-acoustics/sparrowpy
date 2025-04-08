@@ -1,10 +1,14 @@
 """Module for the radiosity simulation."""
 import numpy as np
 import pyfar as pf
-from sparrowpy.radiosity_fast import (
-    form_factor, source_energy, receiver_energy, geometry)
-from sparrowpy.radiosity_fast import energy_exchange_order as ee_order
-
+import sparrowpy.form_factor.universal as form_factor
+from sparrowpy import ( geometry )
+try:
+    import numba
+    prange = numba.prange
+except ImportError:
+    numba = None
+    prange = range
 
 class DirectionalRadiosityFast():
     """Radiosity object for directional scattering coefficients."""
@@ -104,7 +108,7 @@ class DirectionalRadiosityFast():
         # create patches
         (
             patches_points, patches_normal,
-            n_patches, patch_to_wall_ids) = geometry.process_patches(
+            n_patches, patch_to_wall_ids) = geometry._process_patches(
             walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
@@ -117,7 +121,7 @@ class DirectionalRadiosityFast():
 
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry.check_visibility(
+        self._visibility_matrix = geometry._check_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
@@ -132,7 +136,7 @@ class DirectionalRadiosityFast():
                 i_counter += 1
         self._visible_patches = visible_patches
 
-        self._form_factors = form_factor.universal(
+        self._form_factors = form_factor.patch2patch_ff_universal(
             self.patches_points, self.patches_normal,
             self.patches_area, self._visible_patches)
 
@@ -153,7 +157,7 @@ class DirectionalRadiosityFast():
         n_bins = 1 if self._n_bins is None else self._n_bins
 
         self._form_factors_tilde = \
-            form_factor._form_factors_with_directivity_dim(
+            _form_factors_with_directivity_dim(
             self.visibility_matrix, self.form_factors, n_bins,
             self.patches_center, self.patches_area,
             self._air_attenuation,
@@ -173,10 +177,10 @@ class DirectionalRadiosityFast():
         scattering = np.array(self._brdf)
         scattering_index = self._brdf_index
         patches_center = self.patches_center
-        energy_0, distance_0 = source_energy._init_energy_universal(
+        energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
             self._air_attenuation, self.n_bins)
-        energy_0_dir = ee_order._add_directional(
+        energy_0_dir = _add_directional(
             energy_0, source_position,
             patches_center, self._n_bins, patch_to_wall_ids,
             sources, receivers,
@@ -210,12 +214,12 @@ class DirectionalRadiosityFast():
         if self._energy_exchange_etc is None or recalculate:
             if max_reflection_order < 1:
                 self._energy_exchange_etc = \
-                    ee_order.energy_exchange_init_energy(
+                    _energy_exchange_init_energy(
                         n_samples, energy_0_dir, distance_0,
                         speed_of_sound, etc_time_resolution,
                         )
             else:
-                self._energy_exchange_etc = ee_order.energy_exchange(
+                self._energy_exchange_etc = _energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
                     speed_of_sound, etc_time_resolution,
@@ -297,14 +301,14 @@ class DirectionalRadiosityFast():
             patches_receiver_distance = patches_center - receiver_pos[i]
 
             # geometrical weighting
-            patch_receiver_energy = receiver_energy._universal(
+            patch_receiver_energy=form_factor._patch2receiver_energy_universal(
                     receiver_pos[i], patches_points)
 
             # access histograms with correct scattering weighting
             receivers_array = np.array(
                 [s.cartesian for s in self._brdf_outgoing_directions])
 
-            receiver_idx = geometry.get_scattering_data_receiver_index(
+            receiver_idx = get_scattering_data_receiver_index(
                 patches_center, receiver_pos[i], receivers_array,
                 self._patch_to_wall_ids)
 
@@ -318,7 +322,7 @@ class DirectionalRadiosityFast():
             if propagation_fx:
                 # accumulate the patch energies towards the receiver
                 # with atmospheric effects (delay, atmospheric attenuation)
-                histogram_out[i] = ee_order._collect_receiver_energy(
+                histogram_out[i] = _collect_receiver_energy(
                         E_matrix,
                         np.linalg.norm(patches_receiver_distance, axis=1),
                                     self.speed_of_sound,
@@ -487,7 +491,6 @@ class DirectionalRadiosityFast():
         return self._speed_of_sound
 
 
-
 def _rotate_coords_to_normal(
         wall_normal:np.ndarray, wall_up_vector:np.ndarray,
         sources:pf.Coordinates, receivers:pf.Coordinates):
@@ -504,3 +507,418 @@ def _rotate_coords_to_normal(
     sources_cp.rotate('xyz', euler)
     sources_cp.radius = 1
     return sources_cp, receivers_cp
+
+def _add_directional(
+        energy_0, source_position: np.ndarray,
+        patches_center: np.ndarray, n_bins:float, patch_to_wall_ids:np.ndarray,
+        sources: np.ndarray, receivers: np.ndarray,
+        scattering: np.ndarray, scattering_index: np.ndarray):
+    """Add scattering and absorption to the initial energy from the source.
+
+    Parameters
+    ----------
+    energy_0 : np.ndarray
+        energy of all patches of shape (n_patches, n_bins)
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    n_bins : float
+        number of frequency bins.
+    patch_to_wall_ids : np.ndarray
+        indexes from each patch to the wall of shape (n_patches)
+    sources : np.ndarray
+        source positions of shape (n_walls, n_sources, 3)
+    receivers : np.ndarray
+        receiver positions of shape (n_walls, n_receivers, 3)
+    scattering : np.ndarray
+        scattering data of shape (n_walls, n_sources, n_receivers, n_bins)
+    scattering_index : np.ndarray
+        mapping from the wall id to scattering database index (n_walls)
+
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches, n_directions, n_bins)
+
+    """
+    n_patches = patches_center.shape[0]
+    n_directions = receivers.shape[1]
+    energy_0_directivity = np.zeros((n_patches, n_directions, n_bins))
+    for i in prange(n_patches):
+        wall_id_i = int(patch_to_wall_ids[i])
+        scattering_factor = get_scattering_data_source(
+            source_position, patches_center[i],
+            sources, wall_id_i, scattering, scattering_index)
+
+        energy_0_directivity[i, :, :] = energy_0[i] \
+            * scattering_factor
+
+    return energy_0_directivity
+
+
+def _energy_exchange_init_energy(
+        n_samples, energy_0_directivity, distance_0,
+        speed_of_sound, histogram_time_resolution):
+    """Calculate energy exchange between patches.
+
+    Parameters
+    ----------
+    n_samples : int
+        number of samples of the histogram.
+    energy_0_directivity : np.ndarray
+        init energy of all patches of shape (n_patches, n_directions, n_bins)
+    distance_0 : np.ndarray
+        distance from the source to all patches of shape (n_patches)
+    speed_of_sound : float
+        speed of sound in m/s.
+    histogram_time_resolution : float
+        time resolution of the histogram in s.
+
+    Returns
+    -------
+    E_matrix_total : np.ndarray
+        energy of all patches of shape
+        (n_patches, n_directions, n_bins, n_samples)
+
+    """
+    n_patches = energy_0_directivity.shape[0]
+    n_directions = energy_0_directivity.shape[1]
+    n_bins = energy_0_directivity.shape[2]
+    E_matrix_total = np.zeros((n_patches, n_directions, n_bins, n_samples))
+    for i in prange(n_patches):
+        n_delay_samples = int(
+            distance_0[i]/speed_of_sound/histogram_time_resolution)
+        E_matrix_total[i, :, :, n_delay_samples] += energy_0_directivity[i]
+    return E_matrix_total
+
+
+def _energy_exchange(
+        n_samples, energy_0_directivity, distance_0, distance_ij,
+        form_factors_tilde,
+        speed_of_sound, histogram_time_resolution, max_order, visible_patches):
+    """Calculate energy exchange between patches.
+
+    Parameters
+    ----------
+    n_samples : int
+        number of samples of the histogram.
+    energy_0_directivity : np.ndarray
+        init energy of all patches of shape (n_patches, n_directions, n_bins)
+    distance_0 : np.ndarray
+        distance from the source to all patches of shape (n_patches)
+    distance_ij : np.ndarray
+        distance between all patches of shape (n_patches, n_patches)
+    form_factors_tilde : np.ndarray
+        form factors of shape (n_patches, n_patches, n_directions, n_bins)
+    speed_of_sound : float
+        speed of sound in m/s.
+    histogram_time_resolution : float
+        time resolution of the histogram in s.
+    max_order : int
+        maximum order of reflections.
+    visible_patches : np.ndarray
+        indexes of all visible patches of shape (n_visible, 2)
+
+    Returns
+    -------
+    E_matrix_total : np.ndarray
+        energy of all patches of shape
+        (n_patches, n_directions, n_bins, n_samples)
+
+    """
+    n_patches = form_factors_tilde.shape[0]
+    n_directions = form_factors_tilde.shape[2]
+    n_bins = energy_0_directivity.shape[2]
+    form_factors_tilde = form_factors_tilde[..., np.newaxis]
+    E_matrix_total  = _energy_exchange_init_energy(
+        n_samples, energy_0_directivity, distance_0, speed_of_sound,
+        histogram_time_resolution)
+    E_matrix = np.zeros((2, n_patches, n_directions, n_bins, n_samples))
+    E_matrix[0] += E_matrix_total
+    if max_order == 0:
+        return E_matrix_total
+    for k in range(max_order):
+        current_index = (1+k) % 2
+        E_matrix[current_index, :, :, :] = 0
+        for ii in range(visible_patches.shape[0]):
+            for jj in range(2):
+                if jj == 0:
+                    i = visible_patches[ii, 0]
+                    j = visible_patches[ii, 1]
+                else:
+                    j = visible_patches[ii, 0]
+                    i = visible_patches[ii, 1]
+                n_delay_samples = int(
+                    distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
+                if n_delay_samples > 0:
+                    E_matrix[current_index, j, :, :, n_delay_samples:] += \
+                        form_factors_tilde[i, j] * E_matrix[
+                            current_index-1, i, :, :, :-n_delay_samples]
+                else:
+                    E_matrix[current_index, j, :, :, :] += form_factors_tilde[
+                        i, j] * E_matrix[current_index-1, i, :, :, :]
+        E_matrix_total += E_matrix[current_index]
+    return E_matrix_total
+
+
+def _collect_receiver_energy(
+        E_matrix_total, patch_receiver_distance,
+        speed_of_sound, histogram_time_resolution, air_attenuation):
+    """Collect the energy at the receiver.
+
+    Parameters
+    ----------
+    E_matrix_total : np.ndarray
+        energy of all patches of shape
+        (n_patches, n_directions, n_bins, n_samples)
+    patch_receiver_distance : np.ndarray
+        distance from the patch to the receiver of shape (n_patches)
+    speed_of_sound : float
+        speed of sound in m/s.
+    histogram_time_resolution : float
+        time resolution of the histogram in s.
+    air_attenuation : np.ndarray
+        air attenuation factor for each frequency bin of shape (n_bins)
+
+    Returns
+    -------
+    ir : np.ndarray
+        impulse response of shape (n_samples, n_bins)
+
+    """
+    E_mat_out = np.zeros_like(E_matrix_total)
+    n_patches = E_matrix_total.shape[0]
+    n_bins = E_matrix_total.shape[1]
+
+    for i in prange(n_patches):
+        n_delay_samples = int(np.ceil(
+            patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
+        for j in range(n_bins):
+            E_mat_out[i,j] = np.roll(
+                E_matrix_total[i,j]*np.exp(-air_attenuation[j]*patch_receiver_distance[i]),
+                n_delay_samples)
+
+    return E_mat_out
+
+def _form_factors_with_directivity(
+        visibility_matrix, form_factors, n_bins, patches_center,
+        patches_area, air_attenuation,
+        absorption, absorption_index, patch_to_wall_ids,
+        scattering, scattering_index, sources, receivers):
+    """Calculate the form factors with directivity."""
+    n_patches = patches_center.shape[0]
+    form_factors_tilde = np.zeros((n_patches, n_patches, n_patches, n_bins))
+    # loop over previous patches, current and next patch
+
+    for ii in prange(n_patches**3):
+        h = ii % n_patches
+        i = int(ii/n_patches) % n_patches
+        j = int(ii/n_patches**2) % n_patches
+        visible_hi = visibility_matrix[
+            h, i] if h < i else visibility_matrix[i, h]
+        visible_ij = visibility_matrix[
+            i, j] if i < j else visibility_matrix[j, i]
+        if visible_hi and visible_ij:
+            difference_receiver = patches_center[i]-patches_center[j]
+            wall_id_i = int(patch_to_wall_ids[i])
+            difference_receiver /= np.linalg.norm(difference_receiver)
+            ff = form_factors[i, j] if i<j else (form_factors[j, i]
+                                                 *patches_area[i]/patches_area[j])
+
+            distance = np.linalg.norm(difference_receiver)
+            form_factors_tilde[h, i, j, :] = ff
+            if air_attenuation is not None:
+                form_factors_tilde[h, i, j, :] = form_factors_tilde[
+                    h, i, j, :] * np.exp(-air_attenuation * distance)
+
+            if scattering is not None:
+                scattering_factor = get_scattering_data(
+                    patches_center[h], patches_center[i], patches_center[j],
+                    sources, receivers, wall_id_i,
+                    scattering, scattering_index)
+                form_factors_tilde[h, i, j, :] = form_factors_tilde[
+                    h, i, j, :] * scattering_factor
+
+            if absorption is not None:
+                source_wall_idx = absorption_index[wall_id_i]
+                form_factors_tilde[h, i, j, :] = form_factors_tilde[
+                    h, i, j, :] * (1-absorption[source_wall_idx])
+
+    return form_factors_tilde
+
+
+def _form_factors_with_directivity_dim(
+        visibility_matrix, form_factors, n_bins, patches_center,
+        patches_area,
+        air_attenuation,
+        patch_to_wall_ids,
+        scattering, scattering_index, sources, receivers):
+    """Calculate the form factors with directivity."""
+    n_patches = patches_center.shape[0]
+    n_directions = receivers.shape[1] if receivers is not None else 1
+    form_factors_tilde = np.zeros((n_patches, n_patches, n_directions, n_bins))
+    # loop over previous patches, current and next patch
+
+    for ii in prange(n_patches**2):
+        i = ii % n_patches
+        j = int(ii/n_patches) % n_patches
+        visible_ij = visibility_matrix[
+            i, j] if i < j else visibility_matrix[j, i]
+        if visible_ij:
+            difference_receiver = patches_center[i]-patches_center[j]
+            wall_id_i = int(patch_to_wall_ids[i])
+            difference_receiver /= np.linalg.norm(difference_receiver)
+            ff = form_factors[i, j] if i<j else (form_factors[j, i]
+                                                 *patches_area[j]/patches_area[i])
+
+            distance = np.linalg.norm(difference_receiver)
+            form_factors_tilde[i, j, :, :] = ff
+            if air_attenuation is not None:
+                form_factors_tilde[i, j, :, :] = form_factors_tilde[
+                    i, j, :, :] * np.exp(-air_attenuation * distance)
+
+            if scattering is not None:
+                scattering_factor = get_scattering_data_source(
+                    patches_center[i], patches_center[j],
+                    sources, wall_id_i,
+                    scattering, scattering_index)
+                form_factors_tilde[i, j, :, :] = form_factors_tilde[
+                    i, j, :, :] * scattering_factor
+
+    return form_factors_tilde
+
+
+## scattering data access
+
+def get_scattering_data_receiver_index(
+        pos_i:np.ndarray, pos_j:np.ndarray,
+        receivers:np.ndarray, wall_id_i:np.ndarray,
+        ):
+    """Get scattering data depending on previous, current and next position.
+
+    Parameters
+    ----------
+    pos_i : np.ndarray
+        current position of shape (3)
+    pos_j : np.ndarray
+        next position of shape (3)
+    receivers : np.ndarray
+        receiver directions of all walls of shape (n_walls, n_receivers, 3)
+    wall_id_i : np.ndarray
+        current wall id to get write directional data
+
+    Returns
+    -------
+    scattering_factor: float
+        scattering factor from directivity
+
+    """
+    n_patches = pos_i.shape[0] if pos_i.ndim > 1 else 1
+    receiver_idx = np.empty((n_patches), dtype=np.int64)
+
+    for i in range(n_patches):
+        difference_receiver = pos_i[i]-pos_j
+        difference_receiver /= np.linalg.norm(
+            difference_receiver)
+        receiver_idx[i] = np.argmin(np.sum(
+            (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
+            axis=-1)
+
+
+    return receiver_idx
+
+
+def get_scattering_data(
+        pos_h:np.ndarray, pos_i:np.ndarray, pos_j:np.ndarray,
+        sources:np.ndarray, receivers:np.ndarray, wall_id_i:np.ndarray,
+        scattering:np.ndarray, scattering_index:np.ndarray):
+    """Get scattering data depending on previous, current and next position.
+
+    Parameters
+    ----------
+    pos_h : np.ndarray
+        previous position of shape (3)
+    pos_i : np.ndarray
+        current position of shape (3)
+    pos_j : np.ndarray
+        next position of shape (3)
+    sources : np.ndarray
+        source directions of all walls of shape (n_walls, n_sources, 3)
+    receivers : np.ndarray
+        receiver directions of all walls of shape (n_walls, n_receivers, 3)
+    wall_id_i : np.ndarray
+        current wall id to get write directional data
+    scattering : np.ndarray
+        scattering data of shape (n_scattering, n_sources, n_receivers, n_bins)
+    scattering_index : np.ndarray
+        index of the scattering data of shape (n_walls)
+
+    Returns
+    -------
+    scattering_factor: float
+        scattering factor from directivity
+
+    """
+    difference_source = pos_h-pos_i
+    difference_receiver = pos_i-pos_j
+
+    difference_source /= np.linalg.norm(difference_source)
+    difference_receiver /= np.linalg.norm(difference_receiver)
+    source_idx = np.argmin(np.sum(
+        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+    receiver_idx = np.argmin(np.sum(
+        (receivers[wall_id_i, :]-difference_receiver)**2, axis=-1))
+    return scattering[scattering_index[wall_id_i],
+        source_idx, receiver_idx, :]
+
+
+def get_scattering_data_source(
+        pos_h:np.ndarray, pos_i:np.ndarray,
+        sources:np.ndarray, wall_id_i:np.ndarray,
+        scattering:np.ndarray, scattering_index:np.ndarray):
+    """Get scattering data depending on previous, current position.
+
+    Parameters
+    ----------
+    pos_h : np.ndarray
+        previous position of shape (3)
+    pos_i : np.ndarray
+        current position of shape (3)
+    sources : np.ndarray
+        source directions of all walls of shape (n_walls, n_sources, 3)
+    wall_id_i : np.ndarray
+        current wall id to get write directional data
+    scattering : np.ndarray
+        scattering data of shape (n_scattering, n_sources, n_receivers, n_bins)
+    scattering_index : np.ndarray
+        index of the scattering data of shape (n_walls)
+
+    Returns
+    -------
+    scattering_factor: float
+        scattering factor from directivity
+
+    """
+    difference_source = pos_h-pos_i
+    difference_source /= np.linalg.norm(difference_source)
+    source_idx = np.argmin(np.sum(
+        (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+    return scattering[scattering_index[wall_id_i], source_idx]
+
+if numba is not None:
+    _add_directional = numba.njit(parallel=True)(_add_directional)
+    _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
+    _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
+    _energy_exchange = numba.njit()(_energy_exchange)
+    _form_factors_with_directivity_dim = numba.njit(parallel=True)(
+        _form_factors_with_directivity_dim)
+    _form_factors_with_directivity = numba.njit(parallel=True)(
+        _form_factors_with_directivity)
+    get_scattering_data_receiver_index = numba.njit()(
+        get_scattering_data_receiver_index)
+    get_scattering_data = numba.njit()(get_scattering_data)
+    get_scattering_data_source = numba.njit()(get_scattering_data_source)
+
+
+
