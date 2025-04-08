@@ -287,7 +287,7 @@ def _norm(vector):
 
 ####################################################
 # patch processing (numpy formulation)
-def process_patches(
+def _process_patches(
         polygon_points_array: np.ndarray,
         walls_normal: np.ndarray,
         patch_size:float, n_walls:int):
@@ -317,7 +317,7 @@ def process_patches(
     n_patches = 0
     n_walls = polygon_points_array.shape[0]
     for i in range(n_walls):
-        n_patches += total_number_of_patches(
+        n_patches += _total_number_of_patches(
             polygon_points_array[i, :, :], patch_size)
     patches_points = np.empty((n_patches, 4, 3))
     patch_to_wall_ids = np.empty((n_patches), dtype=np.int64)
@@ -338,7 +338,7 @@ def process_patches(
     patches_normal = walls_normal[patch_to_wall_ids, :]
     return (patches_points, patches_normal, n_patches, patch_to_wall_ids)
 
-def total_number_of_patches(polygon_points:np.ndarray, max_size: float):
+def _total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     """Calculate the total number of patches.
 
     Parameters
@@ -741,7 +741,7 @@ def _coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-6) -> bool:
 
     return flag
 
-def check_visibility(
+def _check_visibility(
         patches_center:np.ndarray,
         surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
     """Check the visibility between patches.
@@ -850,13 +850,13 @@ def _basic_visibility(vis_point: np.ndarray,
 
 
 if numba is not None:
-    total_number_of_patches = numba.njit()(total_number_of_patches)
-    process_patches = numba.njit()(process_patches)
+    _total_number_of_patches = numba.njit()(_total_number_of_patches)
+    _process_patches = numba.njit()(_process_patches)
     _calculate_area = numba.njit()(_calculate_area)
     _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
     _create_patches = numba.njit()(_create_patches)
-    check_visibility = numba.njit(parallel=True)(check_visibility)
+    _check_visibility = numba.njit(parallel=True)(_check_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
     _basic_visibility = numba.njit()(_basic_visibility)

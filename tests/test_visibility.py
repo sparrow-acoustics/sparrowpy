@@ -126,7 +126,7 @@ def test_vis_matrix_assembly(model):
                                             -m["verts"][m["conn"][i]][0])
             surfs_normals[i]/=np.linalg.norm(surfs_normals[i])
 
-        vis_matrix = geom.check_visibility(patches_center=patches_centers,
+        vis_matrix = geom._check_visibility(patches_center=patches_centers,
                                            surf_normal=surfs_normals,
                                            surf_points=surfs_points)
 

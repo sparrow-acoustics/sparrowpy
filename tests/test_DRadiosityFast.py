@@ -31,7 +31,7 @@ def test_check_visibility(sample_walls):
 def test_check_visibility_wrapper(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
-    visibility_matrix = sp.geometry.check_visibility(
+    visibility_matrix = sp.geometry._check_visibility(
         radiosity.patches_center, radiosity.patches_normal,
         radiosity.patches_points)
     npt.assert_almost_equal(radiosity._visibility_matrix, visibility_matrix)
@@ -145,6 +145,6 @@ def test_set_air_attenuation(sample_walls):
 
 def test_total_number_of_patches():
     points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]])
-    result = sp.geometry.total_number_of_patches(points, 0.2)
+    result = sp.geometry._total_number_of_patches(points, 0.2)
     desired = 25
     assert result == desired
