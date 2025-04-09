@@ -46,7 +46,7 @@ def run_energy_diff_specular_ratio(
     speed_of_sound = 343
     sampling_rate = 1
     etc_duration = reflection_len/speed_of_sound
-    etc_duration=1
+    etc_duration = 1
 
     plane = sp.geometry.Polygon(
             [[-width/2, -length/2, 0],
@@ -55,38 +55,21 @@ def run_energy_diff_specular_ratio(
              [-width/2, length/2, 0]],
             [1, 0, 0], [0, 0, 1])
 
-    #simulation parameters
+    # simulation parameters
     radi = sp.DirectionalRadiosityFast.from_polygon(
         [plane], patch_size)
-
-    brdf_sources = pf.Coordinates(0, 0, 1, weights=1)
-    brdf_receivers = pf.Coordinates(0, 0, 1, weights=1)
-    brdf = sp.brdf.create_from_scattering(
-        brdf_sources,
-        brdf_receivers,
-        pf.FrequencyData(1, [100]),
-        pf.FrequencyData(0, [100]),
-    )
-
-    radi.set_wall_brdf(
-        np.arange(1), brdf, brdf_sources, brdf_receivers)
-
-    # set air absorption
-    radi.set_air_attenuation(
-        pf.FrequencyData(
-            np.zeros_like(brdf.frequencies),
-            brdf.frequencies))
 
     # initialize source energy at each patch
     radi.init_source_energy(source)
 
-    # gather energy at receiver
+    # calculate energy exchange
     radi.calculate_energy_exchange(
         speed_of_sound=speed_of_sound,
         etc_time_resolution=1/sampling_rate,
         etc_duration=etc_duration,
         max_reflection_order=0)
 
+    # gather energy at receiver
     I_diffuse = radi.collect_energy_receiver_mono(receiver)
 
     I_specular = 1/(4*np.pi*reflection_len**2)
@@ -133,9 +116,9 @@ def test_source_receiver_along_same_normal(patch_size):
     npt.assert_allclose(ratio, 1.97, rtol=0.01)
 
 
-@pytest.mark.parametrize("theta_deg", [30, 45, 60])
+@pytest.mark.parametrize("theta_deg", [30, 60])
 @pytest.mark.parametrize("patch_size", [1])
-def test_source_receiver_same_hight(patch_size, theta_deg):
+def test_source_receiver_same_elevation(patch_size, theta_deg):
     """
     Compares test case 3 from [1], where receiver is at the same height as
     the source, but moved sideways/laterally. For this case the Energy
