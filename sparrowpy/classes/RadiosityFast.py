@@ -136,7 +136,7 @@ class DirectionalRadiosityFast():
             of the CAD model.
 
         auto_walls: bool
-            if True, walls of the geometry model are assembled from coplanar 
+            if True, walls of the geometry model are assembled from coplanar
             and contiguous patches which share material properties.
             if False, the walls are defined as one per patch.
 
