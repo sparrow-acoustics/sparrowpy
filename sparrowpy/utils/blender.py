@@ -243,16 +243,16 @@ def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
 
     out_mesh = {"verts":np.array([]), "conn":[], "map":np.array([])}
 
-    out_mesh["verts"] = np.array([v.co for v in finemesh.verts])
-    out_mesh["map"] = np.empty((len(finemesh.faces)),dtype=int)
+    out_mesh["verts"] = np.array([v.co for v in fine_mesh.verts])
+    out_mesh["map"] = np.empty((len(fine_mesh.faces)),dtype=int)
 
-    for i,pface in enumerate(finemesh.faces):
+    for i,pface in enumerate(fine_mesh.faces):
         line = cleanup_collinear(conn=[v.index for v in pface.verts],
                                  vertlist=out_mesh["verts"])
 
         out_mesh["conn"].append(line)
 
-        for j,wface in enumerate(broadmesh.faces):
+        for j,wface in enumerate(rough_mesh.faces):
             if pface.normal==wface.normal:
                 if pface.material_index==wface.material_index:
                     if bmesh.geometry.intersect_face_point(wface,
