@@ -1,5 +1,6 @@
 """Module for the radiosity simulation."""
 import numpy as np
+import deepdiff
 import pyfar as pf
 import sparrowpy.form_factor.universal as form_factor
 from sparrowpy import ( geometry )
@@ -10,6 +11,7 @@ except ImportError:
     numba = None
     prange = range
 
+
 class DirectionalRadiosityFast():
     """Radiosity object for directional scattering coefficients."""
 
@@ -17,7 +19,6 @@ class DirectionalRadiosityFast():
     _walls_normal: np.ndarray
     _walls_up_vector: np.ndarray
     _patches_points: np.ndarray
-    _patches_normal: np.ndarray
     _n_patches: int
     _patch_to_wall_ids: np.ndarray
 
@@ -28,7 +29,6 @@ class DirectionalRadiosityFast():
     _form_factors_tilde: np.ndarray
 
     # general data for material and medium data
-    _n_bins: int
     _frequencies: np.ndarray
     _brdf: np.ndarray
     _brdf_index: np.ndarray
@@ -49,43 +49,150 @@ class DirectionalRadiosityFast():
 
 
     def __init__(
-            self, walls_points, walls_normal, walls_up_vector,
-            patches_points, patches_normal, n_patches,
-            patch_to_wall_ids):
-        """Create a Radiosity object for directional implementation."""
+            self,
+            walls_points:np.ndarray,
+            walls_normal:np.ndarray,
+            walls_up_vector:np.ndarray,
+            patches_points:np.ndarray,
+            n_patches:int,
+            patch_to_wall_ids:np.ndarray,
+            visibility_matrix:np.ndarray=None,
+            visible_patches:np.ndarray=None,
+            form_factors:np.ndarray=None,
+            form_factors_tilde:np.ndarray=None,
+            frequencies:np.ndarray=None,
+            brdf:list[np.ndarray]=None,
+            brdf_index:np.ndarray=None,
+            brdf_incoming_directions:list[pf.Coordinates]=None,
+            brdf_outgoing_directions:list[pf.Coordinates]=None,
+            air_attenuation:np.ndarray=None,
+            speed_of_sound:float=None,
+            etc_time_resolution:float=None,
+            etc_duration:float=None,
+            distance_patches_to_source:np.ndarray=None,
+            energy_init_etc:np.ndarray=None,
+            energy_exchange_etc:np.ndarray=None):
+        """Create a Radiosity object for directional implementation.
+
+        Parameters
+        ----------
+        walls_points : np.ndarray
+            edge points of all walls in cartesian of shape
+            (n_walls, n_points, 3)
+        walls_normal : np.ndarray
+            normals of all walls of shape (n_walls, 3)
+        walls_up_vector : np.ndarray
+            uo vector of all walls of shape (n_walls, 3)
+        patches_points : np.ndarray
+            edge points of all patches in cartesian of shape
+            (n_patches, n_points, 3)
+        n_patches : int
+            number of patches
+        patch_to_wall_ids : np.ndarray
+            maps each patch to a wall of shape (n_patches)
+        visibility_matrix : np.ndarray, optional
+            patch to patch boolean visibility matrix, by default None.
+        visible_patches : np.ndarray, optional
+            list of all patches which are visible, by default None
+        form_factors : np.ndarray, optional
+            geometrical form factor from each patch to each other patch,
+            by default None.
+        form_factors_tilde : np.ndarray, optional
+            Form factor including air attenuation and BRDF, by default None
+        frequencies : np.ndarray, optional
+            frequency vector used for the simulation. , by default None
+        brdf : list[np.ndarray], optional
+            brdf in its raw postprocessed data format, by default None
+        brdf_index : np.ndarray, optional
+            maps brdfs to walls, must be of shape (n_walls, ), by default None
+        brdf_incoming_directions : list[pf.Coordinates], optional
+            incoming direction of brdfs, by default None
+        brdf_outgoing_directions : list[pf.Coordinates], optional
+            _description_, by default None
+        air_attenuation : np.ndarray, optional
+            _description_, by default None
+        speed_of_sound : float, optional
+            _description_, by default None
+        etc_time_resolution : float, optional
+            _description_, by default None
+        etc_duration : float, optional
+            _description_, by default None
+        distance_patches_to_source : np.ndarray, optional
+            _description_, by default None
+        energy_init_etc : np.ndarray, optional
+            _description_, by default None
+        energy_exchange_etc : np.ndarray, optional
+            _description_, by default None
+        """
+        # input checks Walls
+
+        walls_points = np.atleast_3d(walls_points)
+        n_walls = walls_points.shape[0]
+        if (walls_points.shape[0] != n_walls) or \
+                (walls_points.shape[2] != 3):
+            raise ValueError(
+                "Walls need to be of shape (n_walls, n_points, 3)")
+        walls_up_vector = np.atleast_2d(walls_up_vector)
+        if walls_up_vector.shape != (n_walls, 3):
+            raise ValueError(
+                "Up vector of walls need to be of shape (n_walls, 3)")
+        walls_normal = np.atleast_2d(walls_normal)
+        if walls_normal.shape != (n_walls, 3):
+            raise ValueError(
+                "Normal of walls need to be of shape (n_walls, 3)")
+
+        # input checks Patches
+        patches_points = np.atleast_3d(patches_points)
+        if (patches_points.shape[0] != n_patches) or \
+                (patches_points.shape[2] != 3):
+            raise ValueError(
+                "Patches need to be of shape (n_patches, n_points, 3)")
+        patch_to_wall_ids = np.atleast_1d(np.array(
+            patch_to_wall_ids, dtype=int))
+        if patch_to_wall_ids.shape != (n_patches,):
+            raise ValueError(
+                "patch_to_wall_ids need to be of shape (n_patches,)")
+        if any(i not in np.arange(n_walls) for i in set(patch_to_wall_ids)):
+            raise ValueError(
+                "patch_to_wall_ids does contain other ids than range(n_walls)")
+        if any(i not in set(patch_to_wall_ids) for i in np.arange(n_walls)):
+            raise ValueError(
+                "patch_to_wall_ids does contain other ids than range(n_walls)")
+
+        # check 
+
+
         self._walls_points = walls_points
         self._walls_normal = walls_normal
         self._walls_up_vector = walls_up_vector
         self._patches_points = patches_points
-        self._patches_normal = patches_normal
         self._n_patches = n_patches
         self._patch_to_wall_ids = patch_to_wall_ids
 
         # geometrical data
-        self._visibility_matrix = None
-        self._visible_patches = None
-        self._form_factors = None
-        self._form_factors_tilde = None
+        self._visibility_matrix = visibility_matrix
+        self._visible_patches = visible_patches
+        self._form_factors = form_factors
+        self._form_factors_tilde = form_factors_tilde
 
         # general data for material and medium data
-        self._n_bins = None
-        self._frequencies = None
-        self._brdf = None
-        self._brdf_index = None
-        self._brdf_incoming_directions = None
-        self._brdf_outgoing_directions = None
+        self._frequencies = frequencies
+        self._brdf = brdf
+        self._brdf_index = brdf_index
+        self._brdf_incoming_directions = brdf_incoming_directions
+        self._brdf_outgoing_directions = brdf_outgoing_directions
 
-        self._air_attenuation = None
-        self._speed_of_sound = None
+        self._air_attenuation = air_attenuation
+        self._speed_of_sound = speed_of_sound
 
         # etc metadata
-        self._etc_time_resolution = None
-        self._etc_duration = None
+        self._etc_time_resolution = etc_time_resolution
+        self._etc_duration = etc_duration
 
         # etc results
-        self._distance_patches_to_source = None
-        self._energy_init_etc = None
-        self._energy_exchange_etc = None
+        self._distance_patches_to_source = distance_patches_to_source
+        self._energy_init_etc = energy_init_etc
+        self._energy_exchange_etc = energy_exchange_etc
 
     @classmethod
     def from_polygon(
@@ -107,13 +214,13 @@ class DirectionalRadiosityFast():
 
         # create patches
         (
-            patches_points, patches_normal,
+            patches_points, _,
             n_patches, patch_to_wall_ids) = geometry._process_patches(
             walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
             walls_points, walls_normal, walls_up_vector,
-            patches_points, patches_normal, n_patches,
+            patches_points, n_patches,
             patch_to_wall_ids)
 
     def bake_geometry(self):
@@ -154,7 +261,7 @@ class DirectionalRadiosityFast():
             scattering_index = None
             scattering = None
 
-        n_bins = 1 if self._n_bins is None else self._n_bins
+        n_bins = 1 if self._frequencies is None else self.n_bins
 
         self._form_factors_tilde = \
             _form_factors_with_directivity_dim(
@@ -170,21 +277,30 @@ class DirectionalRadiosityFast():
         """Initialize the source energy."""
         source_position = source.cartesian
         patch_to_wall_ids = self._patch_to_wall_ids
-        sources = np.array(
+        if self._brdf_incoming_directions is None:
+            frequencies = np.array([0]) if self._frequencies is None else \
+                self._frequencies
+            self.set_wall_brdf(
+                np.arange(self.n_walls),
+                pf.FrequencyData(np.ones_like(frequencies), frequencies),
+                pf.Coordinates(0, 0, 1, weights=1),
+                pf.Coordinates(0, 0, 1, weights=1))
+            self._frequencies = frequencies
+        n_bins = self.n_bins
+        vi = np.array(
             [s.cartesian for s in self._brdf_incoming_directions])
-        receivers = np.array(
+        vo = np.array(
             [s.cartesian for s in self._brdf_outgoing_directions])
-        scattering = np.array(self._brdf)
-        scattering_index = self._brdf_index
+        brdf = np.array(self._brdf)
+        brdf_index = self._brdf_index
         patches_center = self.patches_center
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
-            self._air_attenuation, self.n_bins)
+            self._air_attenuation, n_bins)
         energy_0_dir = _add_directional(
             energy_0, source_position,
-            patches_center, self._n_bins, patch_to_wall_ids,
-            sources, receivers,
-            scattering, scattering_index)
+            patches_center, n_bins, patch_to_wall_ids,
+            vi, vo, brdf, brdf_index)
         self._energy_init_etc = energy_0_dir
         self._distance_patches_to_source = distance_0
 
@@ -399,21 +515,77 @@ class DirectionalRadiosityFast():
 
     def _check_set_frequency(self, frequencies:np.ndarray):
         """Check if the frequency data matches the radiosity object."""
-        if self._n_bins is None:
-            self._n_bins = frequencies.size
-        else:
-            assert self._n_bins == frequencies.size, \
-                "Number of bins do not match"
         if self._frequencies is None:
             self._frequencies = frequencies
         else:
+            assert self._frequencies.size == frequencies.size, \
+                "Number of frequency bins do not match"
             assert (self._frequencies == frequencies).all(), \
                 "Frequencies do not match"
+
+    def write(self, filename, compress=True):
+        """Write the object to a far file."""
+        pf.io.write(filename, compress=compress, **self.to_dict())
+
+    @classmethod
+    def from_read(cls, filename):
+        """Read the object to a far file."""
+        data = pf.io.read(filename)
+        for key, value in data.items():
+            if isinstance(value, str) and value == 'None':
+                data[key] = None
+        return cls.from_dict(data)
+
+    def to_dict(self) -> dict:
+        """Convert the object to a dictionary."""
+        dict_out = {
+            'walls_points': self._walls_points,
+            'walls_normal': self._walls_normal,
+            'walls_up_vector': self._walls_up_vector,
+            'patches_points': self._patches_points,
+            'n_patches': self._n_patches,
+            'patch_to_wall_ids': self._patch_to_wall_ids,
+            'visibility_matrix': self._visibility_matrix,
+            'visible_patches': self._visible_patches,
+            'form_factors': self._form_factors,
+            'form_factors_tilde': self._form_factors_tilde,
+            'frequencies': self._frequencies,
+            'brdf': self._brdf,
+            'brdf_index': self._brdf_index,
+            'brdf_incoming_directions': self._brdf_incoming_directions,
+            'brdf_outgoing_directions': self._brdf_outgoing_directions,
+            'air_attenuation': self._air_attenuation,
+            'speed_of_sound': self._speed_of_sound,
+            'etc_time_resolution': self._etc_time_resolution,
+            'etc_duration': self._etc_duration,
+            'distance_patches_to_source': self._distance_patches_to_source,
+            'energy_init_etc': self._energy_init_etc,
+            'energy_exchange_etc': self._energy_exchange_etc,
+        }
+        for key, value in dict_out.items():
+            if value is None:
+                dict_out[key] = 'None'
+            elif isinstance(value, np.ndarray):
+                dict_out[key] = value.tolist()
+        return dict_out
+
+    def __eq__(self, other):
+        """Check for equality of two objects."""
+        if not isinstance(other, DirectionalRadiosityFast):
+            return False
+        return not deepdiff.DeepDiff(self.to_dict(), other.to_dict())
+
+
+    @classmethod
+    def from_dict(cls, input_dict: dict):
+        """Create an object from a dictionary. Used for read write."""
+        obj = cls(**input_dict)
+        return obj
 
     @property
     def n_bins(self):
         """Return the number of frequency bins."""
-        return self._n_bins
+        return 0 if self._frequencies is None else self._frequencies.shape[0]
 
     @property
     def n_walls(self):
@@ -483,7 +655,7 @@ class DirectionalRadiosityFast():
     @property
     def patches_normal(self):
         """Return the normal of the patches."""
-        return self._patches_normal
+        return self._walls_normal[self._patch_to_wall_ids]
 
     @property
     def speed_of_sound(self):
