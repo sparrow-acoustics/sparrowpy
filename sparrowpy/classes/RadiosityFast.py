@@ -123,7 +123,7 @@ class DirectionalRadiosityFast():
     @classmethod
     def from_file(cls, filename: str, patch_size=1.0,
                        auto_walls=True, auto_patches=True):
-        """Create a Radiosity object ffrom a blender file.
+        """Create a Radiosity object from a blender or stl file.
 
         """
         if (not auto_patches) and (not auto_walls):
