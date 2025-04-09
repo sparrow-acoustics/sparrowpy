@@ -409,7 +409,7 @@ class DirectionalRadiosityFast():
             sources_array, receivers_array)
 
     def _set_brdf_diffuse(self):
-        """Set the diffuse BRDF for all walls using the given frequency
+        """Set a perfectly diffuse BRDF for all walls using the given frequency
         vector or assumes 0 frequency.
         """
         frequencies = np.array([0]) if self._frequencies is None else \
