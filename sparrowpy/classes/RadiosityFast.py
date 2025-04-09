@@ -413,8 +413,6 @@ class DirectionalRadiosityFast():
 
             patch_to_wall_ids = patches["map"]
 
-            patches_normal = walls["normal"][patch_to_wall_ids]
-
             patches_points = np.empty((n_patches,
                                 len(patches["conn"][0]),
                                 patches["verts"].shape[-1]))
