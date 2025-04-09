@@ -128,13 +128,6 @@ def read_geometry_file(blend_file: Path,
           check_geometry(wall_data, element="walls")):
         patch_data["conn"]=np.array(patch_data["conn"])
         geom_data["patch"]=patch_data
-    elif (not patches_from_model) and (not auto_walls):
-        raise (
-        ValueError("auto_walls=False and auto_patches=False."+
-                   " Your geometry is undefined.\n" +
-                   "Consider enabling one of these options or initializing "+
-                   "a radiosity instance from polygon.")
-                        )
 
     geom_data["wall"]= wall_data
 
