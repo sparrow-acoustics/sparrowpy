@@ -141,6 +141,10 @@ class DirectionalRadiosityFast():
             patch_to_wall_ids, dtype=int))
         if frequencies is not None:
             frequencies = np.array(frequencies)
+        if visible_patches is not None:
+            visible_patches = np.array(visible_patches)
+        if visibility_matrix is not None:
+            visibility_matrix = np.array(visibility_matrix)
         if form_factors is not None:
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
