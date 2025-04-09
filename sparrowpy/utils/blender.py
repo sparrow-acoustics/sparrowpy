@@ -269,16 +269,22 @@ def check_geometry(faces: dict, element="patches", strict=False):
     have the same number of vertices (all triangles, all quads, etc).
     Return False otherwise.
 
+    This function is used when loading geometries from file to ensure that
+    the geometry data can be stored in numpy.ndarrays, making the simulation
+    more efficient. When the ``strict`` flag is True, the shape of the geometry
+    polygons is checked, which allows patch generation methods to run
+    without errors.
+
     Parameters
     ----------
     faces: dict
-        list of all faces (polygons) in a given mesh
+        list of all faces (polygons) in a given mesh.
 
     element: string
         name of polygon which is being checked (usually "walls" or "patches").
 
     strict: bool
-        enables check for rectangular shaped polygons
+        enables check for rectangular shaped polygons.
 
     Returns
     -------
