@@ -8,7 +8,7 @@ import sparrowpy as sp
 
 
 @pytest.mark.parametrize('patch_size', [1])
-def test_analytic_diffuse_room(patch_size):
+def test_etc_decay(patch_size):
     """Test vs a perfect diffuse room, after Kuttruff."""
     # note that order k=0 means one reflection and k=1 means two reflections
     # (2nd order)
@@ -38,12 +38,7 @@ def test_analytic_diffuse_room(patch_size):
 
     radiosity.set_wall_brdf(
         np.arange(len(walls)), brdf, sources, receivers)
-    radiosity.set_air_attenuation(
-        pf.FrequencyData(
-            np.zeros_like(brdf.frequencies),
-            brdf.frequencies))
     radiosity.bake_geometry()
-
     radiosity.init_source_energy(source)
     radiosity.calculate_energy_exchange(
         speed_of_sound=speed_of_sound,
@@ -77,5 +72,61 @@ def test_analytic_diffuse_room(patch_size):
     npt.assert_allclose(
         etc_radiosity_db[samples_reverb_start:samples_reverb_end],
         etc_analytic_db[samples_reverb_start:samples_reverb_end],
+        atol=0.3)
+
+
+
+@pytest.mark.parametrize('patch_size', [1])
+def test_diffuse_energy(patch_size):
+    """Test vs a perfect diffuse room, after Kuttruff."""
+    # note that order k=0 means one reflection and k=1 means two reflections
+    # (2nd order)
+    X = 1
+    Y = 2
+    Z = 3
+    length_histogram = 1
+    time_resolution = 1
+    max_order_k = 3
+    speed_of_sound = 343
+    receiver = pf.Coordinates(.5, 1, 1.5)
+    source = pf.Coordinates(.5, 1, 2)
+
+    absorption = 0.1
+
+    brdf_incoming = pf.Coordinates(0, 0, 1, weights=1)
+    brdf_outgoing = pf.Coordinates(0, 0, 1, weights=1)
+    frequencies = np.array([500])
+    brdf = sp.brdf.create_from_scattering(
+        brdf_incoming, brdf_outgoing,
+        pf.FrequencyData(1, frequencies),
+        pf.FrequencyData(absorption, frequencies))
+    walls = sp.testing.shoebox_room_stub(X, Y, Z)
+
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        walls, patch_size)
+
+    radiosity.set_wall_brdf(
+        np.arange(len(walls)), brdf, brdf_incoming, brdf_outgoing)
+    radiosity.bake_geometry()
+    radiosity.init_source_energy(source)
+    radiosity.calculate_energy_exchange(
+        speed_of_sound=speed_of_sound,
+        etc_time_resolution=time_resolution,
+        etc_duration=length_histogram,
+        max_reflection_order=max_order_k)
+
+    etc = radiosity.collect_energy_receiver_mono(receiver)
+
+    # desired
+    S = (2*X*Y) + (2*X*Z) + (2*Y*Z)
+    A = S*absorption
+    V = X*Y*Z
+    E_reverb_analytical = 4 / A
+    w_0 = E_reverb_analytical/ V # Kuttruff Eq 4.7
+
+    # compare the diffuse part
+    npt.assert_allclose(
+        10*np.log10(np.sum(etc.time)),
+        10*np.log10(w_0),
         atol=0.3)
 
