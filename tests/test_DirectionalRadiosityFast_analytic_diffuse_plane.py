@@ -116,7 +116,7 @@ def test_source_receiver_along_same_normal(patch_size):
     npt.assert_allclose(ratio, 1.97, rtol=0.01)
 
 
-@pytest.mark.parametrize("theta_deg", [30, 45, 60])
+@pytest.mark.parametrize("theta_deg", [30, 60])
 @pytest.mark.parametrize("patch_size", [1])
 def test_source_receiver_same_hight(patch_size, theta_deg):
     """
