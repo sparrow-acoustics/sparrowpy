@@ -221,7 +221,7 @@ def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
 
     Parameters
     ----------
-    finemesh: bmesh
+    fine_mesh: bmesh
         fine mesh extracted from blender file
 
     broadmesh: bmesh
