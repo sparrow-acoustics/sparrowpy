@@ -18,7 +18,9 @@ def test_init_default_single_wall():
     npt.assert_almost_equal(radiosity.patches_normal.shape, (1, 3))
 
 
-def test_io(tmpdir):
+@pytest.mark.parametrize("apply_brdf", [True, False])
+@pytest.mark.parametrize("apply_attenuation", [True, False])
+def test_io(apply_brdf, apply_attenuation, tmpdir):
     walls = sp.testing.shoebox_room_stub(1, 1, 1)
     walls = walls[:2]
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
@@ -30,17 +32,20 @@ def test_io(tmpdir):
 
     # set brdf and air attenuation
     frequencies = [1000]
-    radiosity.set_wall_brdf(
-        np.arange(len(walls)),
-        pf.FrequencyData(np.ones_like(frequencies), frequencies),
-        pf.Coordinates(0, 0, 1, weights=1),
-        pf.Coordinates(0, 0, 1, weights=1))
-    radiosity.set_air_attenuation(
-        pf.FrequencyData(np.ones_like(frequencies), frequencies))
-    radiosity.write(tmpdir / "test.far")
-    radiosity_out = sp.DirectionalRadiosityFast.from_read(
-        tmpdir / "test.far")
-    assert radiosity_out == radiosity
+    if apply_brdf:
+        radiosity.set_wall_brdf(
+            np.arange(len(walls)),
+            pf.FrequencyData(np.ones_like(frequencies), frequencies),
+            pf.Coordinates(0, 0, 1, weights=1),
+            pf.Coordinates(0, 0, 1, weights=1))
+    if apply_attenuation:
+        radiosity.set_air_attenuation(
+            pf.FrequencyData(np.ones_like(frequencies), frequencies))
+    if apply_attenuation or apply_brdf:
+        radiosity.write(tmpdir / "test.far")
+        radiosity_out = sp.DirectionalRadiosityFast.from_read(
+            tmpdir / "test.far")
+        assert radiosity_out == radiosity
 
     # check readwrite after baking
     radiosity.bake_geometry()

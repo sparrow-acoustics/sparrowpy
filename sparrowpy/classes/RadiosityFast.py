@@ -44,7 +44,7 @@ class DirectionalRadiosityFast():
 
     # etc results
     _distance_patches_to_source: np.ndarray
-    _energy_init_etc: np.ndarray
+    _energy_init_source: np.ndarray
     _energy_exchange_etc: np.ndarray
 
 
@@ -70,7 +70,7 @@ class DirectionalRadiosityFast():
             etc_time_resolution:float=None,
             etc_duration:float=None,
             distance_patches_to_source:np.ndarray=None,
-            energy_init_etc:np.ndarray=None,
+            energy_init_source:np.ndarray=None,
             energy_exchange_etc:np.ndarray=None):
         """Create a Radiosity object for directional implementation.
 
@@ -98,7 +98,9 @@ class DirectionalRadiosityFast():
             geometrical form factor from each patch to each other patch,
             by default None.
         form_factors_tilde : np.ndarray, optional
-            Form factor including air attenuation and BRDF, by default None
+            Form factor including air attenuation and BRDF of shape
+            (n_patches, n_patches, n_outgoing_directions, n_bins), by
+            default None
         frequencies : np.ndarray, optional
             frequency vector used for the simulation. , by default None
         brdf : list[np.ndarray], optional
@@ -106,61 +108,59 @@ class DirectionalRadiosityFast():
         brdf_index : np.ndarray, optional
             maps brdfs to walls, must be of shape (n_walls, ), by default None
         brdf_incoming_directions : list[pf.Coordinates], optional
-            incoming direction of brdfs, by default None
+            incoming direction of brdfs per wall, by default None
         brdf_outgoing_directions : list[pf.Coordinates], optional
-            _description_, by default None
+            outgoing directions of brdfs per wall, by default None
         air_attenuation : np.ndarray, optional
-            _description_, by default None
+            air attenuation coefficients for each frequency, needs to be of
+            shape (n_bins), by default None
         speed_of_sound : float, optional
-            _description_, by default None
+            speed of sound in m/s, by default None
         etc_time_resolution : float, optional
-            _description_, by default None
+            time resolution fo the etc, by default None
         etc_duration : float, optional
-            _description_, by default None
+            duration fo the etc in seconds, by default None
         distance_patches_to_source : np.ndarray, optional
-            _description_, by default None
-        energy_init_etc : np.ndarray, optional
-            _description_, by default None
+            distance from the source to each patch, need to be of shape
+            (n_patches), by default None
+        energy_init_source : np.ndarray, optional
+            initial energy from source to patches,
+            need to be of shape (n_patches, n_outgoing_directions, n_bins),
+            by default None
         energy_exchange_etc : np.ndarray, optional
-            _description_, by default None
+            etc of the energy exchange, must be of shape
+            (n_patches, n_outgoing_directions, n_bins, n_samples),
+            by default None
         """
-        # input checks Walls
-
+        # convert inputs
         walls_points = np.atleast_3d(walls_points)
-        n_walls = walls_points.shape[0]
-        if (walls_points.shape[0] != n_walls) or \
-                (walls_points.shape[2] != 3):
-            raise ValueError(
-                "Walls need to be of shape (n_walls, n_points, 3)")
         walls_up_vector = np.atleast_2d(walls_up_vector)
-        if walls_up_vector.shape != (n_walls, 3):
-            raise ValueError(
-                "Up vector of walls need to be of shape (n_walls, 3)")
         walls_normal = np.atleast_2d(walls_normal)
-        if walls_normal.shape != (n_walls, 3):
-            raise ValueError(
-                "Normal of walls need to be of shape (n_walls, 3)")
-
-        # input checks Patches
         patches_points = np.atleast_3d(patches_points)
-        if (patches_points.shape[0] != n_patches) or \
-                (patches_points.shape[2] != 3):
-            raise ValueError(
-                "Patches need to be of shape (n_patches, n_points, 3)")
         patch_to_wall_ids = np.atleast_1d(np.array(
             patch_to_wall_ids, dtype=int))
-        if patch_to_wall_ids.shape != (n_patches,):
-            raise ValueError(
-                "patch_to_wall_ids need to be of shape (n_patches,)")
-        if any(i not in np.arange(n_walls) for i in set(patch_to_wall_ids)):
-            raise ValueError(
-                "patch_to_wall_ids does contain other ids than range(n_walls)")
-        if any(i not in set(patch_to_wall_ids) for i in np.arange(n_walls)):
-            raise ValueError(
-                "patch_to_wall_ids does contain other ids than range(n_walls)")
-
-        # check 
-
+        if frequencies is not None:
+            frequencies = np.array(frequencies)
+        if form_factors is not None:
+            form_factors = np.array(form_factors)
+        if form_factors_tilde is not None:
+            form_factors_tilde = np.array(form_factors_tilde)
+        if brdf is not None:
+            brdf = [np.array(b) for b in brdf]
+        if air_attenuation is not None:
+            air_attenuation = np.array(air_attenuation)
+        if speed_of_sound is not None:
+            speed_of_sound = float(speed_of_sound)
+        if etc_time_resolution is not None:
+            etc_time_resolution = float(etc_time_resolution)
+        if etc_duration is not None:
+            etc_duration = float(etc_duration)
+        if distance_patches_to_source is not None:
+            distance_patches_to_source = np.array(distance_patches_to_source)
+        if energy_init_source is not None:
+            energy_init_source = np.array(energy_init_source)
+        if energy_exchange_etc is not None:
+            energy_exchange_etc = np.array(energy_exchange_etc)
 
         self._walls_points = walls_points
         self._walls_normal = walls_normal
@@ -191,8 +191,139 @@ class DirectionalRadiosityFast():
 
         # etc results
         self._distance_patches_to_source = distance_patches_to_source
-        self._energy_init_etc = energy_init_etc
+        self._energy_init_source = energy_init_source
         self._energy_exchange_etc = energy_exchange_etc
+
+        self.check()
+
+    def check(self):
+        """Check the input data for consistency."""
+
+        n_walls = self._walls_points.shape[0]
+        if (self._walls_points.shape[0] != n_walls) or \
+                (self._walls_points.shape[2] != 3):
+            raise ValueError(
+                "Walls need to be of shape (n_walls, n_points, 3)")
+        if self._walls_up_vector.shape != (n_walls, 3):
+            raise ValueError(
+                "Up vector of walls need to be of shape (n_walls, 3)")
+        if self._walls_normal.shape != (n_walls, 3):
+            raise ValueError(
+                "Normal of walls need to be of shape (n_walls, 3)")
+
+        # input checks Patches
+        if (self._patches_points.shape[0] != self.n_patches) or \
+                (self._patches_points.shape[2] != 3):
+            raise ValueError(
+                "Patches need to be of shape (n_patches, n_points, 3)")
+        if self._patch_to_wall_ids.shape != (self.n_patches,):
+            raise ValueError(
+                "patch_to_wall_ids need to be of shape (n_patches,)")
+        if any(i not in np.arange(
+                n_walls) for i in set(self._patch_to_wall_ids)):
+            raise ValueError(
+                "patch_to_wall_ids does contain other ids than range(n_walls)")
+        if any(i not in set(
+                self._patch_to_wall_ids) for i in np.arange(n_walls)):
+            raise ValueError(
+                "patch_to_wall_ids does contain other ids than range(n_walls)")
+
+        # check frequencies
+        n_bins = 1
+        if self._frequencies is not None:
+            if len(self._frequencies.shape) != 1:
+                raise ValueError(
+                    "Frequencies need to be of shape (n_bins,)")
+            n_bins = self._frequencies.size
+
+        # check form factors
+        if self._form_factors is not None:
+            if self._form_factors.shape != (self.n_patches, self.n_patches):
+                raise ValueError(
+                    "form_factors need to be of shape (n_patches, n_patches)")
+
+        # check brdf
+        n_outgoing_directions = 1
+        if self._brdf_index is not None:
+            if len(self._brdf_index) != n_walls:
+                raise ValueError(
+                    "brdf_index need to be of shape (n_walls,)")
+        if self._brdf_incoming_directions is not None:
+            if any(not isinstance(i, pf.Coordinates) \
+                   for i in self._brdf_incoming_directions):
+                raise ValueError(
+                    "brdf_incoming_directions need to be a list of type "
+                    "pf.Coordinates")
+        if self._brdf_outgoing_directions is not None:
+            if any(not isinstance(i, pf.Coordinates) \
+                   for i in self._brdf_outgoing_directions):
+                raise ValueError(
+                    "brdf_outgoing_directions need to be a list of type "
+                    "pf.Coordinates")
+            n_outgoing_directions = self._brdf_outgoing_directions[0].csize
+
+        # check form_factors_tilde
+        if self._form_factors_tilde is not None:
+            if self._form_factors_tilde.shape != (
+                    self.n_patches, self.n_patches,
+                    n_outgoing_directions, n_bins):
+                raise ValueError(
+                    "form_factors_tilde need to be of shape "
+                    "(n_patches, n_patches, n_outgoing_directions, n_bins)")
+
+        # check air_attenuation
+        if self._air_attenuation is not None:
+            if len(self._air_attenuation.shape) != 1:
+                raise ValueError(
+                    "Air attenuation need to be of shape (n_bins,)")
+            if self._air_attenuation.shape[0] != n_bins:
+                raise ValueError(
+                    "Air attenuation need to be of shape (n_bins,)")
+
+        # check speed_of_sound
+        if self._speed_of_sound is not None:
+            if self._speed_of_sound <= 0:
+                raise ValueError(
+                    "Speed of sound must be positive and non-zero")
+
+        # check etc_time_resolution
+        if self._etc_time_resolution is not None:
+            if self._etc_time_resolution <= 0:
+                raise ValueError(
+                    "Time resolution must be positive and non-zero")
+
+        # check etc_duration
+        if self._etc_duration is not None:
+            if self._etc_duration <= 0:
+                raise ValueError(
+                    "Duration must be positive and non-zero")
+
+        # check distance_patches_to_source
+        if self._distance_patches_to_source is not None:
+            if self._distance_patches_to_source.shape != (self.n_patches,):
+                raise ValueError(
+                    "distance_patches_to_source need to be of shape "
+                    "(n_patches,)")
+
+        # check energy_init_source
+        if self._energy_init_source is not None:
+            if self._energy_init_source.shape != (
+                    self.n_patches, n_outgoing_directions, n_bins):
+                raise ValueError(
+                    "energy_init_source need to be of shape "
+                    "(n_patches, n_outgoing_directions, n_bins)")
+
+        # check energy_exchange_etc
+        if self._energy_exchange_etc is not None:
+            n_samples = int(
+                self._etc_duration/self._etc_time_resolution)
+            if self._energy_exchange_etc.shape != (
+                    self.n_patches,
+                    n_outgoing_directions, n_bins, n_samples):
+                raise ValueError(
+                    "energy_exchange_etc need to be of shape "
+                    "(n_patches, n_outgoing_directions, n_bins, n_samples)")
+
 
     @classmethod
     def from_polygon(
@@ -301,7 +432,7 @@ class DirectionalRadiosityFast():
             energy_0, source_position,
             patches_center, n_bins, patch_to_wall_ids,
             vi, vo, brdf, brdf_index)
-        self._energy_init_etc = energy_0_dir
+        self._energy_init_source = energy_0_dir
         self._distance_patches_to_source = distance_0
 
     def calculate_energy_exchange(
@@ -325,7 +456,7 @@ class DirectionalRadiosityFast():
                 distance_i_j[i, j] = np.linalg.norm(
                     patches_center[i, :]-patches_center[j, :])
 
-        energy_0_dir = self._energy_init_etc
+        energy_0_dir = self._energy_init_source
 
         if self._energy_exchange_etc is None or recalculate:
             if max_reflection_order < 1:
@@ -342,9 +473,9 @@ class DirectionalRadiosityFast():
                     max_reflection_order,
                     self._visible_patches)
 
-        self._etc_time_resolution = etc_time_resolution
-        self._speed_of_sound = speed_of_sound
-        self._etc_duration = etc_duration
+        self._etc_time_resolution = float(etc_time_resolution)
+        self._speed_of_sound = float(speed_of_sound)
+        self._etc_duration = float(etc_duration)
 
     def collect_energy_receiver_mono(self, receivers):
         """Collect the energy at the receivers.
@@ -559,7 +690,7 @@ class DirectionalRadiosityFast():
             'etc_time_resolution': self._etc_time_resolution,
             'etc_duration': self._etc_duration,
             'distance_patches_to_source': self._distance_patches_to_source,
-            'energy_init_etc': self._energy_init_etc,
+            'energy_init_source': self._energy_init_source,
             'energy_exchange_etc': self._energy_exchange_etc,
         }
         for key, value in dict_out.items():
