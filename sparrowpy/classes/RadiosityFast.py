@@ -530,11 +530,6 @@ class DirectionalRadiosityFast():
         return self._walls_up_vector
 
     @property
-    def walls_material(self):
-        """Return the material of the walls."""
-        return self._walls_material
-
-    @property
     def patches_area(self):
         """Return the area of the patches."""
         return geometry._calculate_area(self._patches_points)
