@@ -14,7 +14,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 def test_point_plane_projection(origin: np.ndarray, point: np.ndarray,
                                 plpt: np.ndarray, pln: np.ndarray, solution):
     """Ensure correct projection of rays into plane."""
-    out = geom._project_to_plane(origin, point, plpt, pln)
+    out = geom._project_to_plane(origin, point, plpt, pln,
+                                 epsilon=1e-6,
+                                 heck_normal=True)
 
     npt.assert_array_equal(solution,out)
 
@@ -32,7 +34,8 @@ def test_point_in_polygon(point, plpt, pln):
     """Ensure correct projection of rays into plane."""
     out = geom._point_in_polygon(point3d=point,
                                  polygon3d=plpt,
-                                 plane_normal=pln)
+                                 plane_normal=pln,
+                                 eta=1e-6)
 
     if abs(point[0]) > 1. or abs(point[1]) > 1:
         solution = False

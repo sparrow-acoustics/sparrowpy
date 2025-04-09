@@ -495,7 +495,7 @@ def _matrix_vector_product(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
 
     return out
 
-def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
+def _rotation_matrix(n_in: np.ndarray, n_out=np.array([0])):
     """Compute a rotation matrix from a given input and output directions.
 
     Parameters
@@ -512,7 +512,7 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
         rotation matrix
 
     """
-    if n_out.shape[0] == 0:
+    if n_out.shape[0] == 1:
         n_out = np.zeros_like(n_in)
         n_out[-1] = 1.
     else:
@@ -560,7 +560,7 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
 
 def _project_to_plane(origin: np.ndarray, point: np.ndarray,
                      plane_pt: np.ndarray, plane_normal: np.ndarray,
-                     epsilon=1e-6, check_normal=True):
+                     epsilon=1e-6, check_normal=True)->tuple[np.ndarray,bool]:
     """Project point onto plane following direction defined by origin.
 
     Also applicable to lower or higher-dimensional spaces, not just 3D.
@@ -595,9 +595,6 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
         flags if an intersection was found
 
     """
-    int_flag = False
-    int_point = np.array([0.,0.,0.])
-
     v = point-origin
     dotprod = np.dot(v,plane_normal)
 
@@ -613,7 +610,9 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
 
         int_point = w + plane_pt + fac*v
         int_flag = True
-
+    else:
+        int_flag = False
+        int_point = np.zeros_like(v)
 
     return int_point, int_flag
 
@@ -665,7 +664,7 @@ def _point_in_polygon(point3d: np.ndarray,
         # check if line from evaluation point in +x direction
         # intersects polygon side
         nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
-        proj_point=(pt+np.array([1.,0.]))
+        proj_point=(pt+np.array([1.,0.],dtype=np.float64))
         b,bf = _project_to_plane(origin=pt, point=proj_point,
                              plane_pt=a1, plane_normal=nl,
                              epsilon=1e-6, check_normal=False)
@@ -836,6 +835,7 @@ def _basic_visibility(vis_point: np.ndarray,
         pt,ptf = _project_to_plane(origin=vis_point, point=eval_point,
                             plane_pt=surf_points[0],
                             plane_normal=surf_normal,
+                            epsilon=1e-6,
                             check_normal=True)
 
         # if intersection point exists
@@ -845,7 +845,7 @@ def _basic_visibility(vis_point: np.ndarray,
                                 np.linalg.norm(pt-vis_point)):
                 # if point is inside surf polygon
                 if _point_in_polygon(point3d=pt, polygon3d=surf_points,
-                                    plane_normal=surf_normal):
+                                    plane_normal=surf_normal,eta=1e-6):
                     is_visible = False
 
     # if both vis and eval point are coplanar
@@ -881,23 +881,24 @@ if numba is not None:
         numba.f8[:](numba.f8[:,:],numba.f8[:]),
     )(_matrix_vector_product)
     _project_to_plane = numba.njit(
-        numba.types.Tuple((numba.f8[:],numba.b1))(
-            numba.f8[:],numba.f8[:],
-            numba.f8[:],numba.f8[:],
-            numba.f8,numba.b1),
+        # numba.types.Tuple((numba.f8[:],numba.b1))(
+        #     numba.f8[:],numba.f8[:],
+        #     numba.f8[:],numba.f8[:],
+        #     numba.f8,numba.b1),
     )(_project_to_plane)
     _point_in_polygon = numba.njit(
-        numba.b1(numba.f8[:],numba.f8[:,:],
-                 numba.f8[:],numba.f8),
+        # numba.b1(numba.f8[:],numba.f8[:,:],
+        #          numba.f8[:],numba.f8),
     )(_point_in_polygon)
     _basic_visibility = numba.njit(
-        numba.b1(numba.f8[:],numba.f8[:],
-                 numba.f8[:,:],numba.f8[:],
-                 numba.f8),
+        # numba.b1(numba.f8[:],numba.f8[:],
+        #          numba.f8[:,:],numba.f8[:],
+        #          numba.f8),
     )(_basic_visibility)
     _check_visibility = numba.njit(
-        numba.b1[:,:](numba.f8[:,:],numba.f8[:,:],numba.f8[:]),
-        parallel=True)(_check_visibility)
+        # numba.b1[:,:](numba.f8[:,:],numba.f8[:,:],numba.f8[:]),
+        # parallel=True
+        )(_check_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
     _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)

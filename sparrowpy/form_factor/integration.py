@@ -343,7 +343,8 @@ def nusselt_analog(surf_origin, surf_normal,
         sphPts[ii] = ( (boundary_points[ii]-surf_origin) /
                         np.linalg.norm(boundary_points[ii]-surf_origin) )
 
-    rotmat = geom._rotation_matrix(n_in=surf_normal)
+    rotmat = geom._rotation_matrix(n_in=surf_normal,
+                                   n_out=np.zeros_like(surf_normal))
 
     for ii in prange(len(sphPts)):
         # points on the hemisphere projected onto patch plane
