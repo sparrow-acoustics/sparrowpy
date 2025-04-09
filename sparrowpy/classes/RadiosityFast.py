@@ -4,6 +4,7 @@ import deepdiff
 import pyfar as pf
 import sparrowpy.form_factor.universal as form_factor
 from sparrowpy import ( geometry )
+import sparrowpy as sp
 try:
     import numba
     prange = numba.prange
@@ -407,20 +408,45 @@ class DirectionalRadiosityFast():
             scattering_index,
             sources_array, receivers_array)
 
+    def _set_brdf_diffuse(self):
+        """Set the diffuse BRDF for all walls using the given frequency
+        vector or assumes 0 frequency.
+        """
+        frequencies = np.array([0]) if self._frequencies is None else \
+            self._frequencies
+        brdf_vi = pf.Coordinates(0, 0, 1, weights=1)
+        brdf_vo = pf.Coordinates(0, 0, 1, weights=1)
+        brdf = sp.brdf.create_from_scattering(
+            brdf_vi,
+            brdf_vo,
+            pf.FrequencyData(1, frequencies),
+            pf.FrequencyData(0, frequencies),
+        )
+        self.set_wall_brdf(
+            np.arange(self.n_walls),
+            brdf,
+            brdf_vi,
+            brdf_vo,
+            )
+
+    def _set_air_attenuation_zero(self):
+        """Set the attenuation to zero using the given frequency vector or
+        assumes 0 frequency.
+        """
+        frequencies = np.array([0]) if self._frequencies is None else \
+            self._frequencies
+        self.set_air_attenuation(
+            pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+
     def init_source_energy(
             self, source:pf.Coordinates):
         """Initialize the source energy."""
         source_position = source.cartesian
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
-            frequencies = np.array([0]) if self._frequencies is None else \
-                self._frequencies
-            self.set_wall_brdf(
-                np.arange(self.n_walls),
-                pf.FrequencyData(np.ones_like(frequencies), frequencies),
-                pf.Coordinates(0, 0, 1, weights=1),
-                pf.Coordinates(0, 0, 1, weights=1))
-            self._frequencies = frequencies
+            self._set_brdf_diffuse()
+        if self._air_attenuation is None:
+            self._set_air_attenuation_zero()
         n_bins = self.n_bins
         vi = np.array(
             [s.cartesian for s in self._brdf_incoming_directions])
@@ -576,9 +602,9 @@ class DirectionalRadiosityFast():
                 histogram_out[i] = _collect_receiver_energy(
                         E_matrix,
                         np.linalg.norm(patches_receiver_distance, axis=1),
-                                    self.speed_of_sound,
-                                    self._etc_time_resolution,
-                                    air_attenuation=air_attenuation)
+                        self.speed_of_sound,
+                        self._etc_time_resolution,
+                        air_attenuation=air_attenuation)
             else:
                 histogram_out[i] = E_matrix
 
