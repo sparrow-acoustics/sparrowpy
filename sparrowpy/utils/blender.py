@@ -194,6 +194,27 @@ def generate_connectivity_wall(mesh: bmesh):
 
         for v in f.verts:
             line.append(v.index)
+
+        # exclude redundant vertices (along an edge)
+        if len(line)!=4:
+            verts_center=out_mesh["verts"][line]
+            verts_past  = np.roll(verts_center,-1,axis=0)
+            verts_future = np.roll(verts_center,1,axis=0)
+
+            u = verts_past-verts_center
+            v = verts_future-verts_center
+
+            for i in range(u.shape[0]):
+                if np.dot(u[i],v[i])+1<1e-4:
+                    line.pop(i)
+
+        if len(line)!=4:
+            raise (
+            ValueError("Something is wrong with your model. "+
+                       "Make sure that your walls are simple rectangles "+
+                       "and avoid redundant or disconnected vertices.")
+                    )
+
         out_mesh["conn"].append(line)
 
         normals.append(np.array(f.normal))
