@@ -121,12 +121,20 @@ def read_geometry_file(blend_file: Path,
     geom_data = {"wall":{}, "patch":{}}
 
     if ((not patches_from_model) and
-        (check_geometry(wall_data, wall_check=True))):
+        check_geometry(wall_data, element="walls", strict=True)):
         wall_data["conn"] = np.array(wall_data["conn"])
-
-    elif patches_from_model and (check_geometry(patch_data, wall_check=False)):
+    elif (patches_from_model and
+          check_geometry(patch_data, element="patches") and
+          check_geometry(wall_data, element="walls")):
         patch_data["conn"]=np.array(patch_data["conn"])
         geom_data["patch"]=patch_data
+    elif (not patches_from_model) and (not auto_walls):
+        raise (
+        ValueError("auto_walls=False and auto_patches=False."+
+                   " Your geometry is undefined.\n" +
+                   "Consider enabling one of these options or initializing "+
+                   "a radiosity instance from polygon.")
+                        )
 
     geom_data["wall"]= wall_data
 
@@ -196,15 +204,7 @@ def generate_connectivity_wall(mesh: bmesh):
             line.append(v.index)
 
         # exclude redundant vertices (along an edge)
-        if len(line)!=4:
-            line = cleanup_collinear(conn=line, vertlist=out_mesh["verts"])
-
-        if len(line)!=4:
-            raise (
-            ValueError("Something is wrong with your model. "+
-                       "Make sure that your walls are simple rectangles "+
-                       "and avoid redundant or disconnected vertices.")
-                    )
+        line = cleanup_collinear(conn=line, vertlist=out_mesh["verts"])
 
         out_mesh["conn"].append(line)
 
@@ -269,7 +269,7 @@ def generate_connectivity_patch(finemesh: bmesh, broadmesh:bmesh):
 
     return out_mesh
 
-def check_geometry(faces: dict, wall_check=True):
+def check_geometry(faces: dict, element="patches", strict=False):
     """Check if all patches have the same shape.
 
     Return True if all polygons in a given mesh
@@ -281,9 +281,11 @@ def check_geometry(faces: dict, wall_check=True):
     faces: dict
         list of all faces (polygons) in a given mesh
 
-    wall_check: bool
-        toggles geometry checks for wall geometries (True)
-        or patch geometries (False)
+    element: string
+        name of polygon which is being checked (usually "walls" or "patches").
+
+    strict: bool
+        enables check for rectangular shaped polygons
 
     Returns
     -------
@@ -293,7 +295,7 @@ def check_geometry(faces: dict, wall_check=True):
 
     """
     out=True
-    if wall_check:
+    if strict:
         for i in range(len(faces["conn"])):
             w = faces["verts"][faces["conn"][i]]
             nverts=len(w)
@@ -308,16 +310,14 @@ def check_geometry(faces: dict, wall_check=True):
             "and set auto_walls=False.")
                         )
 
-
-    else:
-        for i in range(1,len(faces["conn"])):
-            if len(faces["conn"][i]) != len(faces["conn"][0]):
-                raise (
-            ValueError("All patches must have the same number of sides.\n"+
-            "Your model has patches with "+str(len(faces["conn"][i]))+
-            " and "+str(len(faces["conn"][0]))+" sides.\n"
-            "Recheck your model or set auto_patches=False.")
-                    )
+    for i in range(1,len(faces["conn"])):
+        if len(faces["conn"][i]) != len(faces["conn"][0]):
+            raise (
+        ValueError(f"All {element} must have the same number of sides.\n"+
+        f"Your model has {element} with "+str(len(faces["conn"][i]))+
+        " and "+str(len(faces["conn"][0]))+" sides.\n"
+        f"Recheck your model or set auto_{element}=False.")
+                )
 
     return out
 
