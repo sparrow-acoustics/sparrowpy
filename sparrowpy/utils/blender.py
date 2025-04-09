@@ -224,8 +224,8 @@ def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
     fine_mesh: bmesh
         fine mesh extracted from blender file
 
-    broadmesh: bmesh
-        broad mesh extracted from blender file
+    rough_mesh: bmesh
+        rough mesh extracted from blender file
 
     Returns
     -------
@@ -322,6 +322,28 @@ def check_geometry(faces: dict, element="patches", strict=False):
 
 
 def cleanup_collinear(conn: list, vertlist: np.ndarray)->list:
+    """Remove midpoints from polygon vertex loops.
+
+    Vertices along an edge which is defined by two other end vertices
+    are redundant to polygon definition. Thus, their indices are removed from
+    the connectivity list.
+
+    Parameters
+    ----------
+    conn: list((n_verts_poly,))
+        ordered list of indices to vertices which consist of
+        a polygon loop.
+
+    vertlist: np.ndarray((n_verts_total,3))
+        array of vertices in a given geometry.
+
+    Returns
+    -------
+    conn: list((n_verts_poly_clean,))
+        ordered list of vertex indices without indices to
+        midpoint vertices.
+
+    """
     verts_center=vertlist[conn]
     verts_past  = np.roll(verts_center,-1,axis=0)
     verts_future = np.roll(verts_center,1,axis=0)
