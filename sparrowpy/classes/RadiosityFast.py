@@ -409,7 +409,9 @@ class DirectionalRadiosityFast():
             sources_array, receivers_array)
 
     def _set_brdf_diffuse(self):
-        """Set the diffuse BRDF for all walls."""
+        """Set the diffuse BRDF for all walls using the given frequency
+        vector or assumes 0 frequency.
+        """
         frequencies = np.array([0]) if self._frequencies is None else \
             self._frequencies
         brdf_vi = pf.Coordinates(0, 0, 1, weights=1)
@@ -427,8 +429,10 @@ class DirectionalRadiosityFast():
             brdf_vo,
             )
 
-    def _set_attenuation_one(self):
-        """Set the attenuation to zero."""
+    def _set_air_attenuation_zero(self):
+        """Set the attenuation to zero using the given frequency vector or
+        assumes 0 frequency.
+        """
         frequencies = np.array([0]) if self._frequencies is None else \
             self._frequencies
         self.set_air_attenuation(
@@ -442,7 +446,7 @@ class DirectionalRadiosityFast():
         if self._brdf_incoming_directions is None:
             self._set_brdf_diffuse()
         if self._air_attenuation is None:
-            self._set_attenuation_one()
+            self._set_air_attenuation_zero()
         n_bins = self.n_bins
         vi = np.array(
             [s.cartesian for s in self._brdf_incoming_directions])
