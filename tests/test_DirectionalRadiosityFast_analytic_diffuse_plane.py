@@ -118,7 +118,7 @@ def test_source_receiver_along_same_normal(patch_size):
 
 @pytest.mark.parametrize("theta_deg", [30, 60])
 @pytest.mark.parametrize("patch_size", [1])
-def test_source_receiver_same_hight(patch_size, theta_deg):
+def test_source_receiver_same_elevation(patch_size, theta_deg):
     """
     Compares test case 3 from [1], where receiver is at the same height as
     the source, but moved sideways/laterally. For this case the Energy
