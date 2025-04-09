@@ -332,7 +332,7 @@ class DirectionalRadiosityFast():
 
         Parameters
         ----------
-        polygon_list : list[PatchesDirectional]
+        polygon_list : list[Polygon]
             list of patches
         patch_size : float
             maximal patch size in meters.
@@ -585,7 +585,7 @@ class DirectionalRadiosityFast():
 
         Parameters
         ----------
-        air_attenuation : pf.FrequencyData
+        air_attenuation : pyfar.FrequencyData
             Air attenuation factor in Np/m.
 
         """
@@ -716,7 +716,7 @@ class DirectionalRadiosityFast():
     @property
     def n_bins(self):
         """Return the number of frequency bins."""
-        return 0 if self._frequencies is None else self._frequencies.shape[0]
+        return None if self._frequencies is None else self._frequencies.shape[0]
 
     @property
     def n_walls(self):
