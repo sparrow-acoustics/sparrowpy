@@ -716,7 +716,9 @@ class DirectionalRadiosityFast():
     @property
     def n_bins(self):
         """Return the number of frequency bins."""
-        return None if self._frequencies is None else self._frequencies.shape[0]
+        if self._frequencies is None:
+            return None
+        return self._frequencies.shape[0]
 
     @property
     def n_walls(self):
