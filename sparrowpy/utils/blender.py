@@ -197,16 +197,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
         # exclude redundant vertices (along an edge)
         if len(line)!=4:
-            verts_center=out_mesh["verts"][line]
-            verts_past  = np.roll(verts_center,-1,axis=0)
-            verts_future = np.roll(verts_center,1,axis=0)
-
-            u = verts_past-verts_center
-            v = verts_future-verts_center
-
-            for i in range(u.shape[0]):
-                if np.dot(u[i],v[i])+1<1e-4:
-                    line.pop(i)
+            line = cleanup_collinear(conn=line, vertlist=out_mesh["verts"])
 
         if len(line)!=4:
             raise (
@@ -263,7 +254,10 @@ def generate_connectivity_patch(finemesh: bmesh, broadmesh:bmesh):
     out_mesh["map"] = np.empty((len(finemesh.faces)),dtype=int)
 
     for i,pface in enumerate(finemesh.faces):
-        out_mesh["conn"].append([v.index for v in pface.verts])
+        line = cleanup_collinear(conn=[v.index for v in pface.verts],
+                                 vertlist=out_mesh["verts"])
+
+        out_mesh["conn"].append(line)
 
         for j,wface in enumerate(broadmesh.faces):
             if pface.normal==wface.normal:
@@ -325,5 +319,19 @@ def check_geometry(faces: dict, wall_check=True):
             "Recheck your model or set auto_patches=False.")
                     )
 
-
     return out
+
+
+def cleanup_collinear(conn: list, vertlist: np.ndarray)->list:
+    verts_center=vertlist[conn]
+    verts_past  = np.roll(verts_center,-1,axis=0)
+    verts_future = np.roll(verts_center,1,axis=0)
+
+    u = verts_past-verts_center
+    v = verts_future-verts_center
+
+    for i in range(u.shape[0]):
+        if np.dot(u[i],v[i])+1<1e-4:
+            conn.pop(i)
+
+    return conn
