@@ -212,7 +212,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
     return out_mesh
 
-def generate_connectivity_patch(finemesh: bmesh, broadmesh:bmesh):
+def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
     """Summarize characteristics of polygons in a fine mesh.
 
     Return a dictionary which includes a list of vertices,
