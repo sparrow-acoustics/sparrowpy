@@ -86,10 +86,10 @@ def test_diffuse_energy(patch_size):
     Z = 3
     length_histogram = 1
     time_resolution = 1
-    max_order_k = 3
+    max_order_k = 20
     speed_of_sound = 343
-    receiver = pf.Coordinates(.5, 1, 1.5)
-    source = pf.Coordinates(.5, 1, 2)
+    receiver = pf.Coordinates(X/2, Y/2, Z/2)
+    source = pf.Coordinates(X/2, Y/2, Z/2)
 
     absorption = 0.1
 
@@ -122,11 +122,10 @@ def test_diffuse_energy(patch_size):
     A = S*absorption
     V = X*Y*Z
     E_reverb_analytical = 4 / A
-    w_0 = E_reverb_analytical/ V # Kuttruff Eq 4.7
+    w_0 = E_reverb_analytical / V # Kuttruff Eq 4.7
 
     # compare the diffuse part
     npt.assert_allclose(
-        10*np.log10(np.sum(etc.time)),
-        10*np.log10(w_0),
+        np.sum(etc.time),
+        E_reverb_analytical,
         atol=0.3)
-
