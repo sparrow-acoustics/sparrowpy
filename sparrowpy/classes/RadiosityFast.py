@@ -121,24 +121,21 @@ class DirectionalRadiosityFast():
             patch_to_wall_ids)
 
     @classmethod
-    def from_file(cls, filename: str, patch_size=1.0,
-                       auto_walls=True, auto_patches=True):
+    def from_file(cls, filename: str, manual_patch_size=None,
+                       auto_walls=True):
         """Create a Radiosity object from a blender or stl file.
 
         """
-        if (not auto_patches) and (not auto_walls):
-            raise (
-        ValueError("auto_walls=False and auto_patches=False."+
-                    " Your geometry is undefined.\n" +
-                    "Consider enabling one of these options or initializing "+
-                    "a radiosity instance from polygon.")
-                            )
+        if manual_patch_size is None:
+            patches_from_model=True
+        else:
+            patches_from_model=False
 
         geom_data = blender.read_geometry_file(filename,
                                            auto_walls=auto_walls,
-                                           patches_from_model=auto_patches)
+                                           patches_from_model=patches_from_model)
 
-        walls   = geom_data["wall"]
+        walls = geom_data["wall"]
 
         ## save wall information
         walls_normal = walls["normal"]
@@ -177,7 +174,7 @@ class DirectionalRadiosityFast():
             (
             patches_points, patches_normal,
             n_patches, patch_to_wall_ids) = geometry._process_patches(
-            walls_points, walls_normal, patch_size, len(walls_normal))
+            walls_points, walls_normal, manual_patch_size, len(walls_normal))
 
         # create radiosity object
         return cls(
