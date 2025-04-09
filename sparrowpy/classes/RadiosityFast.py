@@ -426,15 +426,15 @@ class DirectionalRadiosityFast():
 
         else:
             (
-            patches_points, patches_normal,
+            patches_points, _,
             n_patches, patch_to_wall_ids) = geometry._process_patches(
             walls_points, walls_normal, manual_patch_size, len(walls_normal))
 
         # create radiosity object
         return cls(
-            walls_points, walls_normal, walls_up_vector, walls_material,
-            patches_points, patches_normal,
-            n_patches, patch_to_wall_ids)
+            walls_points, walls_normal, walls_up_vector,
+            patches_points, n_patches,
+            patch_to_wall_ids)
 
     def bake_geometry(self):
         """Bake the geometry by calculating all the form factors.
