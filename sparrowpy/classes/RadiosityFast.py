@@ -125,6 +125,21 @@ class DirectionalRadiosityFast():
                        auto_walls=True):
         """Create a Radiosity object from a blender or stl file.
 
+        Parameters
+        ----------
+        filename: string
+            file path to .blend or .stl file which should be loaded
+
+        manual_patch_size: float (default None)
+            sets the patch size for manual patch generation.
+            if None, patches are loaded automatically from the faces
+            of the CAD model.
+
+        auto_walls: bool
+            if True, walls of the geometry model are assembled from coplanar 
+            and contiguous patches which share material properties.
+            if False, the walls are defined as one per patch.
+
         """
         if manual_patch_size is None:
             patches_from_model=True
