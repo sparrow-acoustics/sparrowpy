@@ -17,6 +17,7 @@ class DirectionalRadiosityFast():
     _walls_points: np.ndarray
     _walls_normal: np.ndarray
     _walls_up_vector: np.ndarray
+    _walls_material: np.ndarray
     _patches_points: np.ndarray
     _patches_normal: np.ndarray
     _n_patches: int
@@ -50,13 +51,14 @@ class DirectionalRadiosityFast():
 
 
     def __init__(
-            self, walls_points, walls_normal, walls_up_vector,
+            self, walls_points, walls_normal, walls_up_vector, walls_material,
             patches_points, patches_normal, n_patches,
             patch_to_wall_ids):
         """Create a Radiosity object for directional implementation."""
         self._walls_points = walls_points
         self._walls_normal = walls_normal
         self._walls_up_vector = walls_up_vector
+        self._walls_material = walls_material
         self._patches_points = patches_points
         self._patches_normal = patches_normal
         self._n_patches = n_patches
@@ -105,6 +107,7 @@ class DirectionalRadiosityFast():
         walls_points = np.array([p.pts for p in polygon_list])
         walls_normal = np.array([p.normal for p in polygon_list])
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
+        walls_material = None
 
         # create patches
         (
@@ -113,7 +116,7 @@ class DirectionalRadiosityFast():
             walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
-            walls_points, walls_normal, walls_up_vector,
+            walls_points, walls_normal, walls_up_vector, walls_material,
             patches_points, patches_normal, n_patches,
             patch_to_wall_ids)
 
@@ -123,6 +126,14 @@ class DirectionalRadiosityFast():
         """Create a Radiosity object ffrom a blender file.
 
         """
+        if (not auto_patches) and (not auto_walls):
+            raise (
+        ValueError("auto_walls=False and auto_patches=False."+
+                    " Your geometry is undefined.\n" +
+                    "Consider enabling one of these options or initializing "+
+                    "a radiosity instance from polygon.")
+                            )
+
         geom_data = blender.read_geometry_file(filename,
                                            auto_walls=auto_walls,
                                            patches_from_model=auto_patches)
@@ -136,6 +147,8 @@ class DirectionalRadiosityFast():
         walls_points=np.empty((len(walls["conn"]),
                                len(walls["conn"][0]),
                                walls["verts"].shape[-1]))
+
+        walls_material = walls["material"]
 
         for wallID in range(len(walls_normal)):
             walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
@@ -168,9 +181,9 @@ class DirectionalRadiosityFast():
 
         # create radiosity object
         return cls(
-            walls_points, walls_normal, walls_up_vector,
-            patches_points, patches_normal, n_patches,
-            patch_to_wall_ids)
+            walls_points, walls_normal, walls_up_vector, walls_material,
+            patches_points, patches_normal,
+            n_patches, patch_to_wall_ids)
 
     def bake_geometry(self):
         """Bake the geometry by calculating all the form factors.
@@ -515,6 +528,11 @@ class DirectionalRadiosityFast():
     def walls_up_vector(self):
         """Return the up vector of the walls."""
         return self._walls_up_vector
+
+    @property
+    def walls_material(self):
+        """Return the material of the walls."""
+        return self._walls_material
 
     @property
     def patches_area(self):
