@@ -22,7 +22,7 @@ def test_init_from_polygon(sample_walls):
     "tests/test_data/cube.stl",
     ])
 def test_init_from_file(filename):
-    radiosity = sp.DirectionalRadiosityFast.from_file(filename,np.sqrt(2))
+    radiosity = sp.DirectionalRadiosityFast.from_file(filename)
     npt.assert_almost_equal(radiosity.patches_points.shape, (12, 3, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (12))
     npt.assert_almost_equal(radiosity.patches_center.shape, (12, 3))
