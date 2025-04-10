@@ -120,9 +120,7 @@ def test_diffuse_energy(patch_size):
     # desired
     S = (2*X*Y) + (2*X*Z) + (2*Y*Z)
     A = S*absorption
-    V = X*Y*Z
     E_reverb_analytical = 4 / A
-    w_0 = E_reverb_analytical / V # Kuttruff Eq 4.7
 
     # compare the diffuse part
     npt.assert_allclose(
