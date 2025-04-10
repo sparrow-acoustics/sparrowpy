@@ -51,8 +51,6 @@ tests = [
     "coverage",
     "watermark",
     "ipykernel",
-    "sparrowpy[fast]",
-    "sparrowpy[blender]",
     "nbmake",
 ]
 docs = [
@@ -68,7 +66,7 @@ docs = [
     "nbsphinx_link",
     "ipython",
 ]
-dev = ["sparrowpy[deploy,tests,docs]"]
+dev = ["sparrowpy[deploy,tests,docs,blender,fast]"]
 
 [project.urls]
 Tracker = "https://github.com/ahms5/sparrowpy/issues"
