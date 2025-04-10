@@ -495,7 +495,7 @@ def _matrix_vector_product(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
 
     return out
 
-def _rotation_matrix(n_in: np.ndarray, n_out=np.array([0])):
+def _rotation_matrix(n_in: np.ndarray, n_out=np.array([0.,0.,0.])):
     """Compute a rotation matrix from a given input and output directions.
 
     Parameters
@@ -512,8 +512,7 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([0])):
         rotation matrix
 
     """
-    if n_out.shape[0] == 1:
-        n_out = np.zeros_like(n_in)
+    if (n_out==np.zeros_like(n_in)).all():
         n_out[-1] = 1.
     else:
         n_out = n_out
@@ -598,6 +597,10 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
     v = point-origin
     dotprod = np.dot(v,plane_normal)
 
+    w = point-plane_pt
+    fac = -np.divide(np.dot(plane_normal,w), dotprod)
+
+    int_point = w + plane_pt + fac*v
 
     if not check_normal:
         cond = abs(dotprod) > epsilon
@@ -605,16 +608,13 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
         cond = dotprod < -epsilon
 
     if cond:
-        w = point-plane_pt
-        fac = -np.divide(np.dot(plane_normal,w), dotprod)
 
-        int_point = w + plane_pt + fac*v
         int_flag = True
     else:
         int_flag = False
-        int_point = np.zeros_like(v)
 
-    return int_point, int_flag
+
+    return int_point.astype(np.float64), int_flag
 
 def _point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
@@ -644,7 +644,7 @@ def _point_in_polygon(point3d: np.ndarray,
     """
     # rotate all (coplanar) points to a horizontal plane
     # and remove z dimension for convenience
-    rotmat = _rotation_matrix(n_in=plane_normal,n_out=np.array([]))
+    rotmat = _rotation_matrix(n_in=plane_normal,n_out=np.array([0.,0.,0.]))
 
     pt = _matrix_vector_product(matrix=rotmat,
                                 vector=point3d)[0:point3d.shape[0]-1]
@@ -757,9 +757,11 @@ def _check_visibility(
     patches_center : np.ndarray
         center points of all patches of shape (n_patches, 3)
     surf_normal : np.ndarray
-        normal vectors of all patches of shape (n_patches, 3)
+        normal vectors of all possibly blocking surfaces
+        of shape (n_surfaces, 3)
     surf_points : np.ndarray
-        boundary points of possible blocking surfaces (n_surfaces,)
+        boundary points of possible blocking surfaces
+        (n_surfaces,n_polyverts,3)
 
     Returns
     -------
@@ -772,17 +774,20 @@ def _check_visibility(
     visibility_matrix = np.empty((n_patches, n_patches), dtype=np.bool_)
     visibility_matrix.fill(False)
     indexes = []
-    for i_source in range(n_patches):
-        for i_receiver in range(n_patches):
+
+    for i_receiver in range(n_patches):
+        for i_source in range(i_receiver):
             if i_source < i_receiver:
                 indexes.append((i_source, i_receiver))
                 visibility_matrix[i_source,i_receiver]=True
+
     indexes = np.array(indexes)
     for i in prange(indexes.shape[0]):
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
 
         surfid=0
+
         while (visibility_matrix[i_source, i_receiver] and
                                 surfid!=len(surf_normal)):
 
@@ -790,7 +795,7 @@ def _check_visibility(
                                                         patches_center[i_source],
                                                         patches_center[i_receiver],
                                                         surf_points[surfid],
-                                                        surf_normal[surfid])
+                                                        surf_normal[surfid],1e-6)
 
             surfid+=1
 
@@ -867,7 +872,7 @@ if numba is not None:
         numba.types.Tuple(
             (numba.f8[:,:,:],numba.f8[:,:],numba.i8, numba.i8[:]),
             )(numba.f8[:,:,:],numba.f8[:,:],numba.f8,numba.i8),
-                                  )(_process_patches)
+    )(_process_patches)
     _polygon_area = numba.njit(
         numba.f8(numba.f8[:,:]),
     )(_polygon_area)
@@ -881,24 +886,24 @@ if numba is not None:
         numba.f8[:](numba.f8[:,:],numba.f8[:]),
     )(_matrix_vector_product)
     _project_to_plane = numba.njit(
-        # numba.types.Tuple((numba.f8[:],numba.b1))(
-        #     numba.f8[:],numba.f8[:],
-        #     numba.f8[:],numba.f8[:],
-        #     numba.f8,numba.b1),
+        numba.types.Tuple((numba.f8[:],numba.b1))(
+            numba.f8[:],numba.f8[:],
+            numba.f8[:],numba.f8[:],
+            numba.f8,numba.b1),
     )(_project_to_plane)
     _point_in_polygon = numba.njit(
-        # numba.b1(numba.f8[:],numba.f8[:,:],
-        #          numba.f8[:],numba.f8),
+        numba.b1(numba.f8[:],numba.f8[:,:],
+                 numba.f8[:],numba.f8),
     )(_point_in_polygon)
     _basic_visibility = numba.njit(
-        # numba.b1(numba.f8[:],numba.f8[:],
-        #          numba.f8[:,:],numba.f8[:],
-        #          numba.f8),
+        numba.b1(numba.f8[:],numba.f8[:],
+                 numba.f8[:,:],numba.f8[:],
+                 numba.f8),
     )(_basic_visibility)
     _check_visibility = numba.njit(
-        # numba.b1[:,:](numba.f8[:,:],numba.f8[:,:],numba.f8[:]),
-        # parallel=True
-        )(_check_visibility)
+        numba.b1[:,:](numba.f8[:,:],numba.f8[:,:],numba.f8[:,:,:]),
+        parallel=True,
+    )(_check_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
     _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
