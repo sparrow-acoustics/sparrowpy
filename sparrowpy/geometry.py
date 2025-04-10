@@ -885,7 +885,9 @@ if numba is not None:
     _coincidence_check = numba.njit(
         numba.b1(numba.f8[:,:],numba.f8[:,:],numba.f8),
         )(_coincidence_check)
-    _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
+    _sphere_tangent_vector = numba.njit(
+        numba.f8[:](numba.f8[:],numba.f8[:]),
+        )(_sphere_tangent_vector)
     _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
 
