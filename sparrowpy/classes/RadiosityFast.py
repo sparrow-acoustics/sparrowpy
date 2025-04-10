@@ -19,7 +19,6 @@ class DirectionalRadiosityFast():
     _walls_points: np.ndarray
     _walls_normal: np.ndarray
     _walls_up_vector: np.ndarray
-    _walls_material: np.ndarray
     _patches_points: np.ndarray
     _n_patches: int
     _patch_to_wall_ids: np.ndarray
@@ -399,7 +398,6 @@ class DirectionalRadiosityFast():
                                len(walls["conn"][0]),
                                walls["verts"].shape[-1]))
 
-        walls_material = walls["material"]
 
         for wallID in range(len(walls_normal)):
             walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
