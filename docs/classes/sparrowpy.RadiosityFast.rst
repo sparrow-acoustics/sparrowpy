@@ -9,7 +9,7 @@ the following features:
 - It supports :py:mod:`BRDFs<sparrowpy.brdf>`
 
 It is now possible to load geometries in this class from `Blender <https://www.blender.org/>` or STL files.
-We recommend you see how this is done in our :ref:`example<geom_loading_from_file>`, which includes some important details about import options.
+We recommend you see how this is done in our :ref:`example on geometry loading<geom_example>`, which includes some important details about import options.
 
 .. autoclass:: sparrowpy.DirectionalRadiosityFast
    :members:
