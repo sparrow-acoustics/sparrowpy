@@ -449,28 +449,6 @@ def _calculate_area(points: np.ndarray):
 
 ####################################################
 # point, vector, patch operations
-def _calculate_normals(points: np.ndarray):
-    """Calculate normals of plane defined by 3 or more input points.
-
-    Parameters
-    ----------
-    points: np.ndarray (n_planes, n_points, 3)
-        collection of points on common planes.
-
-    Returns
-    -------
-    normals: np.ndarray (n_planes,3)
-        collection of normal vectors to planes defined by point collection.
-    """
-
-    normals = np.empty((points.shape[0],3))
-
-    for i in numba.prange(points.shape[0]):
-        normals[i]=np.cross(points[i][1]-points[i][0],points[i][2]-points[i][0])
-        normals[i]/=np.linalg.norm(normals[i])
-
-    return normals
-
 def _matrix_vector_product(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
     """Compute the inner product between a matrix and a vector to please njit.
 
@@ -904,7 +882,6 @@ if numba is not None:
         numba.b1[:,:](numba.f8[:,:],numba.f8[:,:],numba.f8[:,:,:]),
         parallel=True,
     )(_check_visibility)
-    _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
     _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
     _calculate_center = numba.njit()(_calculate_center)
