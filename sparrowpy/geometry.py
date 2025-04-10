@@ -899,9 +899,7 @@ if numba is not None:
     _sphere_tangent_vector = numba.njit(
         numba.f8[:](numba.f8[:],numba.f8[:]),
     )(_sphere_tangent_vector)
-    _calculate_center = numba.njit(
-        numba.f8[:](numba.f8[:,:]),
-    )(_calculate_center)
+    _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
 
 
