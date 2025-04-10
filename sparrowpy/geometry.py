@@ -409,7 +409,18 @@ def _create_patches(polygon_points:np.ndarray, max_size:float):
 
     return patches_points
 
-def _calculate_center(points):
+def _calculate_center(points:np.ndarray):
+    """Calculate the centroid of a group of points (polygon).
+
+    Parameters
+    ----------
+    points: np.ndarray((n_points,n_dims))
+        collection of points to evaluate
+
+    Returns
+    -------
+    centroid coordinates: np.ndarray(n_dims)
+    """
     return np.sum(points, axis=-2) / points.shape[-2]
 
 def _calculate_size(points):
@@ -884,11 +895,13 @@ if numba is not None:
     )(_check_visibility)
     _coincidence_check = numba.njit(
         numba.b1(numba.f8[:,:],numba.f8[:,:],numba.f8),
-        )(_coincidence_check)
+    )(_coincidence_check)
     _sphere_tangent_vector = numba.njit(
         numba.f8[:](numba.f8[:],numba.f8[:]),
-        )(_sphere_tangent_vector)
-    _calculate_center = numba.njit()(_calculate_center)
+    )(_sphere_tangent_vector)
+    _calculate_center = numba.njit(
+        numba.f8[:](numba.f8[:,:]),
+    )(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
 
 
