@@ -1,3 +1,6 @@
 {
-  "path": "../../examples/geometry_loading_from_file.ipynb"
+  "path": "../../examples/geometry_loading_from_file.ipynb",
+  "extra-media": [
+    "../../examples/resources"
+  ]
 }
