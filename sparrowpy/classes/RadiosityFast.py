@@ -524,7 +524,7 @@ def _add_directional(
         source position of shape (3,)
     patches_center : np.ndarray
         center of all patches of shape (n_patches, 3)
-    n_bins : float
+    n_bins : int
         number of frequency bins.
     patch_to_wall_ids : np.ndarray
         indexes from each patch to the wall of shape (n_patches)
@@ -908,7 +908,16 @@ def get_scattering_data_source(
     return scattering[scattering_index[wall_id_i], source_idx]
 
 if numba is not None:
-    _add_directional = numba.njit(parallel=True)(_add_directional)
+    _add_directional = numba.njit(
+        numba.f8[:,:,:](
+            numba.f8[:,:], numba.f8[:],
+            numba.f8[:,:], numba.i8,
+            numba.i8[:],
+            numba.f8[:,:,:], numba.f8[:,:,:],
+            numba.f8[:,:,:,:], numba.i8[:],
+        ),
+        parallel=True,
+    )(_add_directional)
     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
     _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
     _energy_exchange = numba.njit()(_energy_exchange)
