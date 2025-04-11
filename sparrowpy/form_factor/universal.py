@@ -166,7 +166,7 @@ if numba is not None:
         numba.f8[:,:](numba.f8[:,:,::1],
                         numba.f8[:,::1],
                         numba.f8[::1],
-                        numba.u2[:,::1]),
+                        numba.i8[:,::1]),
         parallel=True,
                  )(patch2patch_ff_universal)
     _source2patch_energy_universal = numba.njit(

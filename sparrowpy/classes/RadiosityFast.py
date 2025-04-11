@@ -367,7 +367,7 @@ class DirectionalRadiosityFast():
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
-        visible_patches = np.empty((n_combinations, 2), dtype=np.uint16)
+        visible_patches = np.empty((n_combinations, 2), dtype=int)
         i_counter = 0
         for i_source in range(self.n_patches):
             for i_receiver in range(self.n_patches):
@@ -1011,53 +1011,6 @@ def _collect_receiver_energy(
 
     return E_mat_out
 
-def _form_factors_with_directivity(
-        visibility_matrix, form_factors, n_bins, patches_center,
-        patches_area, air_attenuation,
-        absorption, absorption_index, patch_to_wall_ids,
-        scattering, scattering_index, sources, receivers):
-    """Calculate the form factors with directivity."""
-    n_patches = patches_center.shape[0]
-    form_factors_tilde = np.zeros((n_patches, n_patches, n_patches, n_bins))
-    # loop over previous patches, current and next patch
-
-    for ii in prange(n_patches**3):
-        h = ii % n_patches
-        i = int(ii/n_patches) % n_patches
-        j = int(ii/n_patches**2) % n_patches
-        visible_hi = visibility_matrix[
-            h, i] if h < i else visibility_matrix[i, h]
-        visible_ij = visibility_matrix[
-            i, j] if i < j else visibility_matrix[j, i]
-        if visible_hi and visible_ij:
-            difference_receiver = patches_center[i]-patches_center[j]
-            wall_id_i = int(patch_to_wall_ids[i])
-            difference_receiver /= np.linalg.norm(difference_receiver)
-            ff = form_factors[i, j] if i<j else (form_factors[j, i]
-                                                 *patches_area[i]/patches_area[j])
-
-            distance = np.linalg.norm(difference_receiver)
-            form_factors_tilde[h, i, j, :] = ff
-            if air_attenuation is not None:
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * np.exp(-air_attenuation * distance)
-
-            if scattering is not None:
-                scattering_factor = get_scattering_data(
-                    patches_center[h], patches_center[i], patches_center[j],
-                    sources, receivers, wall_id_i,
-                    scattering, scattering_index)
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * scattering_factor
-
-            if absorption is not None:
-                source_wall_idx = absorption_index[wall_id_i]
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * (1-absorption[source_wall_idx])
-
-    return form_factors_tilde
-
-
 def _form_factors_with_directivity_dim(
         visibility_matrix, form_factors, n_bins, patches_center,
         patches_area,
@@ -1220,6 +1173,7 @@ if numba is not None:
     f8=numba.f8
     b1=numba.b1
     i8=numba.i8
+    u4=numba.u4
     get_scattering_data_source = numba.njit(
         f8[:,:](
             f8[:], f8[:],
@@ -1244,12 +1198,12 @@ if numba is not None:
     )(_energy_exchange_init_energy)
     _collect_receiver_energy = numba.njit(
         f8[:,:,:,:](
-            f8[:,:,:,:], f8[:],
+            f8[:,:,:], f8[:],
             f8, f8, f8[:],
         ),
     )(_collect_receiver_energy)
     _energy_exchange = numba.njit(
-        f8[:](
+        f8[:,:,:,:](
             i8, f8[:,:,:],
             f8[:], f8[:,:],
             f8[:,:,:,:], f8,
