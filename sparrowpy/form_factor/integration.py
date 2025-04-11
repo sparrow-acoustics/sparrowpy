@@ -157,7 +157,7 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
     n_div = npoints - 1
 
     pts  = np.empty((len(el)*(npoints-1),len(el[0])))
-    conn = np.empty((len(el),npoints), dtype=int)
+    conn = np.empty((len(el),npoints), dtype=np.int64)
 
     for i in range(len(el)):
 
@@ -171,7 +171,7 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
             conn[i][ii]=(i*n_div+ii)%(n_div*len(el))
 
 
-    return pts,conn.astype(int)
+    return pts,conn.astype(np.int64)
 
 
 ###################################################
