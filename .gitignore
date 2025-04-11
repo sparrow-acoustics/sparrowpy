@@ -122,3 +122,4 @@ docs/_static/css/custom.css
 
 # ignore generated files
 *.pdf
+examples/radiosity_fast.far
