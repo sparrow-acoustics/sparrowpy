@@ -144,7 +144,7 @@ def test_set_air_attenuation(sample_walls):
 
 
 def test_total_number_of_patches():
-    points = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]])
+    points = np.array([[0., 0., 0.], [1., 0., 0.], [1., 1., 0.], [0., 1., 0.]])
     result = sp.geometry._total_number_of_patches(points, 0.2)
     desired = 25
     assert result == desired

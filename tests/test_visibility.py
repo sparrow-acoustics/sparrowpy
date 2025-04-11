@@ -14,7 +14,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 def test_point_plane_projection(origin: np.ndarray, point: np.ndarray,
                                 plpt: np.ndarray, pln: np.ndarray, solution):
     """Ensure correct projection of rays into plane."""
-    out = geom._project_to_plane(origin, point, plpt, pln)
+    out,_ = geom._project_to_plane(origin, point, plpt, pln,
+                                 epsilon=1e-6,
+                                 check_normal=True)
 
     npt.assert_array_equal(solution,out)
 
@@ -32,7 +34,8 @@ def test_point_in_polygon(point, plpt, pln):
     """Ensure correct projection of rays into plane."""
     out = geom._point_in_polygon(point3d=point,
                                  polygon3d=plpt,
-                                 plane_normal=pln)
+                                 plane_normal=pln,
+                                 eta=1e-6)
 
     if abs(point[0]) > 1. or abs(point[1]) > 1:
         solution = False
@@ -58,7 +61,7 @@ def test_point_in_polygon(point, plpt, pln):
 def test_basic_visibility(point, origin, plpt, pln):
     """Test basic_visibility function."""
     out = geom._basic_visibility(eval_point=point,vis_point=origin,
-                              surf_points=plpt,surf_normal=pln)
+                              surf_points=plpt,surf_normal=pln, eta=1e-6)
 
     if (abs(point[0])/(-point[2]+1) > 1. or
         abs(point[1])/(-point[2]+1) > 1) or point[2]>0 or pln[2]<0:
@@ -127,11 +130,9 @@ def test_vis_matrix_assembly(model):
             surfs_normals[i]/=np.linalg.norm(surfs_normals[i])
 
         vis_matrix = geom._check_visibility(patches_center=patches_centers,
-                                           surf_normal=surfs_normals,
-                                           surf_points=surfs_points)
+                                           surf_normal=np.array(surfs_normals),
+                                           surf_points=np.array(surfs_points))
 
-        plt.imsave(model[:-6]+"_vis.pdf",vis_matrix)
-        plt.imsave(model[:-6]+"_sol.pdf",solution)
         npt.assert_array_equal(vis_matrix,solution)
 
 A=[

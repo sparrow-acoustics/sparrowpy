@@ -370,7 +370,7 @@ def _total_number_of_patches(polygon_points:np.ndarray, max_size: float):
 
     return patch_nums[x_idx]*patch_nums[y_idx]
 
-def _create_patches(polygon_points:np.ndarray, max_size):
+def _create_patches(polygon_points:np.ndarray, max_size:float):
     """Create patches from a polygon."""
     size = np.empty(polygon_points.shape[1])
     for i in range(polygon_points.shape[1]):
@@ -409,7 +409,18 @@ def _create_patches(polygon_points:np.ndarray, max_size):
 
     return patches_points
 
-def _calculate_center(points):
+def _calculate_center(points:np.ndarray):
+    """Calculate the centroid of a group of points (polygon).
+
+    Parameters
+    ----------
+    points: np.ndarray((n_points,n_dims))
+        collection of points to evaluate
+
+    Returns
+    -------
+    centroid coordinates: np.ndarray(n_dims)
+    """
     return np.sum(points, axis=-2) / points.shape[-2]
 
 def _calculate_size(points):
@@ -439,7 +450,7 @@ def _polygon_area(pts: np.ndarray) -> float:
 
     return area
 
-def _calculate_area(points):
+def _calculate_area(points: np.ndarray):
     area = np.zeros(points.shape[0])
 
     for i in prange(points.shape[0]):
@@ -449,28 +460,6 @@ def _calculate_area(points):
 
 ####################################################
 # point, vector, patch operations
-def _calculate_normals(points: np.ndarray):
-    """Calculate normals of plane defined by 3 or more input points.
-
-    Parameters
-    ----------
-    points: np.ndarray (n_planes, n_points, 3)
-        collection of points on common planes.
-
-    Returns
-    -------
-    normals: np.ndarray (n_planes,3)
-        collection of normal vectors to planes defined by point collection.
-    """
-
-    normals = np.empty((points.shape[0],3))
-
-    for i in numba.prange(points.shape[0]):
-        normals[i]=np.cross(points[i][1]-points[i][0],points[i][2]-points[i][0])
-        normals[i]/=np.linalg.norm(normals[i])
-
-    return normals
-
 def _matrix_vector_product(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
     """Compute the inner product between a matrix and a vector to please njit.
 
@@ -495,7 +484,7 @@ def _matrix_vector_product(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
 
     return out
 
-def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
+def _rotation_matrix(n_in: np.ndarray, n_out=np.array([0.,0.,0.])):
     """Compute a rotation matrix from a given input and output directions.
 
     Parameters
@@ -512,8 +501,7 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
         rotation matrix
 
     """
-    if n_out.shape[0] == 0:
-        n_out = np.zeros_like(n_in)
+    if (n_out==np.zeros_like(n_in)).all():
         n_out[-1] = 1.
     else:
         n_out = n_out
@@ -560,7 +548,7 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
 
 def _project_to_plane(origin: np.ndarray, point: np.ndarray,
                      plane_pt: np.ndarray, plane_normal: np.ndarray,
-                     epsilon=1e-6, check_normal=True):
+                     epsilon=1e-6, check_normal=True)->tuple[np.ndarray,bool]:
     """Project point onto plane following direction defined by origin.
 
     Also applicable to lower or higher-dimensional spaces, not just 3D.
@@ -588,28 +576,34 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
 
     Returns
     -------
-    int_point: np.ndarray(float) (n_dims,) or None
+    int_point: np.ndarray(float) (n_dims,)
         intersection point.
-        None if no intersection point is found
+
+    int_flag: bool
+        flags if an intersection was found
 
     """
     v = point-origin
     dotprod = np.dot(v,plane_normal)
 
-    cond = dotprod < -epsilon
+    w = point-plane_pt
+    fac = -np.divide(np.dot(plane_normal,w), dotprod)
+
+    int_point = w + plane_pt + fac*v
 
     if not check_normal:
         cond = abs(dotprod) > epsilon
+    else:
+        cond = dotprod < -epsilon
 
     if cond:
-        w = point-plane_pt
-        fac = -np.divide(np.dot(plane_normal,w), dotprod)
 
-        int_point = w + plane_pt + fac*v
+        int_flag = True
     else:
-        int_point = None
+        int_flag = False
 
-    return int_point
+
+    return int_point.astype(np.float64), int_flag
 
 def _point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
@@ -639,7 +633,7 @@ def _point_in_polygon(point3d: np.ndarray,
     """
     # rotate all (coplanar) points to a horizontal plane
     # and remove z dimension for convenience
-    rotmat = _rotation_matrix(n_in=plane_normal)
+    rotmat = _rotation_matrix(n_in=plane_normal,n_out=np.array([0.,0.,0.]))
 
     pt = _matrix_vector_product(matrix=rotmat,
                                 vector=point3d)[0:point3d.shape[0]-1]
@@ -659,12 +653,13 @@ def _point_in_polygon(point3d: np.ndarray,
         # check if line from evaluation point in +x direction
         # intersects polygon side
         nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
-        b = _project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
+        proj_point=(pt+np.array([1.,0.],dtype=np.float64))
+        b,bf = _project_to_plane(origin=pt, point=proj_point,
                              plane_pt=a1, plane_normal=nl,
-                             check_normal=False)
+                             epsilon=1e-6, check_normal=False)
 
         # check if intersection exists and if is inside side [a0,a1]
-        if (b is not None) and b[0]>pt[0]:
+        if bf and b[0]>pt[0]:
             if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
                                 -np.linalg.norm(a1-a0)) <= eta:
                 if np.dot(b-pt,nl)>0:
@@ -751,9 +746,11 @@ def _check_visibility(
     patches_center : np.ndarray
         center points of all patches of shape (n_patches, 3)
     surf_normal : np.ndarray
-        normal vectors of all patches of shape (n_patches, 3)
+        normal vectors of all possibly blocking surfaces
+        of shape (n_surfaces, 3)
     surf_points : np.ndarray
-        boundary points of possible blocking surfaces (n_surfaces,)
+        boundary points of possible blocking surfaces
+        (n_surfaces,n_polyverts,3)
 
     Returns
     -------
@@ -766,17 +763,20 @@ def _check_visibility(
     visibility_matrix = np.empty((n_patches, n_patches), dtype=np.bool_)
     visibility_matrix.fill(False)
     indexes = []
-    for i_source in range(n_patches):
-        for i_receiver in range(n_patches):
+
+    for i_receiver in range(n_patches):
+        for i_source in range(i_receiver):
             if i_source < i_receiver:
                 indexes.append((i_source, i_receiver))
                 visibility_matrix[i_source,i_receiver]=True
+
     indexes = np.array(indexes)
     for i in prange(indexes.shape[0]):
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
 
         surfid=0
+
         while (visibility_matrix[i_source, i_receiver] and
                                 surfid!=len(surf_normal)):
 
@@ -784,7 +784,7 @@ def _check_visibility(
                                                         patches_center[i_source],
                                                         patches_center[i_receiver],
                                                         surf_points[surfid],
-                                                        surf_normal[surfid])
+                                                        surf_normal[surfid],1e-6)
 
             surfid+=1
 
@@ -826,19 +826,20 @@ def _basic_visibility(vis_point: np.ndarray,
     if np.abs(np.dot(surf_normal,eval_point-surf_points[0]))>eta:
 
         # check if projected point on surf
-        pt = _project_to_plane(origin=vis_point, point=eval_point,
+        pt,ptf = _project_to_plane(origin=vis_point, point=eval_point,
                             plane_pt=surf_points[0],
                             plane_normal=surf_normal,
+                            epsilon=1e-6,
                             check_normal=True)
 
         # if intersection point exists
-        if pt is not None:
+        if ptf:
             # if plane is in front of eval point
             if (np.linalg.norm(eval_point-vis_point)>
                                 np.linalg.norm(pt-vis_point)):
                 # if point is inside surf polygon
                 if _point_in_polygon(point3d=pt, polygon3d=surf_points,
-                                    plane_normal=surf_normal):
+                                    plane_normal=surf_normal,eta=1e-6):
                     is_visible = False
 
     # if both vis and eval point are coplanar
@@ -850,21 +851,55 @@ def _basic_visibility(vis_point: np.ndarray,
 
 
 if numba is not None:
-    _total_number_of_patches = numba.njit()(_total_number_of_patches)
-    _process_patches = numba.njit()(_process_patches)
-    _calculate_area = numba.njit()(_calculate_area)
+    _total_number_of_patches = numba.njit(
+        numba.i8(numba.f8[:,:],numba.f8),
+    )(_total_number_of_patches)
+    _create_patches = numba.njit(
+        numba.f8[:,:,:](numba.f8[:,:],numba.f8),
+    )(_create_patches)
+    _process_patches = numba.njit(
+        numba.types.Tuple(
+            (numba.f8[:,:,:],numba.f8[:,:],numba.i8, numba.i8[:]),
+            )(numba.f8[:,:,:],numba.f8[:,:],numba.f8,numba.i8),
+    )(_process_patches)
+    _polygon_area = numba.njit(
+        numba.f8(numba.f8[:,:]),
+    )(_polygon_area)
+    _calculate_area = numba.njit(
+        numba.f8[:](numba.f8[:,:,:]),
+    )(_calculate_area)
+    _rotation_matrix = numba.njit(
+        numba.f8[:,:](numba.f8[:],numba.f8[:]),
+    )(_rotation_matrix)
+    _matrix_vector_product = numba.njit(
+        numba.f8[:](numba.f8[:,:],numba.f8[:]),
+    )(_matrix_vector_product)
+    _project_to_plane = numba.njit(
+        numba.types.Tuple((numba.f8[:],numba.b1))(
+            numba.f8[:],numba.f8[:],
+            numba.f8[:],numba.f8[:],
+            numba.f8,numba.b1),
+    )(_project_to_plane)
+    _point_in_polygon = numba.njit(
+        numba.b1(numba.f8[:],numba.f8[:,:],
+                 numba.f8[:],numba.f8),
+    )(_point_in_polygon)
+    _basic_visibility = numba.njit(
+        numba.b1(numba.f8[:],numba.f8[:],
+                 numba.f8[:,:],numba.f8[:],
+                 numba.f8),
+    )(_basic_visibility)
+    _check_visibility = numba.njit(
+        numba.b1[:,:](numba.f8[:,:],numba.f8[:,:],numba.f8[:,:,:]),
+        parallel=True,
+    )(_check_visibility)
+    _coincidence_check = numba.njit(
+        numba.b1(numba.f8[:,:],numba.f8[:,:],numba.f8),
+    )(_coincidence_check)
+    _sphere_tangent_vector = numba.njit(
+        numba.f8[:](numba.f8[:],numba.f8[:]),
+    )(_sphere_tangent_vector)
     _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
-    _create_patches = numba.njit()(_create_patches)
-    _check_visibility = numba.njit(parallel=True)(_check_visibility)
-    _calculate_normals = numba.njit()(_calculate_normals)
-    _coincidence_check = numba.njit()(_coincidence_check)
-    _basic_visibility = numba.njit()(_basic_visibility)
-    _project_to_plane = numba.njit()(_project_to_plane)
-    _point_in_polygon = numba.njit()(_point_in_polygon)
-    _matrix_vector_product = numba.njit()(_matrix_vector_product)
-    _rotation_matrix = numba.njit()(_rotation_matrix)
-    _polygon_area = numba.njit()(_polygon_area)
-    _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
 
 

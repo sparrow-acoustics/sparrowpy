@@ -138,7 +138,7 @@ class DirectionalRadiosityFast():
         walls_normal = np.atleast_2d(walls_normal)
         patches_points = np.atleast_3d(patches_points)
         patch_to_wall_ids = np.atleast_1d(np.array(
-            patch_to_wall_ids, dtype=int))
+            patch_to_wall_ids, dtype=np.int64))
         if frequencies is not None:
             frequencies = np.array(frequencies)
         if visible_patches is not None:
@@ -367,7 +367,7 @@ class DirectionalRadiosityFast():
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
-        visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
+        visible_patches = np.empty((n_combinations, 2), dtype=int)
         i_counter = 0
         for i_source in range(self.n_patches):
             for i_receiver in range(self.n_patches):
@@ -388,7 +388,7 @@ class DirectionalRadiosityFast():
                 [s.cartesian for s in self._brdf_incoming_directions])
             receivers_array = np.array(
                 [s.cartesian for s in self._brdf_outgoing_directions])
-            scattering_index = np.array(self._brdf_index)
+            scattering_index = np.array(self._brdf_index, dtype=np.int64)
             scattering = np.array(self._brdf)
         else:
             sources_array = None
@@ -410,7 +410,7 @@ class DirectionalRadiosityFast():
     def init_source_energy(
             self, source:pf.Coordinates):
         """Initialize the source energy."""
-        source_position = source.cartesian
+        source_position = source.cartesian[0]
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
             frequencies = np.array([0]) if self._frequencies is None else \
@@ -427,7 +427,7 @@ class DirectionalRadiosityFast():
         vo = np.array(
             [s.cartesian for s in self._brdf_outgoing_directions])
         brdf = np.array(self._brdf)
-        brdf_index = self._brdf_index
+        brdf_index = np.array(self._brdf_index, dtype=np.int64)
         patches_center = self.patches_center
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
@@ -819,7 +819,8 @@ def _rotate_coords_to_normal(
 
 def _add_directional(
         energy_0, source_position: np.ndarray,
-        patches_center: np.ndarray, n_bins:float, patch_to_wall_ids:np.ndarray,
+        patches_center: np.ndarray, n_bins:np.int64,
+        patch_to_wall_ids:np.ndarray,
         sources: np.ndarray, receivers: np.ndarray,
         scattering: np.ndarray, scattering_index: np.ndarray):
     """Add scattering and absorption to the initial energy from the source.
@@ -832,7 +833,7 @@ def _add_directional(
         source position of shape (3,)
     patches_center : np.ndarray
         center of all patches of shape (n_patches, 3)
-    n_bins : float
+    n_bins : int
         number of frequency bins.
     patch_to_wall_ids : np.ndarray
         indexes from each patch to the wall of shape (n_patches)
@@ -1010,53 +1011,6 @@ def _collect_receiver_energy(
 
     return E_mat_out
 
-def _form_factors_with_directivity(
-        visibility_matrix, form_factors, n_bins, patches_center,
-        patches_area, air_attenuation,
-        absorption, absorption_index, patch_to_wall_ids,
-        scattering, scattering_index, sources, receivers):
-    """Calculate the form factors with directivity."""
-    n_patches = patches_center.shape[0]
-    form_factors_tilde = np.zeros((n_patches, n_patches, n_patches, n_bins))
-    # loop over previous patches, current and next patch
-
-    for ii in prange(n_patches**3):
-        h = ii % n_patches
-        i = int(ii/n_patches) % n_patches
-        j = int(ii/n_patches**2) % n_patches
-        visible_hi = visibility_matrix[
-            h, i] if h < i else visibility_matrix[i, h]
-        visible_ij = visibility_matrix[
-            i, j] if i < j else visibility_matrix[j, i]
-        if visible_hi and visible_ij:
-            difference_receiver = patches_center[i]-patches_center[j]
-            wall_id_i = int(patch_to_wall_ids[i])
-            difference_receiver /= np.linalg.norm(difference_receiver)
-            ff = form_factors[i, j] if i<j else (form_factors[j, i]
-                                                 *patches_area[i]/patches_area[j])
-
-            distance = np.linalg.norm(difference_receiver)
-            form_factors_tilde[h, i, j, :] = ff
-            if air_attenuation is not None:
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * np.exp(-air_attenuation * distance)
-
-            if scattering is not None:
-                scattering_factor = get_scattering_data(
-                    patches_center[h], patches_center[i], patches_center[j],
-                    sources, receivers, wall_id_i,
-                    scattering, scattering_index)
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * scattering_factor
-
-            if absorption is not None:
-                source_wall_idx = absorption_index[wall_id_i]
-                form_factors_tilde[h, i, j, :] = form_factors_tilde[
-                    h, i, j, :] * (1-absorption[source_wall_idx])
-
-    return form_factors_tilde
-
-
 def _form_factors_with_directivity_dim(
         visibility_matrix, form_factors, n_bins, patches_center,
         patches_area,
@@ -1184,7 +1138,7 @@ def get_scattering_data(
 
 def get_scattering_data_source(
         pos_h:np.ndarray, pos_i:np.ndarray,
-        sources:np.ndarray, wall_id_i:np.ndarray,
+        sources:np.ndarray, wall_id_i:int,
         scattering:np.ndarray, scattering_index:np.ndarray):
     """Get scattering data depending on previous, current position.
 
@@ -1205,8 +1159,8 @@ def get_scattering_data_source(
 
     Returns
     -------
-    scattering_factor: float
-        scattering factor from directivity
+    scattering_factor: np.ndarray
+        scattering factors from directivity of shape (n_receivers,n_bins)
 
     """
     difference_source = pos_h-pos_i
@@ -1216,18 +1170,62 @@ def get_scattering_data_source(
     return scattering[scattering_index[wall_id_i], source_idx]
 
 if numba is not None:
-    _add_directional = numba.njit(parallel=True)(_add_directional)
-    _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
-    _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
-    _energy_exchange = numba.njit()(_energy_exchange)
-    _form_factors_with_directivity_dim = numba.njit(parallel=True)(
-        _form_factors_with_directivity_dim)
-    _form_factors_with_directivity = numba.njit(parallel=True)(
-        _form_factors_with_directivity)
-    get_scattering_data_receiver_index = numba.njit()(
-        get_scattering_data_receiver_index)
-    get_scattering_data = numba.njit()(get_scattering_data)
-    get_scattering_data_source = numba.njit()(get_scattering_data_source)
+    f8=numba.f8
+    b1=numba.b1
+    i8=numba.i8
+    u4=numba.u4
+    get_scattering_data_source = numba.njit(
+        f8[:,:](
+            f8[:], f8[:],
+            f8[:,:,:], i8,
+            f8[:,:,:,:], i8[:],
+        ),
+    )(get_scattering_data_source)
+    _add_directional = numba.njit(
+        f8[:,:,:](
+            f8[:,:], f8[:],
+            f8[:,:], i8,
+            i8[:],
+            f8[:,:,:], f8[:,:,:],
+            f8[:,:,:,:], i8[:],
+        ),
+        parallel=True,
+    )(_add_directional)
+    _energy_exchange_init_energy = numba.njit(
+        f8[:,:,:,:](
+            i8, f8[:,:,:],
+            f8[:], f8, f8),
+    )(_energy_exchange_init_energy)
+    _collect_receiver_energy = numba.njit(
+        f8[:,:,:](
+            f8[:,:,:], f8[:],
+            f8, f8, f8[:],
+        ),
+    )(_collect_receiver_energy)
+    _energy_exchange = numba.njit(
+        f8[:,:,:,:](
+            i8, f8[:,:,:],
+            f8[:], f8[:,:],
+            f8[:,:,:,:], f8,
+            f8, i8,
+            i8[:,:],
+        ),
+    )(_energy_exchange)
+    _form_factors_with_directivity_dim = numba.njit(
+        f8[:,:,:,:](
+            i8[:,:], f8[:,:],
+            i8, f8[:,:],
+            f8[:], f8[:],
+            i8[:], f8[:,:,:],
+            i8[:], f8[:,:],
+            f8[:,:],
+        ),
+        parallel=True,
+    )(_form_factors_with_directivity_dim)
+    # get_scattering_data_receiver_index = numba.njit()(
+    #     get_scattering_data_receiver_index)
+    # get_scattering_data = numba.njit()(get_scattering_data)
+
 
 
 
