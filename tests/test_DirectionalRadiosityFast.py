@@ -36,7 +36,7 @@ def test_io(apply_brdf, apply_attenuation, tmpdir):
         radiosity.set_wall_brdf(
             np.arange(len(walls)),
             pf.FrequencyData(np.ones((1,1,len(frequencies))),
-                             len(frequencies)),
+                             frequencies),
             pf.Coordinates(0, 0, 1, weights=1),
             pf.Coordinates(0, 0, 1, weights=1))
     if apply_attenuation:
