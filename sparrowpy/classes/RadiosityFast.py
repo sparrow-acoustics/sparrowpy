@@ -1211,10 +1211,17 @@ if numba is not None:
             i8[:,:],
         ),
     )(_energy_exchange)
-    # _form_factors_with_directivity_dim = numba.njit(parallel=True)(
-    #     _form_factors_with_directivity_dim)
-    # _form_factors_with_directivity = numba.njit(parallel=True)(
-    #     _form_factors_with_directivity)
+    _form_factors_with_directivity_dim = numba.njit(
+        f8[:,:,:,:](
+            i8[:,:], f8[:,:],
+            i8, f8[:,:],
+            f8[:], f8[:],
+            i8[:], f8[:,:,:],
+            i8[:], f8[:,:],
+            f8[:,:],
+        ),
+        parallel=True,
+    )(_form_factors_with_directivity_dim)
     # get_scattering_data_receiver_index = numba.njit()(
     #     get_scattering_data_receiver_index)
     # get_scattering_data = numba.njit()(get_scattering_data)
