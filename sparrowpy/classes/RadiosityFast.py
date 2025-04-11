@@ -1243,7 +1243,10 @@ if numba is not None:
             f8[:], f8, f8),
     )(_energy_exchange_init_energy)
     _collect_receiver_energy = numba.njit(
-
+        f8[:,:,:,:](
+            f8[:,:,:,:], f8[:],
+            f8, f8, f8[:],
+        ),
     )(_collect_receiver_energy)
     # _energy_exchange = numba.njit()(_energy_exchange)
     # _form_factors_with_directivity_dim = numba.njit(parallel=True)(
