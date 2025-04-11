@@ -634,18 +634,18 @@ def stokes_integration(
 
 if numba is not None:
     _surf_sample_random = numba.njit(
-        numba.f8[:,:](numba.f8[:,:], numba.u2),
+        numba.f8[:,:](numba.f8[:,:], numba.i8),
     )(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit(
-        numba.f8[:,:](numba.f8[:,:], numba.u2),
+        numba.f8[:,:](numba.f8[:,:], numba.i8),
     )(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit(
         numba.types.Tuple((
             numba.f8[:,:],
-            numba.u2[:,:]),
+            numba.i8[:,:]),
             )(
                 numba.f8[:,:],
-                numba.u2),
+                numba.i8),
         )(_sample_boundary_regular)
     _poly_estimation_Lagrange = numba.njit(
         numba.f8[:](numba.f8[:], numba.f8[:]),
@@ -666,7 +666,7 @@ if numba is not None:
     nusselt_integration = numba.njit(
         numba.f8(numba.f8[:,:], numba.f8[:,:],
                  numba.f8[:], numba.f8[:],
-                 numba.u2, numba.b1),
+                 numba.i8, numba.b1),
         parallel=False)(nusselt_integration)
     load_stokes_entries = numba.njit(
         numba.f8[:,:](numba.f8[:,:], numba.f8[:,:]),
