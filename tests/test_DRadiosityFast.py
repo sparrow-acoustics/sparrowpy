@@ -8,7 +8,7 @@ import sparrowpy as sp
 
 
 def test_init(sample_walls):
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls[:2], 0.2)
     npt.assert_almost_equal(radiosity.patches_points.shape, (150, 4, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (150))
     npt.assert_almost_equal(radiosity.patches_center.shape, (150, 3))
@@ -17,7 +17,7 @@ def test_init(sample_walls):
 
 
 def test_check_visibility(sample_walls):
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls[:2], 0.2)
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity._visibility_matrix.shape, (150, 150))
     # npt.assert_array_equal(
@@ -29,7 +29,7 @@ def test_check_visibility(sample_walls):
 
 
 def test_check_visibility_wrapper(sample_walls):
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls[:2], 0.2)
     radiosity.bake_geometry()
     visibility_matrix = sp.geometry._check_visibility(
         radiosity.patches_center, radiosity.patches_normal,
@@ -38,7 +38,7 @@ def test_check_visibility_wrapper(sample_walls):
 
 
 def test_compute_form_factors(sample_walls):
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls[:2], 0.2)
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (150, 150))
     radiosity.bake_geometry()
@@ -91,7 +91,7 @@ def test_form_factors_directivity_for_diffuse(
 
 def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls, 0.2)
+        sample_walls[:2], 0.2)
     (data, sources, receivers) = sofa_data_diffuse
     radiosity.set_wall_brdf(np.arange(6), data, sources, receivers)
     # check shape of scattering matrix
@@ -113,7 +113,7 @@ def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
 
 def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls, 0.2)
+        sample_walls[:2], 0.2)
     (data, sources, receivers) = sofa_data_diffuse
     radiosity.set_wall_brdf([0, 1, 2], data, sources, receivers)
     radiosity.set_wall_brdf([3, 4, 5], data, sources, receivers)
@@ -138,7 +138,7 @@ def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
 
 def test_set_air_attenuation(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls, 0.2)
+        sample_walls[:2], 0.2)
     radiosity.set_air_attenuation(pf.FrequencyData([0.1, 0.2], [500, 1000]))
     npt.assert_array_equal(radiosity._air_attenuation, [0.1, 0.2])
 
@@ -148,3 +148,102 @@ def test_total_number_of_patches():
     result = sp.geometry._total_number_of_patches(points, 0.2)
     desired = 25
     assert result == desired
+
+
+def test_set_wall_brdf_valid_input(sample_walls):
+    """Test set_wall_brdf with valid inputs."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    radiosity.set_wall_brdf(
+        wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+    assert len(radiosity._brdf) == 1
+    assert radiosity._brdf_index[0] == 0
+    assert radiosity._brdf_index[1] == 0
+
+
+def test_set_wall_brdf_invalid_wall_indexes(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = "invalid"
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(AssertionError, match="Wall indexes must be a list"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_invalid_incoming_directions(sample_walls):
+    """Test set_wall_brdf with invalid incoming_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = "invalid"
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Incoming directions must be of type pf.Coordinates"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_invalid_outgoing_directions(sample_walls):
+    """Test set_wall_brdf with invalid outgoing_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = "invalid"
+
+    with pytest.raises(
+            AssertionError,
+            match="Outgoing directions must be of type pf.Coordinates"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_negative_z_incoming(sample_walls):
+    """Test set_wall_brdf with negative z-component in incoming_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, -1], [0, 1, 0], [-1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Sources must be in the positive half space"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_negative_z_outgoing(sample_walls):
+    """Test set_wall_brdf with negative z-component in outgoing_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, -1], [0, 1, 0], [-1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Receivers must be in the positive half space"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
