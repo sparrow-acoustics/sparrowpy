@@ -897,8 +897,8 @@ def get_scattering_data_source(
 
     Returns
     -------
-    scattering_factor: float
-        scattering factor from directivity
+    scattering_factor: np.ndarray
+        scattering factors from directivity of shape (n_receivers,n_bins)
 
     """
     difference_source = pos_h-pos_i
@@ -908,6 +908,13 @@ def get_scattering_data_source(
     return scattering[scattering_index[wall_id_i], source_idx]
 
 if numba is not None:
+    get_scattering_data_source = numba.njit(
+        numba.f8[:,:](
+            numba.f8[:], numba.f8[:],
+            numba.f8[:,:,:], numba.i8,
+            numba.f8[:,:,:,:], numba.i8[:],
+        ),
+    )(get_scattering_data_source)
     _add_directional = numba.njit(
         numba.f8[:,:,:](
             numba.f8[:,:], numba.f8[:],
@@ -928,7 +935,7 @@ if numba is not None:
     get_scattering_data_receiver_index = numba.njit()(
         get_scattering_data_receiver_index)
     get_scattering_data = numba.njit()(get_scattering_data)
-    get_scattering_data_source = numba.njit()(get_scattering_data_source)
+
 
 
 
