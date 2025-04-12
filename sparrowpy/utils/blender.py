@@ -76,7 +76,7 @@ def read_geometry_file(blend_file: Path,
         bpy.ops.object.delete()
         bpy.ops.wm.stl_import(filepath=str(blend_file))
     else:
-        NotImplementedError("Only .stl and .blend files are supported.")
+        raise NotImplementedError("Only .stl and .blend files are supported.")
 
     ensure_object_mode()
     objects = bpy.data.objects
