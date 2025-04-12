@@ -363,7 +363,9 @@ class DirectionalRadiosityFast():
                        manual_patch_size=None,
                        wall_auto_assembly=True,
                        geometry_identifier="Geometry"):
-        """Create a Radiosity object from a blender or stl file.
+        """Create a Radiosity object from a CAD file.
+
+        Currently, only Blender and STL files are supported.
 
         Parameters
         ----------
@@ -381,8 +383,9 @@ class DirectionalRadiosityFast():
             if False, the walls are defined as one per patch.
 
         geometry_identifier: string
-            name of the blender object where the scene geometry mesh is stored.
-            unused if geometry file format is not .blend
+            name of the mesh object where the scene geometry mesh is stored.
+            useful if CAD file includes more than one object
+            (e.g. sources, receivers)
 
         """
         if manual_patch_size is None:
