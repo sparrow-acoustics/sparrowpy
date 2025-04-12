@@ -359,6 +359,56 @@ class DirectionalRadiosityFast():
             patch_to_wall_ids)
 
     @classmethod
+    def walls_from_file(cls, filepath: str,
+                       wall_auto_assembly=True,
+                       geometry_identifier="Geometry"):
+        """Create radiosity object walls from a CAD file.
+
+        Currently, only Blender and STL files are supported.
+
+        Parameters
+        ----------
+        filepath: string
+            file path to scene geometry CAD file.
+
+        wall_auto_assembly: bool
+            if True, walls of the geometry model are assembled from coplanar
+            and contiguous patches which share material properties.
+            if False, the walls are defined as one per patch.
+
+        geometry_identifier: string
+            name of the mesh object where the scene geometry mesh is stored.
+            useful if CAD file includes more than one object
+            (e.g. sources, receivers)
+
+        """
+
+        walls = blender.read_geometry_file(filepath,
+                                           polygon_clumping=wall_auto_assembly,
+                                           blender_geom_id=geometry_identifier)
+
+
+        ## save wall information
+        walls_normal = walls["normal"]
+        walls_up_vector = np.empty_like(walls["up"])
+
+        walls_points=np.empty((len(walls["conn"]),
+                               len(walls["conn"][0]),
+                               walls["verts"].shape[-1]))
+
+
+        for wallID in range(len(walls_normal)):
+            walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
+            walls_up_vector[wallID] = walls["up"][wallID]
+
+
+        # create radiosity object
+        return cls(
+            walls_points, walls_normal, walls_up_vector,
+            None, None,
+            None)
+
+    @classmethod
     def from_file(cls, filepath: str,
                        manual_patch_size=None,
                        wall_auto_assembly=True,
@@ -394,7 +444,7 @@ class DirectionalRadiosityFast():
             patches_from_model=False
 
         geom_data = blender.read_geometry_file(filepath,
-                                           wall_auto_assembly=wall_auto_assembly,
+                                           polygon_clumping=wall_auto_assembly,
                                            patches_from_model=patches_from_model,
                                            blender_geom_id=geometry_identifier)
 
