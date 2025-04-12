@@ -360,7 +360,7 @@ class DirectionalRadiosityFast():
 
     @classmethod
     def from_file(cls, filename: str, manual_patch_size=None,
-                       auto_walls=True):
+                       wall_auto_assembly=True):
         """Create a Radiosity object from a blender or stl file.
 
         Parameters
@@ -373,7 +373,7 @@ class DirectionalRadiosityFast():
             if None, patches are loaded automatically from the faces
             of the CAD model.
 
-        auto_walls: bool
+        wall_auto_assembly: bool
             if True, walls of the geometry model are assembled from coplanar
             and contiguous patches which share material properties.
             if False, the walls are defined as one per patch.
@@ -385,7 +385,7 @@ class DirectionalRadiosityFast():
             patches_from_model=False
 
         geom_data = blender.read_geometry_file(filename,
-                                           auto_walls=auto_walls,
+                                           wall_auto_assembly=wall_auto_assembly,
                                            patches_from_model=patches_from_model)
 
         walls = geom_data["wall"]

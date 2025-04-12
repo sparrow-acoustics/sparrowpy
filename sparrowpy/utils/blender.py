@@ -19,7 +19,7 @@ class DotDict(dict):
 
 
 def read_geometry_file(blend_file: Path,
-                       auto_walls=True,
+                       wall_auto_assembly=True,
                        angular_tolerance=1.,
                        patches_from_model=True):
     """Read blender file and return fine and rough mesh.
@@ -37,7 +37,7 @@ def read_geometry_file(blend_file: Path,
         path to blender file describing the
         scene geometry and setup
 
-    auto_walls: bool
+    wall_auto_assembly: bool
         flags if walls should be auto detected from the model geometry (True)
         or if each polygon in the model should become a wall (False).
 
@@ -103,7 +103,7 @@ def read_geometry_file(blend_file: Path,
     # this preserves the geometry as the user sees it inside blender.
     surfs.transform(geometry.matrix_world)
 
-    if auto_walls:
+    if wall_auto_assembly:
         # dissolve coplanar faces for simplicity's sake
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
                                  verts=surfs.verts, edges=surfs.edges,
