@@ -359,8 +359,10 @@ class DirectionalRadiosityFast():
             patch_to_wall_ids)
 
     @classmethod
-    def from_file(cls, filepath: str, manual_patch_size=None,
-                       wall_auto_assembly=True):
+    def from_file(cls, filepath: str,
+                       manual_patch_size=None,
+                       wall_auto_assembly=True,
+                       geometry_identifier="Geometry"):
         """Create a Radiosity object from a blender or stl file.
 
         Parameters
@@ -378,6 +380,9 @@ class DirectionalRadiosityFast():
             and contiguous patches which share material properties.
             if False, the walls are defined as one per patch.
 
+        geometry_identifier: string
+            name of the blender object where the scene geometry mesh is stored.
+
         """
         if manual_patch_size is None:
             patches_from_model=True
@@ -386,7 +391,8 @@ class DirectionalRadiosityFast():
 
         geom_data = blender.read_geometry_file(filepath,
                                            wall_auto_assembly=wall_auto_assembly,
-                                           patches_from_model=patches_from_model)
+                                           patches_from_model=patches_from_model,
+                                           blender_geom_id=geometry_identifier)
 
         walls = geom_data["wall"]
 
