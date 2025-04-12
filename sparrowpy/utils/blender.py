@@ -20,8 +20,8 @@ class DotDict(dict):
 
 def read_geometry_file(blend_file: Path,
                        wall_auto_assembly=True,
-                       angular_tolerance=1.,
-                       patches_from_model=True):
+                       patches_from_model=True,
+                       angular_tolerance=1.):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
