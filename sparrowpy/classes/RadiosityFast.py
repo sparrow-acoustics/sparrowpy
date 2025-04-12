@@ -368,7 +368,7 @@ class DirectionalRadiosityFast():
         Parameters
         ----------
         filepath: string
-            file path to .blend or .stl file which should be loaded
+            file path to scene geometry CAD file.
 
         manual_patch_size: float (default None)
             sets the patch size for manual patch generation.
@@ -382,6 +382,7 @@ class DirectionalRadiosityFast():
 
         geometry_identifier: string
             name of the blender object where the scene geometry mesh is stored.
+            unused if geometry file format is not .blend
 
         """
         if manual_patch_size is None:
