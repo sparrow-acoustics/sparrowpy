@@ -1,5 +1,4 @@
 """Helper functions for handling of blender models."""
-import sys
 import os
 from pathlib import Path
 try:
