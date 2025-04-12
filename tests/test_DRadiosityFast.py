@@ -17,12 +17,12 @@ def test_init_from_polygon(sample_walls):
     npt.assert_almost_equal(radiosity.patches_size.shape, (150, 3))
     npt.assert_almost_equal(radiosity.patches_normal.shape, (150, 3))
 
-@pytest.mark.parametrize('filename', [
+@pytest.mark.parametrize('filepath', [
     "tests/test_data/cube.blend",
     "tests/test_data/cube.stl",
     ])
-def test_init_from_file(filename):
-    radiosity = sp.DirectionalRadiosityFast.from_file(filename)
+def test_init_from_file(filepath):
+    radiosity = sp.DirectionalRadiosityFast.from_file(filepath)
     npt.assert_almost_equal(radiosity.patches_points.shape, (12, 3, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (12))
     npt.assert_almost_equal(radiosity.patches_center.shape, (12, 3))
@@ -30,11 +30,11 @@ def test_init_from_file(filename):
     npt.assert_almost_equal(radiosity.patches_normal.shape, (12, 3))
 
 
-@pytest.mark.parametrize('filename', [
+@pytest.mark.parametrize('filepath', [
     "tests/test_data/sample_walls.blend",
     ])
-def test_init_comparison(filename, sample_walls):
-    radifile = sp.DirectionalRadiosityFast.from_file(filename)
+def test_init_comparison(filepath, sample_walls):
+    radifile = sp.DirectionalRadiosityFast.from_file(filepath)
     radipoly = sp.DirectionalRadiosityFast.from_polygon(sample_walls,
                                                         patch_size=1)
     npt.assert_equal(radifile.patches_points.shape,
@@ -48,7 +48,7 @@ def test_init_comparison(filename, sample_walls):
     npt.assert_equal(radifile.patches_normal.shape,
                      radipoly.patches_normal.shape)
 
-    radifile = sp.DirectionalRadiosityFast.from_file(filename,
+    radifile = sp.DirectionalRadiosityFast.from_file(filepath,
                                                      manual_patch_size=.5)
     radipoly = sp.DirectionalRadiosityFast.from_polygon(sample_walls,
                                                         patch_size=.5)
