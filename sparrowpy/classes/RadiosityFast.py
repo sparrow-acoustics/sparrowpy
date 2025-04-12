@@ -4,6 +4,7 @@ import deepdiff
 import pyfar as pf
 import sparrowpy.form_factor.universal as form_factor
 from sparrowpy import ( geometry )
+from sparrowpy.utils import blender
 try:
     import numba
     prange = numba.prange
@@ -346,12 +347,95 @@ class DirectionalRadiosityFast():
         walls_points = np.array([p.pts for p in polygon_list])
         walls_normal = np.array([p.normal for p in polygon_list])
         walls_up_vector = np.array([p.up_vector for p in polygon_list])
-
         # create patches
         (
             patches_points, _,
             n_patches, patch_to_wall_ids) = geometry._process_patches(
             walls_points, walls_normal, patch_size, len(polygon_list))
+        # create radiosity object
+        return cls(
+            walls_points, walls_normal, walls_up_vector,
+            patches_points, n_patches,
+            patch_to_wall_ids)
+
+    @classmethod
+    def from_file(cls, filepath: str,
+                       manual_patch_size=None,
+                       wall_auto_assembly=True,
+                       geometry_identifier="Geometry"):
+        """Create a Radiosity object from a CAD file.
+
+        Currently, only Blender and STL files are supported.
+
+        Parameters
+        ----------
+        filepath: string
+            file path to scene geometry CAD file.
+
+        manual_patch_size: float (default None)
+            sets the patch size for manual patch generation.
+            if None, patches are loaded automatically from the faces
+            of the CAD model.
+
+        wall_auto_assembly: bool
+            if True, walls of the geometry model are assembled from coplanar
+            and contiguous patches which share material properties.
+            if False, the walls are defined as one per patch.
+
+        geometry_identifier: string
+            name of the mesh object where the scene geometry mesh is stored.
+            useful if CAD file includes more than one object
+            (e.g. sources, receivers)
+
+        """
+        if manual_patch_size is None:
+            patches_from_model=True
+        else:
+            patches_from_model=False
+
+        geom_data = blender.read_geometry_file(filepath,
+                                           wall_auto_assembly=wall_auto_assembly,
+                                           patches_from_model=patches_from_model,
+                                           blender_geom_id=geometry_identifier)
+
+        walls = geom_data["wall"]
+
+        ## save wall information
+        walls_normal = walls["normal"]
+        walls_up_vector = np.empty_like(walls["up"])
+
+        walls_points=np.empty((len(walls["conn"]),
+                               len(walls["conn"][0]),
+                               walls["verts"].shape[-1]))
+
+
+        for wallID in range(len(walls_normal)):
+            walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
+            walls_up_vector[wallID] = walls["up"][wallID]
+
+        if bool(geom_data["patch"]):
+            patches = geom_data["patch"]
+
+            ## save patch information
+            n_patches = len(patches["map"])
+
+            patch_to_wall_ids = patches["map"]
+
+            patches_points = np.empty((n_patches,
+                                len(patches["conn"][0]),
+                                patches["verts"].shape[-1]))
+
+            for patchID in range(n_patches):
+                patches_points[patchID] = patches["verts"][
+                                                patches["conn"][patchID]
+                                                ]
+
+        else:
+            (
+            patches_points, _,
+            n_patches, patch_to_wall_ids) = geometry._process_patches(
+            walls_points, walls_normal, manual_patch_size, len(walls_normal))
+
         # create radiosity object
         return cls(
             walls_points, walls_normal, walls_up_vector,

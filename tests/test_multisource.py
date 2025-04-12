@@ -59,7 +59,7 @@ def test_multi_receiver(basicscene, frequencies,
     10, 20,
     ])
 @pytest.mark.parametrize('ps', [
-    1, 1.5,
+    .5, 1.5,
     ])
 def test_reciprocity_shoebox(src,rec,order,ps):
     """Test if radiosity results are reciprocal in shoebox room."""
