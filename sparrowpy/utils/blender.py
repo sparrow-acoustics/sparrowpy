@@ -85,11 +85,11 @@ def read_geometry_file(blend_file: Path,
         for obj in objects:
             obj.name = blender_geom_id
 
-    if "Geometry" not in objects:
-        print("Geometry object not found in blend file")
-        sys.exit()
+    if blender_geom_id not in objects:
+        raise ValueError(f"Scene geometry object \"{blender_geom_id}\""+
+                         " not found in Blender file")
 
-    geometry = objects["Geometry"]
+    geometry = objects[blender_geom_id]
 
 
     # Creates file with only static geometric data of original blender file
@@ -97,7 +97,6 @@ def read_geometry_file(blend_file: Path,
     bpy.ops.object.select_all(action="DESELECT")
     geometry.select_set(True)
     bpy.context.view_layer.objects.active = geometry
-
 
     # create bmesh from geometry
     surfs = bmesh.new()
