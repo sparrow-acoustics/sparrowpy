@@ -19,7 +19,7 @@ class DotDict(dict):
 
 
 def read_geometry_file(blend_file: Path,
-                       wall_auto_assembly=True,
+                       polygon_clumping=True,
                        blender_geom_id = "Geometry",
                        angular_tolerance=1.):
     """Read blender file and return fine and rough mesh.
@@ -37,13 +37,10 @@ def read_geometry_file(blend_file: Path,
         path to blender file describing the
         scene geometry and setup
 
-    wall_auto_assembly: bool
-        flags if walls should be auto detected from the model geometry (True)
-        or if each polygon in the model should become a wall (False).
-
-    patches_from_model: bool
-        flags if patches should be extracted from the model's polygons (True)
-        or not (False).
+    polygon_clumping: bool
+        flags if polygons with equal properties should be assembled into a
+        single large polygon (True)
+        or if all polygons should remain separate (False).
 
     blender_geom_id: string
         name of the blender object where the scene geometry mesh is stored.
@@ -54,14 +51,17 @@ def read_geometry_file(blend_file: Path,
 
     Returns
     -------
-    geom_data: dict
-        "wall":
-            wall vertex list ["verts"], polygon vertex mapping ["conn"],
-            normals["normal"], and material names ["material"].
-
-        "patch":
-            patch vertex list ["verts"], polygon vertex mapping ["conn"],
-            patch-to-wall mapping ["wall_ID"]
+    geom_data: dict({
+                    "verts": np.ndarray(n_vertices,3),
+                    "conn":  list (n_polygons, :),
+                    "normal": list (n_polygons, 3),
+                    "material": list(n_polygons)
+                    })
+        mesh in reduced data representation.
+            "verts":    vertex (node) list
+            "conn":     vertex to polygon mapping,
+            "normal":   normal list
+            "material": material list
 
     """
     if bpy is None:
@@ -105,7 +105,7 @@ def read_geometry_file(blend_file: Path,
     # this preserves the geometry as the user sees it inside blender.
     surfs.transform(geometry.matrix_world)
 
-    if wall_auto_assembly:
+    if polygon_clumping:
         # dissolve coplanar faces for simplicity's sake
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
                                  verts=surfs.verts, edges=surfs.edges,
@@ -147,14 +147,16 @@ def generate_connectivity(mesh: bmesh):
     out_mesh: dict({
                     "verts": np.ndarray(n_vertices,3),
                     "conn":  list (n_polygons, :),
-                    "normal": list (n_polygons, 3),
-                    "material": list(n_polygons)
+                    "normal": np.ndarray (n_polygons, 3),
+                    "up": np.ndarray (n_polygons,3),
+                    "material": np.ndarray (n_polygons)
                     })
         mesh in reduced data representation.
             "verts":    vertex (node) list
             "conn":     vertex to polygon mapping,
             "normal":   normal list
-            "material": material list
+            "up":       up vector list
+            "material": material name list
 
     """
     if bmesh is None:
