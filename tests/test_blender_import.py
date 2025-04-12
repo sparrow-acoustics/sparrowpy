@@ -8,7 +8,7 @@ import numpy as np # noqa: E402
                          ["./tests/test_data/cube_simple.blend","./tests/test_data/cube.stl"])
 def test_geometry_loading(path):
     """Test that geometry data is correctly loaded from file."""
-    geom_w = bh.read_geometry_file(path, wall_auto_assembly=True,
+    geom_w = bh.read_geometry_file(path, polygon_clumping=True,
                                  patches_from_model=False)
 
     assert not geom_w["patch"]
@@ -22,7 +22,7 @@ def test_geometry_loading(path):
         npt.assert_almost_equal(np.inner(geom_w["wall"]["up"][i],geom_w["wall"]["normal"][i]),0)
 
 
-    geom_wp= bh.read_geometry_file(path, wall_auto_assembly=True,
+    geom_wp= bh.read_geometry_file(path, polygon_clumping=True,
                                  patches_from_model=True)
 
 

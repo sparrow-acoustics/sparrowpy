@@ -407,7 +407,62 @@ class DirectionalRadiosityFast():
             walls_points, walls_normal, walls_up_vector,
             None, None,
             None)
+        
+    @classmethod
+    def patches_from_file(self, filepath: str,
+                       patch_auto_assembly=True,
+                       geometry_identifier="Geometry"):
+        """Create radiosity object walls from a CAD file.
 
+        Currently, only Blender and STL files are supported.
+
+        Parameters
+        ----------
+        filepath: string
+            file path to scene geometry CAD file.
+
+        wall_auto_assembly: bool
+            if True, walls of the geometry model are assembled from coplanar
+            and contiguous patches which share material properties.
+            if False, the walls are defined as one per patch.
+
+        geometry_identifier: string
+            name of the mesh object where the scene geometry mesh is stored.
+            useful if CAD file includes more than one object
+            (e.g. sources, receivers)
+
+        """
+        if self._walls_points is None:
+            raise ImportError("Walls must be defined before patch definition.")
+
+        patches = blender.read_geometry_file(filepath,
+                                           polygon_clumping=patch_auto_assembly,
+                                           blender_geom_id=geometry_identifier)
+
+        self._n_patches = patches["conn"].shape[0]
+
+        for patchID, vertIDS in enumerate(patches["conn"]):
+            patches_points[wallID] = walls["verts"][walls["conn"][wallID]]
+            walls_up_vector[wallID] = walls["up"][wallID]
+
+        patches_points = 
+            patch_to_wall_ids
+
+
+        self._map_patches2walls(patches)
+
+
+        for wallID in range(len(walls_normal)):
+            walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
+            walls_up_vector[wallID] = walls["up"][wallID]
+
+
+        # create radiosity object
+        return cls(
+            cls._walls_points, cls._walls_normal, cls._walls_up_vector,
+            None, None,
+            None)
+        
     @classmethod
     def from_file(cls, filepath: str,
                        manual_patch_size=None,
@@ -791,6 +846,49 @@ class DirectionalRadiosityFast():
                 "Number of frequency bins do not match"
             assert (self._frequencies == frequencies).all(), \
                 "Frequencies do not match"
+
+    def _map_patches2walls(self, patches_dict: dict):
+        """Summarize characteristics of polygons in a fine mesh.
+
+        Return a dictionary which includes a list of vertices,
+        mapping (connectivity) of the vertex list to each fine mesh polygon,
+        and mapping of fine mesh polygons to broad mesh faces.
+
+        Parameters
+        ----------
+        fine_mesh: bmesh
+            fine mesh extracted from blender file
+
+        rough_mesh: bmesh
+            rough mesh extracted from blender file
+
+        Returns
+        -------
+        out_mesh: dict({
+                        "verts": np.ndarray (n_vertices,3),
+                        "conn":  list (n_polygons, :),
+                        "map": np.ndarray (n_polygons,)
+                        })
+            mesh in reduced data representation.
+                "verts":    vertex (node) list
+                "conn":     vertex to polygon mapping,
+                "map":   broad mesh index of face where polygon belongs
+
+        """
+        patch_2_wall_map = np.empty((patches_dict["conn"].shape[0]),dtype=int)
+
+        for patch_idx, patch_conn in enumerate(patches_dict["conn"]):
+            for wall_idx, wall_normal in enumerate(self._walls_normal):
+                if (np.dot(patches_dict["normal"][patch_idx],
+                           wall_normal)-1) < 1e-6:
+                    patch_center = geometry._calculate_center(
+                        points=patches_dict["verts"][patch_conn])
+                    if geometry._point_in_polygon(point3d=patch_center,
+                                                      polygon3d=self._walls_points[wall_idx],
+                                                      plane_normal=wall_normal):
+                        patch_2_wall_map[patch_idx]=wall_idx
+                        break
+
 
     def write(self, filename, compress=True):
         """Write the object to a far file."""

@@ -75,7 +75,7 @@ def test_basic_visibility(point, origin, plpt, pln):
     ])
 def test_vis_matrix_assembly(model):
     """Check if visibility matrices are correctly assembled."""
-    gmodel = bh.read_geometry_file(model, wall_auto_assembly=True)
+    gmodel = bh.read_geometry_file(model, polygon_clumping=True)
 
     m1=gmodel["wall"]
     m2=gmodel["patch"]

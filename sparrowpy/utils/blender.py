@@ -156,7 +156,7 @@ def generate_connectivity(mesh: bmesh):
             "conn":     vertex to polygon mapping,
             "normal":   normal list
             "up":       up vector list
-            "material": material name list
+            "material": material namelist
 
     """
     if bmesh is None:
@@ -200,55 +200,7 @@ def generate_connectivity(mesh: bmesh):
 
     return out_mesh
 
-def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
-    """Summarize characteristics of polygons in a fine mesh.
 
-    Return a dictionary which includes a list of vertices,
-    mapping (connectivity) of the vertex list to each fine mesh polygon,
-    and mapping of fine mesh polygons to broad mesh faces.
-
-    Parameters
-    ----------
-    fine_mesh: bmesh
-        fine mesh extracted from blender file
-
-    rough_mesh: bmesh
-        rough mesh extracted from blender file
-
-    Returns
-    -------
-    out_mesh: dict({
-                    "verts": np.ndarray (n_vertices,3),
-                    "conn":  list (n_polygons, :),
-                    "map": np.ndarray (n_polygons,)
-                    })
-        mesh in reduced data representation.
-            "verts":    vertex (node) list
-            "conn":     vertex to polygon mapping,
-            "map":   broad mesh index of face where polygon belongs
-
-    """
-
-    out_mesh = {"verts":np.array([]), "conn":[], "map":np.array([])}
-
-    out_mesh["verts"] = np.array([v.co for v in fine_mesh.verts])
-    out_mesh["map"] = np.empty((len(fine_mesh.faces)),dtype=int)
-
-    for i,pface in enumerate(fine_mesh.faces):
-        line = cleanup_collinear(conn=[v.index for v in pface.verts],
-                                 vertlist=out_mesh["verts"])
-
-        out_mesh["conn"].append(line)
-
-        for j,wface in enumerate(rough_mesh.faces):
-            if pface.normal==wface.normal:
-                if pface.material_index==wface.material_index:
-                    if bmesh.geometry.intersect_face_point(wface,
-                                                            pface.calc_center_median()):
-                        out_mesh["map"][i]=j
-                        break
-
-    return out_mesh
 
 def check_element_sides(faces: dict, element="patches"):
     """Check if all patches have the same shape.
