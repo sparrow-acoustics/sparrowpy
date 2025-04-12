@@ -20,7 +20,6 @@ class DotDict(dict):
 
 def read_geometry_file(blend_file: Path,
                        wall_auto_assembly=True,
-                       patches_from_model=True,
                        blender_geom_id = "Geometry",
                        angular_tolerance=1.):
     """Read blender file and return fine and rough mesh.
@@ -112,27 +111,11 @@ def read_geometry_file(blend_file: Path,
                                  verts=surfs.verts, edges=surfs.edges,
                                  delimit={'MATERIAL'})
 
-    if patches_from_model:
-        # new bmesh with patch info
-        patches=bmesh.new()
-        patches.from_mesh(geometry.data)
-        patches.transform(geometry.matrix_world)
-        patch_data = generate_connectivity_patch(patches, surfs)
 
-    wall_data = generate_connectivity_wall(surfs)
+    geom_data = generate_connectivity(surfs)
 
-    geom_data = {"wall":{}, "patch":{}}
-
-    if ((not patches_from_model) and
-        check_geometry(wall_data, element="walls", strict=True)):
-        wall_data["conn"] = np.array(wall_data["conn"])
-    elif (patches_from_model and
-          check_geometry(patch_data, element="patches") and
-          check_geometry(wall_data, element="walls")):
-        patch_data["conn"]=np.array(patch_data["conn"])
-        geom_data["patch"]=patch_data
-
-    geom_data["wall"]= wall_data
+    if check_element_sides(geom_data, element="walls"):
+        geom_data["conn"] = np.array(geom_data["conn"])
 
     return geom_data
 
@@ -147,7 +130,7 @@ def ensure_object_mode():
             bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def generate_connectivity_wall(mesh: bmesh):
+def generate_connectivity(mesh: bmesh):
     """Summarize characteristics of polygons in a given mesh.
 
     Return a dictionary which includes a list of vertices,
@@ -265,7 +248,7 @@ def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
 
     return out_mesh
 
-def check_geometry(faces: dict, element="patches", strict=False):
+def check_element_sides(faces: dict, element="patches"):
     """Check if all patches have the same shape.
 
     Return True if all polygons in a given mesh
@@ -274,9 +257,7 @@ def check_geometry(faces: dict, element="patches", strict=False):
 
     This function is used when loading geometries from file to ensure that
     the geometry data can be stored in numpy.ndarrays, making the simulation
-    more efficient. When the ``strict`` flag is True, the shape of the geometry
-    polygons is checked, which allows patch generation methods to run
-    without errors.
+    more efficient.
 
     Parameters
     ----------
@@ -297,20 +278,20 @@ def check_geometry(faces: dict, element="patches", strict=False):
 
     """
     out=True
-    if strict:
-        for i in range(len(faces["conn"])):
-            w = faces["verts"][faces["conn"][i]]
-            nverts=len(w)
-            for j in range(nverts):
-                vec0 = w[(j+1)%nverts]-w[j]
-                vec1 = w[(j+2)%nverts]-w[(j+1)%nverts]
+    # if strict:
+    #     for i in range(len(faces["conn"])):
+    #         w = faces["verts"][faces["conn"][i]]
+    #         nverts=len(w)
+    #         for j in range(nverts):
+    #             vec0 = w[(j+1)%nverts]-w[j]
+    #             vec1 = w[(j+2)%nverts]-w[(j+1)%nverts]
 
-                if (nverts != 4 or np.abs(np.dot(vec0,vec1))>1e-6):
-                    raise (
-            ValueError("Model wall shapes should be rectangular quads.\n"+
-            "You can define walls by hand in the geometry model "+
-            "and set auto_walls=False.")
-                        )
+    #             if (nverts != 4 or np.abs(np.dot(vec0,vec1))>1e-6):
+    #                 raise (
+    #         ValueError("Model wall shapes should be rectangular quads.\n"+
+    #         "You can define walls by hand in the geometry model "+
+    #         "and set auto_walls=False.")
+    #                     )
 
     for i in range(1,len(faces["conn"])):
         if len(faces["conn"][i]) != len(faces["conn"][0]):
