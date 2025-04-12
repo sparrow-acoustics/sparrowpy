@@ -365,7 +365,7 @@ class DirectionalRadiosityFast():
 
         Parameters
         ----------
-        filename: string
+        filepath: string
             file path to .blend or .stl file which should be loaded
 
         manual_patch_size: float (default None)
