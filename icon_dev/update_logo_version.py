@@ -17,7 +17,8 @@ out_filepath = os.path.join(os.getcwd(),
                       svg_filename)
 
 original_svg=open(os.path.join(os.getcwd(),
-                               'icon_dev\\sparrowpy_transparent.svg'),
+                               'icon_dev',
+                               'logo_versioning.svg'),
                   'r')
 
 out=open(os.path.join(os.getcwd(),
@@ -33,7 +34,7 @@ out.write(svg_string)
 
 img = Image.open(os.path.join(os.getcwd(),
                       "icon_dev",
-                      "sparrowpy_filled.png",
+                      "logo_simple.png",
                       ))
 
 img.save(os.path.join(os.getcwd(),
