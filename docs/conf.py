@@ -56,8 +56,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sparrowpy'
-copyright = "2024, The pyfar developers"
-author = "The pyfar developers"
+copyright = "2025, The sparrowpz developers"
+author = "The sparrowpy developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -127,7 +127,7 @@ html_theme_options = {
     "icon_links": [
         {
           "name": "GitHub",
-          "url": "https://github.com/pyfar",
+          "url": "https://github.com/sparrow-acoustics/sparrowpy",
           "icon": "fa-brands fa-square-github",
           "type": "fontawesome",
         },
