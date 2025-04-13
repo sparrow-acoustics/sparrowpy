@@ -282,9 +282,11 @@
        id="text1"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:14px;line-height:1;font-family:Consolas;-inkscape-font-specification:'Consolas Bold';text-align:center;direction:ltr;white-space:pre;shape-inside:url(#rect1);display:inline;mix-blend-mode:exclusion;fill:#126cb0;fill-opacity:1;stroke:none;stroke-width:1.13386;stroke-linecap:round;stroke-linejoin:round"
        text_anchor="right"
-       transform="translate(50,15)"><tspan
-         x="-41.235352"
+       transform="translate(10.266113,15.678711)"
+       x="0"
+       y="0"><tspan
+         x="0"
          y="0"
-         id="tspan3"><tspan
+         id="tspan4"><tspan
            style="font-size:15px"
-           id="tspan1">[stand-in]</tspan></tspan></text></g></svg>
+           id="tspan2">[stand-in]</tspan></tspan></text></g></svg>
