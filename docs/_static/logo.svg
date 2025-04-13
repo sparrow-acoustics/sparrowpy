@@ -162,7 +162,7 @@
          d="M 11.17196,0 H 88.828041 C 95.017307,0 100,4.9826942 100,11.17196 V 88.828041 C 100,95.017307 88.828041,100 88.828041,100 H 0 V 11.17196 C 0,4.9826942 4.9826942,0 11.17196,0 Z" /></clipPath></defs><g
      id="layer1"
      transform="translate(7.3432922e-4,7.3432922e-4)"><rect
-       style="display:inline;fill:#808080;fill-opacity:0.5;stroke:#000000;stroke-width:2.99996;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+       style="display:inline;fill:#808080;fill-opacity:0.2;stroke:#000000;stroke-width:2.99996;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
        id="rect1"
        width="97.000046"
        height="97.000046"
