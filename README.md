@@ -1,5 +1,5 @@
 <h1 align="center">
-<img src="docs/_static/logo.svg" width="300">
+<img src="https://github.com/sparrow-acoustics/sparrowpy/raw//icon_updates/docs/_static/logo.svg" width="300">
 </h1><br>
 
 [![PyPI version](https://badge.fury.io/py/sparrowpy.svg)](https://badge.fury.io/py/sparrowpy)
