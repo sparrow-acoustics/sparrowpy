@@ -11,14 +11,13 @@ svg_filename = "logo.svg"
 png_filename = "logo.png"
 ico_filename = "favicon.ico"
 
-
 out_filepath = os.path.join(os.getcwd(),
                       out_path,
                       svg_filename)
 
 original_svg=open(os.path.join(os.getcwd(),
                                'icon_dev',
-                               'logo_versioning.svg'),
+                               'logo.svg'),
                   'r')
 
 out=open(os.path.join(os.getcwd(),
@@ -29,12 +28,18 @@ out=open(os.path.join(os.getcwd(),
 
 
 svg_string = original_svg.read()
-svg_string = svg_string.replace('>[stand-in]<',f'>{version}<')
+
+#replace standin with actual version
+svg_string = svg_string.replace('>[stand-in]<',
+                                f'>{version}<')
+
+
+
 out.write(svg_string)
 
 img = Image.open(os.path.join(os.getcwd(),
                       "icon_dev",
-                      "logo_simple.png",
+                      "logo_no_version.png",
                       ))
 
 img.save(os.path.join(os.getcwd(),

@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="100.00073mm"
-   height="100.00073mm"
-   viewBox="0 0 100.00073 100.00073"
+   width="100mm"
+   height="100mm"
+   viewBox="0 0 100 100"
    version="1.1"
    id="svg1"
    xml:space="preserve"
@@ -154,15 +154,10 @@
        id="clipPath1-4"><path
          id="path1-7"
          style="display:inline;fill:none;stroke-width:0;stroke-linecap:round;stroke-linejoin:round"
-         d="M 11.17196,0 H 88.828041 C 95.017307,0 100,4.9826942 100,11.17196 V 88.828041 C 100,95.017307 88.828041,100 88.828041,100 H 0 V 11.17196 C 0,4.9826942 4.9826942,0 11.17196,0 Z" /></clipPath><rect
-       x="36"
-       y="21"
-       width="295"
-       height="42"
-       id="rect3-3" /></defs><g
+         d="M 11.17196,0 H 88.828041 C 95.017307,0 100,4.9826942 100,11.17196 V 88.828041 C 100,95.017307 88.828041,100 88.828041,100 H 0 V 11.17196 C 0,4.9826942 4.9826942,0 11.17196,0 Z" /></clipPath></defs><g
      id="layer1-4"
-     transform="translate(7.3432922e-4,7.3432922e-4)"><rect
-       style="display:inline;fill:#808080;fill-opacity:0.2;stroke:#000000;stroke-width:2.99996;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+     transform="translate(3.6716461e-4,3.6716461e-4)"><rect
+       style="display:inline;fill:#7e8081;fill-opacity:0.2;stroke:#000000;stroke-width:2.99996;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
        id="rect1-3"
        width="97.000046"
        height="97.000046"
@@ -281,11 +276,15 @@
        d="m 51.554993,31.25649 a 3.8892701,3.8892701 0 0 0 -3.889169,3.889168 3.8892701,3.8892701 0 0 0 3.889169,3.889169 3.8892701,3.8892701 0 0 0 3.889168,-3.889169 3.8892701,3.8892701 0 0 0 -3.889168,-3.889168 z m -1.810743,1.299146 a 0.63471806,0.63471806 0 0 1 0.634587,0.634586 0.63471806,0.63471806 0 0 1 -0.634587,0.634587 0.63471806,0.63471806 0 0 1 -0.634586,-0.634587 0.63471806,0.63471806 0 0 1 0.634586,-0.634586 z"
        style="fill:#000000;fill-opacity:1;stroke:#fbfbfb;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
        id="path194-0"
-       clip-path="url(#clipPath1-4)" /><text
+       clip-path="url(#clipPath1-4)" /></g><g
+     id="layer1"><text
        xml:space="preserve"
-       transform="matrix(0.26458333,0,0,0.26458333,-2.1166667,1.5875)"
-       id="text1-4"
-       style="font-weight:bold;font-size:37.7953px;line-height:1;font-family:'Courier New';-inkscape-font-specification:'Courier New Bold';white-space:pre;shape-inside:url(#rect3-3);display:none;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1.13386;stroke-linecap:round;stroke-linejoin:round"><tspan
-         x="36"
-         y="49.417683"
-         id="tspan2">[stand-in]</tspan></text></g></svg>
+       id="text1"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:14px;line-height:1;font-family:Consolas;-inkscape-font-specification:'Consolas Bold';text-align:center;direction:ltr;white-space:pre;shape-inside:url(#rect1);display:inline;mix-blend-mode:exclusion;fill:#126cb0;fill-opacity:1;stroke:none;stroke-width:1.13386;stroke-linecap:round;stroke-linejoin:round"
+       text_anchor="right"
+       transform="translate(50,15)"><tspan
+         x="-41.235352"
+         y="0"
+         id="tspan3"><tspan
+           style="font-size:15px"
+           id="tspan1">[stand-in]</tspan></tspan></text></g></svg>
