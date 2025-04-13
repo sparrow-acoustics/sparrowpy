@@ -22,6 +22,9 @@ jobs:
         run: |
             python -m pip install --upgrade pip
             pip install ".[docs]"
+      - name: update logo version number
+        run: | 
+            python icon_dev/update_logo_version.py
       - name: build docs
         run: |            
             cd docs/
