@@ -17,7 +17,7 @@ out_filepath = os.path.join(os.getcwd(),
                       svg_filename)
 
 original_svg=open(os.path.join(os.getcwd(),
-                               'icon_dev\\sparrowpy_filled.svg'),
+                               'icon_dev\\sparrowpy_transparent.svg'),
                   'r')
 
 out=open(os.path.join(os.getcwd(),
@@ -27,9 +27,9 @@ out=open(os.path.join(os.getcwd(),
 
 
 
-filestring = original_svg.read()
-filestring = filestring.replace('>[stand-in]<',f'>{version}<')
-out.write(filestring)
+svg_string = original_svg.read()
+svg_string = svg_string.replace('>[stand-in]<',f'>{version}<')
+out.write(svg_string)
 
 img = Image.open(os.path.join(os.getcwd(),
                       "icon_dev",
