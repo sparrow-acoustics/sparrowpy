@@ -126,7 +126,7 @@ def _source2patch_energy_universal(
 
     """
     n_patches = patches_center.shape[0]
-    energy = np.empty((n_patches, n_bins))
+    energy = np.zeros((n_patches, n_bins))
     distance_out = np.empty((n_patches, ))
     for j in prange(n_patches):
         source_pos = source_position.copy()
@@ -134,12 +134,12 @@ def _source2patch_energy_universal(
         receiver_pts = patches_points[j, :, :].copy()
         receiver_normal= patches_normals[j, :].copy()
 
+        distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
+
         if geom._basic_visibility(vis_point=source_pos,
                                   eval_point=receiver_pos,
                                   surf_points=receiver_pts,
                                   surf_normal=receiver_normal):
-
-            distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
 
             if air_attenuation is not None:
                 energy[j,:] = np.exp(
@@ -169,7 +169,7 @@ if numba is not None:
     patch2patch_ff_universal = numba.njit(parallel=True)(
         patch2patch_ff_universal)
     universal_form_factor = numba.njit()(universal_form_factor)
-    _source2patch_energy_universal = numba.njit(parallel=True)(
-        _source2patch_energy_universal)
-    _patch2receiver_energy_universal = numba.njit(parallel=True)(
-        _patch2receiver_energy_universal)
+    # _source2patch_energy_universal = numba.njit(parallel=True)(
+    #     _source2patch_energy_universal)
+    # _patch2receiver_energy_universal = numba.njit(parallel=True)(
+    #     _patch2receiver_energy_universal)
