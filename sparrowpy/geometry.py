@@ -599,7 +599,7 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
     cond = dotprod < -epsilon
 
     if not check_normal:
-        cond = abs(dotprod) > epsilon
+        cond = np.abs(dotprod) > epsilon
 
     if cond:
         w = point-plane_pt
@@ -792,7 +792,8 @@ def _check_visibility(
 
 def _basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
-                     surf_points: np.ndarray, surf_normal: np.ndarray,
+                     surf_points: np.ndarray,
+                     surf_normal: np.ndarray,
                      eta=1e-6)->bool:
     """Return visibility of a point based on view point position.
 

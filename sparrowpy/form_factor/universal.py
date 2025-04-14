@@ -173,6 +173,3 @@ if numba is not None:
         _source2patch_energy_universal)
     _patch2receiver_energy_universal = numba.njit(parallel=True)(
         _patch2receiver_energy_universal)
-
-
-

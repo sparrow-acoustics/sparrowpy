@@ -410,7 +410,7 @@ class DirectionalRadiosityFast():
     def init_source_energy(
             self, source:pf.Coordinates):
         """Initialize the source energy."""
-        source_position = source.cartesian
+        source_position = source.cartesian.squeeze()
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
             frequencies = np.array([0]) if self._frequencies is None else \
