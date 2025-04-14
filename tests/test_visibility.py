@@ -206,6 +206,6 @@ def test_source_vis(basicscene):
 
     radi=sp.DirectionalRadiosityFast.from_polygon(basicscene["walls"],patch_size=.5)
     radi.bake_geometry()
-    radi.init_source_energy(pf.Coordinates((4.,4.,4.)))
+    radi.init_source_energy(pf.Coordinates(4.,4.,4.))
     npt.assert_equal(radi._energy_init_source,
                      np.zeros_like(radi._energy_init_source))
