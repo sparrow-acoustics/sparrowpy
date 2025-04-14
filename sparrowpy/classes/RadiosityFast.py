@@ -382,33 +382,20 @@ class DirectionalRadiosityFast():
             (e.g. sources, receivers)
 
         """
-
-        walls = blender.read_geometry_file(filepath,
-                                           polygon_clumping=wall_auto_assembly,
-                                           blender_geom_id=geometry_identifier)
-
-
-        ## save wall information
-        walls_normal = walls["normal"]
-        walls_up_vector = np.empty_like(walls["up"])
-
-        walls_points=np.empty((len(walls["conn"]),
-                               len(walls["conn"][0]),
-                               walls["verts"].shape[-1]))
-
-
-        for wallID in range(len(walls_normal)):
-            walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
-            walls_up_vector[wallID] = walls["up"][wallID]
-
+        (walls_points,
+         walls_normal,
+         walls_up_vector)= _walls_from_file(
+                                            filepath,
+                                            wall_auto_assembly=wall_auto_assembly,
+                                            geometry_identifier=geometry_identifier,
+                                            )
 
         # create radiosity object
         return cls(
             walls_points, walls_normal, walls_up_vector,
-            None, None,
-            None)
-        
-    @classmethod
+            walls_points, walls_points.shape[0],
+            np.arange(walls_points.shape[0]))
+
     def patches_from_file(self, filepath: str,
                        patch_auto_assembly=True,
                        geometry_identifier="Geometry"):
@@ -421,10 +408,10 @@ class DirectionalRadiosityFast():
         filepath: string
             file path to scene geometry CAD file.
 
-        wall_auto_assembly: bool
-            if True, walls of the geometry model are assembled from coplanar
-            and contiguous patches which share material properties.
-            if False, the walls are defined as one per patch.
+        patch_auto_assembly: bool
+            if True, patches of the geometry model are assembled from coplanar
+            and contiguous polygons which share material properties.
+            if False, the patches are defined as each of the model polygons.
 
         geometry_identifier: string
             name of the mesh object where the scene geometry mesh is stored.
@@ -432,21 +419,23 @@ class DirectionalRadiosityFast():
             (e.g. sources, receivers)
 
         """
-        if self._walls_points is None:
-            raise ImportError("Walls must be defined before patch definition.")
+        if isinstance(self, type):
+            raise ImportError(
+            "Class must be initialized from walls before patch calculation.",
+                                )
 
-        patches = blender.read_geometry_file(filepath,
-                                           polygon_clumping=patch_auto_assembly,
-                                           blender_geom_id=geometry_identifier)
+        (self._patches_points,
+         self._patch_to_wall_ids) = _patches_from_file(
+                                            filepath,
+                                            walls_points=self._walls_points,
+                                            walls_normals=self._walls_normal,
+                                            patch_auto_assembly=patch_auto_assembly,
+                                            geometry_identifier=geometry_identifier,
+                                            )
 
-        self._n_patches = patches["conn"].shape[0]
+        self._n_patches = self._patch_to_wall_ids.shape[0]
 
-        for patchID, vertIDs in enumerate(patches["conn"]):
-            self._patches_points[patchID] = patches["verts"][
-                                                        patches["conn"][vertIDs]
-                                                            ]
-
-        self._map_patches2walls(patches)
+        self.check()
 
 
     @classmethod
@@ -479,58 +468,36 @@ class DirectionalRadiosityFast():
             (e.g. sources, receivers)
 
         """
+
+        (walls_points,
+         walls_normal,
+         walls_up_vector)= _walls_from_file(
+                                            filepath,
+                                            wall_auto_assembly=wall_auto_assembly,
+                                            blender_geom_id=geometry_identifier,
+                                            )
+
         if manual_patch_size is None:
-            patches_from_model=True
-        else:
-            patches_from_model=False
-
-        geom_data = blender.read_geometry_file(filepath,
-                                           polygon_clumping=wall_auto_assembly,
-                                           patches_from_model=patches_from_model,
-                                           blender_geom_id=geometry_identifier)
-
-        walls = geom_data["wall"]
-
-        ## save wall information
-        walls_normal = walls["normal"]
-        walls_up_vector = np.empty_like(walls["up"])
-
-        walls_points=np.empty((len(walls["conn"]),
-                               len(walls["conn"][0]),
-                               walls["verts"].shape[-1]))
-
-
-        for wallID in range(len(walls_normal)):
-            walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
-            walls_up_vector[wallID] = walls["up"][wallID]
-
-        if bool(geom_data["patch"]):
-            patches = geom_data["patch"]
-
-            ## save patch information
-            n_patches = len(patches["map"])
-
-            patch_to_wall_ids = patches["map"]
-
-            patches_points = np.empty((n_patches,
-                                len(patches["conn"][0]),
-                                patches["verts"].shape[-1]))
-
-            for patchID in range(n_patches):
-                patches_points[patchID] = patches["verts"][
-                                                patches["conn"][patchID]
-                                                ]
+            (patches_points,
+             patch_to_wall_ids) = _patches_from_file(
+                                            filepath,
+                                            walls_points=walls_points,
+                                            walls_normals=walls_normal,
+                                            patch_auto_assembly=False,
+                                            blender_geom_id=geometry_identifier,
+                                            )
 
         else:
-            (
-            patches_points, _,
-            n_patches, patch_to_wall_ids) = geometry._process_patches(
-            walls_points, walls_normal, manual_patch_size, len(walls_normal))
+            (patches_points,_,_,
+             patch_to_wall_ids) = geometry._process_patches(
+                                                    walls_points,
+                                                    walls_normal,
+                                                    manual_patch_size,
+                                                    walls_normal.shape[0])
 
-        # create radiosity object
         return cls(
             walls_points, walls_normal, walls_up_vector,
-            patches_points, n_patches,
+            patches_points, patches_points.shape[0],
             patch_to_wall_ids)
 
     def bake_geometry(self):
@@ -833,50 +800,6 @@ class DirectionalRadiosityFast():
             assert (self._frequencies == frequencies).all(), \
                 "Frequencies do not match"
 
-    def _map_patches2walls(self, patches_dict: dict):
-        """Summarize characteristics of polygons in a fine mesh.
-
-        Return a dictionary which includes a list of vertices,
-        mapping (connectivity) of the vertex list to each fine mesh polygon,
-        and mapping of fine mesh polygons to broad mesh faces.
-
-        Parameters
-        ----------
-        fine_mesh: bmesh
-            fine mesh extracted from blender file
-
-        rough_mesh: bmesh
-            rough mesh extracted from blender file
-
-        Returns
-        -------
-        out_mesh: dict({
-                        "verts": np.ndarray (n_vertices,3),
-                        "conn":  list (n_polygons, :),
-                        "map": np.ndarray (n_polygons,)
-                        })
-            mesh in reduced data representation.
-                "verts":    vertex (node) list
-                "conn":     vertex to polygon mapping,
-                "map":   broad mesh index of face where polygon belongs
-
-        """
-        self._patch_to_wall_ids = np.empty((patches_dict["conn"].shape[0]),
-                                           dtype=int)
-
-        for patch_idx, patch_conn in enumerate(patches_dict["conn"]):
-            for wall_idx, wall_normal in enumerate(self._walls_normal):
-                if (np.dot(patches_dict["normal"][patch_idx],
-                           wall_normal)-1) < 1e-6:
-                    patch_center = geometry._calculate_center(
-                        points=patches_dict["verts"][patch_conn])
-                    if geometry._point_in_polygon(point3d=patch_center,
-                                                      polygon3d=self._walls_points[wall_idx],
-                                                      plane_normal=wall_normal):
-                        self._patch_to_wall_ids[patch_idx]=wall_idx
-                        break
-
-
     def write(self, filename, compress=True):
         """Write the object to a far file."""
         pf.io.write(filename, compress=compress, **self.to_dict())
@@ -1018,6 +941,54 @@ class DirectionalRadiosityFast():
         """Return the speed of sound in m/s."""
         return self._speed_of_sound
 
+def _walls_from_file(filepath: str,
+                    wall_auto_assembly=True,
+                    geometry_identifier="Geometry"):
+    walls = blender.read_geometry_file(filepath,
+                                        polygon_clumping=wall_auto_assembly,
+                                        blender_geom_id=geometry_identifier)
+
+
+    ## save wall information
+    walls_normal = walls["normal"]
+    walls_up_vector = np.empty_like(walls["up"])
+
+    walls_points=np.empty((len(walls["conn"]),
+                            len(walls["conn"][0]),
+                            walls["verts"].shape[-1]))
+
+
+    for wallID in range(len(walls_normal)):
+        walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
+        walls_up_vector[wallID] = walls["up"][wallID]
+
+    return walls_points, walls_normal, walls_up_vector
+
+def _patches_from_file( filepath: str,
+                        walls_points: np.ndarray,
+                        walls_normals: np.ndarray,
+                        patch_auto_assembly=True,
+                        geometry_identifier="Geometry",
+                        ):
+    patches = blender.read_geometry_file(filepath,
+                                        polygon_clumping=patch_auto_assembly,
+                                        blender_geom_id=geometry_identifier)
+
+    patches_normal = patches["normal"]
+
+    patches_points = np.empty((patches["conn"].shape[0],
+                                patches["conn"].shape[1],
+                                3))
+
+    for patchID, vertIDs in enumerate(patches["conn"]):
+        patches_points[patchID] = patches["verts"][vertIDs]
+
+    patch2wall_map = geometry._map_patches2walls(patches_points,
+                                        patches_normal,
+                                        walls_points,
+                                        walls_normals)
+
+    return patches_points, patch2wall_map
 
 def _rotate_coords_to_normal(
         wall_normal:np.ndarray, wall_up_vector:np.ndarray,
