@@ -4,6 +4,8 @@ from PIL import Image
 import sparrowpy
 
 def main():
+    """Updates sparrowpy version in logo and generates icon."""
+    # TO DO split into two separate functions
     version=sparrowpy.__version__
 
     out_path = "docs/_static"
