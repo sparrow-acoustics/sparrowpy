@@ -340,21 +340,22 @@ def _process_patches(
 
 def _map_patches2walls(patches_points: np.ndarray, patches_normals: np.ndarray,
                        walls_points: np.ndarray, walls_normals: np.ndarray):
-        """Map "patch" polygons to "wall" polygons."""
-        patch_to_wall_ids = np.empty((patches_normals.shape[0]),
-                                           dtype=int)
+    """Map "patch" polygons to "wall" polygons."""
+    patch_to_wall_ids = np.empty((patches_normals.shape[0]),
+                                        dtype=int)
 
-        for patch_idx, patch_normal in enumerate(patches_normals):
-            for wall_idx, wall_normal in enumerate(walls_normals):
-                if (np.dot(patch_normal,
-                           wall_normal)-1) < 1e-6:
-                    patch_center = _calculate_center(
-                        points=patches_points[patch_idx])
-                    if _point_in_polygon(point3d=patch_center,
-                                         polygon3d=walls_points[wall_idx],
-                                         plane_normal=wall_normal):
-                        patch_to_wall_ids[patch_idx]=wall_idx
-                        break
+    for patch_idx, patch_normal in enumerate(patches_normals):
+        for wall_idx, wall_normal in enumerate(walls_normals):
+            if (np.dot(patch_normal,
+                        wall_normal)-1) < 1e-6:
+                patch_center = _calculate_center(
+                    points=patches_points[patch_idx])
+                if _point_in_polygon(point3d=patch_center,
+                                        polygon3d=walls_points[wall_idx],
+                                        plane_normal=wall_normal):
+                    patch_to_wall_ids[patch_idx]=wall_idx
+                    break
+    return patch_to_wall_ids
 
 def _total_number_of_patches(polygon_points:np.ndarray, max_size: float):
     """Calculate the total number of patches.
