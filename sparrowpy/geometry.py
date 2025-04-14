@@ -346,7 +346,7 @@ def _map_patches2walls(patches_points: np.ndarray, patches_normals: np.ndarray,
 
     for patch_idx, patch_normal in enumerate(patches_normals):
         for wall_idx, wall_normal in enumerate(walls_normals):
-            if (np.dot(patch_normal,
+            if np.abs(np.dot(patch_normal,
                         wall_normal)-1) < 1e-6:
                 patch_center = _calculate_center(
                     points=patches_points[patch_idx])
