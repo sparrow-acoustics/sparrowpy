@@ -870,6 +870,7 @@ def _basic_visibility(vis_point: np.ndarray,
 
 if numba is not None:
     _total_number_of_patches = numba.njit()(_total_number_of_patches)
+    _map_patches2walls = numba.njit(parallel=True)(_map_patches2walls)
     _process_patches = numba.njit()(_process_patches)
     _calculate_area = numba.njit()(_calculate_area)
     _calculate_center = numba.njit()(_calculate_center)
