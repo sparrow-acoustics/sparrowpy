@@ -474,7 +474,7 @@ class DirectionalRadiosityFast():
          walls_up_vector)= _walls_from_file(
                                             filepath,
                                             wall_auto_assembly=wall_auto_assembly,
-                                            blender_geom_id=geometry_identifier,
+                                            geometry_identifier=geometry_identifier,
                                             )
 
         if manual_patch_size is None:
@@ -484,7 +484,7 @@ class DirectionalRadiosityFast():
                                             walls_points=walls_points,
                                             walls_normals=walls_normal,
                                             patch_auto_assembly=False,
-                                            blender_geom_id=geometry_identifier,
+                                            geometry_identifier=geometry_identifier,
                                             )
 
         else:
