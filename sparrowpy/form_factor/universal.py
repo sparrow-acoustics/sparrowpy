@@ -143,7 +143,7 @@ def _source2patch_energy_universal(
 
             if air_attenuation is not None:
                 energy[j,:] = np.exp(
-                    -air_attenuation*distance_out[j]) * integration.pt_solution(
+                    -air_attenuation*distance_out[j])*integration.pt_solution(
                         point=source_pos, patch_points=receiver_pts,
                         mode="source")
             else:
