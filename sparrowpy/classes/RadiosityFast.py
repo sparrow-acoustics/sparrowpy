@@ -441,28 +441,14 @@ class DirectionalRadiosityFast():
 
         self._n_patches = patches["conn"].shape[0]
 
-        for patchID, vertIDS in enumerate(patches["conn"]):
-            patches_points[wallID] = walls["verts"][walls["conn"][wallID]]
-            walls_up_vector[wallID] = walls["up"][wallID]
-
-        patches_points = 
-            patch_to_wall_ids
-
+        for patchID, vertIDs in enumerate(patches["conn"]):
+            self._patches_points[patchID] = patches["verts"][
+                                                        patches["conn"][vertIDs]
+                                                            ]
 
         self._map_patches2walls(patches)
 
 
-        for wallID in range(len(walls_normal)):
-            walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
-            walls_up_vector[wallID] = walls["up"][wallID]
-
-
-        # create radiosity object
-        return cls(
-            cls._walls_points, cls._walls_normal, cls._walls_up_vector,
-            None, None,
-            None)
-        
     @classmethod
     def from_file(cls, filepath: str,
                        manual_patch_size=None,
@@ -875,7 +861,8 @@ class DirectionalRadiosityFast():
                 "map":   broad mesh index of face where polygon belongs
 
         """
-        patch_2_wall_map = np.empty((patches_dict["conn"].shape[0]),dtype=int)
+        self._patch_to_wall_ids = np.empty((patches_dict["conn"].shape[0]),
+                                           dtype=int)
 
         for patch_idx, patch_conn in enumerate(patches_dict["conn"]):
             for wall_idx, wall_normal in enumerate(self._walls_normal):
@@ -886,7 +873,7 @@ class DirectionalRadiosityFast():
                     if geometry._point_in_polygon(point3d=patch_center,
                                                       polygon3d=self._walls_points[wall_idx],
                                                       plane_normal=wall_normal):
-                        patch_2_wall_map[patch_idx]=wall_idx
+                        self._patch_to_wall_ids[patch_idx]=wall_idx
                         break
 
 
