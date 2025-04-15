@@ -38,11 +38,7 @@ class SceneGeometry:
         # we already have this... :
         raise NotImplementedError()
 
-    def set_materials_per_wall(self, list_names):
-        raise NotImplementedError()
-
-    def assign_materials(self, dict):
-        # dict with names brdfs etc... maybe even a class for brdfs
+    def set_material_names_per_wall(self, list_names):
         raise NotImplementedError()
 
     def validate_geometry(self):
