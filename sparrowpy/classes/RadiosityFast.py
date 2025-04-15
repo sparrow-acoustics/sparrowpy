@@ -440,8 +440,8 @@ class DirectionalRadiosityFast():
         patches_center = self.patches_center
         patches_normal = self.patches_normal
         source_vis = geometry._check_point2patch_visibility(
-                                        vis_point=source_position,
-                                        eval_point=patches_center,
+                                        eval_point=source_position,
+                                        patches_center=patches_center,
                                         surf_points=self.patches_points,
                                         surf_normal=patches_normal)
 
