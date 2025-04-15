@@ -370,7 +370,7 @@ class DirectionalRadiosityFast():
 
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry._check_visibility(
+        self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
