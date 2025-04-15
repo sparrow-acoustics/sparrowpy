@@ -440,7 +440,7 @@ class DirectionalRadiosityFast():
         patches_center = self.patches_center
         patches_normal = self.patches_normal
         source_vis = np.array(
-            [geometry._basic_visibility(vis_point=source_position.cartesian,
+            [geometry._basic_visibility(vis_point=source_position,
                                   eval_point=patches_center[i],
                                   surf_points=self.patches_points[i],
                                   surf_normal=patches_normal[i])
