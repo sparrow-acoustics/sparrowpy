@@ -2,7 +2,7 @@ import numpy as np
 
 
 
-def SceneGeometry():
+class SceneGeometry:
     _walls_connectivity: list[int]
     _patches_connectivity: np.ndarray
     _walls_normals: np.ndarray
