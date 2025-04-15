@@ -30,7 +30,19 @@ class SceneGeometry:
         raise NotImplementedError()
 
     @classmethod
-    def patches_from_polygons(cls, vertices, faces):
+    def patches_from_mesh(cls, vertices, patches_connectivity):
+        """Initializes the patches from a given mesh.
+
+        Parameters
+        ----------
+        vertices : array_like
+            cartesian coordinates of the vertices, must be of shape
+            (n_vertices, 3)
+        patches_connectivity : array_like
+            connectivity of the patches, must be of shape
+            (n_walls, n_vertices_per_patch)
+            n_vertices_per_patch must be constant for all patches.
+        """
         raise NotImplementedError()
 
     @classmethod
