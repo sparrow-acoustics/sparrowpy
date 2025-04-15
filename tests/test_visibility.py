@@ -205,7 +205,7 @@ A=[
     [11,12],
    ]
 
-@pytest.mark.filterwarnings("ignore:UserWarnings")
+@pytest.mark.filterwarnings("ignore:UserWarning")
 def test_source_vis(basicscene):
     """Test visibility check between source and patches."""
 

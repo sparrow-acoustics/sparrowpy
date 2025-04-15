@@ -875,19 +875,19 @@ def _basic_visibility(vis_point: np.ndarray,
         # if intersection point exists
         if pt is not None:
             # if plane is in front of eval point
-            plane_in_front = (np.linalg.norm(eval_point-vis_point)>
-                             np.linalg.norm(pt-vis_point))
+            plane_in_front = (np.linalg.norm(eval_point-vis_point)-
+                                np.linalg.norm(pt-vis_point)>eta)
             point_in_polygon = _point_in_polygon(point3d=pt,
-                                                 polygon3d=surf_points,
-                                                 plane_normal=surf_normal)
-            surf_back_facing = np.dot(eval_point-vis_point, surf_normal)<-eta
+                                                    polygon3d=surf_points,
+                                                    plane_normal=surf_normal)
 
-            if plane_in_front or (point_in_polygon and surf_back_facing):
+            if (point_in_polygon and plane_in_front):
                 is_visible = False
 
     # if both vis and eval point are coplanar
-    elif (np.abs(np.dot(surf_normal,vis_point-surf_points[0]))<eta and
-                    np.abs(np.dot(surf_normal,eval_point-surf_points[0]))<eta):
+    elif np.dot(vis_point-eval_point,surf_normal)<eta:
+    # elif (np.abs(np.dot(surf_normal,vis_point-surf_points[0]))<eta and
+    #                 np.abs(np.dot(surf_normal,eval_point-surf_points[0]))<eta):
         is_visible = False
 
     return is_visible
