@@ -126,7 +126,8 @@ def test_vis_matrix_assembly(model):
                                             -m["verts"][m["conn"][i]][0])
             surfs_normals[i]/=np.linalg.norm(surfs_normals[i])
 
-        vis_matrix = sp.geometry._check_visibility(patches_center=patches_centers,
+        vis_matrix = sp.geometry._check_patch2patch_visibility(
+                                            patches_center=patches_centers,
                                            surf_normal=surfs_normals,
                                            surf_points=surfs_points)
 
@@ -206,8 +207,14 @@ def test_source_vis(basicscene):
 
     radi=sp.DirectionalRadiosityFast.from_polygon(basicscene["walls"],patch_size=1.)
 
-    radi.init_source_energy(pf.Coordinates(-4.,-4.,-4.))
+    radi.init_source_energy(pf.Coordinates(3.,3.,3.))
     npt.assert_equal(radi._source_visibility,
                      np.zeros_like(radi._source_visibility))
     npt.assert_equal(radi._energy_init_source,
                      np.zeros_like(radi._energy_init_source))
+
+
+    radi.init_source_energy(pf.Coordinates(.5, .5, .5))
+    npt.assert_equal(radi._source_visibility,
+                     np.ones_like(radi._source_visibility))
+
