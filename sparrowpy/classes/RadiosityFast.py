@@ -410,7 +410,9 @@ class DirectionalRadiosityFast():
     def init_source_energy(
             self, source:pf.Coordinates):
         """Initialize the source energy."""
-        source_position = source.cartesian.squeeze()
+        if source.cshape != (1, ):
+           raise ValueError('just one source position is allowed.')
+        source_position = source.cartesian[0]
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
             frequencies = np.array([0]) if self._frequencies is None else \
@@ -430,7 +432,6 @@ class DirectionalRadiosityFast():
         brdf_index = self._brdf_index
         patches_center = self.patches_center
         patches_normal = self.patches_normal
-
         source_vis = np.array(
             [geometry._basic_visibility(vis_point=source_position.cartesian,
                                   eval_point=patches_center[i],
