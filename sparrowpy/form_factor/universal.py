@@ -127,15 +127,14 @@ def _source2patch_energy_universal(
     """
     n_patches = patches_center.shape[0]
     energy = np.zeros((n_patches, n_bins))
-    distance_out = np.empty((n_patches, ))
+    distance_out = np.zeros((n_patches, ))
     for j in prange(n_patches):
-        source_pos = source_position.copy()
-        receiver_pos = patches_center[j, :].copy()
-        receiver_pts = patches_points[j, :, :].copy()
-
-        distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
-
         if source_vis[j]:
+            source_pos = source_position.copy()
+            receiver_pos = patches_center[j, :].copy()
+            receiver_pts = patches_points[j, :, :].copy()
+
+            distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
 
             if air_attenuation is not None:
                 energy[j,:] = np.exp(
