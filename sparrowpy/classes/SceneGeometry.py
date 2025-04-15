@@ -14,7 +14,18 @@ class SceneGeometry:
         pass
 
     @classmethod
-    def walls_from_mesh(cls, vertices, faces):
+    def walls_from_mesh(cls, vertices, walls_connectivity):
+        """Initializes the walls from a given mesh.
+
+        Parameters
+        ----------
+        vertices : array_like
+            cartesian coordinates of the vertices, must be of shape
+            (n_vertices, 3)
+        walls_connectivity : array_like
+            connectivity list of the faces, must have the length of the walls,
+            the number of vertices per wall can vary.
+        """
         # like what we are doing now
         raise NotImplementedError()
 
