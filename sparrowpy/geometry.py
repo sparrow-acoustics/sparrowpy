@@ -753,7 +753,7 @@ def _check_patch2patch_visibility(
     surf_normal : np.ndarray
         normal vectors of all patches of shape (n_patches, 3)
     surf_points : np.ndarray
-        boundary points of possible blocking surfaces (n_surfaces,)
+        boundary points of possible blocking surfaces  (n_surfaces,n_patches,3)
 
     Returns
     -------
@@ -805,7 +805,7 @@ def _check_point2patch_visibility(
     surf_normal : np.ndarray
         normal vectors of all patches of shape (n_patches, 3)
     surf_points : np.ndarray
-        boundary points of possible blocking surfaces (n_surfaces,)
+        boundary points of possible blocking surfaces (n_surfaces,n_patches,3)
 
     Returns
     -------
