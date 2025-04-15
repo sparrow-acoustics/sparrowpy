@@ -439,12 +439,11 @@ class DirectionalRadiosityFast():
         brdf_index = self._brdf_index
         patches_center = self.patches_center
         patches_normal = self.patches_normal
-        source_vis = np.array(
-            [geometry._basic_visibility(vis_point=source_position,
-                                  eval_point=patches_center[i],
-                                  surf_points=self.patches_points[i],
-                                  surf_normal=patches_normal[i])
-                                  for i in range(patches_center.shape[0])])
+        source_vis = geometry._check_point2patch_visibility(
+                                        vis_point=source_position,
+                                        eval_point=patches_center,
+                                        surf_points=self.patches_points,
+                                        surf_normal=patches_normal)
 
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
