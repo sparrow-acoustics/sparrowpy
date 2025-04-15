@@ -444,6 +444,12 @@ class DirectionalRadiosityFast():
                                         surf_points=self.walls_points,
                                         surf_normal=self.walls_normal)
 
+        if (source_vis).all():
+            raise UserWarning("All patches are invisible to the sound source."+
+                    " Output will be zero.\n" +
+                    "Check your model's source position "+
+                    "and/or surface normals.")
+
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
             source_vis,
