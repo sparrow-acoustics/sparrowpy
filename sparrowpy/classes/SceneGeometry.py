@@ -30,30 +30,30 @@ def SceneGeometry():
     def patches_from_file(cls, file_path):
         raise NotImplementedError()
 
-    def walls_from_patches():
+    def walls_from_patches(self):
         # all the merge patches into walls or each patch, one wall
         raise NotImplementedError()
 
-    def patches_from_walls_equal_area(patch_size):
+    def patches_from_walls_equal_area(self, patch_size):
         # we already have this... :
         raise NotImplementedError()
 
-    def set_materials_per_wall(list_names):
+    def set_materials_per_wall(self, list_names):
         raise NotImplementedError()
 
-    def assign_materials(dict):
+    def assign_materials(self, dict):
         # dict with names brdfs etc... maybe even a class for brdfs
         raise NotImplementedError()
 
-    def validate_geometry():
+    def validate_geometry(self):
         # is all set, walls, patches, materials
         raise NotImplementedError()
 
-    def plot():
+    def plot(self):
         raise NotImplementedError()
 
-    def clear_patches():
+    def clear_patches(self):
         raise NotImplementedError()
 
-    def clear_walls():
+    def clear_walls(self):
         raise NotImplementedError()
