@@ -899,7 +899,10 @@ if numba is not None:
     _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
     _create_patches = numba.njit()(_create_patches)
-    _check_patch2patch_visibility = numba.njit(parallel=True)(_check_patch2patch_visibility)
+    _check_patch2patch_visibility = numba.njit(parallel=True)(
+        _check_patch2patch_visibility)
+    _check_point2patch_visibility = numba.njit(parallel=True)(
+        _check_point2patch_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
     _basic_visibility = numba.njit()(_basic_visibility)
