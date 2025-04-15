@@ -44,29 +44,32 @@ def test_point_in_polygon(point, plpt, pln):
 
 
 @pytest.mark.parametrize("point", [
-    np.array([0.,0.,-1.]),
     np.array([0.,0.,.5]),
+    np.array([0.,0.,0.]),
+    np.array([0.,0.,2.]),
+    np.array([0.,0.,-1.]),
     np.array([0.,3.,-1.]),
     ])
 @pytest.mark.parametrize("origin", [np.array([0.,0.,1.])])
 @pytest.mark.parametrize("plpt", [
-    np.array([[1.,1.,0.],[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.]]),
+    3*np.array([[1.,1.,0.],[-1.,1.,0.],[-1.,-1.,0.],[1.,-1.,0.]]),
+    3*np.array([[1.,1.,-1.],[-1.,1.,-1.],[-1.,-1.,1.],[1.,-1.,1.]]),
     ])
-@pytest.mark.parametrize("pln", [
-    np.array([0.,0.,1.]),
-    np.array([0.,.5,-.5])/np.linalg.norm(np.array([0.,.5,-.5])),
-    ])
-def test_basic_visibility(point, origin, plpt, pln):
+
+def test_basic_visibility(point, origin, plpt):
     """Test basic_visibility function."""
+
+    pln = np.cross(plpt[1]-plpt[0],plpt[2]-plpt[1])
+    pln /= np.linalg.norm(pln)
+
     out = sp.geometry._basic_visibility(eval_point=point,vis_point=origin,
                               surf_points=plpt,surf_normal=pln)
 
-    if (abs(point[0])/(-point[2]+1) > 1. or
-        abs(point[1])/(-point[2]+1) > 1) or point[2]>0 or pln[2]<0:
+    if (np.dot(point-origin,pln)>0 or
+        point[2]>=0 ):
         solution = 1
     else:
         solution = 0
-
     assert solution==out
 
 @pytest.mark.parametrize("model", [
@@ -202,6 +205,7 @@ A=[
     [11,12],
    ]
 
+@pytest.mark.filterwarnings("ignore:UserWarnings")
 def test_source_vis(basicscene):
     """Test visibility check between source and patches."""
 
