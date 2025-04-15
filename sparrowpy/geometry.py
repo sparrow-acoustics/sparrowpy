@@ -741,7 +741,7 @@ def _coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-6) -> bool:
 
     return flag
 
-def _check_visibility(
+def _check_patch2patch_visibility(
         patches_center:np.ndarray,
         surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
     """Check the visibility between patches.
@@ -789,6 +789,48 @@ def _check_visibility(
             surfid+=1
 
     return visibility_matrix
+
+def _check_point2patch_visibility(
+        eval_point:np.ndarray,
+        patches_center:np.ndarray,
+        surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
+    """Check the visibility between patches.
+
+    Parameters
+    ----------
+    eval_point : np.ndarray
+        evaluation point for visibility of shape (3)
+    patches_center : np.ndarray
+        center points of all patches of shape (n_patches, 3)
+    surf_normal : np.ndarray
+        normal vectors of all patches of shape (n_patches, 3)
+    surf_points : np.ndarray
+        boundary points of possible blocking surfaces (n_surfaces,)
+
+    Returns
+    -------
+    visibility_vector : np.ndarray
+        boolean vector of shape (n_patches) with True if patches
+        are visible from the evaluation point, otherwise false
+
+    """
+    n_patches = patches_center.shape[0]
+    visibility_vector = np.ones((n_patches), dtype=np.bool_)
+    for i in prange(n_patches):
+
+
+        surfid=0
+        while (visibility_vector[i] and
+                                surfid!=len(surf_normal)):
+
+            visibility_vector[i]= _basic_visibility(eval_point,
+                                                    patches_center[i],
+                                                    surf_points[surfid],
+                                                    surf_normal[surfid])
+
+            surfid+=1
+
+    return visibility_vector
 
 def _basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
@@ -857,7 +899,7 @@ if numba is not None:
     _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
     _create_patches = numba.njit()(_create_patches)
-    _check_visibility = numba.njit(parallel=True)(_check_visibility)
+    _check_patch2patch_visibility = numba.njit(parallel=True)(_check_patch2patch_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
     _basic_visibility = numba.njit()(_basic_visibility)
