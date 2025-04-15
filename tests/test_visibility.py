@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 def test_point_plane_projection(origin: np.ndarray, point: np.ndarray,
                                 plpt: np.ndarray, pln: np.ndarray, solution):
     """Ensure correct projection of rays into plane."""
-    out = sp.geom._project_to_plane(origin, point, plpt, pln)
+    out = sp.geometry._project_to_plane(origin, point, plpt, pln)
 
     npt.assert_array_equal(solution,out)
 
@@ -31,7 +31,7 @@ def test_point_plane_projection(origin: np.ndarray, point: np.ndarray,
 @pytest.mark.parametrize("pln", [np.array([0.,0.,1.])])
 def test_point_in_polygon(point, plpt, pln):
     """Ensure correct projection of rays into plane."""
-    out = sp.geom._point_in_polygon(point3d=point,
+    out = sp.geometry._point_in_polygon(point3d=point,
                                  polygon3d=plpt,
                                  plane_normal=pln)
 
@@ -58,7 +58,7 @@ def test_point_in_polygon(point, plpt, pln):
     ])
 def test_basic_visibility(point, origin, plpt, pln):
     """Test basic_visibility function."""
-    out = sp.geom._basic_visibility(eval_point=point,vis_point=origin,
+    out = sp.geometry._basic_visibility(eval_point=point,vis_point=origin,
                               surf_points=plpt,surf_normal=pln)
 
     if (abs(point[0])/(-point[2]+1) > 1. or
@@ -84,7 +84,7 @@ def test_vis_matrix_assembly(model):
 
     for i in range(len(m1["conn"])):
             patches_points[i]=m1["verts"][m1["conn"][i]]
-            patches_centers[i]=sp.geom._calculate_center(m1["verts"][m1["conn"][i]])
+            patches_centers[i]=sp.geometry._calculate_center(m1["verts"][m1["conn"][i]])
             patches_normals[i]=np.cross(m1["verts"][m1["conn"][i]][1]
                                             -m1["verts"][m1["conn"][i]][0],
                                       m1["verts"][m1["conn"][i]][2]
@@ -126,7 +126,7 @@ def test_vis_matrix_assembly(model):
                                             -m["verts"][m["conn"][i]][0])
             surfs_normals[i]/=np.linalg.norm(surfs_normals[i])
 
-        vis_matrix = sp.geom._check_visibility(patches_center=patches_centers,
+        vis_matrix = sp.geometry._check_visibility(patches_center=patches_centers,
                                            surf_normal=surfs_normals,
                                            surf_points=surfs_points)
 
@@ -204,8 +204,10 @@ A=[
 def test_source_vis(basicscene):
     """Test visibility check between source and patches."""
 
-    radi=sp.DirectionalRadiosityFast.from_polygon(basicscene["walls"],patch_size=.5)
-    radi.bake_geometry()
-    radi.init_source_energy(pf.Coordinates(4.,4.,4.))
+    radi=sp.DirectionalRadiosityFast.from_polygon(basicscene["walls"],patch_size=1.)
+
+    radi.init_source_energy(pf.Coordinates(-4.,-4.,-4.))
+    npt.assert_equal(radi._source_visibility,
+                     np.zeros_like(radi._source_visibility))
     npt.assert_equal(radi._energy_init_source,
                      np.zeros_like(radi._energy_init_source))

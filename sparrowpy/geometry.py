@@ -817,8 +817,6 @@ def _check_point2patch_visibility(
     n_patches = patches_center.shape[0]
     visibility_vector = np.ones((n_patches), dtype=np.bool_)
     for i in prange(n_patches):
-
-
         surfid=0
         while (visibility_vector[i] and
                                 surfid!=len(surf_normal)):
@@ -872,17 +870,20 @@ def _basic_visibility(vis_point: np.ndarray,
         pt = _project_to_plane(origin=vis_point, point=eval_point,
                             plane_pt=surf_points[0],
                             plane_normal=surf_normal,
-                            check_normal=True)
+                            check_normal=False)
 
         # if intersection point exists
         if pt is not None:
             # if plane is in front of eval point
-            if (np.linalg.norm(eval_point-vis_point)>
-                                np.linalg.norm(pt-vis_point)):
-                # if point is inside surf polygon
-                if _point_in_polygon(point3d=pt, polygon3d=surf_points,
-                                    plane_normal=surf_normal):
-                    is_visible = False
+            plane_in_front = (np.linalg.norm(eval_point-vis_point)>
+                             np.linalg.norm(pt-vis_point))
+            point_in_polygon = _point_in_polygon(point3d=pt,
+                                                 polygon3d=surf_points,
+                                                 plane_normal=surf_normal)
+            surf_back_facing = np.dot(eval_point-vis_point, surf_normal)<-eta
+
+            if plane_in_front or (point_in_polygon and surf_back_facing):
+                is_visible = False
 
     # if both vis and eval point are coplanar
     elif (np.abs(np.dot(surf_normal,vis_point-surf_points[0]))<eta and
