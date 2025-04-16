@@ -863,8 +863,15 @@ def _basic_visibility(vis_point: np.ndarray,
     """
     is_visible = True
 
-    # if eval point is not coplanar with surf
-    if np.abs(np.dot(surf_normal,eval_point-surf_points[0]))>eta:
+    vis_in_surf = _point_in_polygon(point3d=vis_point,
+                                    polygon3d=surf_points,
+                                    plane_normal=surf_normal)
+    eval_in_surf = _point_in_polygon(point3d=eval_point,
+                                    polygon3d=surf_points,
+                                    plane_normal=surf_normal)
+
+    # if eval point nor vis pointare coplanar with surf
+    if not vis_in_surf and not eval_in_surf:
 
         # check if projected point on surf
         pt = _project_to_plane(origin=vis_point, point=eval_point,
@@ -877,18 +884,23 @@ def _basic_visibility(vis_point: np.ndarray,
             # if plane is in front of eval point
             plane_in_front = (np.linalg.norm(eval_point-vis_point)-
                                 np.linalg.norm(pt-vis_point)>eta)
-            point_in_polygon = _point_in_polygon(point3d=pt,
+            proj_in_polygon = _point_in_polygon(point3d=pt,
                                                     polygon3d=surf_points,
                                                     plane_normal=surf_normal)
 
-            if (point_in_polygon and plane_in_front):
+            if (proj_in_polygon and plane_in_front):
                 is_visible = False
 
-    # if both vis and eval point are coplanar
-    elif np.dot(vis_point-eval_point,surf_normal)<eta:
-    # elif (np.abs(np.dot(surf_normal,vis_point-surf_points[0]))<eta and
-    #                 np.abs(np.dot(surf_normal,eval_point-surf_points[0]))<eta):
-        is_visible = False
+    elif vis_in_surf and eval_in_surf:
+        is_visible=False
+
+    elif vis_in_surf and not eval_in_surf:
+        if np.dot(surf_normal, eval_point-vis_point)<0:
+            is_visible=False
+
+    elif not vis_in_surf and eval_in_surf:
+        if np.dot(surf_normal, vis_point-eval_point)<0:
+            is_visible=False
 
     return is_visible
 
@@ -906,9 +918,9 @@ if numba is not None:
         _check_point2patch_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
-    _basic_visibility = numba.njit()(_basic_visibility)
+    # _basic_visibility = numba.njit()(_basic_visibility)
     _project_to_plane = numba.njit()(_project_to_plane)
-    _point_in_polygon = numba.njit()(_point_in_polygon)
+    # _point_in_polygon = numba.njit()(_point_in_polygon)
     _matrix_vector_product = numba.njit()(_matrix_vector_product)
     _rotation_matrix = numba.njit()(_rotation_matrix)
     _polygon_area = numba.njit()(_polygon_area)
