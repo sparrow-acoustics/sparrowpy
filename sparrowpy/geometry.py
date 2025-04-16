@@ -897,16 +897,20 @@ def _basic_visibility(vis_point: np.ndarray,
             if (proj_in_polygon and plane_in_front):
                 is_visible = False
 
-    elif vis_in_surf and eval_in_surf:
+    elif (vis_in_surf and not eval_in_surf and
+          np.dot(surf_normal, eval_point-vis_point)<0):
         is_visible=False
 
-    elif vis_in_surf and not eval_in_surf:
-        if np.dot(surf_normal, eval_point-vis_point)<0:
+    elif (not vis_in_surf and eval_in_surf and
+          np.dot(surf_normal, vis_point-eval_point)<0):
             is_visible=False
 
-    elif not vis_in_surf and eval_in_surf:
-        if np.dot(surf_normal, vis_point-eval_point)<0:
-            is_visible=False
+    #if both points are coplanar to surf and at least one is inside
+    elif (np.abs(np.dot(vis_point-surf_points[0],surf_normal))<eta and
+          np.abs(np.dot(eval_point-surf_points[0],surf_normal))<eta and
+          (vis_in_surf or eval_in_surf)):
+        is_visible=False
+
 
     return is_visible
 
@@ -924,9 +928,9 @@ if numba is not None:
         _check_point2patch_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
-    # _basic_visibility = numba.njit()(_basic_visibility)
+    _basic_visibility = numba.njit()(_basic_visibility)
     _project_to_plane = numba.njit()(_project_to_plane)
-    # _point_in_polygon = numba.njit()(_point_in_polygon)
+    _point_in_polygon = numba.njit()(_point_in_polygon)
     _matrix_vector_product = numba.njit()(_matrix_vector_product)
     _rotation_matrix = numba.njit()(_rotation_matrix)
     _polygon_area = numba.njit()(_polygon_area)
