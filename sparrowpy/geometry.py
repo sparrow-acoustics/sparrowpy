@@ -637,45 +637,51 @@ def _point_in_polygon(point3d: np.ndarray,
         (True if inside, False if not)
 
     """
-    # rotate all (coplanar) points to a horizontal plane
-    # and remove z dimension for convenience
-    rotmat = _rotation_matrix(n_in=plane_normal)
-
-    pt = _matrix_vector_product(matrix=rotmat,
-                                vector=point3d)[0:point3d.shape[0]-1]
-    poly = np.empty((polygon3d.shape[0],2))
-    for i in prange(polygon3d.shape[0]):
-        poly[i] = _matrix_vector_product(
-            matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
-
-
-    # winding number algorithm
-    count = 0
-    for i in prange(poly.shape[0]):
-        a1 = poly[(i+1)%poly.shape[0]]
-        a0 = poly[i%poly.shape[0]]
-        side = a1-a0
-
-        # check if line from evaluation point in +x direction
-        # intersects polygon side
-        nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
-        b = _project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
-                             plane_pt=a1, plane_normal=nl,
-                             check_normal=False)
-
-        # check if intersection exists and if is inside side [a0,a1]
-        if (b is not None) and b[0]>pt[0]:
-            if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
-                                -np.linalg.norm(a1-a0)) <= eta:
-                if np.dot(b-pt,nl)>0:
-                    count+=1
-                elif np.dot(b-pt,nl)<0:
-                    count-=1
-
-    if count != 0:
-        out = True
+    # check coplanarity of polygon and point3D
+    if np.abs(np.dot(point3d-polygon3d[0],plane_normal))>eta:
+        out= False
     else:
-        out = False
+
+        # rotate all (coplanar) points to a horizontal plane
+        # and remove z dimension for convenience
+        rotmat = _rotation_matrix(n_in=plane_normal)
+
+        pt = _matrix_vector_product(matrix=rotmat,
+                                    vector=point3d)[0:point3d.shape[0]-1]
+
+        poly = np.empty((polygon3d.shape[0],2))
+        for i in prange(polygon3d.shape[0]):
+            poly[i] = _matrix_vector_product(
+                matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
+
+
+        # winding number algorithm
+        count = 0
+        for i in prange(poly.shape[0]):
+            a1 = poly[(i+1)%poly.shape[0]]
+            a0 = poly[i%poly.shape[0]]
+            side = a1-a0
+
+            # check if line from evaluation point in +x direction
+            # intersects polygon side
+            nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
+            b = _project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
+                                plane_pt=a1, plane_normal=nl,
+                                check_normal=False)
+
+            # check if intersection exists and if is inside side [a0,a1]
+            if (b is not None) and b[0]>pt[0]:
+                if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
+                                    -np.linalg.norm(a1-a0)) <= eta:
+                    if np.dot(b-pt,nl)>0:
+                        count+=1
+                    elif np.dot(b-pt,nl)<0:
+                        count-=1
+
+        if count != 0:
+            out = True
+        else:
+            out = False
 
     return out
 
