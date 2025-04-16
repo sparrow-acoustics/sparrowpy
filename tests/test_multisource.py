@@ -175,7 +175,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                     source_position=src_.position,
                                                     patches_center=np.array([wall[0].center]),
                                                     patches_points=np.array([wall[0].pts]),
-                                                    patches_normals=np.array([[1.,0.,0.]]),
+                                                    source_vis=np.ones((wall[0].center.shape[0]),dtype=bool),
                                                     air_attenuation=air_att,
                                                     n_bins=1,
                                                     )
