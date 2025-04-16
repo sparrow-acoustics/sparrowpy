@@ -27,6 +27,7 @@ class DirectionalRadiosityFast():
     _visible_patches: np.ndarray
     _form_factors: np.ndarray
     _form_factors_tilde: np.ndarray
+    _source_visibility: np.ndarray
 
     # general data for material and medium data
     _frequencies: np.ndarray
@@ -60,6 +61,7 @@ class DirectionalRadiosityFast():
             visible_patches:np.ndarray=None,
             form_factors:np.ndarray=None,
             form_factors_tilde:np.ndarray=None,
+            source_visibility:np.ndarray=None,
             frequencies:np.ndarray=None,
             brdf:list[np.ndarray]=None,
             brdf_index:np.ndarray=None,
@@ -101,6 +103,8 @@ class DirectionalRadiosityFast():
             Form factor including air attenuation and BRDF of shape
             (n_patches, n_patches, n_outgoing_directions, n_bins), by
             default None
+        source_visibility : np.ndarray, optional
+            source to patch boolean visibility array, by default None.
         frequencies : np.ndarray, optional
             frequency vector used for the simulation. , by default None
         brdf : list[np.ndarray], optional
@@ -149,6 +153,8 @@ class DirectionalRadiosityFast():
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
             form_factors_tilde = np.array(form_factors_tilde)
+        if source_visibility is not None:
+            source_visibility = np.array(source_visibility)
         if brdf is not None:
             brdf = [np.array(b) for b in brdf]
         if air_attenuation is not None:
@@ -178,6 +184,7 @@ class DirectionalRadiosityFast():
         self._visible_patches = visible_patches
         self._form_factors = form_factors
         self._form_factors_tilde = form_factors_tilde
+        self._source_visibility = source_visibility
 
         # general data for material and medium data
         self._frequencies = frequencies
@@ -363,7 +370,7 @@ class DirectionalRadiosityFast():
 
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry._check_visibility(
+        self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
@@ -410,7 +417,9 @@ class DirectionalRadiosityFast():
     def init_source_energy(
             self, source:pf.Coordinates):
         """Initialize the source energy."""
-        source_position = source.cartesian
+        if source.cshape != (1, ):
+           raise ValueError('just one source position is allowed.')
+        source_position = source.cartesian[0]
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
             frequencies = np.array([0]) if self._frequencies is None else \
@@ -429,15 +438,24 @@ class DirectionalRadiosityFast():
         brdf = np.array(self._brdf)
         brdf_index = self._brdf_index
         patches_center = self.patches_center
+        source_vis = geometry._check_point2patch_visibility(
+                                        eval_point=source_position,
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
+            source_vis,
             self._air_attenuation, n_bins)
         energy_0_dir = _add_directional(
             energy_0, source_position,
             patches_center, n_bins, patch_to_wall_ids,
             vi, vo, brdf, brdf_index)
+
         self._energy_init_source = energy_0_dir
         self._distance_patches_to_source = distance_0
+        self._source_visibility = source_vis
 
     def calculate_energy_exchange(
             self, speed_of_sound,
