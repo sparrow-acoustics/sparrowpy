@@ -14,11 +14,11 @@ def update_all_icons(base_path: str):
     versioned  = set_svg_version(
                     template_filepath=os.path.join(in_path,"logo.svg"),
                     version=sparrowpy.__version__,
-                    out_filename="temp_ver.svg")
+                    out_filename="_temp_ver.svg")
 
     no_version = remove_versioning_layer(
                     template_filepath=os.path.join(in_path,"logo.svg"),
-                    out_filename="temp.svg")
+                    out_filename="_temp.svg")
 
     copy_to_destination(in_filepath=no_version,
                         destination_dir=out_path,
