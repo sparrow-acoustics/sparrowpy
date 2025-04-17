@@ -31,7 +31,7 @@ def test_check_visibility(sample_walls):
 def test_check_visibility_wrapper(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
     radiosity.bake_geometry()
-    visibility_matrix = sp.geometry._check_visibility(
+    visibility_matrix = sp.geometry._check_patch2patch_visibility(
         radiosity.patches_center, radiosity.patches_normal,
         radiosity.patches_points)
     npt.assert_almost_equal(radiosity._visibility_matrix, visibility_matrix)
