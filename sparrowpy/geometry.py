@@ -876,22 +876,17 @@ def _basic_visibility(vis_point: np.ndarray,
                                     polygon3d=surf_points,
                                     plane_normal=surf_normal)
 
-    # if eval point nor vis point are inside surf
     if not vis_in_surf and not eval_in_surf:
 
-        # check if projected point on surf
         pt = _project_to_plane(origin=vis_point, point=eval_point,
                             plane_pt=surf_points[0],
                             plane_normal=surf_normal,
                             check_normal=False)
 
-        # if intersection point exists
         if pt is not None:
-            # if intersection point is inside surf
             if _point_in_polygon(point3d=pt,
                                  polygon3d=surf_points,
                                  plane_normal=surf_normal):
-                # if intersection point is between vis and eval point
                 if (np.dot(pt-vis_point,pt-eval_point)<0):
                     is_visible = False
 
@@ -903,7 +898,6 @@ def _basic_visibility(vis_point: np.ndarray,
           np.dot(surf_normal, vis_point-eval_point)<0):
             is_visible=False
 
-    #if both points are coplanar to surf and at least one is inside
     elif (np.abs(np.dot(vis_point-surf_points[0],surf_normal))<eta and
           np.abs(np.dot(eval_point-surf_points[0],surf_normal))<eta and
           (vis_in_surf or eval_in_surf)):
