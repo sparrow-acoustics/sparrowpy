@@ -148,14 +148,15 @@ def _source2patch_energy_universal(
     return (energy, distance_out)
 
 def _patch2receiver_energy_universal(
-        receiver_pos, patches_points):
+        receiver_pos, patches_points, receiver_vis):
 
-    receiver_factor = np.empty((patches_points.shape[0]))
+    receiver_factor = np.zeros((patches_points.shape[0]))
 
 
     for i in prange(patches_points.shape[0]):
-        receiver_factor[i] = integration.pt_solution(point=receiver_pos,
-                        patch_points=patches_points[i,:], mode="receiver")
+        if receiver_vis[i]:
+            receiver_factor[i] = integration.pt_solution(point=receiver_pos,
+                            patch_points=patches_points[i,:], mode="receiver")
 
     return receiver_factor
 

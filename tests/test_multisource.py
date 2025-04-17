@@ -181,7 +181,9 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                     )
 
             e_r = sp.form_factor.universal._patch2receiver_energy_universal(
-                                                    receiver_pos=rec_.position,patches_points=np.array([wall[0].pts]),
+                                                    receiver_pos=rec_.position,
+                                                    patches_points=np.array([wall[0].pts]),
+                                                    receiver_vis=np.array([True]),
                                                     )
 
 

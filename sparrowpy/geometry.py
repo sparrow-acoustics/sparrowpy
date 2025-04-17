@@ -465,7 +465,7 @@ def _calculate_normals(points: np.ndarray):
 
     normals = np.empty((points.shape[0],3))
 
-    for i in prange(points.shape[0]):
+    for i in numba.prange(points.shape[0]):
         normals[i]=np.cross(points[i][1]-points[i][0],points[i][2]-points[i][0])
         normals[i]/=np.linalg.norm(normals[i])
 
@@ -738,8 +738,8 @@ def _coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-6) -> bool:
     """
     flag = False
 
-    for i in prange(p0.shape[0]):
-        for j in prange(p1.shape[0]):
+    for i in numba.prange(p0.shape[0]):
+        for j in numba.prange(p1.shape[0]):
             if np.linalg.norm(p0[i]-p1[j])<thres:
                 flag=True
                 break
@@ -800,7 +800,9 @@ def _check_point2patch_visibility(
         eval_point:np.ndarray,
         patches_center:np.ndarray,
         surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
-    """Check the visibility between patches.
+    """Check the visibility between a point and patches.
+    
+    It is intended to check the visibiliy between source/receivers and patches.
 
     Parameters
     ----------
