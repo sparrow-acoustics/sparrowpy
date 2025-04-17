@@ -4,7 +4,7 @@ from PIL import Image
 import shutil
 import sparrowpy
 
-def update_all_icons(base_path: os.path):
+def update_all_icons(base_path: str):
     """Updates sparrowpy version in logo and generates icon."""
 
     out_path = os.path.join(base_path,"docs/_static")
@@ -16,22 +16,22 @@ def update_all_icons(base_path: os.path):
 
     no_version = set_svg_version(
                     template_filepath=os.path.join(in_path,"logo.svg"),
-                    out_filename="temp_ver.svg")
+                    out_filename="temp.svg")
 
     versioned  = set_svg_version(
                     template_filepath=os.path.join(in_path,"logo.svg"),
                     version=sparrowpy.__version__,
                     out_filename="temp_ver.svg")
 
-    copy_to_destination(icon,
-                        out_path,
-                        "favicon.ico")
-    copy_to_destination(no_version,
-                        out_path,
-                        "logo_nover.svg")
-    copy_to_destination(versioned,
-                        out_path,
-                        "logo.svg")
+    copy_to_destination(in_filepath=icon,
+                        destination_dir=out_path,
+                        destination_name="favicon.ico")
+    copy_to_destination(in_filepath=no_version,
+                        destination_dir=out_path,
+                        destination_name="logo_nover.svg")
+    copy_to_destination(in_filepath=versioned,
+                        destination_dir=out_path,
+                        destination_name="logo.svg")
 
 def copy_to_destination(in_filepath: str,
                         destination_dir: str,
@@ -46,7 +46,7 @@ def copy_to_destination(in_filepath: str,
                                  destination_name),
                     )
 
-def set_svg_version(template_filepath: os.path,
+def set_svg_version(template_filepath: str,
                     version="",
                     out_filename="temp.svg"):
     """Read template .svg and update stand in text with version."""
@@ -73,7 +73,7 @@ def set_svg_version(template_filepath: os.path,
 
 
 
-def generate_icon_from_png(template_filepath: os.path,
+def generate_icon_from_png(template_filepath: str,
                            out_filename = "temp.ico"):
     """Generate .ico image from .png input."""
     img = Image.open(template_filepath)
@@ -82,12 +82,10 @@ def generate_icon_from_png(template_filepath: os.path,
                     os.path.split(template_filepath)[0],
                     out_filename)
 
-    success = img.save(out_fpath)
+    img.save(out_fpath)
 
-    if success:
-        return out_fpath
-    else:
-        return None
+    return out_fpath
+
 
 if __name__=="__main__":
-    update_all_icons(base_path=os.path.getcwd())
+    update_all_icons(base_path=os.getcwd())
