@@ -16,6 +16,7 @@ def update_all_icons(base_path: str):
 
     no_version = set_svg_version(
                     template_filepath=os.path.join(in_path,"logo.svg"),
+                    version="sparrowpy",
                     out_filename="temp.svg")
 
     versioned  = set_svg_version(
