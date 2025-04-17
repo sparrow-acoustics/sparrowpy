@@ -62,6 +62,7 @@ class DirectionalRadiosityFast():
             form_factors:np.ndarray=None,
             form_factors_tilde:np.ndarray=None,
             source_visibility:np.ndarray=None,
+            receiver_visibility:np.ndarray=None,
             frequencies:np.ndarray=None,
             brdf:list[np.ndarray]=None,
             brdf_index:np.ndarray=None,
@@ -104,7 +105,11 @@ class DirectionalRadiosityFast():
             (n_patches, n_patches, n_outgoing_directions, n_bins), by
             default None
         source_visibility : np.ndarray, optional
-            source to patch boolean visibility array, by default None.
+            source to patch boolean visibility array of shape (n_patches,)
+            by default None.
+        receiver_visibility : np.ndarray, optional
+            receiver to patch boolean visibility array of shape
+            (n_receivers, n_patches), by default None.
         frequencies : np.ndarray, optional
             frequency vector used for the simulation. , by default None
         brdf : list[np.ndarray], optional
@@ -185,6 +190,7 @@ class DirectionalRadiosityFast():
         self._form_factors = form_factors
         self._form_factors_tilde = form_factors_tilde
         self._source_visibility = source_visibility
+        self._receiver_visibility = receiver_visibility
 
         # general data for material and medium data
         self._frequencies = frequencies
@@ -430,6 +436,12 @@ class DirectionalRadiosityFast():
                 pf.Coordinates(0, 0, 1, weights=1),
                 pf.Coordinates(0, 0, 1, weights=1))
             self._frequencies = frequencies
+        if self._air_attenuation is None:
+            frequencies = np.array([0]) if self._frequencies is None else \
+                self._frequencies
+            self.set_air_attenuation(
+                pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+            self._frequencies = frequencies
         n_bins = self.n_bins
         vi = np.array(
             [s.cartesian for s in self._brdf_incoming_directions])
@@ -566,12 +578,20 @@ class DirectionalRadiosityFast():
             n_receivers, n_patches, n_bins,
             self._energy_exchange_etc.shape[-1]))
 
+        receiver_vis=np.empty((n_receivers,n_patches),dtype=bool)
+
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
 
+            receiver_vis[i] = geometry._check_point2patch_visibility(
+                                        eval_point=receiver_pos[i],
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+
             # geometrical weighting
             patch_receiver_energy=form_factor._patch2receiver_energy_universal(
-                    receiver_pos[i], patches_points)
+                    receiver_pos[i], patches_points, receiver_vis[i])
 
             # access histograms with correct scattering weighting
             receivers_array = np.array(
@@ -599,6 +619,8 @@ class DirectionalRadiosityFast():
                                     air_attenuation=air_attenuation)
             else:
                 histogram_out[i] = E_matrix
+
+        self._receiver_visibility = receiver_vis
 
         return histogram_out
 
