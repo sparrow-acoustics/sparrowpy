@@ -569,9 +569,15 @@ class DirectionalRadiosityFast():
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
 
+            receiver_vis = geometry._check_point2patch_visibility(
+                                        eval_point=receiver_pos[i],
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+
             # geometrical weighting
             patch_receiver_energy=form_factor._patch2receiver_energy_universal(
-                    receiver_pos[i], patches_points)
+                    receiver_pos[i], patches_points, receiver_vis)
 
             # access histograms with correct scattering weighting
             receivers_array = np.array(
