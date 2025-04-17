@@ -6,11 +6,13 @@ readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.9"
 authors = [
-    { name = "The pyfar developers", email = "info@pyfar.org" },
+    { name = "The sparrowpy developers" },
 ]
 keywords = [
     "acoustics",
-    "pyfar",
+    "radiosity",
+    "sound propagation",
+    "auralization",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -62,7 +64,6 @@ docs = [
     "sphinx_mdinclude",
     "sphinx-design",
     "sphinx-favicon",
-    "sphinx-reredirects",
     "nbsphinx",
     "sphinx_gallery",
     "nbsphinx_link",
