@@ -205,7 +205,7 @@ A=[
     [11,12],
    ]
 
-@pytest.mark.filterwarnings("ignore:UserWarning")
+
 def test_source_vis(basicscene):
     """Test visibility check between source and patches."""
 
@@ -224,18 +224,42 @@ def test_source_vis(basicscene):
                      np.ones_like(radi._source_visibility))
 
 
-@pytest.mark.filterwarnings("ignore:UserWarning")
 def test_receiver_vis(basicscene):
     """Test visibility check between source and patches."""
 
     radi=sp.DirectionalRadiosityFast.from_polygon(basicscene["walls"],
                                                   patch_size=1.)
 
+    brdf_sources = pf.Coordinates(0, 0, 1, weights=1)
+    brdf_receivers = pf.Coordinates(0, 0, 1, weights=1)
+    frequencies = np.array([1000])
+    brdf = sp.brdf.create_from_scattering(
+                    brdf_sources,
+                    brdf_receivers,
+                    pf.FrequencyData(1, frequencies),
+                    pf.FrequencyData(.3, frequencies))
+
+# set directional scattering data
+    radi.set_wall_brdf(np.arange(len(basicscene["walls"])),
+                       brdf, brdf_sources,
+                       brdf_receivers)
+    radi.set_air_attenuation(
+                    pf.FrequencyData(
+                        np.array([0]),
+                        frequencies))
+
+    radi.init_source_energy(pf.Coordinates(.5,.5,.5))
+
+    radi.calculate_energy_exchange(speed_of_sound=343,
+                                   etc_time_resolution=.2,
+                                   etc_duration=1.)
+
     radi.collect_energy_receiver_mono(pf.Coordinates([3.,.5,-5.],  #x
                                                      [3.,.5, 5.],  #y
                                                      [3.,.5, 4.])) #z
 
     npt.assert_equal(radi._receiver_visibility,
-                     np.array(np.zeros(radi.n_patches),
+                     np.array([np.zeros(radi.n_patches),
                               np.ones(radi.n_patches),
-                              np.zeros(radi.n_patches)))
+                              np.zeros(radi.n_patches)]),
+                     )
