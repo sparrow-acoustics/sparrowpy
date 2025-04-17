@@ -800,7 +800,9 @@ def _check_point2patch_visibility(
         eval_point:np.ndarray,
         patches_center:np.ndarray,
         surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
-    """Check the visibility between patches.
+    """Check the visibility between a point and patches.
+    
+    It is intended to check the visibiliy between source/receivers and patches.
 
     Parameters
     ----------
