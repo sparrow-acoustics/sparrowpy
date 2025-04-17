@@ -71,12 +71,12 @@ docs = [
 dev = ["sparrowpy[deploy,tests,docs]"]
 
 [project.urls]
-Tracker = "https://github.com/ahms5/sparrowpy/issues"
+Tracker = "https://github.com/sparrow-acoustics/sparrowpy/issues"
 Documentation = "https://sparrowpy.readthedocs.io/"
 Download = "https://pypi.org/project/sparrowpy/"
 Homepage = "https://pyfar.org/"
-Source = "https://github.com/ahms5/sparrowpy"
-Changelog = "https://github.com/ahms5/sparrowpy/blob/main/HISTORY.rst"
+Source = "https://github.com/sparrow-acoustics/sparrowpy"
+Changelog = "https://github.com/sparrow-acoustics/sparrowpy/blob/main/HISTORY.rst"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
