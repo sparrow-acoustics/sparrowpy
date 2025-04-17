@@ -436,6 +436,12 @@ class DirectionalRadiosityFast():
                 pf.Coordinates(0, 0, 1, weights=1),
                 pf.Coordinates(0, 0, 1, weights=1))
             self._frequencies = frequencies
+        if self._air_attenuation is None:
+            frequencies = np.array([0]) if self._frequencies is None else \
+                self._frequencies
+            self.set_air_attenuation(
+                pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+            self._frequencies = frequencies
         n_bins = self.n_bins
         vi = np.array(
             [s.cartesian for s in self._brdf_incoming_directions])
