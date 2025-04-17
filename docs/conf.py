@@ -27,7 +27,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'autodocsumm',
     'sphinx_design',
-    'sphinx_favicon',
     'sphinx_mdinclude',
     'nbsphinx',
     'nbsphinx_link',
@@ -56,8 +55,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sparrowpy'
-copyright = "2024, The pyfar developers"
-author = "The pyfar developers"
+copyright = "2024, The sparrowpy developers"
+author = "The sparrowpy developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -111,7 +110,6 @@ html_static_path = ['_static']
 html_css_files = ['css/custom.css']
 html_logo = '_static/logo.png'
 html_title = "sparrowpy"
-html_favicon = '_static/favicon.ico'
 
 # -- HTML theme options
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html
@@ -127,7 +125,7 @@ html_theme_options = {
     "icon_links": [
         {
           "name": "GitHub",
-          "url": "https://github.com/pyfar",
+          "url": "https://github.com/sparrow-acoustics/sparrowpy",
           "icon": "fa-brands fa-square-github",
           "type": "fontawesome",
         },
@@ -150,7 +148,6 @@ branch = 'main'
 link = f'https://github.com/pyfar/gallery/raw/{branch}/docs/'
 folders_in = [
     '_static/css/custom.css',
-    '_static/favicon.ico',
     ]
 
 def download_files_from_gallery(link, folders_in):
