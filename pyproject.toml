@@ -63,6 +63,7 @@ docs = [
     "pydata-sphinx-theme",
     "sphinx_mdinclude",
     "sphinx-design",
+    "sphinx-favicon",
     "nbsphinx",
     "sphinx_gallery",
     "nbsphinx_link",
