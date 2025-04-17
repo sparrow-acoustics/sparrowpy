@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sparrowpy'
-copyright = "2025, The sparrowpz developers"
+copyright = "2025, The sparrowpy developers"
 author = "The sparrowpy developers"
 
 # The version info for the project you're documenting, acts as replacement
@@ -109,7 +109,7 @@ intersphinx_mapping = {
 html_theme = 'pydata_sphinx_theme'
 html_static_path = ['_static']
 html_css_files = ['css/custom.css']
-html_logo = '_static/logo.svg'
+html_logo = '_static/logo_nover.svg'
 html_title = "sparrowpy"
 html_favicon = '_static/favicon.ico'
 
