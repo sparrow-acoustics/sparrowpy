@@ -27,7 +27,6 @@ class DirectionalRadiosityFast():
     _visible_patches: np.ndarray
     _form_factors: np.ndarray
     _form_factors_tilde: np.ndarray
-    _source_visibility: np.ndarray
 
     # general data for material and medium data
     _frequencies: np.ndarray
@@ -61,8 +60,6 @@ class DirectionalRadiosityFast():
             visible_patches:np.ndarray=None,
             form_factors:np.ndarray=None,
             form_factors_tilde:np.ndarray=None,
-            source_visibility:np.ndarray=None,
-            receiver_visibility:np.ndarray=None,
             frequencies:np.ndarray=None,
             brdf:list[np.ndarray]=None,
             brdf_index:np.ndarray=None,
@@ -104,12 +101,6 @@ class DirectionalRadiosityFast():
             Form factor including air attenuation and BRDF of shape
             (n_patches, n_patches, n_outgoing_directions, n_bins), by
             default None
-        source_visibility : np.ndarray, optional
-            source to patch boolean visibility array of shape (n_patches,)
-            by default None.
-        receiver_visibility : np.ndarray, optional
-            receiver to patch boolean visibility array of shape
-            (n_receivers, n_patches), by default None.
         frequencies : np.ndarray, optional
             frequency vector used for the simulation. , by default None
         brdf : list[np.ndarray], optional
@@ -158,8 +149,6 @@ class DirectionalRadiosityFast():
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
             form_factors_tilde = np.array(form_factors_tilde)
-        if source_visibility is not None:
-            source_visibility = np.array(source_visibility)
         if brdf is not None:
             brdf = [np.array(b) for b in brdf]
         if air_attenuation is not None:
@@ -189,8 +178,6 @@ class DirectionalRadiosityFast():
         self._visible_patches = visible_patches
         self._form_factors = form_factors
         self._form_factors_tilde = form_factors_tilde
-        self._source_visibility = source_visibility
-        self._receiver_visibility = receiver_visibility
 
         # general data for material and medium data
         self._frequencies = frequencies
@@ -467,7 +454,6 @@ class DirectionalRadiosityFast():
 
         self._energy_init_source = energy_0_dir
         self._distance_patches_to_source = distance_0
-        self._source_visibility = source_vis
 
     def calculate_energy_exchange(
             self, speed_of_sound,
@@ -619,8 +605,6 @@ class DirectionalRadiosityFast():
                                     air_attenuation=air_attenuation)
             else:
                 histogram_out[i] = E_matrix
-
-        self._receiver_visibility = receiver_vis
 
         return histogram_out
 

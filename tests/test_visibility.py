@@ -213,15 +213,12 @@ def test_source_vis(basicscene):
                                                   patch_size=1.)
 
     radi.init_source_energy(pf.Coordinates(3.,3.,3.))
-    npt.assert_equal(radi._source_visibility,
-                     np.zeros_like(radi._source_visibility))
     npt.assert_equal(radi._energy_init_source,
                      np.zeros_like(radi._energy_init_source))
 
 
     radi.init_source_energy(pf.Coordinates(.5, .5, .5))
-    npt.assert_equal(radi._source_visibility,
-                     np.ones_like(radi._source_visibility))
+    assert (radi._energy_init_source != 0).any()
 
 
 def test_receiver_vis(basicscene):
@@ -236,12 +233,12 @@ def test_receiver_vis(basicscene):
                                    etc_time_resolution=.2,
                                    etc_duration=1.)
 
-    radi.collect_energy_receiver_mono(pf.Coordinates([3.,.5,-5.],  #x
-                                                     [3.,.5, 5.],  #y
-                                                     [3.,.5, 4.])) #z
+    etc = radi.collect_energy_receiver_mono(pf.Coordinates([3.,-5.,.5],  #x
+                                                           [3., 5.,.5],  #y
+                                                           [3., 4.,.5])) #z
 
-    npt.assert_equal(radi._receiver_visibility,
-                     np.array([np.zeros(radi.n_patches),
-                              np.ones(radi.n_patches),
-                              np.zeros(radi.n_patches)]),
+    npt.assert_equal(etc.time[0:2,0,:],
+                     np.array([np.zeros((5)),
+                              np.zeros((5))]),
                      )
+    assert (etc.time[-1,0,:] != 0).any()
