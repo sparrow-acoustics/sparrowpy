@@ -577,7 +577,7 @@ class DirectionalRadiosityFast():
 
             # geometrical weighting
             patch_receiver_energy=form_factor._patch2receiver_energy_universal(
-                    receiver_pos[i], patches_points, receiver_vis[i])
+                    receiver_pos[i], patches_points, receiver_visibility[i])
 
             # access histograms with correct scattering weighting
             receivers_array = np.array(
