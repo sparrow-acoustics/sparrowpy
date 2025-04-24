@@ -154,7 +154,7 @@ def _patch2receiver_energy_universal(
 
 
     for i in prange(patches_points.shape[0]):
-        if receiver_vis[i]:
+        if receiver_visibility[i]:
             receiver_factor[i] = integration.pt_solution(point=receiver_pos,
                             patch_points=patches_points[i,:], mode="receiver")
 
