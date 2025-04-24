@@ -115,10 +115,5 @@ venv.bak/
 tests/*/__init__.py
 tests/private/
 
-# ignore downloads for the doc from pyfar gallery
-docs/header.rst
-docs/_static/favicon.ico
-docs/_static/css/custom.css
-
 # ignore generated files
 *.pdf
