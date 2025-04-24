@@ -175,7 +175,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
                                                     source_position=src_.position,
                                                     patches_center=np.array([wall[0].center]),
                                                     patches_points=np.array([wall[0].pts]),
-                                                    source_vis=np.ones((wall[0].center.shape[0]),dtype=bool),
+                                                    source_visibility=np.ones((wall[0].center.shape[0]),dtype=bool),
                                                     air_attenuation=air_att,
                                                     n_bins=1,
                                                     )
@@ -183,7 +183,7 @@ def test_reciprocity_s2p_p2r(src,rec,method="universal"):
             e_r = sp.form_factor.universal._patch2receiver_energy_universal(
                                                     receiver_pos=rec_.position,
                                                     patches_points=np.array([wall[0].pts]),
-                                                    receiver_vis=np.array([True]),
+                                                    receiver_visibility=np.array([True]),
                                                     )
 
 
