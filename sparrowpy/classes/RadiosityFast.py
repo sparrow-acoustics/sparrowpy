@@ -442,7 +442,7 @@ class DirectionalRadiosityFast():
                                         patches_center=patches_center,
                                         surf_points=self.walls_points,
                                         surf_normal=self.walls_normal)
-    self._source_visibility = source_visibility
+        self._source_visibility = source_visibility
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
             source_visibility,
@@ -569,7 +569,7 @@ class DirectionalRadiosityFast():
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
 
-            receiver_vis[i] = geometry._check_point2patch_visibility(
+            receiver_visibility[i] = geometry._check_point2patch_visibility(
                                         eval_point=receiver_pos[i],
                                         patches_center=patches_center,
                                         surf_points=self.walls_points,
