@@ -129,7 +129,7 @@ def _source2patch_energy_universal(
     energy = np.zeros((n_patches, n_bins))
     distance_out = np.zeros((n_patches, ))
     for j in prange(n_patches):
-        if source_vis[j]:
+        if source_visibility[j]:
             source_pos = source_position.copy()
             receiver_pos = patches_center[j, :].copy()
             receiver_pts = patches_points[j, :, :].copy()
