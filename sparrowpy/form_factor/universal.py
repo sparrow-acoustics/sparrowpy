@@ -148,7 +148,7 @@ def _source2patch_energy_universal(
     return (energy, distance_out)
 
 def _patch2receiver_energy_universal(
-        receiver_pos, patches_points, receiver_vis):
+        receiver_pos, patches_points, receiver_visibility):
 
     receiver_factor = np.zeros((patches_points.shape[0]))
 
