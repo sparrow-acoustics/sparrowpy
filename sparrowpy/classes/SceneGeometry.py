@@ -20,6 +20,7 @@ class SceneGeometry:
     _vertices: np.ndarray
     _material_name_list: list[str]
     _material_id_to_wall: np.ndarray
+
     def __init__(
             vertices, walls_connectivity, walls_normals, walls_up_vectors):
         pass
