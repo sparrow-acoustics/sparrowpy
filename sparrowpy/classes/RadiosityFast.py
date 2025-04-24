@@ -437,7 +437,7 @@ class DirectionalRadiosityFast():
         brdf = np.array(self._brdf)
         brdf_index = self._brdf_index
         patches_center = self.patches_center
-        source_vis = geometry._check_point2patch_visibility(
+        source_visibility = geometry._check_point2patch_visibility(
                                         eval_point=source_position,
                                         patches_center=patches_center,
                                         surf_points=self.walls_points,
