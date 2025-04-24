@@ -564,7 +564,7 @@ class DirectionalRadiosityFast():
             n_receivers, n_patches, n_bins,
             self._energy_exchange_etc.shape[-1]))
 
-        receiver_vis=np.empty((n_receivers,n_patches),dtype=bool)
+        receiver_visibility=np.empty((n_receivers,n_patches),dtype=bool)
 
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
