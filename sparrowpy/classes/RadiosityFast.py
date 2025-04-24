@@ -363,7 +363,7 @@ class DirectionalRadiosityFast():
 
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry._check_visibility(
+        self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
@@ -410,7 +410,9 @@ class DirectionalRadiosityFast():
     def init_source_energy(
             self, source:pf.Coordinates):
         """Initialize the source energy."""
-        source_position = source.cartesian
+        if source.cshape != (1, ):
+           raise ValueError('just one source position is allowed.')
+        source_position = source.cartesian[0]
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
             frequencies = np.array([0]) if self._frequencies is None else \
@@ -421,6 +423,12 @@ class DirectionalRadiosityFast():
                 pf.Coordinates(0, 0, 1, weights=1),
                 pf.Coordinates(0, 0, 1, weights=1))
             self._frequencies = frequencies
+        if self._air_attenuation is None:
+            frequencies = np.array([0]) if self._frequencies is None else \
+                self._frequencies
+            self.set_air_attenuation(
+                pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+            self._frequencies = frequencies
         n_bins = self.n_bins
         vi = np.array(
             [s.cartesian for s in self._brdf_incoming_directions])
@@ -429,13 +437,21 @@ class DirectionalRadiosityFast():
         brdf = np.array(self._brdf)
         brdf_index = self._brdf_index
         patches_center = self.patches_center
+        source_visibility = geometry._check_point2patch_visibility(
+                                        eval_point=source_position,
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+        self._source_visibility = source_visibility
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
+            source_visibility,
             self._air_attenuation, n_bins)
         energy_0_dir = _add_directional(
             energy_0, source_position,
             patches_center, n_bins, patch_to_wall_ids,
             vi, vo, brdf, brdf_index)
+
         self._energy_init_source = energy_0_dir
         self._distance_patches_to_source = distance_0
 
@@ -548,12 +564,20 @@ class DirectionalRadiosityFast():
             n_receivers, n_patches, n_bins,
             self._energy_exchange_etc.shape[-1]))
 
+        receiver_visibility=np.empty((n_receivers,n_patches),dtype=bool)
+
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
 
+            receiver_visibility[i] = geometry._check_point2patch_visibility(
+                                        eval_point=receiver_pos[i],
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+
             # geometrical weighting
             patch_receiver_energy=form_factor._patch2receiver_energy_universal(
-                    receiver_pos[i], patches_points)
+                    receiver_pos[i], patches_points, receiver_visibility[i])
 
             # access histograms with correct scattering weighting
             receivers_array = np.array(

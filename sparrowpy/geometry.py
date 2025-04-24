@@ -599,7 +599,7 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
     cond = dotprod < -epsilon
 
     if not check_normal:
-        cond = abs(dotprod) > epsilon
+        cond = np.abs(dotprod) > epsilon
 
     if cond:
         w = point-plane_pt
@@ -637,45 +637,51 @@ def _point_in_polygon(point3d: np.ndarray,
         (True if inside, False if not)
 
     """
-    # rotate all (coplanar) points to a horizontal plane
-    # and remove z dimension for convenience
-    rotmat = _rotation_matrix(n_in=plane_normal)
-
-    pt = _matrix_vector_product(matrix=rotmat,
-                                vector=point3d)[0:point3d.shape[0]-1]
-    poly = np.empty((polygon3d.shape[0],2))
-    for i in prange(polygon3d.shape[0]):
-        poly[i] = _matrix_vector_product(
-            matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
-
-
-    # winding number algorithm
-    count = 0
-    for i in prange(poly.shape[0]):
-        a1 = poly[(i+1)%poly.shape[0]]
-        a0 = poly[i%poly.shape[0]]
-        side = a1-a0
-
-        # check if line from evaluation point in +x direction
-        # intersects polygon side
-        nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
-        b = _project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
-                             plane_pt=a1, plane_normal=nl,
-                             check_normal=False)
-
-        # check if intersection exists and if is inside side [a0,a1]
-        if (b is not None) and b[0]>pt[0]:
-            if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
-                                -np.linalg.norm(a1-a0)) <= eta:
-                if np.dot(b-pt,nl)>0:
-                    count+=1
-                elif np.dot(b-pt,nl)<0:
-                    count-=1
-
-    if count != 0:
-        out = True
+    # check coplanarity of polygon and point3D
+    if np.abs(np.dot(point3d-polygon3d[0],plane_normal))>eta:
+        out= False
     else:
-        out = False
+
+        # rotate all (coplanar) points to a horizontal plane
+        # and remove z dimension for convenience
+        rotmat = _rotation_matrix(n_in=plane_normal)
+
+        pt = _matrix_vector_product(matrix=rotmat,
+                                    vector=point3d)[0:point3d.shape[0]-1]
+
+        poly = np.empty((polygon3d.shape[0],2))
+        for i in prange(polygon3d.shape[0]):
+            poly[i] = _matrix_vector_product(
+                matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
+
+
+        # winding number algorithm
+        count = 0
+        for i in prange(poly.shape[0]):
+            a1 = poly[(i+1)%poly.shape[0]]
+            a0 = poly[i%poly.shape[0]]
+            side = a1-a0
+
+            # check if line from evaluation point in +x direction
+            # intersects polygon side
+            nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
+            b = _project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
+                                plane_pt=a1, plane_normal=nl,
+                                check_normal=False)
+
+            # check if intersection exists and if is inside side [a0,a1]
+            if (b is not None) and b[0]>pt[0]:
+                if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
+                                    -np.linalg.norm(a1-a0)) <= eta:
+                    if np.dot(b-pt,nl)>0:
+                        count+=1
+                    elif np.dot(b-pt,nl)<0:
+                        count-=1
+
+        if count != 0:
+            out = True
+        else:
+            out = False
 
     return out
 
@@ -741,7 +747,7 @@ def _coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-6) -> bool:
 
     return flag
 
-def _check_visibility(
+def _check_patch2patch_visibility(
         patches_center:np.ndarray,
         surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
     """Check the visibility between patches.
@@ -753,7 +759,7 @@ def _check_visibility(
     surf_normal : np.ndarray
         normal vectors of all patches of shape (n_patches, 3)
     surf_points : np.ndarray
-        boundary points of possible blocking surfaces (n_surfaces,)
+        boundary points of possible blocking surfaces  (n_surfaces,n_patches,3)
 
     Returns
     -------
@@ -790,9 +796,52 @@ def _check_visibility(
 
     return visibility_matrix
 
+def _check_point2patch_visibility(
+        eval_point:np.ndarray,
+        patches_center:np.ndarray,
+        surf_normal:np.ndarray, surf_points:np.ndarray) -> np.ndarray:
+    """Check the visibility between a point and patches.
+
+    It is intended to check the visibiliy between source/receivers and patches.
+
+    Parameters
+    ----------
+    eval_point : np.ndarray
+        evaluation point for visibility of shape (3)
+    patches_center : np.ndarray
+        center points of all patches of shape (n_patches, 3)
+    surf_normal : np.ndarray
+        normal vectors of all patches of shape (n_patches, 3)
+    surf_points : np.ndarray
+        boundary points of possible blocking surfaces (n_surfaces,n_patches,3)
+
+    Returns
+    -------
+    visibility_vector : np.ndarray
+        boolean vector of shape (n_patches) with True if patches
+        are visible from the evaluation point, otherwise false
+
+    """
+    n_patches = patches_center.shape[0]
+    visibility_vector = np.ones((n_patches), dtype=np.bool_)
+    for i in prange(n_patches):
+        surfid=0
+        while (visibility_vector[i] and
+                                surfid!=len(surf_normal)):
+
+            visibility_vector[i]= _basic_visibility(eval_point,
+                                                    patches_center[i],
+                                                    surf_points[surfid],
+                                                    surf_normal[surfid])
+
+            surfid+=1
+
+    return visibility_vector
+
 def _basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
-                     surf_points: np.ndarray, surf_normal: np.ndarray,
+                     surf_points: np.ndarray,
+                     surf_normal: np.ndarray,
                      eta=1e-6)->bool:
     """Return visibility of a point based on view point position.
 
@@ -822,29 +871,40 @@ def _basic_visibility(vis_point: np.ndarray,
     """
     is_visible = True
 
-    # if eval point is not coplanar with surf
-    if np.abs(np.dot(surf_normal,eval_point-surf_points[0]))>eta:
+    vis_in_surf = _point_in_polygon(point3d=vis_point,
+                                    polygon3d=surf_points,
+                                    plane_normal=surf_normal)
+    eval_in_surf = _point_in_polygon(point3d=eval_point,
+                                    polygon3d=surf_points,
+                                    plane_normal=surf_normal)
 
-        # check if projected point on surf
+    if not vis_in_surf and not eval_in_surf:
+
         pt = _project_to_plane(origin=vis_point, point=eval_point,
                             plane_pt=surf_points[0],
                             plane_normal=surf_normal,
-                            check_normal=True)
+                            check_normal=False)
 
-        # if intersection point exists
         if pt is not None:
-            # if plane is in front of eval point
-            if (np.linalg.norm(eval_point-vis_point)>
-                                np.linalg.norm(pt-vis_point)):
-                # if point is inside surf polygon
-                if _point_in_polygon(point3d=pt, polygon3d=surf_points,
-                                    plane_normal=surf_normal):
+            if _point_in_polygon(point3d=pt,
+                                 polygon3d=surf_points,
+                                 plane_normal=surf_normal):
+                if (np.dot(pt-vis_point,pt-eval_point)<0):
                     is_visible = False
 
-    # if both vis and eval point are coplanar
-    elif (np.abs(np.dot(surf_normal,vis_point-surf_points[0]))<eta and
-                    np.abs(np.dot(surf_normal,eval_point-surf_points[0]))<eta):
-        is_visible = False
+    elif (vis_in_surf and not eval_in_surf and
+          np.dot(surf_normal, eval_point-vis_point)<0):
+        is_visible=False
+
+    elif (not vis_in_surf and eval_in_surf and
+          np.dot(surf_normal, vis_point-eval_point)<0):
+            is_visible=False
+
+    elif (np.abs(np.dot(vis_point-surf_points[0],surf_normal))<eta and
+          np.abs(np.dot(eval_point-surf_points[0],surf_normal))<eta and
+          (vis_in_surf or eval_in_surf)):
+        is_visible=False
+
 
     return is_visible
 
@@ -856,7 +916,10 @@ if numba is not None:
     _calculate_center = numba.njit()(_calculate_center)
     _calculate_size = numba.njit()(_calculate_size)
     _create_patches = numba.njit()(_create_patches)
-    _check_visibility = numba.njit(parallel=True)(_check_visibility)
+    _check_patch2patch_visibility = numba.njit(parallel=True)(
+        _check_patch2patch_visibility)
+    _check_point2patch_visibility = numba.njit(parallel=True)(
+        _check_point2patch_visibility)
     _calculate_normals = numba.njit()(_calculate_normals)
     _coincidence_check = numba.njit()(_coincidence_check)
     _basic_visibility = numba.njit()(_basic_visibility)
