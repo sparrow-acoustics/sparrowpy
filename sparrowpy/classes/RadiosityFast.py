@@ -442,7 +442,7 @@ class DirectionalRadiosityFast():
                                         patches_center=patches_center,
                                         surf_points=self.walls_points,
                                         surf_normal=self.walls_normal)
-
+    self._source_visibility = source_visibility
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
             source_visibility,
