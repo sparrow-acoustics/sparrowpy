@@ -110,7 +110,7 @@ def _source2patch_energy_universal(
         center of all patches of shape (n_patches, 3)
     patches_points : np.ndarray
         vertices of all patches of shape (n_patches, n_points, 3)
-    source_vis : np.ndarray
+    source_visibility : np.ndarray
         visibility condition between source and patches (n_patches)
     air_attenuation : np.ndarray
         air attenuation factor in Np/m (n_bins,)
