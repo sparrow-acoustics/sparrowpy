@@ -215,9 +215,12 @@ def test_source_vis(basicscene):
     radi.init_source_energy(pf.Coordinates(3.,3.,3.))
     npt.assert_equal(radi._energy_init_source,
                      np.zeros_like(radi._energy_init_source))
-
+    npt.assert_equal(radi._source_visibility,
+                     np.zeros_like(radi._source_visibility))
 
     radi.init_source_energy(pf.Coordinates(.5, .5, .5))
+    npt.assert_equal(radi._source_visibility,
+                     np.ones_like(radi._source_visibility))
     assert (radi._energy_init_source != 0).any()
 
 
