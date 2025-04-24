@@ -445,7 +445,7 @@ class DirectionalRadiosityFast():
 
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
-            source_vis,
+            source_visibility,
             self._air_attenuation, n_bins)
         energy_0_dir = _add_directional(
             energy_0, source_position,
