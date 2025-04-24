@@ -98,7 +98,7 @@ def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
 
 def _source2patch_energy_universal(
         source_position: np.ndarray, patches_center: np.ndarray,
-        patches_points: np.ndarray, source_vis: np.ndarray,
+        patches_points: np.ndarray, source_visibility: np.ndarray,
         air_attenuation:np.ndarray, n_bins:float):
     """Calculate the initial energy from the source.
 
