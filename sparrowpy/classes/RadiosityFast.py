@@ -521,15 +521,15 @@ class DirectionalRadiosityFast():
         brdf = np.array(self._brdf)
         brdf_index = self._brdf_index
         patches_center = self.patches_center
-        source_vis = geometry._check_point2patch_visibility(
+        source_visibility = geometry._check_point2patch_visibility(
                                         eval_point=source_position,
                                         patches_center=patches_center,
                                         surf_points=self.walls_points,
                                         surf_normal=self.walls_normal)
-
+        self._source_visibility = source_visibility
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
-            source_vis,
+            source_visibility,
             self._air_attenuation, n_bins)
         energy_0_dir = _add_directional(
             energy_0, source_position,
@@ -648,12 +648,12 @@ class DirectionalRadiosityFast():
             n_receivers, n_patches, n_bins,
             self._energy_exchange_etc.shape[-1]))
 
-        receiver_vis=np.empty((n_receivers,n_patches),dtype=bool)
+        receiver_visibility=np.empty((n_receivers,n_patches),dtype=bool)
 
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
 
-            receiver_vis[i] = geometry._check_point2patch_visibility(
+            receiver_visibility[i] = geometry._check_point2patch_visibility(
                                         eval_point=receiver_pos[i],
                                         patches_center=patches_center,
                                         surf_points=self.walls_points,
@@ -661,7 +661,7 @@ class DirectionalRadiosityFast():
 
             # geometrical weighting
             patch_receiver_energy=form_factor._patch2receiver_energy_universal(
-                    receiver_pos[i], patches_points, receiver_vis[i])
+                    receiver_pos[i], patches_points, receiver_visibility[i])
 
             # access histograms with correct scattering weighting
             receivers_array = np.array(

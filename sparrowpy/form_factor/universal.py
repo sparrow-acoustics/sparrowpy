@@ -98,7 +98,7 @@ def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
 
 def _source2patch_energy_universal(
         source_position: np.ndarray, patches_center: np.ndarray,
-        patches_points: np.ndarray, source_vis: np.ndarray,
+        patches_points: np.ndarray, source_visibility: np.ndarray,
         air_attenuation:np.ndarray, n_bins:float):
     """Calculate the initial energy from the source.
 
@@ -110,7 +110,7 @@ def _source2patch_energy_universal(
         center of all patches of shape (n_patches, 3)
     patches_points : np.ndarray
         vertices of all patches of shape (n_patches, n_points, 3)
-    source_vis : np.ndarray
+    source_visibility : np.ndarray
         visibility condition between source and patches (n_patches)
     air_attenuation : np.ndarray
         air attenuation factor in Np/m (n_bins,)
@@ -129,7 +129,7 @@ def _source2patch_energy_universal(
     energy = np.zeros((n_patches, n_bins))
     distance_out = np.zeros((n_patches, ))
     for j in prange(n_patches):
-        if source_vis[j]:
+        if source_visibility[j]:
             source_pos = source_position.copy()
             receiver_pos = patches_center[j, :].copy()
             receiver_pts = patches_points[j, :, :].copy()
@@ -148,13 +148,13 @@ def _source2patch_energy_universal(
     return (energy, distance_out)
 
 def _patch2receiver_energy_universal(
-        receiver_pos, patches_points, receiver_vis):
+        receiver_pos, patches_points, receiver_visibility):
 
     receiver_factor = np.zeros((patches_points.shape[0]))
 
 
     for i in prange(patches_points.shape[0]):
-        if receiver_vis[i]:
+        if receiver_visibility[i]:
             receiver_factor[i] = integration.pt_solution(point=receiver_pos,
                             patch_points=patches_points[i,:], mode="receiver")
 
