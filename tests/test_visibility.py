@@ -5,7 +5,6 @@ import pyfar as pf
 import sparrowpy as sp
 bpy = pytest.importorskip("bpy")
 import sparrowpy.utils.blender as bh  # noqa: E402
-import matplotlib.pyplot as plt  # noqa: E402
 
 @pytest.mark.parametrize("origin", [np.array([0.,1.,3.])])
 @pytest.mark.parametrize("point", [np.array([0.,1.,-1])])
@@ -79,7 +78,10 @@ def test_basic_visibility(point, origin, plpt):
     ])
 def test_vis_matrix_assembly(model):
     """Check if visibility matrices are correctly assembled."""
-    m1,m2 = bh.read_geometry_file(model)
+    gmodel = bh.read_geometry_file(model, wall_auto_assembly=True)
+
+    m1=gmodel["wall"]
+    m2=gmodel["patch"]
 
     patches_points = np.empty((len(m1["conn"]),len(m1["conn"][0]),3))
     patches_centers = np.empty((len(m1["conn"]),3))
@@ -134,75 +136,73 @@ def test_vis_matrix_assembly(model):
                                            surf_normal=surfs_normals,
                                            surf_points=surfs_points)
 
-        plt.imsave(model[:-6]+"_vis.pdf",vis_matrix)
-        plt.imsave(model[:-6]+"_sol.pdf",solution)
         npt.assert_array_equal(vis_matrix,solution)
 
 A=[
-    [0,1],
+    [0,2],
     [0,3],
     [0,4],
     [0,5],
     [0,6],
-    [0,9],
+    [0,10],
+    [0,11],
+    [0,13],
     [0,14],
-    [1,3],
+    [1,2],
     [1,4],
     [1,6],
     [1,7],
-    [1,9],
-    [1,14],
+    [1,12],
+    [1,15],
+    [2,4],
+    [2,6],
+    [2,7],
     [2,8],
-    [2,9],
-    [2,10],
-    [2,11],
     [2,12],
-    [2,13],
     [2,15],
+    [3,4],
     [3,5],
     [3,6],
-    [3,7],
-    [3,8],
-    [3,9],
-    [3,10],
     [3,11],
-    [3,12],
     [3,13],
     [3,14],
-    [3,15],
     [4,5],
     [4,6],
     [4,7],
+    [4,8],
     [4,9],
+    [4,10],
+    [4,13],
     [4,14],
+    [4,15],
     [5,6],
-    [5,7],
-    [5,9],
+    [5,10],
+    [5,11],
     [5,14],
     [6,7],
+    [6,8],
     [6,9],
-    [6,14],
+    [6,10],
+    [6,11],
+    [6,12],
+    [6,13],
+    [7,8],
     [7,9],
-    [7,14],
+    [7,10],
+    [7,12],
+    [7,15],
     [8,9],
-    [8,10],
-    [8,11],
     [8,12],
     [8,15],
-    [9,10],
     [9,12],
-    [9,13],
     [9,15],
     [10,11],
-    [10,12],
     [10,13],
-    [10,15],
-    [11,12],
+    [10,14],
     [11,13],
-    [11,15],
-    [12,13],
-    [13,15],
-    [11,12],
+    [11,14],
+    [12,15],
+    [13,14],
    ]
 
 
