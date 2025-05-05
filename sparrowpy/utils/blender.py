@@ -200,8 +200,8 @@ def generate_connectivity_wall(mesh: bmesh):
 
         # exclude redundant vertices (along an edge)
         line = cleanup_collinear(conn=line, vertlist=out_mesh["verts"])
-
-        out_mesh["conn"].append(line)
+        if len(line)>=3:
+            out_mesh["conn"].append(line)
 
         normals.append(np.array(f.normal))
 
@@ -251,8 +251,8 @@ def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
     for i,pface in enumerate(fine_mesh.faces):
         line = cleanup_collinear(conn=[v.index for v in pface.verts],
                                  vertlist=out_mesh["verts"])
-
-        out_mesh["conn"].append(line)
+        if len(line)>=3:
+            out_mesh["conn"].append(line)
 
         for j,wface in enumerate(rough_mesh.faces):
             if pface.normal==wface.normal:
@@ -347,14 +347,22 @@ def cleanup_collinear(conn: list, vertlist: np.ndarray)->list:
 
     """
     verts_center=vertlist[conn]
-    verts_past  = np.roll(verts_center,-1,axis=0)
-    verts_future = np.roll(verts_center,1,axis=0)
+    verts_past  = np.roll(vertlist[conn],-1,axis=0)
+    verts_future = np.roll(vertlist[conn],1,axis=0)
 
     u = verts_past-verts_center
+    u /= np.linalg.norm(u)
     v = verts_future-verts_center
+    v /= np.linalg.norm(v)
 
-    for i in range(u.shape[0]):
-        if np.dot(u[i],v[i])+1<1e-4:
+    i = 0
+
+    while len(conn) != i:
+        if np.dot(u[i],v[i])+1<1e-8:
+            if i>len(conn)-1:
+                print("hello")
             conn.pop(i)
+        else:
+            i+=1
 
     return conn

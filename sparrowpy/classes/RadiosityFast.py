@@ -19,6 +19,7 @@ class DirectionalRadiosityFast():
     _walls_points: np.ndarray
     _walls_normal: np.ndarray
     _walls_up_vector: np.ndarray
+    _walls_material: np.ndarray
     _patches_points: np.ndarray
     _n_patches: int
     _patch_to_wall_ids: np.ndarray
@@ -54,6 +55,7 @@ class DirectionalRadiosityFast():
             walls_points:np.ndarray,
             walls_normal:np.ndarray,
             walls_up_vector:np.ndarray,
+            walls_material:np.ndarray,
             patches_points:np.ndarray,
             n_patches:int,
             patch_to_wall_ids:np.ndarray,
@@ -170,6 +172,7 @@ class DirectionalRadiosityFast():
         self._walls_points = walls_points
         self._walls_normal = walls_normal
         self._walls_up_vector = walls_up_vector
+        self._walls_material = walls_material
         self._patches_points = patches_points
         self._n_patches = n_patches
         self._patch_to_wall_ids = patch_to_wall_ids
@@ -408,6 +411,8 @@ class DirectionalRadiosityFast():
                                len(walls["conn"][0]),
                                walls["verts"].shape[-1]))
 
+        walls_material = walls["material"]
+
 
         for wallID in range(len(walls_normal)):
             walls_points[wallID] = walls["verts"][walls["conn"][wallID]]
@@ -438,7 +443,7 @@ class DirectionalRadiosityFast():
 
         # create radiosity object
         return cls(
-            walls_points, walls_normal, walls_up_vector,
+            walls_points, walls_normal, walls_up_vector, walls_material,
             patches_points, n_patches,
             patch_to_wall_ids)
 
