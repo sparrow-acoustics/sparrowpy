@@ -518,17 +518,8 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     else:
         n_out = n_out
 
-    #check if all the vector entries coincide
-    counter = int(0)
-
-    for i in prange(n_in.shape[0]):
-        if n_in[i] == n_out[i]:
-            counter+=1
-        else:
-            counter=counter
-
     # if input vector is the same as output return identity matrix
-    if counter == n_in.shape[0]:
+    if np.allclose(n_in,n_out,atol=1e-6):
 
         matrix = np.eye( len(n_in) , dtype=np.float64)
 
