@@ -790,6 +790,7 @@ class DirectionalRadiosityFast():
             'walls_points': self._walls_points,
             'walls_normal': self._walls_normal,
             'walls_up_vector': self._walls_up_vector,
+            'walls_material': self._walls_material,
             'patches_points': self._patches_points,
             'n_patches': self._n_patches,
             'patch_to_wall_ids': self._patch_to_wall_ids,
