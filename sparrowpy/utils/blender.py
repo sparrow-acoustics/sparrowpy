@@ -8,6 +8,7 @@ except ImportError:
     bpy = None
     bmesh = None
 import numpy as np
+import sparrowpy.geometry as geom
 
 class DotDict(dict):
     """dot.notation access to dictionary attributes."""
@@ -203,7 +204,9 @@ def generate_connectivity_wall(mesh: bmesh):
         if len(line)>=3:
             out_mesh["conn"].append(line)
 
-        normals.append(np.array(f.normal))
+        #normals.append(np.array(f.normal))
+        facenormal = geom._calculate_normals(np.array([out_mesh["verts"][line]]))
+        normals.append(facenormal[0])
 
         ## PLACEHOLDER VALUES
         upvecs.append(np.array(f.verts[1].co-f.verts[0].co))
