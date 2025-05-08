@@ -112,7 +112,7 @@ def create_from_scattering(
     brdf[:, :, :] += (
         scattering_flattened) / np.pi
     i_sources = np.arange(source_directions.csize)
-    brdf[i_sources, i_receiver, :] += scattering_factor / cos_factor
+    brdf[i_sources, i_receiver, :] += scattering_factor * cos_factor
 
     brdf *= (1 - absorption_coefficient.freq.flatten())
     if file_path is not None:
