@@ -357,7 +357,7 @@ class DirectionalRadiosityFast():
             walls_points, walls_normal, patch_size, len(polygon_list))
         # create radiosity object
         return cls(
-            walls_points, walls_normal, walls_up_vector,
+            walls_points, walls_normal, walls_up_vector,_,
             patches_points, n_patches,
             patch_to_wall_ids)
 
