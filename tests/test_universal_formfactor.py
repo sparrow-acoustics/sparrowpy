@@ -274,6 +274,30 @@ def test_binomial_formula(sol):
 
     npt.assert_array_equal(sol, coefs)
 
+@pytest.mark.parametrize("samples",[
+    np.array([1.,2.,3.]),
+    np.array([40.,45.,50.]),
+    np.array([4.,4.5,5.,6.]),
+    ])
+@pytest.mark.parametrize("order",[
+    3,4,5,6,
+])
+def test_Taylor_approximation(samples,order):
+    """Test Taylor expansion of log function."""
+    coefs = sp.form_factor.integration._poly_estimation_Taylor(x=samples,
+                                                               o=order)
+
+    true = np.log(samples)
+
+    est = np.zeros_like(true)
+
+    for i,x in enumerate(samples):
+        for o in range(order+1):
+            est[i]+= coefs[i]*x**o
+
+    npt.assert_allclose(est,true)
+
+
 
 def source_cast(src, rpatch, absor):
     """Cast and test source-to-patch factor calculation."""
