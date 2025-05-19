@@ -422,11 +422,11 @@ def _poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
 
     Taylor_coefs[0] = np.log(a)
     for n in prange(1,o+1):
-        Taylor_coefs[n] = -1**(n-1)/(n*a**n)
+        Taylor_coefs[n] = ((-1)**(n-1))/(n*a**n)
 
     for n in prange(o+1):
         for i in range(n+1):
-            b[i] += Taylor_coefs[n] * bin_coefs[i]*(-a)**(n-i)
+            b[i] += Taylor_coefs[n] * bin_coefs[n,i]*((-a)**(n-i))
 
     return b
 
@@ -473,11 +473,12 @@ def _binomial_coefficients(order: int)->np.ndarray:
         list of binomial coefficients.
     """
 
-    coefs = np.ones((order+1))
+    coefs = np.ones((order+1,order+1))
 
-    for k in prange(order+1):
-        for ll in range(k):
-            coefs[k] *= (order-ll)/(k-ll)
+    for j in prange(order+1):
+        for k in range(j+1):
+            for ll in range(k):
+                coefs[j,k] *= (j-ll)/(k-ll)
 
     return coefs
 
