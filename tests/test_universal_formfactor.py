@@ -2,6 +2,7 @@
 import pytest
 import sparrowpy.geometry as geo
 import numpy as np
+import numpy.testing as npt
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy import PatchesKang
@@ -256,6 +257,22 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
     patch = source_cast(src=source, rpatch=patch, absor=absor_factor)
 
     receiver_cast(receiver, patch, sr, c)
+
+@pytest.mark.parametrize("sol",[
+    np.array([1]),
+    np.array([1,1]),
+    np.array([1,2,1]),
+    np.array([1,3,3,1]),
+    np.array([1,4,6,4,1]),
+])
+def test_binomial_formula(sol):
+    """Test binomial coefficient formula."""
+
+    order = sol.shape[0]-1
+
+    coefs = sp.form_factor.integration._binomial_coefficients(order)
+
+    npt.assert_array_equal(sol, coefs)
 
 
 def source_cast(src, rpatch, absor):
