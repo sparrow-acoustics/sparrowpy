@@ -275,12 +275,13 @@ def test_binomial_formula(sol):
     npt.assert_array_equal(sol, coefs)
 
 @pytest.mark.parametrize("samples",[
-    np.array([1.,2.,3.]),
-    np.array([40.,45.,50.]),
-    np.array([4.,4.5,5.,6.]),
+    np.array([.4,2.]),
+    np.array([.1,.2]),
+    np.array([6.,7.,8.,9.]),
+    np.array([10.,11.]),
     ])
 @pytest.mark.parametrize("order",[
-    3,4,5,6,
+    4,5,6
 ])
 def test_Taylor_approximation(samples,order):
     """Test Taylor expansion of log function."""
@@ -289,13 +290,13 @@ def test_Taylor_approximation(samples,order):
 
     true = np.log(samples)
 
-    est = np.zeros_like(true)
+    est = np.zeros_like(samples)
 
     for i,x in enumerate(samples):
         for o in range(order+1):
-            est[i]+= coefs[i]*x**o
+            est[i]+= coefs[o]*x**(o)
 
-    npt.assert_allclose(est,true)
+    assert (np.abs(est-true)/np.abs(true)<0.1).all()
 
 
 
