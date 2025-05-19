@@ -259,20 +259,19 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
     receiver_cast(receiver, patch, sr, c)
 
 @pytest.mark.parametrize("sol",[
-    np.array([1]),
-    np.array([1,1]),
-    np.array([1,2,1]),
-    np.array([1,3,3,1]),
-    np.array([1,4,6,4,1]),
+    np.array(
+        [[1,1,1,1,1],
+        [1,1,1,1,1],
+        [1,2,1,1,1],
+        [1,3,3,1,1],
+        [1,4,6,4,1]]),
 ])
 def test_binomial_formula(sol):
     """Test binomial coefficient formula."""
+    for order in range(sol.shape[0]):
+        coefs = sp.form_factor.integration._binomial_coefficients(order)
 
-    order = sol.shape[0]-1
-
-    coefs = sp.form_factor.integration._binomial_coefficients(order)
-
-    npt.assert_array_equal(sol, coefs)
+    npt.assert_array_equal(sol[:order+1], coefs)
 
 @pytest.mark.parametrize("samples",[
     np.array([.4,2.]),
