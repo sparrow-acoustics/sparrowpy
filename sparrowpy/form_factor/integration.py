@@ -426,7 +426,7 @@ def _poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
 
     for n in prange(o+1):
         for i in range(n+1):
-            b[i] += Taylor_coefs[n] * bin_coefs[i]*a**(n-i)
+            b[i] += Taylor_coefs[n] * bin_coefs[i]*(-a)**(n-i)
 
     return b
 
@@ -473,34 +473,13 @@ def _binomial_coefficients(order: int)->np.ndarray:
         list of binomial coefficients.
     """
 
-    coefs = np.empty((order+1))
+    coefs = np.ones((order+1))
 
     for k in prange(order+1):
-        coefs[k] = _factorial(order)/(
-            _factorial(k)*_factorial(order-k)
-        )
+        for ll in range(k):
+            coefs[k] *= (order-ll)/(k-ll)
 
     return coefs
-
-def _factorial(n:int):
-    """Calculate factorial of input number.
-
-    Parameters
-    ----------
-    n: int
-        input value.
-
-    Returns
-    -------
-    out: int
-        factorial (!) of input value.
-    """
-
-    out = int(1)
-    for i in range(2,n+1):
-        out*=i
-
-    return out
 
 ################# surface areas
 
@@ -725,7 +704,6 @@ if numba is not None:
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
     _poly_estimation_Taylor = numba.njit()(_poly_estimation_Taylor)
     _binomial_coefficients = numba.njit()(_binomial_coefficients)
-    _factorial = numba.njit()(_factorial)
     _poly_integration = numba.njit()(_poly_integration)
     _surf_sample_random = numba.njit()(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
