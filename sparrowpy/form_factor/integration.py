@@ -389,8 +389,7 @@ def _poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     return b
 
-@numba.njit()
-def poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
+def _poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
     """Estimate polynomial coefficients based on sample points.
 
     Computes coefficients of a polynomial curve passing through points (x,y)
@@ -461,7 +460,7 @@ def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
 
     return out
 
-def _binomial_coefficients(order):
+def _binomial_coefficients(order: int)->np.ndarray:
     """"Calculate binomial coefficients based on polynomial order.
 
     Parameters
@@ -705,6 +704,8 @@ if numba is not None:
     nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
     load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
+    _poly_estimation_Taylor = numba.njit()(_poly_estimation_Taylor)
+    _binomial_coefficients = numba.njit()(_binomial_coefficients)
     _poly_integration = numba.njit()(_poly_integration)
     _surf_sample_random = numba.njit()(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
