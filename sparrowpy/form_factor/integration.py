@@ -7,6 +7,7 @@ except ImportError:
     prange = range
 import numpy as np
 import sparrowpy.geometry as geom
+import math
 
 
 def load_stokes_entries(
@@ -475,11 +476,31 @@ def _binomial_coefficients(order: int)->np.ndarray:
     coefs = np.empty((order+1))
 
     for k in prange(order+1):
-        coefs[k] = np.math.factorial(order)/(
-            np.math.factorial(k)*np.math.factorial(order-k)
+        coefs[k] = _factorial(order)/(
+            _factorial(k)*_factorial(order-k)
         )
 
     return coefs
+
+def _factorial(n:int):
+    """Calculate factorial of input number.
+
+    Parameters
+    ----------
+    n: int
+        input value.
+
+    Returns
+    -------
+    out: int
+        factorial (!) of input value.
+    """
+
+    out = int(1)
+    for i in range(2,n+1):
+        out*=i
+
+    return out
 
 ################# surface areas
 
@@ -704,6 +725,7 @@ if numba is not None:
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
     _poly_estimation_Taylor = numba.njit()(_poly_estimation_Taylor)
     _binomial_coefficients = numba.njit()(_binomial_coefficients)
+    _factorial = numba.njit()(_factorial)
     _poly_integration = numba.njit()(_poly_integration)
     _surf_sample_random = numba.njit()(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
