@@ -411,23 +411,21 @@ def _poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
     b: np.ndarray
         polynomial coefficients
     """
-
     b = np.zeros((o+1,))
+    bin_coefs = _binomial_coefficients(o)
 
     if np.abs(x[-1]-x[0])>1e-6:
-
         a = x[0]+(x[1]-x[0])/2
 
-        k = np.zeros((o+1,))
+    Taylor_coefs = np.zeros((o+1,))
 
-        k[0] = np.log(a)
+    Taylor_coefs[0] = np.log(a)
+    for n in prange(1,o+1):
+        Taylor_coefs[n] = -1**(n-1)/(n*a**n)
 
-        for n in range(1,o+1):
-            k[n] = -1**(n-1)/(n*a**n) * (x-a)**n
-
-        for j in range(o+1):
-            for i in range(j,o+1):
-                b[j] += (1+j) *-1**(2+i+j) * k[i] * a**(i-j)
+    for n in prange(o+1):
+        for i in range(n+1):
+            b[i] += Taylor_coefs[n] * bin_coefs[i]*a**(n-i)
 
     return b
 
