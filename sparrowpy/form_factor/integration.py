@@ -389,6 +389,48 @@ def _poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     return b
 
+@numba.njit()
+def poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
+    """Estimate polynomial coefficients based on sample points.
+
+    Computes coefficients of a polynomial curve passing through points (x,y)
+    the order of the polynomial depends on the number of sample points
+    input in the function. Uses info about the sample points and the
+    Taylor expansion of the natural logarithm to get an estimation
+        ex. a polynomial P estimated with 4 sample points:
+            P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
+
+    Parameters
+    ----------
+    x: np.ndarray
+        sample x-values
+    o: float
+        polynomial order
+
+    Returns
+    -------
+    b: np.ndarray
+        polynomial coefficients
+    """
+
+    b = np.zeros((o+1,))
+
+    if np.abs(x[-1]-x[0])>1e-6:
+
+        a = x[0]+(x[1]-x[0])/2
+
+        k = np.zeros((o+1,))
+
+        k[0] = np.log(a)
+
+        for n in range(1,o+1):
+            k[n] = -1**(n-1)/(n*a**n) * (x-a)**n
+
+        for j in range(o+1):
+            for i in range(j,o+1):
+                b[j] += (1+j) *-1**(2+i+j) * k[i] * a**(i-j)
+
+    return b
 
 def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     """Integrate a polynomial curve.
@@ -418,6 +460,29 @@ def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
         out -= c[i] * x[0]**(len(c)-i) / (len(c)-i)
 
     return out
+
+def _binomial_coefficients(order):
+    """"Calculate binomial coefficients based on polynomial order.
+
+    Parameters
+    ----------
+    order: int
+        polynomial order of output.
+
+    Returns
+    -------
+    coefs: np.ndarray(int)
+        list of binomial coefficients.
+    """
+
+    coefs = np.empty((order+1))
+
+    for k in prange(order+1):
+        coefs[k] = np.math.factorial(order)/(
+            np.math.factorial(k)*np.math.factorial(order-k)
+        )
+
+    return coefs
 
 ################# surface areas
 
