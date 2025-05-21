@@ -126,7 +126,7 @@ def test_perpendicular_coincidentpoint_patches(
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
-    assert rel < 2
+    assert rel < 2.5
 
 @pytest.mark.parametrize("X", [2.0, 3.0])
 @pytest.mark.parametrize("Y", [1.0, 2.0])

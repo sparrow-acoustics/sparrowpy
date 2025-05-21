@@ -27,7 +27,7 @@ def load_stokes_entries(
         f function value matrix (n_boundary_points_i , n_boundary_points_j)
 
     """
-    eps=1e-10
+    eps=1e-14
     form_mat = eps*np.ones((len(i_bpoints) , len(j_bpoints)))
 
     for i in prange(i_bpoints.shape[0]):
@@ -369,7 +369,7 @@ def _first_integration_analytical(x: np.ndarray,
 
     poly_factors = _poly_estimation_Lagrange(x=x,y=rsquared)
 
-    poly_factors[poly_factors==0]=1e-10
+    poly_factors[poly_factors==0]=1e-14
 
     g = _g_integral(abc=poly_factors,x=x)
 
