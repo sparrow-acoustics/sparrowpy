@@ -7,7 +7,6 @@ except ImportError:
     prange = range
 import numpy as np
 import sparrowpy.geometry as geom
-import math
 
 
 def load_stokes_entries(
@@ -28,11 +27,14 @@ def load_stokes_entries(
         f function value matrix (n_boundary_points_i , n_boundary_points_j)
 
     """
-    form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)))
+    eps=1e-10
+    form_mat = eps*np.ones((len(i_bpoints) , len(j_bpoints)))
 
     for i in prange(i_bpoints.shape[0]):
         for j in prange(j_bpoints.shape[0]):
-            form_mat[i][j] = np.log(np.linalg.norm(i_bpoints[i]-j_bpoints[j]))
+            rs = (np.linalg.norm(i_bpoints[i]-j_bpoints[j]))**2
+            if rs > eps:
+                form_mat[i][j] = rs
 
     return form_mat
 
@@ -74,7 +76,7 @@ def stokes_integration(
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
                                                          npoints=approx_order+1)
     j_bpoints, j_conn = _sample_boundary_regular(patch_j,
-                                                         npoints=approx_order+1)
+                                                         npoints=3)
 
     subsecj = np.zeros((j_conn.shape[1]))
     subseci = np.zeros((i_conn.shape[1]))
@@ -99,12 +101,9 @@ def stokes_integration(
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
-                    # compute polynomial coefficients
-                    quadfactors = _poly_estimation_Lagrange(x=xj,
-                                                                   y=subsecj)
                     # analytical integration of the approx polynomials
-                    inner_integral[i][dim] += _poly_integration(
-                                                        c=quadfactors,x=xj)
+                    inner_integral[i][dim]+=first_integration_analytical(x=xj,
+                                                                         rsquared=subsecj)
 
 
         # integrate previously computed integral over patch i
@@ -419,6 +418,44 @@ def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
 
     return out
 
+def first_integration_analytical(x: np.ndarray,
+                                 rsquared: np.ndarray):
+    """Calculate first integral analytically."""
+
+    a = np.zeros((2,))
+    g = np.zeros((2,))
+
+    a=np.log(np.sqrt(rsquared))*x
+
+    poly_factors = _poly_estimation_Lagrange(x=x,y=rsquared)
+
+    poly_factors[np.argwhere(poly_factors==0)]=1e-6
+
+    g = g_integral(abc=poly_factors,x=x)
+
+    integral = a+g
+
+    return integral[-1]-integral[0]
+
+def g_integral(abc:np.ndarray, x:np.ndarray):
+    """Calculate second half of integral."""
+
+    g = np.empty_like(x)
+    a = abc[0]
+    b = abc[1]
+    c = abc[2]
+
+    k = 4*a*c-b**2
+    if k<=0:
+        k=1e-20
+
+    A = 2*np.sqrt(k)
+    B = np.arctan((2*a*x+b)/np.sqrt(k))
+    C = b*np.log(a*x**2+b*x+c)-4*a*x
+
+    g = (A*B+C)/4*a
+
+    return g
 
 ################# surface areas
 
