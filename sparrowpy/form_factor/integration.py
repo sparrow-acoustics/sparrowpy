@@ -390,46 +390,6 @@ def _poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     return b
 
-def _poly_estimation_Taylor(x: np.ndarray, o: float) -> np.ndarray:
-    """Estimate polynomial coefficients based on sample points.
-
-    Computes coefficients of a polynomial curve passing through points (x,y)
-    the order of the polynomial depends on the number of sample points
-    input in the function. Uses info about the sample points and the
-    Taylor expansion of the natural logarithm to get an estimation
-        ex. a polynomial P estimated with 4 sample points:
-            P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
-
-    Parameters
-    ----------
-    x: np.ndarray
-        sample x-values
-    o: float
-        polynomial order
-
-    Returns
-    -------
-    b: np.ndarray
-        polynomial coefficients
-    """
-    b = np.zeros((o+1,))
-    bin_coefs = _binomial_coefficients(o)
-
-    if np.abs(x[-1]-x[0])>1e-6:
-        a = x[0]+(x[1]-x[0])/2
-
-    Taylor_coefs = np.zeros((o+1,))
-
-    Taylor_coefs[0] = np.log(a)
-    for n in prange(1,o+1):
-        Taylor_coefs[n] = ((-1)**(n-1))/(n*a**n)
-
-    for n in prange(o+1):
-        for i in range(n+1):
-            b[i] += Taylor_coefs[n] * bin_coefs[n,i]*((-a)**(n-i))
-
-    return b
-
 def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     """Integrate a polynomial curve.
 
@@ -459,28 +419,6 @@ def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
 
     return out
 
-def _binomial_coefficients(order: int)->np.ndarray:
-    """"Calculate binomial coefficients based on polynomial order.
-
-    Parameters
-    ----------
-    order: int
-        polynomial order of output.
-
-    Returns
-    -------
-    coefs: np.ndarray(int)
-        list of binomial coefficients.
-    """
-
-    coefs = np.ones((order+1,order+1))
-
-    for j in prange(order+1):
-        for k in range(j+1):
-            for ll in range(k):
-                coefs[j,k] *= (j-ll)/(k-ll)
-
-    return coefs
 
 ################# surface areas
 
@@ -703,8 +641,6 @@ if numba is not None:
     nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
     load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
-    _poly_estimation_Taylor = numba.njit()(_poly_estimation_Taylor)
-    _binomial_coefficients = numba.njit()(_binomial_coefficients)
     _poly_integration = numba.njit()(_poly_integration)
     _surf_sample_random = numba.njit()(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
