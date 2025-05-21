@@ -2,7 +2,6 @@
 import pytest
 import sparrowpy.geometry as geo
 import numpy as np
-import numpy.testing as npt
 import sparrowpy.testing.exact_ff_solutions as exact_solutions
 from sparrowpy.sound_object import SoundSource, Receiver
 from sparrowpy import PatchesKang
