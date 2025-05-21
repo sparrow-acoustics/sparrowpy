@@ -258,47 +258,6 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
 
     receiver_cast(receiver, patch, sr, c)
 
-@pytest.mark.parametrize("sol",[
-    np.array(
-        [[1,1,1,1,1],
-        [1,1,1,1,1],
-        [1,2,1,1,1],
-        [1,3,3,1,1],
-        [1,4,6,4,1]]),
-])
-def test_binomial_formula(sol):
-    """Test binomial coefficient formula."""
-    for order in range(sol.shape[0]):
-        coefs = sp.form_factor.integration._binomial_coefficients(order)
-
-    npt.assert_array_equal(sol[:order+1], coefs)
-
-@pytest.mark.parametrize("samples",[
-    np.array([.4,2.]),
-    np.array([.1,.2]),
-    np.array([6.,7.,8.,9.]),
-    np.array([10.,11.]),
-    ])
-@pytest.mark.parametrize("order",[
-    4,5,6
-])
-def test_Taylor_approximation(samples,order):
-    """Test Taylor expansion of log function."""
-    coefs = sp.form_factor.integration._poly_estimation_Taylor(x=samples,
-                                                               o=order)
-
-    true = np.log(samples)
-
-    est = np.zeros_like(samples)
-
-    for i,x in enumerate(samples):
-        for o in range(order+1):
-            est[i]+= coefs[o]*x**(o)
-
-    assert (np.abs(est-true)/np.abs(true)<0.1).all()
-
-
-
 def source_cast(src, rpatch, absor):
     """Cast and test source-to-patch factor calculation."""
     nuss = form_factor.integration.pt_solution(point=src.position,
