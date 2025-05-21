@@ -237,66 +237,6 @@ def nusselt_analog(surf_origin, surf_normal,
 
     return big_poly + hand*curved_area
 
-def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
-                        patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
-                        nsamples=2, random=False) -> float:
-    """Estimate the form factor based on the Nusselt analogue.
-
-    Integrates the differential form factor (Nusselt analogue output)
-    over the surface of the source patch
-
-    Parameters
-    ----------
-    patch_i: np.ndarray
-        vertex coordinates of the source patch
-
-    patch_j: np.ndarray
-        vertex coordinates of the receiver patch
-
-    patch_i_normal: np.ndarray
-        source patch normal (3,)
-
-    patch_j_normal: np.ndarray
-        receiver patch normal (3,)
-
-    patch_i_area: float
-        source patch area
-
-    patch_j_area: float
-        receiver patch area
-
-    nsamples: int
-        number of receiver surface samples for integration
-
-    random: bool
-        determines the distribution of the samples on patch_i surface
-        if True, the samples are randomly distributed in a uniform way
-        if False, a regular sampling of the surface is performed
-
-    Returns
-    -------
-    out: float
-        form factor between patches i and j
-
-    """
-    if random:
-        p0_array = _surf_sample_random(patch_i,nsamples)
-    else:
-        p0_array = _surf_sample_regulargrid(patch_i,nsamples)
-
-    out = 0
-
-    for i in prange(p0_array.shape[0]):
-        out += nusselt_analog( surf_origin=p0_array[i],
-                               surf_normal=patch_i_normal,
-                               patch_points=patch_j,
-                               patch_normal=patch_j_normal )
-
-    out *= 1 / ( np.pi * len(p0_array) )
-
-    return out
-
-
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### point-to-patch and patch-to-point
@@ -673,7 +613,6 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
 
 if numba is not None:
     pt_solution = numba.njit(parallel=True)(pt_solution)
-    nusselt_integration = numba.njit(parallel=False)(nusselt_integration)
     stokes_integration = numba.njit(parallel=False)(stokes_integration)
     nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
     load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)

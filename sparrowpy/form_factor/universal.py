@@ -83,16 +83,10 @@ def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
         form factor
 
     """
-    if geom._coincidence_check(receiver_pts, source_pts):
-        form_factor = integration.nusselt_integration(
-                    patch_i=source_pts, patch_i_normal=source_normal,
-                    patch_j=receiver_pts, patch_j_normal=receiver_normal,
-                    nsamples=64)
-    else:
-        form_factor = integration.stokes_integration(patch_i=source_pts,
+    form_factor = integration.stokes_integration(patch_i=source_pts,
                                              patch_j=receiver_pts,
                                              patch_i_area=source_area,
-                                             approx_order=4)
+                                             approx_order=8)
 
     return form_factor
 
