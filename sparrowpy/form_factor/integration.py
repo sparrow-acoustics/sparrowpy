@@ -369,7 +369,7 @@ def _first_integration_analytical(x: np.ndarray,
 
     poly_factors = _poly_estimation_Lagrange(x=x,y=rsquared)
 
-    poly_factors[np.argwhere(poly_factors==0)]=1e-6
+    poly_factors[poly_factors==0]=1e-10
 
     g = _g_integral(abc=poly_factors,x=x)
 
