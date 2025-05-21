@@ -102,7 +102,7 @@ def stokes_integration(
                         subsecj[k] = form_mat[i][segj[k]]
 
                     # analytical integration of the approx polynomials
-                    inner_integral[i][dim]+=first_integration_analytical(x=xj,
+                    inner_integral[i][dim]+=_first_integration_analytical(x=xj,
                                                                          rsquared=subsecj)
 
 
@@ -358,7 +358,7 @@ def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
 
     return out
 
-def first_integration_analytical(x: np.ndarray,
+def _first_integration_analytical(x: np.ndarray,
                                  rsquared: np.ndarray):
     """Calculate first integral analytically."""
 
@@ -371,13 +371,13 @@ def first_integration_analytical(x: np.ndarray,
 
     poly_factors[np.argwhere(poly_factors==0)]=1e-6
 
-    g = g_integral(abc=poly_factors,x=x)
+    g = _g_integral(abc=poly_factors,x=x)
 
     integral = a+g
 
     return integral[-1]-integral[0]
 
-def g_integral(abc:np.ndarray, x:np.ndarray):
+def _g_integral(abc:np.ndarray, x:np.ndarray):
     """Calculate second half of integral."""
 
     g = np.empty_like(x)
@@ -618,6 +618,8 @@ if numba is not None:
     load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
     _poly_integration = numba.njit()(_poly_integration)
+    _first_integration_analytical = numba.njit()(_first_integration_analytical)
+    _g_integral = numba.njit()(_g_integral)
     _surf_sample_random = numba.njit()(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
