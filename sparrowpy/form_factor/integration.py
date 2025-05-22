@@ -27,7 +27,7 @@ def load_stokes_entries(
         f function value matrix (n_boundary_points_i , n_boundary_points_j)
 
     """
-    eps=1e-14
+    eps=1e-10
     form_mat = eps*np.ones((len(i_bpoints) , len(j_bpoints)))
 
     for i in prange(i_bpoints.shape[0]):
@@ -386,12 +386,15 @@ def _g_integral(abc:np.ndarray, x:np.ndarray):
     c = abc[2]
 
     k = 4*a*c-b**2
+    kk=a*x**2+b*x+c
     if k<=0:
         k=1e-20
 
+    kk[kk<=0]=1e-20
+
     A = 2*np.sqrt(k)
     B = np.arctan((2*a*x+b)/np.sqrt(k))
-    C = b*np.log(a*x**2+b*x+c)-4*a*x
+    C = b*np.log(kk)-4*a*x
 
     g = (A*B+C)/4*a
 
