@@ -379,8 +379,9 @@ class DirectionalRadiosityFast():
         self._visible_patches = visible_patches
 
         self._form_factors = form_factor.patch2patch_ff_universal(
-            self.patches_points, self.patches_normal,
-            self.patches_area, self._visible_patches)
+                                                self.patches_points,
+                                                self.patches_area,
+                                                self._visible_patches)
 
         # Calculate the form factors with directivity.
         if self._brdf_incoming_directions is not None:
