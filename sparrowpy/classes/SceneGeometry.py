@@ -3,6 +3,7 @@ Placeholder for general introduction to SceneGeometry class.
 """
 
 import numpy as np
+import utils.blender as bd
 
 
 
@@ -74,7 +75,23 @@ class SceneGeometry:
             name of the geometry object in the file. All other geometry objects
             will be ignored.
         """
-        raise NotImplementedError()
+        wall_data = bd.read_geometry_file(blend_file=file_path,
+                                          wall_auto_assembly=True,
+                                          patches_from_model=False,
+                                          blender_geom_id=geometry_name)
+        cls.walls_connectivity = cls._update_scene_mesh(
+                                        wall_data["verts"],
+                                        wall_data["conn"])
+        cls._walls_connectivity = wall_data["conn"]
+        cls._walls_normals = wall_data["normal"]
+        cls._walls_up_vector = wall_data["up"]
+        cls._material_name_list = list(dict.fromkeys(wall_data["materials"]))
+        cls._material_id_to_wall = []
+
+        for material in cls._material_name_list:
+            cls._material_id_to_wall.append(
+                [k for k,mat in enumerate(wall_data["materials"])
+                                            if mat==material])
 
     @classmethod
     def patches_from_file(cls, file_path, geometry_name):
@@ -137,3 +154,22 @@ class SceneGeometry:
     def clear_walls(self):
         """Remove the walls."""
         raise NotImplementedError()
+
+    def _update_scene_mesh(self, vertices, connectivity):
+        """Update scene geometry vertex list and connectivity.
+
+        Removes redundant vertices and replaces connectivity index
+        with previously existing one.
+
+        Parameters
+        ----------
+        vertices: np.ndarray(n_vertices,3)
+            input vertex list.
+        connectivity: list
+            mesh connectivity based on input vertex list.
+
+        Returns
+        -------
+        conn_updated: list
+            mesh connectivity based on updated scene vertex list.
+        """
