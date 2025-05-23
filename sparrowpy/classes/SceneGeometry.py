@@ -23,8 +23,30 @@ class SceneGeometry:
     _material_id_to_wall: np.ndarray
 
     def __init__(
-            vertices, walls_connectivity, walls_normals, walls_up_vectors):
-        pass
+            self,
+            vertices:np.ndarray,
+            walls_connectivity:list,
+            walls_normals:np.ndarray,
+            walls_up_vectors:np.ndarray,
+            patches_connectivity:np.ndarray=None,
+            materials_list:np.ndarray=None):
+
+        self._vertices = vertices
+        self._walls_connectivity = walls_connectivity
+        self._walls_normals = walls_normals
+        self._walls_up_vectors = walls_up_vectors
+        self._patches_connectivity = patches_connectivity
+
+        if materials_list is not None:
+            self._material_name_list = list(dict.fromkeys(materials_list))
+            mat_conn = []
+            for material in self._material_name_list:
+                mat_conn.append(
+                        [k for k,mat in enumerate(materials_list)
+                         if mat==material])
+            self._material_id_to_wall = np.array(mat_conn)
+
+
 
     @classmethod
     def walls_from_mesh(cls, vertices, walls_connectivity):
@@ -80,20 +102,12 @@ class SceneGeometry:
                                           patches_from_model=False,
                                           blender_geom_id=geometry_name)
 
-        cls.walls_connectivity = cls._update_scene_mesh(
-                                        wall_data["verts"],
-                                        wall_data["conn"])
 
-        cls._walls_connectivity = wall_data["conn"]
-        cls._walls_normals = wall_data["normal"]
-        cls._walls_up_vector = wall_data["up"]
-        cls._material_name_list = list(dict.fromkeys(wall_data["materials"]))
-        cls._material_id_to_wall = []
-
-        for material in cls._material_name_list:
-            cls._material_id_to_wall.append(
-                [k for k,mat in enumerate(wall_data["materials"])
-                                            if mat==material])
+        cls(vertices = wall_data["verts"],
+            walls_connectivity = wall_data["conn"],
+            walls_normals = wall_data["normal"],
+            walls_up_vectors = wall_data["up"],
+            materials_list = wall_data["materials"])
 
     @classmethod
     def patches_from_file(cls, file_path, geometry_name):
