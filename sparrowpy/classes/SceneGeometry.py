@@ -79,9 +79,11 @@ class SceneGeometry:
                                           wall_auto_assembly=True,
                                           patches_from_model=False,
                                           blender_geom_id=geometry_name)
+
         cls.walls_connectivity = cls._update_scene_mesh(
                                         wall_data["verts"],
                                         wall_data["conn"])
+
         cls._walls_connectivity = wall_data["conn"]
         cls._walls_normals = wall_data["normal"]
         cls._walls_up_vector = wall_data["up"]
@@ -173,3 +175,42 @@ class SceneGeometry:
         conn_updated: list
             mesh connectivity based on updated scene vertex list.
         """
+
+        if self._vertices is None:
+            self._vertices = vertices
+            conn_updated = connectivity
+
+        else:
+            new_ids = [0 for i in range(vertices)]
+            for in_id in range(vertices):
+                found_vertex = False
+                for ref_id in range(self._vertices.shape[0]):
+                    if np.linalg.norm(
+                        vertices[in_id]-self._vertices[ref_id])<1e-3:
+                        found_vertex=True
+                        break
+                if found_vertex:
+                    new_ids[in_id]=ref_id
+                else:
+                    new_ids[in_id]=self._vertices.shape[0]
+                    self._vertices = np.append(self._vertices,
+                                               np.expand_dims(vertices[in_id]))
+
+            conn_updated = _update_conn(conn=connectivity,new_ids=new_ids)
+
+        return conn_updated
+
+
+
+
+
+def _update_conn(conn,new_ids):
+    """Update index in connectivity."""
+    for i,poly in enumerate(conn):
+        for old_id in range(new_ids):
+            conn[i] = poly[poly==old_id]=new_ids[old_id]
+
+    return conn
+
+
+
