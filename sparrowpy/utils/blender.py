@@ -164,6 +164,9 @@ def generate_connectivity(mesh: bmesh):
     normals=[]
     upvecs=[]
 
+    if len(bpy.context.object.material_slots)!=0:
+        out_mesh["material"] = np.array([])
+
     for f in mesh.faces:
         if len(bpy.context.object.material_slots)!=0:
             out_mesh["material"] = np.append(out_mesh["material"],
