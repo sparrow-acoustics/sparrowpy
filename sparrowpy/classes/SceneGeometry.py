@@ -29,7 +29,8 @@ class SceneGeometry:
             walls_normals:np.ndarray,
             walls_up_vectors:np.ndarray,
             patches_connectivity:np.ndarray=None,
-            materials_list:np.ndarray=None):
+            materials_list:np.ndarray=None,
+            materials_connectivity:np.ndarray=None):
 
         self._vertices = vertices
         self._walls_connectivity = walls_connectivity
@@ -38,14 +39,21 @@ class SceneGeometry:
         self._patches_connectivity = patches_connectivity
 
         if materials_list is not None:
-            self._material_name_list = list(dict.fromkeys(materials_list))
-            mat_conn = []
-            for material in self._material_name_list:
-                mat_conn.append(
-                        [k for k,mat in enumerate(materials_list)
-                         if mat==material])
-            self._material_id_to_wall = np.array(mat_conn)
 
+            self._material_name_list = list(dict.fromkeys(materials_list))
+
+            if (materials_list.shape[0]==len(self._walls_connectivity) and
+                materials_connectivity is None):
+
+                mat_conn = []
+                for material in self._material_name_list:
+                    mat_conn.append(
+                            [k for k,mat in enumerate(materials_list)
+                            if mat==material])
+                self._material_id_to_wall = np.array(mat_conn)
+
+            elif materials_connectivity is not None:
+                self._material_id_to_wall = materials_connectivity
 
 
     @classmethod
