@@ -111,8 +111,6 @@ def read_geometry_file(blend_file: Path,
 
     geom_data = generate_connectivity(surfs)
 
-    geom_data["wall"]= wall_data
-
     return geom_data
 
 def ensure_object_mode():

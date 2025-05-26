@@ -119,7 +119,6 @@ class SceneGeometry:
                                           patches_from_model=False,
                                           blender_geom_id=geometry_name)
 
-
         cls(vertices = wall_data["verts"],
             walls_connectivity = wall_data["conn"],
             walls_normals = wall_data["normal"],
