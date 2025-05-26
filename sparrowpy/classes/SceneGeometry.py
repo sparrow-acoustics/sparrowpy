@@ -46,13 +46,10 @@ class SceneGeometry:
 
             if (materials_list.shape[0]==len(self._walls_connectivity) and
                 materials_map is None):
+                self._material_id_to_wall = np.ones((materials_list.shape[0]))
 
-                mat_conn = []
-                for material in self._material_name_list:
-                    mat_conn.append(
-                            [k for k,mat in enumerate(materials_list)
-                            if mat==material])
-                self._material_id_to_wall = np.array(mat_conn)
+                for mat_id,material in enumerate(self._material_name_list):
+                    self._material_id_to_wall[materials_list==material]=mat_id
 
 
 
