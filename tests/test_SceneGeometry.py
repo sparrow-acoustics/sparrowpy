@@ -32,3 +32,12 @@ def test_walls_from_file(filename,file_path=os.getcwd()+"/tests/test_data/"):
         assert scene_geom._material_name_list == ["matA","matB"]
         npt.assert_array_equal(scene_geom._material_id_to_wall,
                                np.array([0,0,0,1,0,1,1,1,1,0,1,0]))
+
+
+@pytest.mark.parametrize('filepath', [
+    "tests/test_data/sample_walls.blend",
+    ])
+def test_init_comparison(filepath, sample_walls):
+    file_scene = sp.SceneGeometry.walls_from_file(filepath)
+    poly_scene = sp.SceneGeometry.from_polygon(sample_walls,
+                                                        patch_size=1)
