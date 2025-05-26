@@ -49,7 +49,6 @@ def read_geometry_file(blend_file: Path,
         normals["normal"];
         up vectors["up"];
         and material names ["material"].
-]
 
     """
     if bpy is None:

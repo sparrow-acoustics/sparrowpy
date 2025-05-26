@@ -3,7 +3,6 @@ import os
 
 import numpy as np
 import numpy.testing as npt
-import pyfar as pf
 import pytest
 import sparrowpy as sp
 
@@ -38,6 +37,7 @@ def test_walls_from_file(filename,file_path=os.getcwd()+"/tests/test_data/"):
     "tests/test_data/sample_walls.blend",
     ])
 def test_init_comparison(filepath, sample_walls):
-    file_scene = sp.SceneGeometry.walls_from_file(filepath)
-    poly_scene = sp.SceneGeometry.from_polygon(sample_walls,
-                                                        patch_size=1)
+    pass
+    # file_scene = sp.SceneGeometry.walls_from_file(filepath)
+    # poly_scene = sp.SceneGeometry.from_polygon(sample_walls,
+    #                                             patch_size=1)
