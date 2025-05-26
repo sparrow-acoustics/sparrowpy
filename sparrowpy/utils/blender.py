@@ -19,7 +19,6 @@ class DotDict(dict):
 
 def read_geometry_file(blend_file: Path,
                        wall_auto_assembly=True,
-                       patches_from_model=True,
                        blender_geom_id = "Geometry"):
     """Read blender file and return fine and rough mesh.
 
@@ -40,27 +39,17 @@ def read_geometry_file(blend_file: Path,
         flags if walls should be auto detected from the model geometry (True)
         or if each polygon in the model should become a wall (False).
 
-    patches_from_model: bool
-        flags if patches should be extracted from the model's polygons (True)
-        or not (False).
-
     blender_geom_id: string
         name of the blender object where the scene geometry mesh is stored.
-
-    angular_tolerance: float
-        maximum angle in degree by which two patches are considered coplanar
-        determines walls if they are automatically assessed
 
     Returns
     -------
     geom_data: dict
-        "wall":
-            wall vertex list ["verts"], polygon vertex mapping ["conn"],
-            normals["normal"], and material names ["material"].
-
-        "patch":
-            patch vertex list ["verts"], polygon vertex mapping ["conn"],
-            patch-to-wall mapping ["wall_ID"]
+        mesh: vertex list ["verts"], polygon vertex mapping ["conn"];
+        normals["normal"];
+        up vectors["up"];
+        and material names ["material"].
+]
 
     """
     if bpy is None:
