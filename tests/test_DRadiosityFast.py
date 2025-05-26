@@ -7,13 +7,18 @@ import pyfar as pf
 import sparrowpy as sp
 
 
-def test_init(sample_walls):
+create_reference_files = False
+
+def test_init_from_polygon(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.2)
     npt.assert_almost_equal(radiosity.patches_points.shape, (150, 4, 3))
     npt.assert_almost_equal(radiosity.patches_area.shape, (150))
     npt.assert_almost_equal(radiosity.patches_center.shape, (150, 3))
     npt.assert_almost_equal(radiosity.patches_size.shape, (150, 3))
     npt.assert_almost_equal(radiosity.patches_normal.shape, (150, 3))
+
+
+
 
 
 def test_check_visibility(sample_walls):

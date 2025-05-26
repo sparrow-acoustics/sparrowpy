@@ -3,7 +3,7 @@ Placeholder for general introduction to SceneGeometry class.
 """
 
 import numpy as np
-
+import sparrowpy.utils.blender as bd
 
 
 class SceneGeometry:
@@ -22,8 +22,36 @@ class SceneGeometry:
     _material_id_to_wall: np.ndarray
 
     def __init__(
-            vertices, walls_connectivity, walls_normals, walls_up_vectors):
-        pass
+            self,
+            vertices:np.ndarray,
+            walls_connectivity:list,
+            walls_normals:np.ndarray,
+            walls_up_vectors:np.ndarray,
+            patches_connectivity:np.ndarray=None,
+            materials_list:np.ndarray=None,
+            materials_map:np.ndarray=None):
+
+        self._vertices = vertices
+        self._walls_connectivity = walls_connectivity
+        self._walls_normals = walls_normals
+        self._walls_up_vectors = walls_up_vectors
+        self._patches_connectivity = patches_connectivity
+
+        self._material_name_list = materials_list
+        self._material_id_to_wall = materials_map
+
+        if materials_list is not None:
+
+            self._material_name_list = list(dict.fromkeys(materials_list))
+
+            if (materials_list.shape[0]==len(self._walls_connectivity) and
+                materials_map is None):
+                self._material_id_to_wall = np.ones((materials_list.shape[0]))
+
+                for mat_id,material in enumerate(self._material_name_list):
+                    self._material_id_to_wall[materials_list==material]=mat_id
+
+
 
     @classmethod
     def walls_from_mesh(cls, vertices, walls_connectivity):
@@ -58,7 +86,9 @@ class SceneGeometry:
         raise NotImplementedError()
 
     @classmethod
-    def walls_from_file(cls, file_path, geometry_name):
+    def walls_from_file(cls, file_path,
+                        geometry_name="Geometry",
+                        auto_detect_walls = True):
         """Initializes the walls from a given file.
 
         The material names are read from the file and stored in the
@@ -70,11 +100,27 @@ class SceneGeometry:
             path to the geometry file. The file must be in the format
             ``.blend``, the imported Geometry must have the name
             ``'geometry_name'``
+
         geometry_name : str
             name of the geometry object in the file. All other geometry objects
             will be ignored.
+
+        auto_detect_walls: bool
+            If True, walls are detected an assembled automatically based on
+            the model's material and face orientation [recommended].
+            This overwrites the polygons in the scene, reducing the existing
+            faces to fewer n-gons.
         """
-        raise NotImplementedError()
+        wall_data = bd.read_geometry_file(blend_file=file_path,
+                                          wall_auto_assembly=auto_detect_walls,
+                                          patches_from_model=False,
+                                          blender_geom_id=geometry_name)
+
+        return cls( vertices = wall_data["verts"],
+                    walls_connectivity = wall_data["conn"],
+                    walls_normals = wall_data["normal"],
+                    walls_up_vectors = wall_data["up"],
+                    materials_list = wall_data["material"] )
 
     @classmethod
     def patches_from_file(cls, file_path, geometry_name):
@@ -137,3 +183,61 @@ class SceneGeometry:
     def clear_walls(self):
         """Remove the walls."""
         raise NotImplementedError()
+
+    def _update_scene_mesh(self, vertices, connectivity):
+        """Update scene geometry vertex list and connectivity.
+
+        Removes redundant vertices and replaces connectivity index
+        with previously existing one.
+
+        Parameters
+        ----------
+        vertices: np.ndarray(n_vertices,3)
+            input vertex list.
+        connectivity: list
+            mesh connectivity based on input vertex list.
+
+        Returns
+        -------
+        conn_updated: list
+            mesh connectivity based on updated scene vertex list.
+        """
+
+        if self._vertices is None:
+            self._vertices = vertices
+            conn_updated = connectivity
+
+        else:
+            new_ids = [0 for i in range(vertices)]
+            for in_id in range(vertices):
+                found_vertex = False
+                for ref_id in range(self._vertices.shape[0]):
+                    if np.linalg.norm(
+                        vertices[in_id]-self._vertices[ref_id])<1e-3:
+                        found_vertex=True
+                        break
+                if found_vertex:
+                    new_ids[in_id]=ref_id
+                else:
+                    new_ids[in_id]=self._vertices.shape[0]
+                    self._vertices = np.append(self._vertices,
+                                               np.expand_dims(vertices[in_id]))
+
+            conn_updated = _update_conn(conn=connectivity,new_ids=new_ids)
+
+        return conn_updated
+
+
+
+
+
+def _update_conn(conn,new_ids):
+    """Update index in connectivity."""
+    for i,poly in enumerate(conn):
+        for old_id in range(new_ids):
+            conn[i] = poly[poly==old_id]=new_ids[old_id]
+
+    return conn
+
+
+
