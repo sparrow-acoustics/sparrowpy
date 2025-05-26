@@ -8,41 +8,26 @@ import numpy as np # noqa: E402
                          ["./tests/test_data/cube_simple.blend","./tests/test_data/cube.stl"])
 def test_geometry_loading(path):
     """Test that geometry data is correctly loaded from file."""
-    geom_w = bh.read_geometry_file(path, wall_auto_assembly=True,
-                                 patches_from_model=False)
+    geom_w = bh.read_geometry_file(path, wall_auto_assembly=True)
 
-    assert not geom_w["patch"]
-    assert geom_w["wall"]["conn"].shape[0]==6
-    assert geom_w["wall"]["normal"].shape[0]==geom_w["wall"]["conn"].shape[0]
-    assert geom_w["wall"]["up"].shape[0]==geom_w["wall"]["conn"].shape[0]
-    assert geom_w["wall"]["verts"].shape[0]==8
-    assert geom_w["wall"]["normal"].shape[1]==3
-    assert geom_w["wall"]["up"].shape[1]==3
-    for i in range(geom_w["wall"]["conn"].shape[0]):
-        npt.assert_almost_equal(np.inner(geom_w["wall"]["up"][i],geom_w["wall"]["normal"][i]),0)
+    assert len(geom_w["conn"])==6
+    assert geom_w["normal"].shape[0]==len(geom_w["conn"])
+    assert geom_w["up"].shape[0]==len(geom_w["conn"])
+    assert geom_w["verts"].shape[0]==8
+    assert geom_w["normal"].shape[1]==3
+    assert geom_w["up"].shape[1]==3
+    for i in range(len(geom_w["conn"])):
+        npt.assert_almost_equal(np.inner(geom_w["up"][i],geom_w["normal"][i]),0)
 
 
-    geom_wp= bh.read_geometry_file(path, wall_auto_assembly=True,
-                                 patches_from_model=True)
-
-
-    assert bool(geom_wp["patch"])
-    assert isinstance(geom_wp["wall"]["conn"], list)
-    npt.assert_equal(np.array(geom_wp["wall"]["conn"]),
-                            geom_w["wall"]["conn"])
-    npt.assert_equal(geom_wp["wall"]["normal"],
-                            geom_w["wall"]["normal"])
-    npt.assert_equal(geom_wp["wall"]["verts"],
-                            geom_w["wall"]["verts"])
-    npt.assert_equal(geom_wp["wall"]["material"],
-                            geom_w["wall"]["material"])
+    geom_p= bh.read_geometry_file(path, wall_auto_assembly=False)
 
     if path.endswith(".blend"):
-        assert geom_wp["patch"]["conn"].shape[0]==24
-        assert geom_wp["patch"]["verts"].shape[0]==26
+        assert len(geom_p["conn"])==24
+        assert geom_p["verts"].shape[0]==26
     else:
-        assert geom_wp["patch"]["conn"].shape[0]==12
-        assert geom_wp["patch"]["verts"].shape[0]==8
+        assert len(geom_p["conn"])==12
+        assert geom_p["verts"].shape[0]==8
 
 
 
@@ -51,8 +36,7 @@ def test_geometry_loading(path):
                          ["./tests/test_data/cube_simple.blend","./tests/test_data/cube.stl"])
 def test_material_assignment(path):
     """Check that material is correctly assigned from model."""
-    geom = bh.read_geometry_file(path)
-    walls= geom["wall"]
+    walls = bh.read_geometry_file(path)
     Acount=0
     Bcount=0
     if path.endswith(".blend"):
@@ -66,5 +50,4 @@ def test_material_assignment(path):
         assert Acount==1
         assert Bcount==5
     else:
-        assert (walls["material"]=="").all()
-    assert True
+        assert walls["material"] is None
