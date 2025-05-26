@@ -3,8 +3,7 @@ Placeholder for general introduction to SceneGeometry class.
 """
 
 import numpy as np
-import utils.blender as bd
-
+import sparrowpy.utils.blender as bd
 
 
 class SceneGeometry:
@@ -30,7 +29,7 @@ class SceneGeometry:
             walls_up_vectors:np.ndarray,
             patches_connectivity:np.ndarray=None,
             materials_list:np.ndarray=None,
-            materials_connectivity:np.ndarray=None):
+            materials_map:np.ndarray=None):
 
         self._vertices = vertices
         self._walls_connectivity = walls_connectivity
@@ -38,12 +37,15 @@ class SceneGeometry:
         self._walls_up_vectors = walls_up_vectors
         self._patches_connectivity = patches_connectivity
 
+        self._material_name_list = materials_list
+        self._material_id_to_wall = materials_map
+
         if materials_list is not None:
 
             self._material_name_list = list(dict.fromkeys(materials_list))
 
             if (materials_list.shape[0]==len(self._walls_connectivity) and
-                materials_connectivity is None):
+                materials_map is None):
 
                 mat_conn = []
                 for material in self._material_name_list:
@@ -52,8 +54,6 @@ class SceneGeometry:
                             if mat==material])
                 self._material_id_to_wall = np.array(mat_conn)
 
-            elif materials_connectivity is not None:
-                self._material_id_to_wall = materials_connectivity
 
 
     @classmethod
@@ -119,11 +119,11 @@ class SceneGeometry:
                                           patches_from_model=False,
                                           blender_geom_id=geometry_name)
 
-        cls(vertices = wall_data["verts"],
-            walls_connectivity = wall_data["conn"],
-            walls_normals = wall_data["normal"],
-            walls_up_vectors = wall_data["up"],
-            materials_list = wall_data["materials"])
+        return cls( vertices = wall_data["verts"],
+                    walls_connectivity = wall_data["conn"],
+                    walls_normals = wall_data["normal"],
+                    walls_up_vectors = wall_data["up"],
+                    materials_list = wall_data["material"] )
 
     @classmethod
     def patches_from_file(cls, file_path, geometry_name):

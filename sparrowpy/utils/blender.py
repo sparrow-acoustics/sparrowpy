@@ -159,7 +159,7 @@ def generate_connectivity(mesh: bmesh):
                 "conn":[],
                 "normal":np.array([]),
                 "up":np.array([]),
-                "material": np.array([])}
+                "material": None}
 
     normals=[]
     upvecs=[]
@@ -168,8 +168,6 @@ def generate_connectivity(mesh: bmesh):
         if len(bpy.context.object.material_slots)!=0:
             out_mesh["material"] = np.append(out_mesh["material"],
                                              bpy.context.object.material_slots[f.material_index].name)
-        else:
-           out_mesh["material"] = np.append(out_mesh["material"],"")
 
         line=[]
 
