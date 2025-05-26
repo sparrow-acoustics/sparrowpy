@@ -15,6 +15,7 @@ from .classes.RadiosityKang import (
     DirectionalRadiosityKang,
     PatchesKang,
     PatchesDirectionalKang)
+from .classes.SceneGeometry import SceneGeometry
 from . import testing
 from . import form_factor
 from . import brdf
@@ -26,6 +27,7 @@ __all__ = [
     'DirectionalRadiosityKang',
     'PatchesKang',
     'PatchesDirectionalKang',
+    'SceneGeometry',
     'geometry',
     'sound_object',
     'DirectionalRadiosityFast',
