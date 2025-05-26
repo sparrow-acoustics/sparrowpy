@@ -89,7 +89,9 @@ class SceneGeometry:
         raise NotImplementedError()
 
     @classmethod
-    def walls_from_file(cls, file_path, geometry_name):
+    def walls_from_file(cls, file_path,
+                        geometry_name="Geometry",
+                        auto_detect_walls = True):
         """Initializes the walls from a given file.
 
         The material names are read from the file and stored in the
@@ -101,12 +103,19 @@ class SceneGeometry:
             path to the geometry file. The file must be in the format
             ``.blend``, the imported Geometry must have the name
             ``'geometry_name'``
+
         geometry_name : str
             name of the geometry object in the file. All other geometry objects
             will be ignored.
+
+        auto_detect_walls: bool
+            If True, walls are detected an assembled automatically based on
+            the model's material and face orientation [recommended].
+            This overwrites the polygons in the scene, reducing the existing
+            faces to fewer n-gons.
         """
         wall_data = bd.read_geometry_file(blend_file=file_path,
-                                          wall_auto_assembly=True,
+                                          wall_auto_assembly=auto_detect_walls,
                                           patches_from_model=False,
                                           blender_geom_id=geometry_name)
 

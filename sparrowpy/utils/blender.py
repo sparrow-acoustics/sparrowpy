@@ -20,8 +20,7 @@ class DotDict(dict):
 def read_geometry_file(blend_file: Path,
                        wall_auto_assembly=True,
                        patches_from_model=True,
-                       blender_geom_id = "Geometry",
-                       angular_tolerance=1.):
+                       blender_geom_id = "Geometry"):
     """Read blender file and return fine and rough mesh.
 
     Reads the input geometry from the blender file and reduces
@@ -90,7 +89,6 @@ def read_geometry_file(blend_file: Path,
 
     geometry = objects[blender_geom_id]
 
-
     # Creates file with only static geometric data of original blender file
     # without information about source and receiver
     bpy.ops.object.select_all(action="DESELECT")
@@ -107,29 +105,11 @@ def read_geometry_file(blend_file: Path,
 
     if wall_auto_assembly:
         # dissolve coplanar faces for simplicity's sake
-        bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
+        bmesh.ops.dissolve_limit(surfs,angle_limit=1.*np.pi/180,
                                  verts=surfs.verts, edges=surfs.edges,
                                  delimit={'MATERIAL'})
 
-    if patches_from_model:
-        # new bmesh with patch info
-        patches=bmesh.new()
-        patches.from_mesh(geometry.data)
-        patches.transform(geometry.matrix_world)
-        patch_data = generate_connectivity_patch(patches, surfs)
-
-    wall_data = generate_connectivity_wall(surfs)
-
-    geom_data = {"wall":{}, "patch":{}}
-
-    if ((not patches_from_model) and
-        check_geometry(wall_data, element="walls", strict=True)):
-        wall_data["conn"] = np.array(wall_data["conn"])
-    elif (patches_from_model and
-          check_geometry(patch_data, element="patches") and
-          check_geometry(wall_data, element="walls")):
-        patch_data["conn"]=np.array(patch_data["conn"])
-        geom_data["patch"]=patch_data
+    geom_data = generate_connectivity(surfs)
 
     geom_data["wall"]= wall_data
 
@@ -146,7 +126,7 @@ def ensure_object_mode():
             bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def generate_connectivity_wall(mesh: bmesh):
+def generate_connectivity(mesh: bmesh):
     """Summarize characteristics of polygons in a given mesh.
 
     Return a dictionary which includes a list of vertices,
