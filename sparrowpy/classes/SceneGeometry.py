@@ -51,7 +51,8 @@ class SceneGeometry:
 
             if (materials_list.shape[0]==len(self._walls_connectivity) and
                 materials_map is None):
-                self._material_id_to_wall = np.ones((materials_list.shape[0]))
+                self._material_id_to_wall = np.ones((materials_list.shape[0]),
+                                                    dtype=int)
 
                 for mat_id,material in enumerate(self._material_name_list):
                     self._material_id_to_wall[materials_list==material]=mat_id
@@ -221,8 +222,8 @@ class SceneGeometry:
             conn_updated = connectivity
 
         else:
-            new_ids = [0 for i in range(vertices)]
-            for in_id in range(vertices):
+            new_ids = [0 for i in range(vertices.shape[0])]
+            for in_id in range(vertices.shape[0]):
                 found_vertex = False
                 for ref_id in range(self._vertices.shape[0]):
                     if np.linalg.norm(
@@ -234,7 +235,8 @@ class SceneGeometry:
                 else:
                     new_ids[in_id]=self._vertices.shape[0]
                     self._vertices = np.append(self._vertices,
-                                               np.expand_dims(vertices[in_id]))
+                                               np.expand_dims(vertices[in_id],axis=0),
+                                               axis=0)
 
             conn_updated = _update_conn(conn=connectivity,new_ids=new_ids)
 
@@ -245,7 +247,7 @@ class SceneGeometry:
         if self._walls_connectivity is None:
             raise AttributeError("Walls must be defined before patches.")
 
-        self._patches_to_wall = -1*np.ones((len(patch_dict["conn"])))
+        self._patches_to_wall = -1*np.ones((len(patch_dict["conn"])),dtype=int)
 
         for i,pface in enumerate(patch_dict["conn"]):
             for j,wface in enumerate(self._walls_connectivity):
@@ -253,17 +255,22 @@ class SceneGeometry:
                     patch_dict["normal"][i]-self._walls_normals[j],
                     )<1e-6:
 
-                    wmaterial = self._material_name_list[
-                                    self._material_id_to_wall[j]]
+                    if self._material_name_list is None:
+                        wmaterial=None
+                    else:
+                        wmaterial = self._material_name_list[
+                                        self._material_id_to_wall[j]]
 
-                    if patch_dict["material"][i]==wmaterial:
+                    if (wmaterial is None or
+                        patch_dict["material"][i]==wmaterial):
 
                         pcenter = geom._calculate_center(
                                         patch_dict["verts"][pface])
                         wall = self._vertices[wface]
 
                         if geom._point_in_polygon(point3d=pcenter,
-                                                  polygon3d=wall):
+                                                  polygon3d=wall,
+                                                  plane_normal=self._walls_normals[j]):
                             self._patches_to_wall[i]=j
                             break
 
@@ -271,15 +278,10 @@ class SceneGeometry:
             raise AttributeError(
                 "Patch and wall geometries are not compatible.")
 
-
-
-
-
-
 def _update_conn(conn,new_ids):
     """Update index in connectivity."""
     for i,poly in enumerate(conn):
-        for old_id in range(new_ids):
+        for old_id in range(len(new_ids)):
             conn[i] = poly[poly==old_id]=new_ids[old_id]
 
     return conn
