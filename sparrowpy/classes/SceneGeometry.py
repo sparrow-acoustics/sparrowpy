@@ -148,6 +148,10 @@ class SceneGeometry:
                                           wall_auto_assembly=False,
                                           blender_geom_id=geometry_name)
 
+        self._map_patches_to_walls(patch_data)
+        self._patches_connectivity = self._update_scene_mesh(
+                                    vertices=patch_data["verts"],
+                                    connectivity=patch_data["conn"])
 
 
     def walls_from_patches(self):
