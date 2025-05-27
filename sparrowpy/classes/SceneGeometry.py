@@ -4,6 +4,7 @@ Placeholder for general introduction to SceneGeometry class.
 
 import numpy as np
 import sparrowpy.utils.blender as bd
+import sparrowpy.geometry as geom
 
 
 class SceneGeometry:
@@ -15,6 +16,7 @@ class SceneGeometry:
 
     _walls_connectivity: list[int]
     _patches_connectivity: np.ndarray
+    _patches_to_wall: np.ndarray
     _walls_normals: np.ndarray
     _walls_up_vectors: np.ndarray
     _vertices: np.ndarray
@@ -28,6 +30,7 @@ class SceneGeometry:
             walls_normals:np.ndarray,
             walls_up_vectors:np.ndarray,
             patches_connectivity:np.ndarray=None,
+            patches_to_wall:np.ndarray=None,
             materials_list:np.ndarray=None,
             materials_map:np.ndarray=None):
 
@@ -35,7 +38,9 @@ class SceneGeometry:
         self._walls_connectivity = walls_connectivity
         self._walls_normals = walls_normals
         self._walls_up_vectors = walls_up_vectors
+
         self._patches_connectivity = patches_connectivity
+        self._patches_to_wall = patches_to_wall
 
         self._material_name_list = materials_list
         self._material_id_to_wall = materials_map
@@ -113,7 +118,6 @@ class SceneGeometry:
         """
         wall_data = bd.read_geometry_file(blend_file=file_path,
                                           wall_auto_assembly=auto_detect_walls,
-                                          patches_from_model=False,
                                           blender_geom_id=geometry_name)
 
         return cls( vertices = wall_data["verts"],
@@ -122,8 +126,9 @@ class SceneGeometry:
                     walls_up_vectors = wall_data["up"],
                     materials_list = wall_data["material"] )
 
-    @classmethod
-    def patches_from_file(cls, file_path, geometry_name):
+
+    def patches_from_file(self, file_path,
+                          geometry_name="Geometry"):
         """Initializes the patches from a given file.
 
         The material names are read from the file and stored in the
@@ -139,7 +144,11 @@ class SceneGeometry:
             name of the geometry object in the file. All other geometry objects
             will be ignored.
         """
-        raise NotImplementedError()
+        patch_data = bd.read_geometry_file(blend_file=file_path,
+                                          wall_auto_assembly=False,
+                                          blender_geom_id=geometry_name)
+
+
 
     def walls_from_patches(self):
         """Creates walls from patches."""
@@ -227,6 +236,38 @@ class SceneGeometry:
 
         return conn_updated
 
+    def _map_patches_to_walls(self,patch_dict):
+        """Create patch to wall map."""
+        if self._walls_connectivity is None:
+            raise AttributeError("Walls must be defined before patches.")
+
+        self._patches_to_wall = -1*np.ones((len(patch_dict["conn"])))
+
+        for i,pface in enumerate(patch_dict["conn"]):
+            for j,wface in enumerate(self._walls_connectivity):
+                if np.linalg.norm(
+                    patch_dict["normal"][i]-self._walls_normals[j],
+                    )<1e-6:
+
+                    wmaterial = self._material_name_list[
+                                    self._material_id_to_wall[j]]
+
+                    if patch_dict["material"][i]==wmaterial:
+
+                        pcenter = geom._calculate_center(
+                                        patch_dict["verts"][pface])
+                        wall = self._vertices[wface]
+
+                        if geom._point_in_polygon(point3d=pcenter,
+                                                  polygon3d=wall):
+                            self._patches_to_wall[i]=j
+                            break
+
+        if (self._patches_to_wall<0).any():
+            raise AttributeError(
+                "Patch and wall geometries are not compatible.")
+
+
 
 
 
@@ -238,6 +279,8 @@ def _update_conn(conn,new_ids):
             conn[i] = poly[poly==old_id]=new_ids[old_id]
 
     return conn
+
+
 
 
 
