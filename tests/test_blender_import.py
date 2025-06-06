@@ -38,7 +38,7 @@ def test_geometry_loading(path):
                             geom_w["wall"]["material"])
 
     if path.endswith(".blend"):
-        assert geom_wp["patch"]["conn"].shape[0]==24
+        assert geom_wp["patch"]["conn"].shape[0]==2*24
         assert geom_wp["patch"]["verts"].shape[0]==26
     else:
         assert geom_wp["patch"]["conn"].shape[0]==12
@@ -73,4 +73,6 @@ def test_material_assignment(path):
                          ["./tests/test_data/ico.blend"])
 def test_point_cloud(path):
     """Check that patches can be generated from point clouds."""
-    geom = bh.read_geometry_file(path,blender_geom_id="Icosphere")
+    geom = bh.read_geometry_file(path,blender_geom_id="Icosphere",
+                                 patch_geom_id="Cube")
+

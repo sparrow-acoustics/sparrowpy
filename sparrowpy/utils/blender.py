@@ -4,6 +4,7 @@ from pathlib import Path
 try:
     import bpy
     import bmesh
+    import mathutils
 except ImportError:
     bpy = None
     bmesh = None
@@ -23,6 +24,7 @@ def read_geometry_file(blend_file: Path,
                        wall_auto_assembly=True,
                        patches_from_model=True,
                        blender_geom_id = "Geometry",
+                       patch_geom_id = None,
                        angular_tolerance=1.):
     """Read blender file and return fine and rough mesh.
 
@@ -79,6 +81,10 @@ def read_geometry_file(blend_file: Path,
     else:
         raise NotImplementedError("Only .stl and .blend files are supported.")
 
+
+    if patch_geom_id is None:
+        patch_geom_id=blender_geom_id
+
     ensure_object_mode()
     objects = bpy.data.objects
 
@@ -91,7 +97,7 @@ def read_geometry_file(blend_file: Path,
                          " not found in Blender file")
 
     geometry = objects[blender_geom_id]
-    pt_cloud = objects["Cube"]
+    pt_cloud = objects[patch_geom_id]
 
 
     # Creates file with only static geometric data of original blender file
@@ -108,9 +114,15 @@ def read_geometry_file(blend_file: Path,
     # this preserves the geometry as the user sees it inside blender.
     surfs.transform(geometry.matrix_world)
 
-    # Creates file with only static geometric data of original blender file
+    if wall_auto_assembly:
+        # dissolve coplanar faces for simplicity's sake
+        bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
+                                 verts=surfs.verts, edges=surfs.edges,
+                                 delimit={'MATERIAL'})
+
+        # Creates file with only static geometric data of original blender file
     # without information about source and receiver
-    bpy.ops.object.select_all(action="DESELECT")
+    #bpy.ops.object.select_all(action="DESELECT")
     pt_cloud.select_set(True)
     bpy.context.view_layer.objects.active = pt_cloud
 
@@ -125,12 +137,6 @@ def read_geometry_file(blend_file: Path,
     depsgraph = bpy.context.evaluated_depsgraph_get()
     obj_eval = bpy.context.active_object.evaluated_get(depsgraph)
     pts = obj_eval.data
-
-    if wall_auto_assembly:
-        # dissolve coplanar faces for simplicity's sake
-        bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
-                                 verts=surfs.verts, edges=surfs.edges,
-                                 delimit={'MATERIAL'})
 
     if patches_from_model:
         # new bmesh with patch info
@@ -263,28 +269,51 @@ def generate_connectivity_patch(point_cloud:bmesh,rough_mesh:bmesh):
 
     """
 
-    out_mesh = {"verts":np.array([]), "conn":[], "map":np.array([])}
+    out_mesh = {"verts":np.array([]), "conn":[], "map":[]}
 
-    verts,conn = sp.spatial.Delaunay()
+    verts_raw=[]
 
-    out_mesh["verts"] = np.array(verts)
-    out_mesh["map"] = conn
+    for vv in point_cloud.vertices:
+        verts_raw.append([v for v in vv.co])
 
-    for i in range(len(conn)):
-        line = cleanup_collinear(conn=conn[i],
-                                 vertlist=verts)
+    verts_raw = np.array(verts_raw)
 
-        if len(line)>=3:
-            out_mesh["conn"].append(line)
+    tri = sp.spatial.Delaunay(verts_raw,qhull_options='Qbb Qc Qz Q12 Q0')
 
-        # for j,wface in enumerate(rough_mesh.faces):
-            # normal = 
-            # if pface.normal==wface.normal:
-            #     if pface.material_index==wface.material_index:
-            #         if bmesh.geometry.intersect_face_point(wface,
-            #                                                 pface.calc_center_median()):
-            #             out_mesh["map"][i]=j
-            #             break
+    out_mesh["verts"] = np.array(tri.points)
+
+    count = 0
+
+    for simp in tri.simplices:
+        for i in range(len(simp)):
+            line = np.roll(simp,-i)[:-1]
+            skip = False
+
+            for ll in out_mesh["conn"]:
+                if (line==np.array(ll)).all():
+                    skip = True
+                    break
+
+            if not skip:
+                pface = out_mesh["verts"][line]
+                center = geom._calculate_center(pface)
+
+                for j,wface in enumerate(rough_mesh.faces):
+
+                    wall = []
+                    for i in range(len(wface.verts)):
+                        wall.append([v for v in wface.verts[i].co])
+
+
+                    nwall = np.array([v for v in wface.normal])
+                    wall = np.array(wall)
+
+                    if geom._point_in_polygon(center, wall, nwall):
+                        out_mesh["map"].append(j)
+                        out_mesh["conn"].append(line)
+                        break
+
+    out_mesh["conn"]=np.array(out_mesh["conn"])
 
     return out_mesh
 
