@@ -9,6 +9,7 @@ except ImportError:
     bmesh = None
 import numpy as np
 import sparrowpy.geometry as geom
+import scipy as sp
 
 class DotDict(dict):
     """dot.notation access to dictionary attributes."""
@@ -90,6 +91,7 @@ def read_geometry_file(blend_file: Path,
                          " not found in Blender file")
 
     geometry = objects[blender_geom_id]
+    pt_cloud = objects["Cube"]
 
 
     # Creates file with only static geometric data of original blender file
@@ -106,6 +108,24 @@ def read_geometry_file(blend_file: Path,
     # this preserves the geometry as the user sees it inside blender.
     surfs.transform(geometry.matrix_world)
 
+    # Creates file with only static geometric data of original blender file
+    # without information about source and receiver
+    bpy.ops.object.select_all(action="DESELECT")
+    pt_cloud.select_set(True)
+    bpy.context.view_layer.objects.active = pt_cloud
+
+    # create bmesh from geometry
+    pts = bmesh.new()
+    pts.from_mesh(pt_cloud.data)
+
+    # sometimes the object space is scaled/rotated inside the .blend model.
+    # this preserves the geometry as the user sees it inside blender.
+    pts.transform(pt_cloud.matrix_world)
+
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    obj_eval = bpy.context.active_object.evaluated_get(depsgraph)
+    pts = obj_eval.data
+
     if wall_auto_assembly:
         # dissolve coplanar faces for simplicity's sake
         bmesh.ops.dissolve_limit(surfs,angle_limit=angular_tolerance*np.pi/180,
@@ -114,10 +134,7 @@ def read_geometry_file(blend_file: Path,
 
     if patches_from_model:
         # new bmesh with patch info
-        patches=bmesh.new()
-        patches.from_mesh(geometry.data)
-        patches.transform(geometry.matrix_world)
-        patch_data = generate_connectivity_patch(patches, surfs)
+        patch_data = generate_connectivity_patch(pts,surfs)
 
     wall_data = generate_connectivity_wall(surfs)
 
@@ -217,7 +234,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
     return out_mesh
 
-def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
+def generate_connectivity_patch(point_cloud:bmesh,rough_mesh:bmesh):
     """Summarize characteristics of polygons in a fine mesh.
 
     Return a dictionary which includes a list of vertices,
@@ -248,22 +265,26 @@ def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
 
     out_mesh = {"verts":np.array([]), "conn":[], "map":np.array([])}
 
-    out_mesh["verts"] = np.array([v.co for v in fine_mesh.verts])
-    out_mesh["map"] = np.empty((len(fine_mesh.faces)),dtype=int)
+    verts,conn = sp.spatial.Delaunay()
 
-    for i,pface in enumerate(fine_mesh.faces):
-        line = cleanup_collinear(conn=[v.index for v in pface.verts],
-                                 vertlist=out_mesh["verts"])
+    out_mesh["verts"] = np.array(verts)
+    out_mesh["map"] = conn
+
+    for i in range(len(conn)):
+        line = cleanup_collinear(conn=conn[i],
+                                 vertlist=verts)
+
         if len(line)>=3:
             out_mesh["conn"].append(line)
 
-        for j,wface in enumerate(rough_mesh.faces):
-            if pface.normal==wface.normal:
-                if pface.material_index==wface.material_index:
-                    if bmesh.geometry.intersect_face_point(wface,
-                                                            pface.calc_center_median()):
-                        out_mesh["map"][i]=j
-                        break
+        # for j,wface in enumerate(rough_mesh.faces):
+            # normal = 
+            # if pface.normal==wface.normal:
+            #     if pface.material_index==wface.material_index:
+            #         if bmesh.geometry.intersect_face_point(wface,
+            #                                                 pface.calc_center_median()):
+            #             out_mesh["map"][i]=j
+            #             break
 
     return out_mesh
 

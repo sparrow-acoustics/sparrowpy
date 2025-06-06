@@ -68,3 +68,9 @@ def test_material_assignment(path):
     else:
         assert (walls["material"]=="").all()
     assert True
+
+@pytest.mark.parametrize("path",
+                         ["./tests/test_data/ico.blend"])
+def test_point_cloud(path):
+    """Check that patches can be generated from point clouds."""
+    geom = bh.read_geometry_file(path,blender_geom_id="Icosphere")
