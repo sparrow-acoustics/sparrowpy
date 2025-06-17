@@ -29,4 +29,4 @@ rpf.run();
 mono_ir_ita = rpf.getMonauralImpulseResponseItaAudio();
 hist = rpf.getHistogram_itaResult();
 hist.plot_time_dB;
-T60 = rpf.getT60()
+T30 = rpf.getT30()
