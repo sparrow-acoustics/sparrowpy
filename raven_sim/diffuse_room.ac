@@ -1,0 +1,60 @@
+AC3Db
+MATERIAL "abs20scat00" rgb 0.3 0.0917647 0.114118 amb 0 0 0 emis 0.6 0.183529 0.228235 spec 0.1 0.0305882 0.0380392 shi 32 trans 0
+OBJECT world
+kids 1
+OBJECT poly
+name "polygon_object"
+numvert 8
+5 0 0
+5 -2.29714121936e-15 -6
+0 -2.29714121936e-15 -6
+0 0 0
+5 4 -6
+5 4 -1.53142747957e-15
+0 4 -1.53142747957e-15
+0 4 -6
+numsurf 6
+SURF 0x10
+mat 0
+refs 4
+3 0 0
+2 0 0
+1 0 0
+0 0 0
+SURF 0x10
+mat 0
+refs 4
+7 0 0
+6 0 0
+5 0 0
+4 0 0
+SURF 0x10
+mat 0
+refs 4
+4 0 0
+5 0 0
+0 0 0
+1 0 0
+SURF 0x10
+mat 0
+refs 4
+5 0 0
+6 0 0
+3 0 0
+0 0 0
+SURF 0x10
+mat 0
+refs 4
+6 0 0
+7 0 0
+2 0 0
+3 0 0
+SURF 0x10
+mat 0
+refs 4
+7 0 0
+4 0 0
+1 0 0
+2 0 0
+kids 0
+
