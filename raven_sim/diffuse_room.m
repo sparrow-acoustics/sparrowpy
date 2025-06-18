@@ -4,14 +4,16 @@ rpf=itaRavenProject('diffuse_room.rpf');
 %% setting up the scene (materials are loaded already)
 rpf.setSourceNames('S');
 rpf.setSourcePositions([2,2,-2]);
-rpf.setSourceDirectivity('Omnidirectional.daff');
+rpf.setSourceDirectivity('C:\\ITASoftware\\Raven\\RavenDatabase\\HRTF\\Omnidirectional.daff');
 
 rpf.setReceiverNames('R');
 rpf.setReceiverPositions([2,3,-2]);
-rpf.setReceiverHRTF('Receiver_IR_2ch_omni_ds31_30x30.daff');
+rpf.setReceiverHRTF('C:\\ITASoftware\\Raven\\RavenDatabase\\HRTF\\Receiver_IR_2ch_omni_ds31_30x30.daff');
 
 
 rpf.setTemperature(20)
+rpf.setHumidity(50)
+rpf.setPressure(101325)
 %% setting up the simulation
 rpf.setNumParticles(20000)
 rpf.setEnergyLoss(60)
@@ -29,4 +31,4 @@ rpf.run();
 mono_ir_ita = rpf.getMonauralImpulseResponseItaAudio();
 hist = rpf.getHistogram_itaResult();
 hist.plot_time_dB;
-T30 = rpf.getT30()
+T30 = rpf.getT30();
