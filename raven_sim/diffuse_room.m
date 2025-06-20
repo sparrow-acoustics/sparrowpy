@@ -15,20 +15,43 @@ rpf.setTemperature(20)
 rpf.setHumidity(50)
 rpf.setPressure(101325)
 %% setting up the simulation
-rpf.setNumParticles(20000)
-rpf.setEnergyLoss(60)
+
+rpf.setEnergyLoss(80)
 rpf.setFilterLength(1200);
 rpf.setGenerateRIR(1);
 rpf.setExportHistogram(1);
 rpf.setExportFilter(1);
-rpf.setISOrder_PS(0)
+rpf.setISOrder_PS(0);
 
+RT30 = [];
+curves = {};
+runtimes = [];
+step_size =[];
+resolution = [];
 
+for step = [50 100 500 1000 5000 10000]
+for nParticles = [100 500 1000 5000 10000 50000]
+
+rpf.setNumParticles(nParticles)
+rpf.setTimeSlotLength(1000/step)
 %% run
+tic
 rpf.run();
-
+runtimes = [runtimes toc];
 %% check
-mono_ir_ita = rpf.getMonauralImpulseResponseItaAudio();
-hist = rpf.getHistogram_itaResult();
-hist.plot_time_dB;
-T30 = rpf.getT30();
+%mono_ir_ita = rpf.getMonauralImpulseResponseItaAudio();
+h = rpf.getHistogram_itaResult();
+curves{end+1} = h.time(:,6);
+RT30 = [RT30 rpf.getT30()];
+resolution = [resolution nParticles];
+step_size = [step_size 1/step];
+
+end
+
+end
+
+save("..\\examples\\out\\diffuse_room_raven.mat", ...
+    'curves',...
+    "RT30",...
+    "runtimes",...
+    "resolution","step_size")
