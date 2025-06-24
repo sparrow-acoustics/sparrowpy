@@ -3,6 +3,7 @@ import pytest
 bpy = pytest.importorskip("bpy")
 import sparrowpy.utils.blender as bh  # noqa: E402
 import numpy as np # noqa: E402
+import trimesh as tm
 
 @pytest.mark.parametrize("path",
                          ["./tests/test_data/cube_simple.blend","./tests/test_data/cube.stl"])
@@ -75,4 +76,11 @@ def test_point_cloud(path):
     """Check that patches can be generated from point clouds."""
     geom = bh.read_geometry_file(path,blender_geom_id="Icosphere",
                                  patch_geom_id="Cube")
+
+    tm.util.attach_to_log()
+
+    mesh = tm.Trimesh(vertices=geom["patch"]["verts"],
+                      faces=geom["patch"]["conn"])
+
+    mesh.show(flags={'wireframe': True})
 

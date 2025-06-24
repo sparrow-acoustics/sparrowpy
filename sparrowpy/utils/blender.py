@@ -4,7 +4,6 @@ from pathlib import Path
 try:
     import bpy
     import bmesh
-    import mathutils
 except ImportError:
     bpy = None
     bmesh = None
@@ -138,11 +137,11 @@ def read_geometry_file(blend_file: Path,
     obj_eval = bpy.context.active_object.evaluated_get(depsgraph)
     pts = obj_eval.data
 
+    wall_data = generate_connectivity_wall(surfs)
+
     if patches_from_model:
         # new bmesh with patch info
-        patch_data = generate_connectivity_patch(pts,surfs)
-
-    wall_data = generate_connectivity_wall(surfs)
+        patch_data = generate_connectivity_patch(pts,wall_data)
 
     geom_data = {"wall":{}, "patch":{}}
 
@@ -240,7 +239,7 @@ def generate_connectivity_wall(mesh: bmesh):
 
     return out_mesh
 
-def generate_connectivity_patch(point_cloud:bmesh,rough_mesh:bmesh):
+def generate_connectivity_patch(point_cloud:bmesh,rough_mesh):
     """Summarize characteristics of polygons in a fine mesh.
 
     Return a dictionary which includes a list of vertices,
@@ -278,40 +277,31 @@ def generate_connectivity_patch(point_cloud:bmesh,rough_mesh:bmesh):
 
     verts_raw = np.array(verts_raw)
 
-    tri = sp.spatial.Delaunay(verts_raw,qhull_options='Qbb Qc Qz Q12 Q0')
+    out_mesh["verts"] = verts_raw
 
-    out_mesh["verts"] = np.array(tri.points)
+    for wallid in range(len(rough_mesh["conn"])):
+        verts_on_wall = []
+        for i,v in enumerate(verts_raw):
+            if geom._point_in_polygon(v,
+                        rough_mesh["verts"][rough_mesh["conn"][wallid]],
+                        rough_mesh["normal"][wallid],
+                        eta=1e-4,
+                        edge_counts=True):
+                verts_on_wall.append(i)
 
-    count = 0
+        rot = geom._rotation_matrix(rough_mesh["normal"][wallid])
 
-    for simp in tri.simplices:
-        for i in range(len(simp)):
-            line = np.roll(simp,-i)[:-1]
-            skip = False
+        v2d = np.empty((len(verts_on_wall),2))
 
-            for ll in out_mesh["conn"]:
-                if (line==np.array(ll)).all():
-                    skip = True
-                    break
+        for i,k in enumerate(verts_on_wall):
+            v2d[i] = geom._matrix_vector_product(rot,verts_raw[k])[:-1]
 
-            if not skip:
-                pface = out_mesh["verts"][line]
-                center = geom._calculate_center(pface)
+        tri = sp.spatial.Delaunay(v2d)
 
-                for j,wface in enumerate(rough_mesh.faces):
+        for face in tri.simplices:
+            out_mesh["conn"].append([verts_on_wall[i] for i in face])
+            out_mesh["map"].append(wallid)
 
-                    wall = []
-                    for i in range(len(wface.verts)):
-                        wall.append([v for v in wface.verts[i].co])
-
-
-                    nwall = np.array([v for v in wface.normal])
-                    wall = np.array(wall)
-
-                    if geom._point_in_polygon(center, wall, nwall):
-                        out_mesh["map"].append(j)
-                        out_mesh["conn"].append(line)
-                        break
 
     out_mesh["conn"]=np.array(out_mesh["conn"])
 

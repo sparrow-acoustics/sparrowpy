@@ -465,7 +465,7 @@ def _calculate_normals(points: np.ndarray):
 
     normals = np.empty((points.shape[0],3))
 
-    for i in numba.prange(points.shape[0]):
+    for i in prange(points.shape[0]):
         normals[i]=np.cross(points[i][1]-points[i][0],points[i][2]-points[i][0])
         normals[i]/=np.linalg.norm(normals[i])
 
@@ -604,7 +604,8 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
 
 def _point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
-                     eta=1e-6) -> bool:
+                     eta=1e-6,
+                     edge_counts=False) -> bool:
     """Check if point is inside given polygon.
 
     Parameters
@@ -674,6 +675,26 @@ def _point_in_polygon(point3d: np.ndarray,
         else:
             out = False
 
+        if edge_counts and not out:
+            for i in prange(poly.shape[0]):
+                a1 = poly[(i+1)%poly.shape[0]]
+                a0 = poly[i%poly.shape[0]]
+                v0 = pt-a0
+                v1 = pt-a1
+
+
+                if np.linalg.norm(v0)<eta or np.linalg.norm(v1)<eta:
+                    out=True
+                    break
+
+                v0/=np.linalg.norm(v0)
+                v1/=np.linalg.norm(v1)
+
+                if np.abs(np.dot(v0,v1)+1)<eta:
+                    out=True
+                    break 
+
+
     return out
 
 def _sphere_tangent_vector(v0: np.ndarray, v1:np.ndarray) -> np.ndarray:
@@ -729,8 +750,8 @@ def _coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-6) -> bool:
     """
     flag = False
 
-    for i in numba.prange(p0.shape[0]):
-        for j in numba.prange(p1.shape[0]):
+    for i in prange(p0.shape[0]):
+        for j in prange(p1.shape[0]):
             if np.linalg.norm(p0[i]-p1[j])<thres:
                 flag=True
                 break
