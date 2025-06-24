@@ -126,3 +126,6 @@ examples/radiosity_fast.far
 
 # ignore temporary blender files
 *.blend1
+
+# ignore BRAS models
+raven_sim/models/
