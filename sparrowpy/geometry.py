@@ -682,7 +682,6 @@ def _point_in_polygon(point3d: np.ndarray,
                 v0 = pt-a0
                 v1 = pt-a1
 
-
                 if np.linalg.norm(v0)<eta or np.linalg.norm(v1)<eta:
                     out=True
                     break
@@ -692,7 +691,7 @@ def _point_in_polygon(point3d: np.ndarray,
 
                 if np.abs(np.dot(v0,v1)+1)<eta:
                     out=True
-                    break 
+                    break
 
 
     return out

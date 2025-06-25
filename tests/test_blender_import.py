@@ -71,11 +71,12 @@ def test_material_assignment(path):
     assert True
 
 @pytest.mark.parametrize("path",
-                         ["./tests/test_data/ico.blend"])
+                         ["./examples/resources/clean_ihtapark.blend"])
 def test_point_cloud(path):
     """Check that patches can be generated from point clouds."""
-    geom = bh.read_geometry_file(path,blender_geom_id="Icosphere",
-                                 patch_geom_id="Cube")
+    geom = bh.read_geometry_file(path,blender_geom_id="Geometry",
+                                 patch_geom_id="PointCloud",
+                                 wall_auto_assembly=False)
 
     tm.util.attach_to_log()
 

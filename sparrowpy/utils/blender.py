@@ -149,8 +149,7 @@ def read_geometry_file(blend_file: Path,
         check_geometry(wall_data, element="walls", strict=True)):
         wall_data["conn"] = np.array(wall_data["conn"])
     elif (patches_from_model and
-          check_geometry(patch_data, element="patches") and
-          check_geometry(wall_data, element="walls")):
+          check_geometry(patch_data, element="patches")):
         patch_data["conn"]=np.array(patch_data["conn"])
         geom_data["patch"]=patch_data
 
@@ -296,12 +295,18 @@ def generate_connectivity_patch(point_cloud:bmesh,rough_mesh):
         for i,k in enumerate(verts_on_wall):
             v2d[i] = geom._matrix_vector_product(rot,verts_raw[k])[:-1]
 
-        tri = sp.spatial.Delaunay(v2d)
+        if len(v2d)>3:
+            tri = sp.spatial.Delaunay(v2d,qhull_options='Qt Qbb')
 
-        for face in tri.simplices:
-            out_mesh["conn"].append([verts_on_wall[i] for i in face])
+            for face in tri.simplices:
+                out_mesh["conn"].append([verts_on_wall[i] for i in face])
+                out_mesh["map"].append(wallid)
+
+        elif len(v2d)==3:
+            out_mesh["conn"].append(verts_on_wall)
             out_mesh["map"].append(wallid)
-
+        else:
+            print("cowabunga")
 
     out_mesh["conn"]=np.array(out_mesh["conn"])
 
