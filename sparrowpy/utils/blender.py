@@ -230,7 +230,7 @@ def generate_connectivity_wall(mesh: bmesh, geom_obj):
         normals.append(facenormal[0])
 
         ## PLACEHOLDER VALUES
-        upvecs.append(np.array(f.verts[1].co-f.verts[0].co))
+        upvecs.append(np.array(f.verts[2].co-f.verts[0].co))
         upvecs[-1]=upvecs[-1]/np.linalg.norm(upvecs[-1])
 
     out_mesh["normal"]=np.array(normals)
