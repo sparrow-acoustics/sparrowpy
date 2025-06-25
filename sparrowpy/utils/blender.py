@@ -119,7 +119,9 @@ def read_geometry_file(blend_file: Path,
                                  verts=surfs.verts, edges=surfs.edges,
                                  delimit={'MATERIAL'})
 
-        # Creates file with only static geometric data of original blender file
+    wall_data = generate_connectivity_wall(surfs, objects[blender_geom_id])
+
+    # Creates file with only static geometric data of original blender file
     # without information about source and receiver
     #bpy.ops.object.select_all(action="DESELECT")
     pt_cloud.select_set(True)
@@ -136,8 +138,6 @@ def read_geometry_file(blend_file: Path,
     depsgraph = bpy.context.evaluated_depsgraph_get()
     obj_eval = bpy.context.active_object.evaluated_get(depsgraph)
     pts = obj_eval.data
-
-    wall_data = generate_connectivity_wall(surfs)
 
     if patches_from_model:
         # new bmesh with patch info
@@ -168,7 +168,7 @@ def ensure_object_mode():
             bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def generate_connectivity_wall(mesh: bmesh):
+def generate_connectivity_wall(mesh: bmesh, geom_obj):
     """Summarize characteristics of polygons in a given mesh.
 
     Return a dictionary which includes a list of vertices,
@@ -209,9 +209,9 @@ def generate_connectivity_wall(mesh: bmesh):
     upvecs=[]
 
     for f in mesh.faces:
-        if len(bpy.context.object.material_slots)!=0:
+        if len(geom_obj.material_slots)!=0:
             out_mesh["material"] = np.append(out_mesh["material"],
-                                             bpy.context.object.material_slots[f.material_index].name)
+                                             geom_obj.material_slots[f.material_index].name)
         else:
            out_mesh["material"] = np.append(out_mesh["material"],"")
 
@@ -296,17 +296,26 @@ def generate_connectivity_patch(point_cloud:bmesh,rough_mesh):
             v2d[i] = geom._matrix_vector_product(rot,verts_raw[k])[:-1]
 
         if len(v2d)>3:
-            tri = sp.spatial.Delaunay(v2d,qhull_options='Qt Qbb')
+            tri = sp.spatial.Delaunay(v2d,qhull_options='Qt Qbb Qz')
 
             for face in tri.simplices:
-                out_mesh["conn"].append([verts_on_wall[i] for i in face])
-                out_mesh["map"].append(wallid)
+                vv=verts_raw[np.array(verts_on_wall)[face]]
+                if geom._point_in_polygon(np.mean(vv, axis=0),
+                        rough_mesh["verts"][rough_mesh["conn"][wallid]],
+                        rough_mesh["normal"][wallid],
+                        eta=1e-4):
+                    out_mesh["conn"].append([verts_on_wall[i] for i in face])
+                    out_mesh["map"].append(wallid)
 
         elif len(v2d)==3:
-            out_mesh["conn"].append(verts_on_wall)
-            out_mesh["map"].append(wallid)
-        else:
-            print("cowabunga")
+            vv=verts_raw[np.array(verts_on_wall)]
+            if geom._point_in_polygon(np.mean(vv, axis=0),
+                        rough_mesh["verts"][rough_mesh["conn"][wallid]],
+                        rough_mesh["normal"][wallid],
+                        eta=1e-4):
+                out_mesh["conn"].append(verts_on_wall)
+                out_mesh["map"].append(wallid)
+
 
     out_mesh["conn"]=np.array(out_mesh["conn"])
 

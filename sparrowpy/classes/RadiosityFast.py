@@ -231,10 +231,10 @@ class DirectionalRadiosityFast():
                 n_walls) for i in set(self._patch_to_wall_ids)):
             raise ValueError(
                 "patch_to_wall_ids does contain other ids than range(n_walls)")
-        if any(i not in set(
-                self._patch_to_wall_ids) for i in np.arange(n_walls)):
-            raise ValueError(
-                "patch_to_wall_ids does contain other ids than range(n_walls)")
+        # if any(i not in set(
+        #         self._patch_to_wall_ids) for i in np.arange(n_walls)):
+        #     raise ValueError(
+        #         "patch_to_wall_ids does contain other ids than range(n_walls)")
 
         # check frequencies
         n_bins = 1
@@ -365,7 +365,8 @@ class DirectionalRadiosityFast():
     def from_file(cls, filepath: str,
                        manual_patch_size=None,
                        wall_auto_assembly=True,
-                       geometry_identifier="Geometry"):
+                       geometry_identifier="Geometry",
+                       patch_identifier="PointCloud"):
         """Create a Radiosity object from a CAD file.
 
         Currently, only Blender and STL files are supported.
@@ -399,7 +400,8 @@ class DirectionalRadiosityFast():
         geom_data = blender.read_geometry_file(filepath,
                                            wall_auto_assembly=wall_auto_assembly,
                                            patches_from_model=patches_from_model,
-                                           blender_geom_id=geometry_identifier)
+                                           blender_geom_id=geometry_identifier,
+                                           patch_geom_id=patch_identifier)
 
         walls = geom_data["wall"]
 
