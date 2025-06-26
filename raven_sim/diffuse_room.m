@@ -3,12 +3,10 @@ rpf=itaRavenProject('diffuse_room.rpf');
 
 %% setting up the scene (materials are loaded already)
 rpf.setSourceNames('S');
-rpf.setSourcePositions([2,2,-2]);
-rpf.setSourceDirectivity('Omnidirectional.daff');
+rpf.setSourcePositions([2,2,2]);
 
 rpf.setReceiverNames('R');
-rpf.setReceiverPositions([2,3,-2]);
-rpf.setReceiverHRTF('Receiver_IR_2ch_omni_ds31_30x30.daff');
+rpf.setReceiverPositions([2,3,2]);
 
 
 rpf.setTemperature(20)
@@ -29,8 +27,8 @@ runtime = [];
 step_size =[];
 resolution = [];
 
-for step = [50 100 500 1000 5000 10000]
-for nParticles = [100 500 1000 5000 10000 50000 100000]
+for step = 500
+for nParticles = 10000
 
 rpf.setNumParticles(nParticles)
 rpf.setTimeSlotLength(1000/step)
