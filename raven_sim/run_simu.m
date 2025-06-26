@@ -17,7 +17,7 @@ function run_simu(sceneID)
         case 'seminar'
             receiverID=1;
             sourceID=1;
-            duration = 1200;
+            duration = 2000;
             src=[.119,2.880,1.203];
             rec=[.439,-.147,1.230];
             nParticles = 50000;
@@ -74,25 +74,31 @@ function run_simu(sceneID)
             runtime = [runtime toc];
             %% check
             h = rpf.getHistogram_itaResult();
-            curves{end+1} = h(sourceID,receiverID).time;
-            RT30 = [RT30 rpf.getT30(0,1)];
-            resolution = [resolution nParticles];
-            step_size = [step_size rpf.timeSlotLength / 1000];
+            curves{end+1} = (h(sourceID,receiverID).time)';
+            rtval= rpf.getT30(0,0,0,sourceID-1);
+            if iscell(rtval)
+                rtval=rtval{receiverID};
+            end
+            RT30 = [RT30 rtval];
+            resolution = [resolution n];
+            step_size = [step_size (rpf.timeSlotLength/1000)];
         end
     end
     
+    out=struct('simu_output',struct(),'scene_data',struct());    
+
+    simu_output.etc=curves;
+    simu_output.RT30=RT30;
+    simu_output.resolution=resolution;
+    simu_output.step_size=step_size;
+    simu_output.runtime=runtime;
+
+    scene_data = compile_conditions(rpf,sourceID,receiverID);
     
+    out.simu_output=simu_output;
+    out.scene_data=scene_data;
 
-    out.simu_output = struct('etc',curves, ...
-                    'RT30',RT30, ...
-                    'resolution',resolution, ...
-                    'step_size',step_size, ...
-                    'runtime',runtime);
-
-    out.scene_data = compile_conditions(rpf,sourceID,receiverID);
-    
-
-    write_simu_conditions(out);
+    write_simu_conditions(out, sceneID);
 
 end
 
@@ -126,7 +132,7 @@ function [scene_data] = compile_conditions(raven_data, sourceID, receiverID)
 
 end
 
-function write_simu_conditions(scene_data,scene_id,base_path)
+function write_simu_conditions(data,scene_id,base_path)
     if nargin<3
         base_path = '..\\examples\\resources\\';
     end
@@ -134,7 +140,7 @@ function write_simu_conditions(scene_data,scene_id,base_path)
         scene_id = 'ihtapark';
     end
 
-    simu_data_json = jsonencode(scene_data, PrettyPrint=true);
+    simu_data_json = jsonencode(data, PrettyPrint=true);
     fid = fopen(strcat(base_path,scene_id,'_scene.json'),'w');
     fprintf(fid,'%s',simu_data_json);
     fclose(fid);
