@@ -3,7 +3,6 @@ function run_simu(sceneID)
         sceneID='ihtapark';
     end
     
-    
     switch sceneID
         case 'ihtapark'
             receiverID=5;
@@ -13,6 +12,7 @@ function run_simu(sceneID)
             rec=[];
             nParticles = 2000000;
             sr = 500;
+            airabs=true;
     
         case 'seminar'
             receiverID=1;
@@ -22,6 +22,7 @@ function run_simu(sceneID)
             rec=[.439,-.147,1.230];
             nParticles = 50000;
             sr = 500;
+            airabs=true;
            
         case 'diffuse_room'
             receiverID=1;
@@ -31,6 +32,7 @@ function run_simu(sceneID)
             rec=[2,3,2];
             nParticles = [50 100 500 1000 5000 10000 50000 100000];
             sr = [50 100 500 1000 5000];
+            airabs=false;
     end
     
     
@@ -45,6 +47,12 @@ function run_simu(sceneID)
     rpf.setExportHistogram(1);
     rpf.setExportFilter(1);
     rpf.setISOrder_PS(0);
+
+    if airabs
+        rpf.enableAirAbsorption()
+    else
+        rpf.disableAirAbsorption()
+    end
     
     RT30 = [];
     curves = {};
@@ -93,7 +101,7 @@ function run_simu(sceneID)
     simu_output.step_size=step_size;
     simu_output.runtime=runtime;
 
-    scene_data = compile_conditions(rpf,sourceID,receiverID);
+    scene_data = compile_conditions(rpf,sourceID,receiverID,airabs);
     
     out.simu_output=simu_output;
     out.scene_data=scene_data;
@@ -102,7 +110,7 @@ function run_simu(sceneID)
 
 end
 
-function [scene_data] = compile_conditions(raven_data, sourceID, receiverID)
+function [scene_data] = compile_conditions(raven_data, sourceID, receiverID,airabs)
 
     material_list = convertCharsToStrings(raven_data.getRoomMaterialNames());
     
@@ -111,9 +119,14 @@ function [scene_data] = compile_conditions(raven_data, sourceID, receiverID)
     scene_data.T = raven_data.getTemperature();
     scene_data.H = raven_data.getHumidity();
     scene_data.P = raven_data.getPressure();
-    scene_data.air_att = determineAirAbsorptionParameter(raven_data.getTemperature(), ...
+    if airabs
+        scene_data.air_att = determineAirAbsorptionParameter(raven_data.getTemperature(), ...
                                                         raven_data.getPressure(), ...
                                                         raven_data.getHumidity());
+    else
+        scene_data.air_att = zeros(length(scene_data.f));
+    end
+        
     scene_data.sound_speed = raven_data.getSoundSpeed();
     
     positions = raven_data.getSourcePosition();
