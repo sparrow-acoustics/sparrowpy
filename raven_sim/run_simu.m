@@ -30,8 +30,8 @@ function run_simu(sceneID)
             duration = 1200;
             src=[2,2,2];
             rec=[2,3,2];
-            nParticles = [50 100 500 1000 5000 10000 50000 100000];
-            sr = [50 100 500 1000 5000];
+            nParticles = 1000;%[50 100 500 1000 5000 10000 50000 100000];
+            sr = [500 1000];%[50 100 500 1000 5000];
             airabs=false;
     end
     
@@ -82,7 +82,7 @@ function run_simu(sceneID)
             runtime = [runtime toc];
             %% check
             h = rpf.getHistogram_itaResult();
-            curves{end+1} = (h(sourceID,receiverID).time)';
+            curves{end+1} = (h(sourceID,receiverID).time(1:duration/rpf.timeSlotLength,:))';
             rtval= rpf.getT30(0,0,0,sourceID-1);
             if iscell(rtval)
                 rtval=rtval{receiverID};
@@ -115,7 +115,7 @@ function [scene_data] = compile_conditions(raven_data, sourceID, receiverID,aira
     material_list = convertCharsToStrings(raven_data.getRoomMaterialNames());
     
     scene_data=struct();
-    scene_data.f = raven_data.freqVector3rd;
+    scene_data.f = raven_data.freqVectorOct;
     scene_data.T = raven_data.getTemperature();
     scene_data.H = raven_data.getHumidity();
     scene_data.P = raven_data.getPressure();
@@ -124,7 +124,7 @@ function [scene_data] = compile_conditions(raven_data, sourceID, receiverID,aira
                                                         raven_data.getPressure(), ...
                                                         raven_data.getHumidity());
     else
-        scene_data.air_att = zeros(length(scene_data.f));
+        scene_data.air_att = zeros(length(scene_data.f),1);
     end
         
     scene_data.sound_speed = raven_data.getSoundSpeed();
