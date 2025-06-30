@@ -1,6 +1,6 @@
 function run_simu(sceneID)
     if nargin==0
-        sceneID='ihtapark';
+        sceneID='diffuse_room';
     end
     
     switch sceneID
@@ -27,10 +27,10 @@ function run_simu(sceneID)
         case 'diffuse_room'
             receiverID=1;
             sourceID=1;
-            duration = 1200;
+            duration = 1300;
             src=[2,2,2];
             rec=[2,3,2];
-            nParticles = 1000;%[50 100 500 1000 5000 10000 50000 100000];
+            nParticles = [50 100 500 1000 5000];% 10000 50000 100000];
             sr = [500 1000];%[50 100 500 1000 5000];
             airabs=false;
     end
@@ -46,8 +46,10 @@ function run_simu(sceneID)
     rpf.setFilterLength(duration);
     rpf.setExportHistogram(1);
     rpf.setExportFilter(1);
-    rpf.setExportFilter(1);
-    rpf.setISOrder_PS(-1);
+    rpf.setISOrder_PS(0);
+    rpf.setISOrder_SS(0);
+    rpf.setSkipDirectSound(1)
+    rpf.setSourceLevels(.1);
 
     if airabs
         rpf.enableAirAbsorption()
