@@ -46,7 +46,8 @@ function run_simu(sceneID)
     rpf.setFilterLength(duration);
     rpf.setExportHistogram(1);
     rpf.setExportFilter(1);
-    rpf.setISOrder_PS(0);
+    rpf.setExportFilter(1);
+    rpf.setISOrder_PS(-1);
 
     if airabs
         rpf.enableAirAbsorption()
