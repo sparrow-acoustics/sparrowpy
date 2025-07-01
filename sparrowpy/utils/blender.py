@@ -209,12 +209,6 @@ def generate_connectivity_wall(mesh: bmesh, geom_obj):
     upvecs=[]
 
     for f in mesh.faces:
-        if len(geom_obj.material_slots)!=0:
-            out_mesh["material"] = np.append(out_mesh["material"],
-                                             geom_obj.material_slots[f.material_index].name)
-        else:
-           out_mesh["material"] = np.append(out_mesh["material"],"")
-
         line=[]
 
         for v in f.verts:
@@ -225,13 +219,19 @@ def generate_connectivity_wall(mesh: bmesh, geom_obj):
         if len(line)>=3:
             out_mesh["conn"].append(line)
 
-        #normals.append(np.array(f.normal))
-        facenormal = geom._calculate_normals(np.array([out_mesh["verts"][line]]))
-        normals.append(facenormal[0])
+            #normals.append(np.array(f.normal))
+            facenormal = geom._calculate_normals(np.array([out_mesh["verts"][line]]))
+            normals.append(facenormal[0])
 
-        ## PLACEHOLDER VALUES
-        upvecs.append(np.array(f.verts[2].co-f.verts[0].co))
-        upvecs[-1]=upvecs[-1]/np.linalg.norm(upvecs[-1])
+            ## PLACEHOLDER VALUES
+            upvecs.append(np.array(f.verts[2].co-f.verts[0].co))
+            upvecs[-1]=upvecs[-1]/np.linalg.norm(upvecs[-1])
+
+            if len(geom_obj.material_slots)!=0:
+                out_mesh["material"] = np.append(out_mesh["material"],
+                                                geom_obj.material_slots[f.material_index].name)
+            else:
+                out_mesh["material"] = np.append(out_mesh["material"],"")
 
     out_mesh["normal"]=np.array(normals)
     out_mesh["up"]=np.array(upvecs)
@@ -408,16 +408,14 @@ def cleanup_collinear(conn: list, vertlist: np.ndarray)->list:
     verts_future = np.roll(vertlist[conn],1,axis=0)
 
     u = verts_past-verts_center
-    u /= np.linalg.norm(u)
+    u = np.array([uu /  np.linalg.norm(uu) for uu  in u])
     v = verts_future-verts_center
-    v /= np.linalg.norm(v)
+    v = np.array([vv /  np.linalg.norm(vv) for vv  in v])
 
     i = 0
 
     while len(conn) != i:
-        if np.dot(u[i],v[i])+1<1e-8:
-            if i>len(conn)-1:
-                print("hello")
+        if 1-np.abs(np.dot(u[i],v[i]))<1e-6:
             conn.pop(i)
         else:
             i+=1

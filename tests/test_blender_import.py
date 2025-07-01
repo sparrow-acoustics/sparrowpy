@@ -71,7 +71,7 @@ def test_material_assignment(path):
     assert True
 
 @pytest.mark.parametrize("path",
-                         ["./examples/resources/lecture_hall.blend"])
+                         ["./examples/resources/seminar.blend"])
 def test_point_cloud(path):
     """Check that patches can be generated from point clouds."""
     geom = bh.read_geometry_file(path,blender_geom_id="Geometry",
