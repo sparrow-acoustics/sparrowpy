@@ -634,11 +634,11 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
     return pts,conn.astype(np.int8)
 
 if numba is not None:
-    pt_solution = numba.njit(parallel=True)(pt_solution)
+    pt_solution = numba.njit(parallel=False)(pt_solution)
     nusselt_integration = numba.njit(parallel=False)(nusselt_integration)
     stokes_integration = numba.njit(parallel=False)(stokes_integration)
     nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
-    load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
+    load_stokes_entries = numba.njit(parallel=False)(load_stokes_entries)
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
     _poly_integration = numba.njit()(_poly_integration)
     _surf_sample_random = numba.njit()(_surf_sample_random)
