@@ -910,24 +910,24 @@ def _basic_visibility(vis_point: np.ndarray,
 
 
 if numba is not None:
-    _total_number_of_patches = numba.njit()(_total_number_of_patches)
-    _process_patches = numba.njit()(_process_patches)
-    _calculate_area = numba.njit()(_calculate_area)
-    _calculate_center = numba.njit()(_calculate_center)
-    _calculate_size = numba.njit()(_calculate_size)
-    _create_patches = numba.njit()(_create_patches)
-    _check_patch2patch_visibility = numba.njit(parallel=True)(
+    _total_number_of_patches = numba.njit(cache=True,)(_total_number_of_patches)
+    _process_patches = numba.njit(cache=True,)(_process_patches)
+    _calculate_area = numba.njit(cache=True,)(_calculate_area)
+    _calculate_center = numba.njit(cache=True,)(_calculate_center)
+    _calculate_size = numba.njit(cache=True,)(_calculate_size)
+    _create_patches = numba.njit(cache=True,)(_create_patches)
+    _check_patch2patch_visibility = numba.njit(cache=True,parallel=True)(
         _check_patch2patch_visibility)
-    _check_point2patch_visibility = numba.njit(parallel=True)(
+    _check_point2patch_visibility = numba.njit(cache=True,parallel=True)(
         _check_point2patch_visibility)
-    _calculate_normals = numba.njit()(_calculate_normals)
-    _coincidence_check = numba.njit()(_coincidence_check)
-    _basic_visibility = numba.njit()(_basic_visibility)
-    _project_to_plane = numba.njit()(_project_to_plane)
-    _point_in_polygon = numba.njit()(_point_in_polygon)
-    _matrix_vector_product = numba.njit()(_matrix_vector_product)
-    _rotation_matrix = numba.njit()(_rotation_matrix)
-    _polygon_area = numba.njit()(_polygon_area)
-    _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
+    _calculate_normals = numba.njit(cache=True,)(_calculate_normals)
+    _coincidence_check = numba.njit(cache=True,)(_coincidence_check)
+    _basic_visibility = numba.njit(cache=True,)(_basic_visibility)
+    _project_to_plane = numba.njit(cache=True,)(_project_to_plane)
+    _point_in_polygon = numba.njit(cache=True,)(_point_in_polygon)
+    _matrix_vector_product = numba.njit(cache=True,)(_matrix_vector_product)
+    _rotation_matrix = numba.njit(cache=True,)(_rotation_matrix)
+    _polygon_area = numba.njit(cache=True,)(_polygon_area)
+    _sphere_tangent_vector = numba.njit(cache=True,)(_sphere_tangent_vector)
 
 
