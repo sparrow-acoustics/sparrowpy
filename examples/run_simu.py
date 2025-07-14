@@ -3,16 +3,15 @@
 import numpy as np
 import sparrowpy as sp
 import pyfar as pf
-import psutil
+import tracemalloc
 
 def run_simu_mem(walls, source, receiver,
              patch_size=1, absorption=.1, scattering=1,
              speed_of_sound=343.26, time_step=.1, duration=.5,
              refl_order=3, freq=np.array([1000])):
     # create object
-    m0 = psutil.Process().memory_info().rss / 1024**2
+    tracemalloc.start()
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
-    mscene = psutil.Process().memory_info().rss / 1024**2 - m0
     # create directional scattering data (totally diffuse)
     brdf_sources = pf.Coordinates(0, 0, 1, weights=1)
     brdf_receivers = pf.Coordinates(0, 0, 1, weights=1)
@@ -31,27 +30,23 @@ def run_simu_mem(walls, source, receiver,
         pf.FrequencyData(
             np.zeros_like(brdf.frequencies),
             brdf.frequencies))
-    mpropagation =  psutil.Process().memory_info().rss / 1024**2 - mscene - m0
+
     # calculate from factors including brdfs
     radi.bake_geometry()
-    mbaking =  psutil.Process().memory_info().rss / 1024**2 - mpropagation - m0
+
     radi.init_source_energy(source)
-    mcast =  psutil.Process().memory_info().rss / 1024**2 - mbaking - m0
+
     radi.calculate_energy_exchange(
         speed_of_sound=speed_of_sound,
         etc_time_resolution=time_step,
         etc_duration=duration,
         max_reflection_order=refl_order)
-    mexchange =  psutil.Process().memory_info().rss / 1024**2 - mcast - m0
-
 
     etc_radiosity = radi.collect_energy_receiver_mono(receivers=receiver)
 
-    mcollect =  psutil.Process().memory_info().rss / 1024**2 - mexchange -m0
 
-    mf = psutil.Process().memory_info().rss / 1024**2 - m0
-
-    mem = np.array([m0,mscene,mpropagation,mbaking,mcast,mexchange,mcollect,mf])
+    mem = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
 
     return etc_radiosity,mem
 
