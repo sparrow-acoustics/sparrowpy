@@ -885,7 +885,7 @@ def _add_directional(
             sources, wall_id_i, scattering, scattering_index)
 
         energy_0_directivity[i, :, :] = energy_0[i] \
-            * scattering_factor
+            * np.real(scattering_factor)
 
     return energy_0_directivity
 
