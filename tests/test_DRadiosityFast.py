@@ -300,3 +300,39 @@ def test_collect_receiver_mono_direct_sound(sample_walls):
     npt.assert_almost_equal(
         etc.time[
             np.arange(len(delay_samples)), : , delay_samples], direct_sound)
+
+
+def test_collect_receiver_mono_direct_sound_with_brdf(
+        sample_walls, sofa_data_diffuse_full_third_octave):
+    brdf, sources, receivers = sofa_data_diffuse_full_third_octave
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 1)
+
+    position = np.array([0, 0, 0])
+    view = np.array([1, 0, 0])
+    up = np.array([0, 0, 1])
+    path = os.path.join(
+        os.path.dirname(__file__), 'test_data',
+        'Genelec8020_DAF_2016_1x1.v17.ms.sofa')
+
+    # create directivity
+    directivity = sp.sound_object.DirectivityMS(path)
+    sound_source = sp.sound_object.SoundSource(position, view, up, directivity)
+
+    # set air attenuation
+    radiosity.set_wall_brdf(
+        np.arange(6), brdf, sources, receivers)
+
+    # try with directivity
+    radiosity.init_source_energy(sound_source)
+    radiosity.calculate_energy_exchange(343, 0.001, .1)
+
+    receivers = pf.Coordinates([0.5, 0.5], 0, 0)
+    direct_sound, delay_samples = radiosity.calculate_direct_sound(
+        receivers)
+
+    etc = radiosity.collect_energy_receiver_mono(
+        receivers, True)
+    npt.assert_almost_equal(
+        etc.time[
+            np.arange(len(delay_samples)), : , delay_samples], direct_sound)

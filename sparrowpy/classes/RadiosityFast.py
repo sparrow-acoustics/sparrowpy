@@ -485,11 +485,12 @@ class DirectionalRadiosityFast():
                             :, np.newaxis]
                     else:
                         directivity[:, :, i_frequency] = np.repeat(
-                            directivity_local, n_directions)
+                            directivity_local[..., np.newaxis],
+                            n_directions,
+                            axis=-1)
                 energy_0_dir *= directivity
             else:
                 energy_0_dir *= 1
-
 
         self._energy_init_source = energy_0_dir
         self._distance_patches_to_source = distance_0
