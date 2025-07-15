@@ -4,17 +4,26 @@ import numpy as np
 import sparrowpy as sp
 import pyfar as pf
 import tracemalloc
+import pyrato
 
 def run_simu_mem(walls, source, receiver,
              patch_size=1, absorption=.1, scattering=1,
              speed_of_sound=343.26, time_step=.1, duration=.5,
-             refl_order=3, freq=np.array([1000])):
+             refl_order=3, freq=np.array([1000]), res=30):
+
+    att=pyrato.air_attenuation_coefficient(freq)
+    att_np= att* 0.115129254650564
+
+    # set brdfs
+    samples = pf.samplings.sph_equal_angle(delta_angles=res)
+    samples.weights=np.ones(samples.cshape[0])
+
+    brdf_sources = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
+    brdf_receivers = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
+
     # create object
     tracemalloc.start()
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
-    # create directional scattering data (totally diffuse)
-    brdf_sources = pf.Coordinates(0, 0, 1, weights=1)
-    brdf_receivers = pf.Coordinates(0, 0, 1, weights=1)
 
     brdf = sp.brdf.create_from_scattering(
         brdf_sources,
@@ -28,7 +37,7 @@ def run_simu_mem(walls, source, receiver,
     # set air absorption
     radi.set_air_attenuation(
         pf.FrequencyData(
-            np.zeros_like(brdf.frequencies),
+            att_np,
             brdf.frequencies))
 
     # calculate from factors including brdfs
@@ -48,18 +57,27 @@ def run_simu_mem(walls, source, receiver,
     mem = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
-    return etc_radiosity,mem
+    return mem
 
 def run_simu(walls, source, receiver,
              patch_size=1, absorption=.1, scattering=1,
              speed_of_sound=343.26, time_step=.1, duration=.5,
-             refl_order=3, freq=np.array([1000])):
+             refl_order=3, freq=np.array([1000]), res=30):
+
+    att=pyrato.air_attenuation_coefficient(freq)
+    att_np= att* 0.115129254650564
+
+    # set brdfs
+    samples = pf.samplings.sph_equal_angle(delta_angles=res)
+    samples.weights=np.ones(samples.cshape[0])
+
+    brdf_sources = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
+    brdf_receivers = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
+
     # create object
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
-    # create directional scattering data (totally diffuse)
-    brdf_sources = pf.Coordinates(0, 0, 1, weights=1)
-    brdf_receivers = pf.Coordinates(0, 0, 1, weights=1)
 
+    # create directional scattering data (totally diffuse)
     brdf = sp.brdf.create_from_scattering(
         brdf_sources,
         brdf_receivers,
@@ -72,7 +90,7 @@ def run_simu(walls, source, receiver,
     # set air absorption
     radi.set_air_attenuation(
         pf.FrequencyData(
-            np.zeros_like(brdf.frequencies),
+            att_np,
             brdf.frequencies))
 
     # calculate from factors including brdfs
