@@ -26,8 +26,16 @@ class DirectivityMS():
         self.data = pf.FrequencyData(
             sofa.Data_Real[source_index, :] + 1j * sofa.Data_Imag[
                 source_index, :], sofa.N)
+        positions = sofa.ReceiverPosition
+        if positions.ndim > 2:
+            positions = np.squeeze(positions)
         self.receivers = pf.io.io._sofa_pos(
-            sofa.ReceiverPosition_Type, sofa.ReceiverPosition)
+            sofa.ReceiverPosition_Type, positions)
+        if  self.receivers.cdim != 1:
+            raise ValueError(
+                'DirectivityMS only supports 1D coordinates, '
+                f'got {self.receivers.cdim}D coordinates. Squeezing did not '
+                'work.')
 
     def get_directivity(
             self, source_pos: np.ndarray, source_view: np.ndarray,
