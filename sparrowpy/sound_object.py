@@ -189,7 +189,7 @@ class SoundSource(SoundObject):
         Parameters
         ----------
         target_position : np.ndarray
-            cartesian target position in m.
+            cartesian target position in m of shape (3,) or (n, 3).
         frequency : float
             frequency in Hz.
 
@@ -199,8 +199,15 @@ class SoundSource(SoundObject):
             nearest directivity factor for given position and frequency.
         """
         i_freq = np.argmin(np.abs(self.directivity.data.frequencies-frequency))
-        return self.directivity.get_directivity(
-            self.position, self.view, self.up, target_position, i_freq)
+        if target_position.size == 3:
+            return self.directivity.get_directivity(
+                self.position, self.view, self.up, target_position, i_freq)
+        else:
+            return np.array([
+                self.directivity.get_directivity(
+                    self.position, self.view, self.up, pos, i_freq)
+                for pos in target_position
+            ])[:, 0]
 
 class Receiver(SoundObject):
     """Receiver object inhered from SoundObject."""
