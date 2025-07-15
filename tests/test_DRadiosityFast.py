@@ -3,8 +3,9 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 import pyfar as pf
-
+import os
 import sparrowpy as sp
+import sofar as sf
 
 
 def test_init(sample_walls):
@@ -148,3 +149,154 @@ def test_total_number_of_patches():
     result = sp.geometry._total_number_of_patches(points, 0.2)
     desired = 25
     assert result == desired
+
+
+def test_init_source_with_directivity(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 1)
+
+    position = np.array([0, 0, 0])
+    view = np.array([1, 0, 0])
+    up = np.array([0, 0, 1])
+    path = os.path.join(
+        os.path.dirname(__file__), 'test_data',
+        'Genelec8020_DAF_2016_1x1.v17.ms.sofa')
+    directivity = sp.sound_object.DirectivityMS(path)
+    sound_source = sp.sound_object.SoundSource(position, view, up, directivity)
+
+    # try without directivity
+    radiosity.init_source_energy(pf.Coordinates(*position))
+    init_energy = radiosity._energy_init_source
+    distance_patches_to_source = radiosity._distance_patches_to_source
+    assert isinstance(radiosity._source, pf.Coordinates)
+
+    # try with directivity
+    radiosity.init_source_energy(sound_source)
+    init_energy_dir = radiosity._energy_init_source
+    distance_patches_to_source_dir = radiosity._distance_patches_to_source
+
+    assert not np.allclose(init_energy, init_energy_dir)
+    npt.assert_allclose(
+        distance_patches_to_source, distance_patches_to_source_dir)
+    assert isinstance(radiosity._source, sp.sound_object.SoundSource)
+
+
+def test_init_source_with_directivity_frequency(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 1)
+
+    position = np.array([0, 0, 0])
+    view = np.array([1, 0, 0])
+    up = np.array([0, 0, 1])
+    path = os.path.join(
+        os.path.dirname(__file__), 'test_data',
+        'Genelec8020_DAF_2016_1x1.v17.ms.sofa')
+
+    # create directivity
+    directivity = sp.sound_object.DirectivityMS(path)
+    sound_source = sp.sound_object.SoundSource(position, view, up, directivity)
+
+    # set air attenuation
+    frequencies = sf.read_sofa(path, verbose=False).N
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+
+    # try without directivity
+    radiosity.init_source_energy(pf.Coordinates(*position))
+    init_energy = radiosity._energy_init_source
+    distance_patches_to_source = radiosity._distance_patches_to_source
+
+    # try with directivity
+    radiosity.init_source_energy(sound_source)
+    init_energy_dir = radiosity._energy_init_source
+    distance_patches_to_source_dir = radiosity._distance_patches_to_source
+
+    assert not np.allclose(init_energy, init_energy_dir)
+    npt.assert_allclose(
+        distance_patches_to_source, distance_patches_to_source_dir)
+
+    # test if first frequency bin is same as above
+    npt.assert_allclose(
+        np.array([
+            [0.        ], [2.13215939], [0.        ],
+            [2.16329116], [0.        ], [2.12899306]]),
+            init_energy_dir[..., 0])
+
+    # test if other frequency bins are not same as first one
+    for i in range(1, frequencies.shape[0]):
+        assert not np.allclose(
+            np.array([
+                [[0.        ]], [[2.13215939]], [[0.        ]],
+                [[2.16329116]], [[0.        ]], [[2.12899306]]]),
+                init_energy_dir[..., i])
+
+
+def test_collect_receiver_direct_sound(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 1)
+
+    position = np.array([0, 0, 0])
+    view = np.array([1, 0, 0])
+    up = np.array([0, 0, 1])
+    path = os.path.join(
+        os.path.dirname(__file__), 'test_data',
+        'Genelec8020_DAF_2016_1x1.v17.ms.sofa')
+
+    # create directivity
+    directivity = sp.sound_object.DirectivityMS(path)
+    sound_source = sp.sound_object.SoundSource(position, view, up, directivity)
+
+    # set air attenuation
+    frequencies = sf.read_sofa(path, verbose=False).N
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+
+    # try with directivity
+    radiosity.init_source_energy(sound_source)
+    radiosity.calculate_energy_exchange(343, 0.1, 1)
+
+    receivers = pf.Coordinates([0.5, 0.5], 0, 0)
+    direct_sound, delay_samples = radiosity.calculate_direct_sound(
+        receivers)
+    n_receivers = receivers.cshape[0]
+    n_bins = radiosity.n_bins
+    npt.assert_almost_equal(direct_sound.shape, (n_receivers, n_bins))
+    npt.assert_almost_equal(delay_samples.shape, (n_receivers))
+
+    npt.assert_almost_equal(direct_sound[0], direct_sound[1])
+    npt.assert_almost_equal(delay_samples[0], delay_samples[1])
+
+
+def test_collect_receiver_mono_direct_sound(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 1)
+
+    position = np.array([0, 0, 0])
+    view = np.array([1, 0, 0])
+    up = np.array([0, 0, 1])
+    path = os.path.join(
+        os.path.dirname(__file__), 'test_data',
+        'Genelec8020_DAF_2016_1x1.v17.ms.sofa')
+
+    # create directivity
+    directivity = sp.sound_object.DirectivityMS(path)
+    sound_source = sp.sound_object.SoundSource(position, view, up, directivity)
+
+    # set air attenuation
+    frequencies = sf.read_sofa(path, verbose=False).N
+    radiosity.set_air_attenuation(
+        pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+
+    # try with directivity
+    radiosity.init_source_energy(sound_source)
+    radiosity.calculate_energy_exchange(343, 0.001, .1)
+
+    receivers = pf.Coordinates([0.5, 0.5], 0, 0)
+    direct_sound, delay_samples = radiosity.calculate_direct_sound(
+        receivers)
+
+    etc = radiosity.collect_energy_receiver_mono(
+        receivers, True)
+    npt.assert_almost_equal(
+        etc.time[
+            np.arange(len(delay_samples)), : , delay_samples], direct_sound)

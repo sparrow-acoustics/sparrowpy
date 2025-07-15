@@ -3,7 +3,7 @@ import numpy as np
 import deepdiff
 import pyfar as pf
 import sparrowpy.form_factor.universal as form_factor
-from sparrowpy import ( geometry )
+from sparrowpy import ( geometry, sound_object )
 try:
     import numba
     prange = numba.prange
@@ -408,11 +408,27 @@ class DirectionalRadiosityFast():
             sources_array, receivers_array)
 
     def init_source_energy(
-            self, source:pf.Coordinates):
-        """Initialize the source energy."""
-        if source.cshape != (1, ):
-           raise ValueError('just one source position is allowed.')
-        source_position = source.cartesian[0]
+            self, source):
+        """Initialize the source energy.
+
+        Parameters
+        ----------
+        source : pf.Coordinates, sparrowpy.sound_object.SoundSource
+            definition of the source position for Coordinates object and
+            orientation and directivity for SoundSource object. If no
+            directivity is given, the directivity is set to 1 for all
+            frequencies.
+
+        """
+        if isinstance(source, pf.Coordinates):
+            if source.cshape != (1, ):
+                raise ValueError('just one source position is allowed.')
+            source_position = source.cartesian[0]
+        elif isinstance(source, sound_object.SoundSource):
+            source_position = source.position
+        self._source = source
+
+
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
             frequencies = np.array([0]) if self._frequencies is None else \
@@ -447,10 +463,33 @@ class DirectionalRadiosityFast():
             source_position, patches_center, self.patches_points,
             source_visibility,
             self._air_attenuation, n_bins)
+
+        # of shape (n_patches, n_directions, n_bins)
         energy_0_dir = _add_directional(
             energy_0, source_position,
             patches_center, n_bins, patch_to_wall_ids,
             vi, vo, brdf, brdf_index)
+
+        # add directivity if given
+        if isinstance(source, sound_object.SoundSource):
+            n_patches = patches_center.shape[0]
+            n_directions = vo.shape[1]
+
+            if source.directivity is not None:
+                directivity = np.zeros((n_patches, n_directions, n_bins))
+                for i_frequency in range(n_bins):
+                    directivity_local = np.real(source.get_directivity(
+                        patches_center, self._frequencies[i_frequency]))
+                    if n_directions == 1:
+                        directivity[:, :, i_frequency] = directivity_local[
+                            :, np.newaxis]
+                    else:
+                        directivity[:, :, i_frequency] = np.repeat(
+                            directivity_local, n_directions)
+                energy_0_dir *= directivity
+            else:
+                energy_0_dir *= 1
+
 
         self._energy_init_source = energy_0_dir
         self._distance_patches_to_source = distance_0
@@ -479,6 +518,8 @@ class DirectionalRadiosityFast():
         energy_0_dir = self._energy_init_source
 
         if self._energy_exchange_etc is None or recalculate:
+            # energy exchange etc
+            # of shape (n_patches, n_directions, n_bins, n_samples)
             if max_reflection_order < 1:
                 self._energy_exchange_etc = \
                     _energy_exchange_init_energy(
@@ -497,13 +538,17 @@ class DirectionalRadiosityFast():
         self._speed_of_sound = float(speed_of_sound)
         self._etc_duration = float(etc_duration)
 
-    def collect_energy_receiver_mono(self, receivers):
+    def collect_energy_receiver_mono(self, receivers, direct_sound=False):
         """Collect the energy at the receivers.
 
         Parameters
         ----------
         receivers : pf.Coordinates
             receiver Coordinates in of cshape (n_receivers).
+        direct_sound : bool, optional
+            If True, the direct sound is collected as well, by default False.
+            The direct sound includes spreading loss, air attenuation and
+            source directivity.
 
         Returns
         -------
@@ -511,9 +556,77 @@ class DirectionalRadiosityFast():
             energy collected at the receiver in cshape
             (n_receivers, n_bins)
         """
+        if not isinstance(direct_sound, bool):
+            raise ValueError(
+                "direct_sound must be of type boolean")
         etc = self.collect_energy_receiver_patchwise(receivers)
         etc.time = np.sum(etc.time, axis=1)
+
+        if direct_sound:
+            direct_sound, n_sample_delay = self.calculate_direct_sound(
+                receivers)
+
+            # add the direct sound to the etc
+            i_receivers = np.arange(len(n_sample_delay))
+            etc.time[i_receivers, :, n_sample_delay] += direct_sound
+
         return etc
+
+
+    def calculate_direct_sound(self, receivers):
+        """Calculate the direct sound at the receivers.
+
+        It includes the spreading loss, air attenuation and
+        source directivity.
+
+        Parameters
+        ----------
+        receivers : pf.Coordinates
+            _description_
+
+        Returns
+        -------
+        direct_sound : np.ndarray
+            energy of the direct sound at the receivers in shape
+            (n_receivers, n_bins)
+        n_sample_delay : np.ndarray
+            number of samples for the delay at the receivers in shape
+            (n_receivers, )
+        """
+        if not isinstance(receivers, pf.Coordinates):
+            raise ValueError(
+                "Receiver positions must be of type pf.Coordinates")
+
+        # calculate distance from source to receivers
+        if isinstance(self._source, pf.Coordinates):
+            source_position = self._source
+        else:
+            source_position = pf.Coordinates(*self._source.position)
+        r = (receivers-source_position).radius
+
+        # calculate spreading loss for direct sound
+        direct_sound = np.ones(
+            (receivers.cshape[0], self.n_bins), dtype=float)
+        direct_sound *= (1/(4 * np.pi * r**2))[:, np.newaxis]
+
+        # add air attenuation
+        if self._air_attenuation is not None:
+            for i in range(self.n_bins):
+                direct_sound[:, i] *= np.exp(
+                    -self._air_attenuation[i] * r)
+
+        # add source directivity
+        if isinstance(self._source, sound_object.SoundSource):
+            for i in range(self.n_bins):
+                direct_sound[:, i] *= np.real(self._source.get_directivity(
+                    receivers.cartesian, self._frequencies[i]))
+
+        # calculate the number of samples for the delay
+        n_sample_delay = np.array(
+            r/self.speed_of_sound/self._etc_time_resolution, dtype=int)
+
+        return direct_sound, n_sample_delay
+
 
     def collect_energy_receiver_patchwise(self, receivers):
         """Collect the energy for each patch at the receivers without summing
