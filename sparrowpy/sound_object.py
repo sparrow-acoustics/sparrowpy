@@ -5,7 +5,7 @@ import pyfar as pf
 import sofar as sf
 
 
-class _DirectivityMS():
+class DirectivityMS():
     """Directivity class for FreeFieldDirectivityTF convention."""
 
     data: pf.FrequencyData
@@ -22,18 +22,12 @@ class _DirectivityMS():
             source index of directivity, by default 0
 
         """
-        sofa = sf.read_sofa(file_path)
-        if sofa.GLOBAL_SOFAConventions != 'FreeFieldDirectivityTF':
-            raise ValueError('convention need to be FreeFieldDirectivityTF')
-        sofa = sf.read_sofa(file_path)
+        sofa = sf.read_sofa(file_path, verbose=False)
         self.data = pf.FrequencyData(
             sofa.Data_Real[source_index, :] + 1j * sofa.Data_Imag[
                 source_index, :], sofa.N)
-        if sofa.ReceiverPosition_Type == 'spherical':
-            pos = sofa.ReceiverPosition.squeeze().T
-            pos[0] = (pos[0] + 360) % 360
-            self.receivers = pf.Coordinates(
-                pos[0], pos[1], pos[2], 'sph', 'top_elev', 'deg')
+        self.receivers = pf.io.io._sofa_pos(
+            sofa.ReceiverPosition_Type, sofa.ReceiverPosition)
 
     def get_directivity(
             self, source_pos: np.ndarray, source_view: np.ndarray,
@@ -62,9 +56,10 @@ class _DirectivityMS():
         """
         (azimuth_deg, elevation_deg) = _get_metrics(
             source_pos, source_view, source_up, target_position)
-        index, _ = self.receivers.find_nearest_k(
-            (azimuth_deg+360) % 360, elevation_deg, 1, k=1,
-            domain='sph', convention='top_elev', unit='deg')
+        find = pf.Coordinates.from_spherical_elevation(
+            azimuth_deg/180*np.pi, elevation_deg/180*np.pi, 1,
+        )
+        index, _ = self.receivers.find_nearest(find)
         return self.data.freq[index, i_freq]
 
 
@@ -139,15 +134,17 @@ class SoundObject():
 
 
 
+
+
 class SoundSource(SoundObject):
     """Acoustic sound source inhered from SoundObject."""
 
-    directivity: _DirectivityMS
+    directivity: DirectivityMS
     sound_power: float
 
     def __init__(
             self, position: np.ndarray, view: np.ndarray,
-            up: np.ndarray, directivity: _DirectivityMS = None,
+            up: np.ndarray, directivity: DirectivityMS = None,
             sound_power: float = 1) -> None:
         """Init sound source.
 
@@ -168,7 +165,7 @@ class SoundSource(SoundObject):
         super(SoundSource, self).__init__(position, view, up)
         self.sound_power = float(sound_power)
         if directivity is not None:
-            assert isinstance(directivity, _DirectivityMS)
+            assert isinstance(directivity, DirectivityMS)
         self.directivity = directivity
 
     def plot(self, ax, **kwargs):
@@ -185,6 +182,25 @@ class SoundSource(SoundObject):
         """
         super(SoundSource, self).plot(ax, color='r', label='Source', **kwargs)
 
+    def get_directivity(
+            self, target_position: np.ndarray, frequency: float) -> float:
+        """Get Directivity for certain position and frequency.
+
+        Parameters
+        ----------
+        target_position : np.ndarray
+            cartesian target position in m.
+        frequency : float
+            frequency in Hz.
+
+        Returns
+        -------
+        float
+            nearest directivity factor for given position and frequency.
+        """
+        i_freq = np.argmin(np.abs(self.directivity.data.frequencies-frequency))
+        return self.directivity.get_directivity(
+            self.position, self.view, self.up, target_position, i_freq)
 
 class Receiver(SoundObject):
     """Receiver object inhered from SoundObject."""
