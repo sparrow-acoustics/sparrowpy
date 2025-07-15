@@ -582,7 +582,7 @@ class DirectionalRadiosityFast():
         Parameters
         ----------
         receivers : pf.Coordinates
-            _description_
+            receiver Coordinates in of cshape (n_receivers).
 
         Returns
         -------
