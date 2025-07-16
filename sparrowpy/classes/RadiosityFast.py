@@ -620,7 +620,7 @@ class DirectionalRadiosityFast():
         if isinstance(self._source, sound_object.SoundSource):
             for i in range(self.n_bins):
                 direct_sound[:, i] *= np.real(self._source.get_directivity(
-                    receivers.cartesian, self._frequencies[i]))
+                    np.squeeze(receivers.cartesian), self._frequencies[i]))
 
         # calculate the number of samples for the delay
         n_sample_delay = np.array(
