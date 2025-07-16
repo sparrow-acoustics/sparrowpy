@@ -82,11 +82,11 @@ def test_small_room_and_shift():
 def test_small_room_and_rotate():
     """Test if the results changes for rotated walls."""
     X = 5
-    Y = 6
+    Y = 3
     Z = 4
-    r_x = 3
+    r_x = 1
     r_y = 2
-    r_z = 3
+    r_z = 1.5
     patch_size = 1
     ir_length_s = 1
     sampling_rate = 1
