@@ -97,12 +97,7 @@ def stokes_integration(
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
-                    h=xj[1]-xj[0]
-                    inner_integral[i][dim]+= 2*h/45 *(7*subsecj[0] +
-                                                      32*subsecj[1] +
-                                                      12*subsecj[2] +
-                                                      32*subsecj[3] +
-                                                      7*subsecj[4])
+                    inner_integral[i][dim]+=_booles_rule(xj,subsecj)
 
 
 
@@ -469,6 +464,23 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
 
     return area
 
+def _booles_rule(x,y):
+    """Integrate 1D function after Boole's rule.
+
+    Parameters
+    ----------
+    x: np.ndarray(float)
+        x-coordinate of the input samples.
+    y: np.ndarray(float)
+        f(x) of the input samples.
+    """
+
+    h=x[1]-x[0]
+    return 2*h/45 *(7*y[0] +
+                    32*y[1] +
+                    12*y[2] +
+                    32*y[3] +
+                    7*y[4])
 
 ####################################################
 # sampling
