@@ -36,8 +36,7 @@ def load_stokes_entries(
     return form_mat
 
 def stokes_integration(
-    patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float,
-    approx_order=4) -> float:
+    patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float) -> float:
     """Calculate an estimation of the form factor between two patches.
 
     Computationally integrates a modified form function over
@@ -71,9 +70,9 @@ def stokes_integration(
 
     """
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
-                                                         npoints=approx_order+1)
+                                                         npoints=5)
     j_bpoints, j_conn = _sample_boundary_regular(patch_j,
-                                                         npoints=approx_order+1)
+                                                         npoints=5)
 
     subsecj = np.zeros((j_conn.shape[1]))
     subseci = np.zeros((i_conn.shape[1]))
@@ -98,12 +97,13 @@ def stokes_integration(
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
-                    # compute polynomial coefficients
-                    quadfactors = _poly_estimation_Lagrange(x=xj,
-                                                                   y=subsecj)
-                    # analytical integration of the approx polynomials
-                    inner_integral[i][dim] += _poly_integration(
-                                                        c=quadfactors,x=xj)
+                    h=xj[1]-xj[0]
+                    inner_integral[i][dim]+= 2*h/45 *(7*subsecj[0] +
+                                                      32*subsecj[1] +
+                                                      12*subsecj[2] +
+                                                      32*subsecj[3] +
+                                                      7*subsecj[4])
+
 
 
         # integrate previously computed integral over patch i
@@ -114,10 +114,12 @@ def stokes_integration(
             if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                quadfactors = _poly_estimation_Lagrange(x=xi,
-                                                                y=subseci)
-                outer_integral += _poly_integration(c=quadfactors,
-                                                                x=xi)
+                h=xi[1]-xi[0]
+                outer_integral+= 2*h/45 *( 7*subsecj[0] +
+                                          32*subsecj[1] +
+                                          12*subsecj[2] +
+                                          32*subsecj[3] +
+                                           7*subsecj[4])
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
