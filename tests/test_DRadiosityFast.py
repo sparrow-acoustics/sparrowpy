@@ -22,8 +22,10 @@ def test_check_visibility(sample_walls):
     npt.assert_almost_equal(radiosity._visibility_matrix.shape, (24,24))
     for i in range(6):
         k = i*4
-        npt.assert_array_equal(radiosity._visibility_matrix[k+4:, k:k+4], False)
-        npt.assert_array_equal(radiosity._visibility_matrix[k:k+4, k+4:], True)
+        npt.assert_array_equal(radiosity._visibility_matrix[k+4:, k:k+4],
+                               False)
+        npt.assert_array_equal(radiosity._visibility_matrix[k:k+4, k+4:],
+                               True)
     assert np.sum(radiosity._visibility_matrix) == 24**2-21*4**2
 
 
