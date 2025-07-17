@@ -659,3 +659,4 @@ if numba is not None:
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
     _area_under_curve = numba.njit()(_area_under_curve)
+    _booles_rule = numba.njit()(_booles_rule)
