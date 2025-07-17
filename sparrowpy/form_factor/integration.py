@@ -109,12 +109,7 @@ def stokes_integration(
             if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                h=xi[1]-xi[0]
-                outer_integral+= 2*h/45 *( 7*subsecj[0] +
-                                          32*subsecj[1] +
-                                          12*subsecj[2] +
-                                          32*subsecj[3] +
-                                           7*subsecj[4])
+                outer_integral+= _booles_rule(xi,subseci)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
