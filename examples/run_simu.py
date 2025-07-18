@@ -40,8 +40,14 @@ def run_simu_mem(walls, source, receiver,
             att_np,
             brdf.frequencies))
 
+    mem_scene = tracemalloc.get_traced_memory()
+    tracemalloc.reset_peak()
+
     # calculate from factors including brdfs
     radi.bake_geometry()
+
+    mem_bake =  tracemalloc.get_traced_memory()
+    tracemalloc.reset_peak()
 
     radi.init_source_energy(source)
 
@@ -51,20 +57,23 @@ def run_simu_mem(walls, source, receiver,
         etc_duration=duration,
         max_reflection_order=refl_order)
 
+    mem_exchange = tracemalloc.get_traced_memory()
+    tracemalloc.reset_peak()
+
     etc_radiosity = radi.collect_energy_receiver_mono(receivers=receiver)
 
 
-    mem = tracemalloc.get_traced_memory()
+    mem_collect = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
-    return mem
+    return [mem_scene, mem_bake, mem_exchange, mem_collect]
 
 def run_simu(walls, source, receiver,
              patch_size=1, absorption=.1, scattering=1,
              speed_of_sound=343.26, time_step=.1, duration=.5,
              refl_order=3, freq=np.array([1000]), res=30):
 
-    att=pyrato.air_attenuation_coefficient(freq)
+    att=10*np.log10(pyrato.air_attenuation_coefficient(freq))/1000
     att_np= att* 0.115129254650564
 
     # set brdfs
