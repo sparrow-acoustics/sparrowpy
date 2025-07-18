@@ -101,7 +101,7 @@ def create_from_scattering(
 
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
-    scattering_flattened = scattering_coefficient.freq.flatten()
+    scattering_flattened = np.real(scattering_coefficient.freq.flatten())
     image_source = source_directions.copy()
     image_source.azimuth += np.pi
     i_receiver = receiver_directions.find_nearest(image_source)[0][0]
