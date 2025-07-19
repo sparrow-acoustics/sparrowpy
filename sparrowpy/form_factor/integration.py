@@ -97,7 +97,7 @@ def stokes_integration(
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
-                    inner_integral[i][dim]+=_booles_rule(xj,subsecj)
+                    inner_integral[i][dim]+=_newton_cotes_4th(xj,subsecj)
 
 
 
@@ -109,7 +109,7 @@ def stokes_integration(
             if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                outer_integral+= _booles_rule(xi,subseci)
+                outer_integral+= _newton_cotes_4th(xi,subseci)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
@@ -459,8 +459,16 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
 
     return area
 
-def _booles_rule(x,y):
+def _newton_cotes_4th(x: np.ndarray,y):
     """Integrate 1D function after Boole's rule.
+
+    Returns the approximate integral of a given function f(x)
+    given 5 equally spaced samples (x,y).
+    x samples the function input, while y samples the respective f(x) values.
+
+    The integral is numerically estimated via the closed 4th-order
+    Newton-Cotes formula (aka Boole's Rule).
+    This formula *requires* 5 equidistant sample input.
 
     Parameters
     ----------
@@ -654,4 +662,4 @@ if numba is not None:
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
     _area_under_curve = numba.njit()(_area_under_curve)
-    _booles_rule = numba.njit()(_booles_rule)
+    _newton_cotes_4th = numba.njit()(_newton_cotes_4th)
