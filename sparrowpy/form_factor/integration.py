@@ -36,8 +36,7 @@ def load_stokes_entries(
     return form_mat
 
 def stokes_integration(
-    patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float,
-    approx_order=4) -> float:
+    patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float) -> float:
     """Calculate an estimation of the form factor between two patches.
 
     Computationally integrates a modified form function over
@@ -71,9 +70,9 @@ def stokes_integration(
 
     """
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
-                                                         npoints=approx_order+1)
+                                                         npoints=5)
     j_bpoints, j_conn = _sample_boundary_regular(patch_j,
-                                                         npoints=approx_order+1)
+                                                         npoints=5)
 
     subsecj = np.zeros((j_conn.shape[1]))
     subseci = np.zeros((i_conn.shape[1]))
@@ -98,12 +97,8 @@ def stokes_integration(
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
-                    # compute polynomial coefficients
-                    quadfactors = _poly_estimation_Lagrange(x=xj,
-                                                                   y=subsecj)
-                    # analytical integration of the approx polynomials
-                    inner_integral[i][dim] += _poly_integration(
-                                                        c=quadfactors,x=xj)
+                    inner_integral[i][dim]+=_newton_cotes_4th(xj,subsecj)
+
 
 
         # integrate previously computed integral over patch i
@@ -114,10 +109,7 @@ def stokes_integration(
             if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                quadfactors = _poly_estimation_Lagrange(x=xi,
-                                                                y=subseci)
-                outer_integral += _poly_integration(c=quadfactors,
-                                                                x=xi)
+                outer_integral+= _newton_cotes_4th(xi,subseci)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
@@ -467,6 +459,31 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
 
     return area
 
+def _newton_cotes_4th(x: np.ndarray,y):
+    """Integrate 1D function after Boole's rule.
+
+    Returns the approximate integral of a given function f(x)
+    given 5 equally spaced samples (x,y).
+    x samples the function input, while y samples the respective f(x) values.
+
+    The integral is numerically estimated via the closed 4th-order
+    Newton-Cotes formula (aka Boole's Rule).
+    This formula *requires* 5 equidistant sample input.
+
+    Parameters
+    ----------
+    x: np.ndarray(float)
+        x-coordinate of the input samples.
+    y: np.ndarray(float)
+        f(x) of the input samples.
+    """
+
+    h=x[1]-x[0]
+    return 2*h/45 *(7*y[0] +
+                    32*y[1] +
+                    12*y[2] +
+                    32*y[3] +
+                    7*y[4])
 
 ####################################################
 # sampling
@@ -645,3 +662,4 @@ if numba is not None:
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
     _area_under_curve = numba.njit()(_area_under_curve)
+    _newton_cotes_4th = numba.njit()(_newton_cotes_4th)
