@@ -362,6 +362,8 @@ class DirectionalRadiosityFast():
         """Bake the geometry by calculating all the form factors.
 
         """
+        self._patch_2_scatt_receiver = np.empty((self.n_patches,self.n_patches),
+                                                  dtype=int)
         # Check the visibility between patches.
         self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
@@ -406,6 +408,13 @@ class DirectionalRadiosityFast():
             self._patch_to_wall_ids, scattering,
             scattering_index,
             sources_array, receivers_array)
+
+        for j in range(self.n_patches):
+            self._patch_2_scatt_receiver[:,j]=get_scattering_data_receiver_index(
+                pos_i=self.patches_center,pos_j=self.patches_center[j],
+                receivers=receivers_array,
+                wall_id_i=self._patch_to_wall_ids,
+            )
 
     def init_source_energy(
             self, source):
@@ -531,19 +540,10 @@ class DirectionalRadiosityFast():
                         )
             else:
 
-                patch_2_scatt_receiver = np.empty((n_patches,n_patches),
-                                                  dtype=int)
-                for j in range(n_patches):
-                    patch_2_scatt_receiver[:,j]=get_scattering_data_receiver_index(
-                        pos_i=patches_center,pos_j=patches_center[j],
-                        receivers=receivers_array,
-                        wall_id_i=self._patch_to_wall_ids,
-                    )
-
                 self._energy_exchange_etc = _energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
-                    patch_2_scatt_receiver,
+                    self._patch_2_scatt_receiver,
                     speed_of_sound, etc_time_resolution,
                     max_reflection_order,
                     self._visible_patches)
