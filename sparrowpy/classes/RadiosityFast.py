@@ -531,7 +531,8 @@ class DirectionalRadiosityFast():
                         )
             else:
 
-                patch_2_scatt_receiver = np.empty((n_patches,n_patches))
+                patch_2_scatt_receiver = np.empty((n_patches,n_patches),
+                                                  dtype=int)
                 for j in range(n_patches):
                     patch_2_scatt_receiver[:,j]=get_scattering_data_receiver_index(
                         pos_i=patches_center,pos_j=patches_center[j],
@@ -1117,10 +1118,10 @@ def _energy_exchange(
                 if n_delay_samples > 0:
                     E_matrix[current_index, j, :, :, n_delay_samples:] += \
                         form_factors_tilde[i, j] * E_matrix[
-                            current_index-1, i, :, :, :-n_delay_samples]
+                            current_index-1, i, dir_id, :, :-n_delay_samples]
                 else:
                     E_matrix[current_index, j, :, :, :] += form_factors_tilde[
-                        i, j] * E_matrix[current_index-1, i, dir_id , :, :]
+                        i, j] * E_matrix[current_index-1, i, dir_id, :, :]
         E_matrix_total += E_matrix[current_index]
     return E_matrix_total
 
