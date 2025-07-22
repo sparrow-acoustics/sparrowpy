@@ -106,13 +106,14 @@ def create_from_scattering(
     image_source.azimuth += np.pi
     i_receiver = receiver_directions.find_nearest(image_source)[0][0]
     cos_factor = (np.cos(
-            receiver_directions.colatitude) * receiver_weights)
-    cos_factor = cos_factor[..., np.newaxis]
+            source_directions.colatitude[
+                np.newaxis, ...]) * receiver_weights[..., np.newaxis])
     scattering_factor = 1 - scattering_flattened[np.newaxis, ...]
     brdf[:, :, :] += (
         scattering_flattened) / np.pi
     i_sources = np.arange(source_directions.csize)
-    brdf[i_sources, i_receiver, :] += scattering_factor / cos_factor
+    brdf[i_sources, i_receiver, :] += scattering_factor / cos_factor[
+        i_sources, i_receiver, np.newaxis]
 
     brdf *= (1 - absorption_coefficient.freq.flatten())
     if file_path is not None:
@@ -201,19 +202,15 @@ def create_from_directional_scattering(
         absorption_coefficient = pf.FrequencyData(
             np.zeros_like(directional_scattering.frequencies),
             directional_scattering.frequencies)
+    source_factor = np.cos(source_directions.colatitude)[
+        :, np.newaxis, np.newaxis]
+    cos_receiver = np.cos(receiver_directions.colatitude)[
+        np.newaxis, :, np.newaxis]
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
-    receiver_factor = (np.cos(
-            receiver_directions.colatitude) * receiver_weights)
-    receiver_factor = receiver_factor[..., np.newaxis]
-
-    source_weights = source_directions.weights
-    source_weights *= 2 * np.pi / np.sum(source_weights)
-    source_factor = (np.cos(
-            source_directions.colatitude)) * source_weights
-    source_factor = source_factor[..., np.newaxis, np.newaxis]
-
-    brdf = directional_scattering.freq / receiver_factor
+    receiver_factor = receiver_weights[..., np.newaxis]
+    factor = source_factor/cos_receiver
+    brdf = directional_scattering.freq / receiver_factor / source_factor * factor
 
     brdf *= (1 - absorption_coefficient.freq.flatten())
     if file_path is not None:
