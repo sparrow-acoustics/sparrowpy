@@ -1372,19 +1372,19 @@ def get_scattering_data_source(
         (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
 
-# if numba is not None:
-#     _add_directional = numba.njit(parallel=True)(_add_directional)
-#     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
-#     _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
-#     _energy_exchange = numba.njit()(_energy_exchange)
-#     _form_factors_with_directivity_dim = numba.njit(parallel=True)(
-#         _form_factors_with_directivity_dim)
-#     _form_factors_with_directivity = numba.njit(parallel=True)(
-#         _form_factors_with_directivity)
-#     get_scattering_data_receiver_index = numba.njit()(
-#         get_scattering_data_receiver_index)
-#     get_scattering_data = numba.njit()(get_scattering_data)
-#     get_scattering_data_source = numba.njit()(get_scattering_data_source)
+if numba is not None:
+    _add_directional = numba.njit(parallel=True)(_add_directional)
+    _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
+    _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
+    _energy_exchange = numba.njit()(_energy_exchange)
+    _form_factors_with_directivity_dim = numba.njit(parallel=True)(
+        _form_factors_with_directivity_dim)
+    _form_factors_with_directivity = numba.njit(parallel=True)(
+        _form_factors_with_directivity)
+    get_scattering_data_receiver_index = numba.njit()(
+        get_scattering_data_receiver_index)
+    get_scattering_data = numba.njit()(get_scattering_data)
+    get_scattering_data_source = numba.njit()(get_scattering_data_source)
 
 
 
