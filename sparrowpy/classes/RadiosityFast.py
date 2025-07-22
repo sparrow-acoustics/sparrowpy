@@ -528,9 +528,20 @@ class DirectionalRadiosityFast():
                         speed_of_sound, etc_time_resolution,
                         )
             else:
+
+                patch_2_scatt_receiver = np.empty((n_patches,n_patches))
+
+                for j in range(n_patches):
+                    patch_2_scatt_receiver[i,j]=get_scattering_data_receiver_index(
+                        pos_i=patches_center,pos_j=patches_center[j],
+                        receivers=self._brdf_outgoing_directions,
+                        wall_id_i=self._patch_to_wall_ids,
+                    )
+
                 self._energy_exchange_etc = _energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
+                    patch_2_scatt_receiver,
                     speed_of_sound, etc_time_resolution,
                     max_reflection_order,
                     self._visible_patches)
@@ -1042,7 +1053,7 @@ def _energy_exchange_init_energy(
 
 def _energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
-        form_factors_tilde,
+        form_factors_tilde, patch_2_out_directions,
         speed_of_sound, histogram_time_resolution, max_order, visible_patches):
     """Calculate energy exchange between patches.
 
@@ -1058,6 +1069,9 @@ def _energy_exchange(
         distance between all patches of shape (n_patches, n_patches)
     form_factors_tilde : np.ndarray
         form factors of shape (n_patches, n_patches, n_directions, n_bins)
+    patch_2_out_directions: np.ndarray
+        patchwise map of patch centers to
+        scattering outgoing directions of shape (n_patches,n_patches)
     speed_of_sound : float
         speed of sound in m/s.
     histogram_time_resolution : float
@@ -1096,6 +1110,7 @@ def _energy_exchange(
                 else:
                     j = visible_patches[ii, 0]
                     i = visible_patches[ii, 1]
+                dir_id = patch_2_out_directions[i,j]
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
                 if n_delay_samples > 0:
@@ -1104,7 +1119,7 @@ def _energy_exchange(
                             current_index-1, i, :, :, :-n_delay_samples]
                 else:
                     E_matrix[current_index, j, :, :, :] += form_factors_tilde[
-                        i, j] * E_matrix[current_index-1, i, :, :, :]
+                        i, j] * E_matrix[current_index-1, i, dir_id , :, :]
         E_matrix_total += E_matrix[current_index]
     return E_matrix_total
 
@@ -1242,12 +1257,12 @@ def get_scattering_data_receiver_index(
         pos_i:np.ndarray, pos_j:np.ndarray,
         receivers:np.ndarray, wall_id_i:np.ndarray,
         ):
-    """Get scattering data depending on previous, current and next position.
+    """Get scattering receiver index based on current and next position.
 
     Parameters
     ----------
     pos_i : np.ndarray
-        current position of shape (3)
+        current position of shape (n,3)
     pos_j : np.ndarray
         next position of shape (3)
     receivers : np.ndarray
