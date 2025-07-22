@@ -532,9 +532,8 @@ class DirectionalRadiosityFast():
             else:
 
                 patch_2_scatt_receiver = np.empty((n_patches,n_patches))
-
                 for j in range(n_patches):
-                    patch_2_scatt_receiver[i,j]=get_scattering_data_receiver_index(
+                    patch_2_scatt_receiver[:,j]=get_scattering_data_receiver_index(
                         pos_i=patches_center,pos_j=patches_center[j],
                         receivers=receivers_array,
                         wall_id_i=self._patch_to_wall_ids,
@@ -1279,15 +1278,17 @@ def get_scattering_data_receiver_index(
 
     """
     n_patches = pos_i.shape[0] if pos_i.ndim > 1 else 1
-    receiver_idx = np.empty((n_patches), dtype=np.int64)
+    receiver_idx = -1*np.ones((n_patches), dtype=np.int64)
 
     for i in range(n_patches):
         difference_receiver = pos_i[i]-pos_j
-        difference_receiver /= np.linalg.norm(
+        norm = np.linalg.norm(
             difference_receiver)
-        receiver_idx[i] = np.argmin(np.sum(
-            (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
-            axis=-1)
+        if norm > 1e-6:
+            difference_receiver /= norm
+            receiver_idx[i] = np.argmin(np.sum(
+                (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
+                axis=-1)
 
 
     return receiver_idx
@@ -1370,19 +1371,19 @@ def get_scattering_data_source(
         (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
 
-if numba is not None:
-    _add_directional = numba.njit(parallel=True)(_add_directional)
-    _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
-    _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
-    _energy_exchange = numba.njit()(_energy_exchange)
-    _form_factors_with_directivity_dim = numba.njit(parallel=True)(
-        _form_factors_with_directivity_dim)
-    _form_factors_with_directivity = numba.njit(parallel=True)(
-        _form_factors_with_directivity)
-    get_scattering_data_receiver_index = numba.njit()(
-        get_scattering_data_receiver_index)
-    get_scattering_data = numba.njit()(get_scattering_data)
-    get_scattering_data_source = numba.njit()(get_scattering_data_source)
+# if numba is not None:
+#     _add_directional = numba.njit(parallel=True)(_add_directional)
+#     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
+#     _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
+#     _energy_exchange = numba.njit()(_energy_exchange)
+#     _form_factors_with_directivity_dim = numba.njit(parallel=True)(
+#         _form_factors_with_directivity_dim)
+#     _form_factors_with_directivity = numba.njit(parallel=True)(
+#         _form_factors_with_directivity)
+#     get_scattering_data_receiver_index = numba.njit()(
+#         get_scattering_data_receiver_index)
+#     get_scattering_data = numba.njit()(get_scattering_data)
+#     get_scattering_data_source = numba.njit()(get_scattering_data_source)
 
 
 
