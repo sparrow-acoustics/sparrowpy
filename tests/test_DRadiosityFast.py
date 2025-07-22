@@ -7,7 +7,6 @@ import os
 import sparrowpy as sp
 import sofar as sf
 
-
 def test_init(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 0.5)
     npt.assert_almost_equal(radiosity.patches_points.shape, (24, 4, 3))
@@ -43,6 +42,54 @@ def test_compute_form_factors(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (24, 24))
+
+def test_patch_2_out_dir_mapping():
+    """Test patch centroid to brdf receiver direction map."""
+    p0 = [[0,0,0],[0,1,0],[0,1,1],[0,0,1]]
+    n0=[1,0,0]
+    u0=[0,0,1]
+    p1 = [[0,0,0],[1,0,0],[1,0,1],[0,0,1]]
+    n1=[0,1,0]
+    u1=[0,0,1]
+
+    walls = [sp.geometry.Polygon(points=p0,normal=n0,up_vector=u0),
+             sp.geometry.Polygon(points=p1,normal=n1,up_vector=u1)]
+
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
+    samples = pf.samplings.sph_equal_angle(delta_angles=45)
+    samples.weights=np.ones(samples.cshape[0])
+
+    brdf_sources = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
+    brdf_receivers = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
+    frequencies = np.array([1000])
+
+    brdf = sp.brdf.create_from_scattering(
+        brdf_sources,
+        brdf_receivers,
+        pf.FrequencyData(.5*np.ones_like(frequencies), frequencies),
+        pf.FrequencyData(.1*np.ones_like(frequencies), frequencies))
+
+    radiosity.set_wall_brdf(
+    np.arange(len(walls)), brdf, brdf_sources, brdf_receivers)
+
+    radiosity.bake_geometry()
+
+    assert radiosity._patch_2_scatt_receiver.ndim==2
+    assert radiosity._patch_2_scatt_receiver.shape[0]==radiosity.n_patches
+    assert radiosity._patch_2_scatt_receiver.shape[1]==radiosity.n_patches
+
+    assert radiosity._patch_2_scatt_receiver[0,0]==-1
+    assert radiosity._patch_2_scatt_receiver[1,1]==-1
+
+    i0 = radiosity._patch_2_scatt_receiver[0,1]
+    i1 = radiosity._patch_2_scatt_receiver[1,0]
+    assert (i0 != i1)
+    v0=radiosity._brdf_outgoing_directions[0].cartesian[i0]
+
+    v1=radiosity._brdf_outgoing_directions[1].cartesian[i1]
+
+    npt.assert_almost_equal(np.cross(v0,radiosity.patches_normal[0]),
+                            -np.cross(v1,radiosity.patches_normal[1]))
 
 
 @pytest.mark.parametrize('walls', [
