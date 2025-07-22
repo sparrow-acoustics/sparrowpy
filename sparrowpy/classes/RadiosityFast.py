@@ -114,7 +114,7 @@ class DirectionalRadiosityFast():
         brdf_outgoing_directions : list[pf.Coordinates], optional
             outgoing directions of brdfs per wall, by default None
         patch_2_scatt_receiver: np.ndarray
-            map of patch centroids to each patch's brdf_outgoing_directions
+            map of patch positions to relative scattering directions
         air_attenuation : np.ndarray, optional
             air attenuation coefficients for each frequency, needs to be of
             shape (n_bins), by default None
@@ -153,6 +153,8 @@ class DirectionalRadiosityFast():
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
             form_factors_tilde = np.array(form_factors_tilde)
+        if patch_2_scatt_receiver is not None:
+            patch_2_scatt_receiver = np.array(patch_2_scatt_receiver)
         if brdf is not None:
             brdf = [np.array(b) for b in brdf]
         if air_attenuation is not None:
@@ -399,11 +401,11 @@ class DirectionalRadiosityFast():
             scattering = np.array(self._brdf)
 
             for j in range(self.n_patches):
-                self._patch_2_scatt_receiver[:,j]=get_scattering_data_receiver_index(
+                self._patch_2_scatt_receiver[:,j]=np.array(get_scattering_data_receiver_index(
                         pos_i=self.patches_center,pos_j=self.patches_center[j],
                         receivers=receivers_array,
                         wall_id_i=self._patch_to_wall_ids,
-                    )
+                    ))
         else:
             sources_array = None
             receivers_array = None
@@ -844,6 +846,7 @@ class DirectionalRadiosityFast():
             'brdf_index': self._brdf_index,
             'brdf_incoming_directions': self._brdf_incoming_directions,
             'brdf_outgoing_directions': self._brdf_outgoing_directions,
+            'patch_2_scatt_receiver': self._patch_2_scatt_receiver,
             'air_attenuation': self._air_attenuation,
             'speed_of_sound': self._speed_of_sound,
             'etc_time_resolution': self._etc_time_resolution,
@@ -1116,7 +1119,9 @@ def _energy_exchange(
                 else:
                     j = visible_patches[ii, 0]
                     i = visible_patches[ii, 1]
+
                 dir_id = patch_2_out_directions[i,j]
+
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
                 if n_delay_samples > 0:
