@@ -34,6 +34,7 @@ class DirectionalRadiosityFast():
     _brdf_index: np.ndarray
     _brdf_incoming_directions: list[pf.Coordinates]
     _brdf_outgoing_directions: list[pf.Coordinates]
+    _patch_2_scatt_receiver: np.ndarray
 
     _air_attenuation: np.ndarray
     _speed_of_sound: float
@@ -65,6 +66,7 @@ class DirectionalRadiosityFast():
             brdf_index:np.ndarray=None,
             brdf_incoming_directions:list[pf.Coordinates]=None,
             brdf_outgoing_directions:list[pf.Coordinates]=None,
+            patch_2_scatt_receiver:np.ndarray=None,
             air_attenuation:np.ndarray=None,
             speed_of_sound:float=None,
             etc_time_resolution:float=None,
@@ -111,6 +113,8 @@ class DirectionalRadiosityFast():
             incoming direction of brdfs per wall, by default None
         brdf_outgoing_directions : list[pf.Coordinates], optional
             outgoing directions of brdfs per wall, by default None
+        patch_2_scatt_receiver: np.ndarray
+            map of patch centroids to each patch's brdf_outgoing_directions
         air_attenuation : np.ndarray, optional
             air attenuation coefficients for each frequency, needs to be of
             shape (n_bins), by default None
@@ -185,6 +189,7 @@ class DirectionalRadiosityFast():
         self._brdf_index = brdf_index
         self._brdf_incoming_directions = brdf_incoming_directions
         self._brdf_outgoing_directions = brdf_outgoing_directions
+        self._patch_2_scatt_receiver = patch_2_scatt_receiver
 
         self._air_attenuation = air_attenuation
         self._speed_of_sound = speed_of_sound
@@ -362,7 +367,7 @@ class DirectionalRadiosityFast():
         """Bake the geometry by calculating all the form factors.
 
         """
-        self._patch_2_scatt_receiver=np.empty((self.n_patches,self.n_patches),
+        self._patch_2_scatt_receiver=np.zeros((self.n_patches,self.n_patches),
                                                   dtype=int)
         # Check the visibility between patches.
         self._visibility_matrix = geometry._check_patch2patch_visibility(
@@ -392,6 +397,13 @@ class DirectionalRadiosityFast():
                 [s.cartesian for s in self._brdf_outgoing_directions])
             scattering_index = np.array(self._brdf_index)
             scattering = np.array(self._brdf)
+
+            for j in range(self.n_patches):
+                self._patch_2_scatt_receiver[:,j]=get_scattering_data_receiver_index(
+                        pos_i=self.patches_center,pos_j=self.patches_center[j],
+                        receivers=receivers_array,
+                        wall_id_i=self._patch_to_wall_ids,
+                    )
         else:
             sources_array = None
             receivers_array = None
@@ -409,12 +421,6 @@ class DirectionalRadiosityFast():
             scattering_index,
             sources_array, receivers_array)
 
-        for j in range(self.n_patches):
-            self._patch_2_scatt_receiver[:,j]=get_scattering_data_receiver_index(
-                pos_i=self.patches_center,pos_j=self.patches_center[j],
-                receivers=receivers_array,
-                wall_id_i=self._patch_to_wall_ids,
-            )
 
     def init_source_energy(
             self, source):
