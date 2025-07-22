@@ -60,7 +60,7 @@ def test_patch_2_out_dir_mapping():
     samples.weights=np.ones(samples.cshape[0])
 
     brdf_sources = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
-    brdf_receivers = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
+    brdf_receivers=samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
     frequencies = np.array([1000])
 
     brdf = sp.brdf.create_from_scattering(

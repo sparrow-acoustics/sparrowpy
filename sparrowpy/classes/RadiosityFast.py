@@ -362,7 +362,7 @@ class DirectionalRadiosityFast():
         """Bake the geometry by calculating all the form factors.
 
         """
-        self._patch_2_scatt_receiver = np.empty((self.n_patches,self.n_patches),
+        self._patch_2_scatt_receiver=np.empty((self.n_patches,self.n_patches),
                                                   dtype=int)
         # Check the visibility between patches.
         self._visibility_matrix = geometry._check_patch2patch_visibility(
@@ -519,8 +519,6 @@ class DirectionalRadiosityFast():
         distance_0 = self._distance_patches_to_source
         n_patches = self.n_patches
         distance_i_j = np.empty((n_patches, n_patches))
-        receivers_array = np.array(
-                [s.cartesian for s in self._brdf_outgoing_directions])
 
         for i in range(n_patches):
             for j in range(n_patches):
