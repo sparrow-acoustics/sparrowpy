@@ -113,8 +113,8 @@ class DirectionalRadiosityFast():
             incoming direction of brdfs per wall, by default None
         brdf_outgoing_directions : list[pf.Coordinates], optional
             outgoing directions of brdfs per wall, by default None
-        patch_2_scatt_receiver: np.ndarray
-            map of patch positions to relative scattering directions
+        patch_2_brdf_outgoing_index: np.ndarray
+            map of patch positions to relative scattering directions indices
         air_attenuation : np.ndarray, optional
             air attenuation coefficients for each frequency, needs to be of
             shape (n_bins), by default None
