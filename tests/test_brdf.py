@@ -266,7 +266,7 @@ def test_directional_energy_conservation_specular(
     check_reciprocity(data)
 
 
-@pytest.mark.parametrize('absorption_data', [0])
+@pytest.mark.parametrize('absorption_data', [0, 0.3, 1])
 @pytest.mark.parametrize('sh_order', [7, 11])
 def test_directional_energy_conservation_diffuse(
         absorption_data, sh_order):
@@ -294,7 +294,7 @@ def test_directional_energy_conservation_diffuse(
         coords, coords.weights, brdf, absorption_data)
     check_reciprocity(brdf)
 
-    npt.assert_almost_equal(brdf.freq, 1 / np.pi, decimal=2)
+    npt.assert_almost_equal(brdf.freq, (1-absorption_data) / np.pi, decimal=2)
 
 
 @pytest.mark.parametrize('absorption_data', [0, 0.3, 1])
