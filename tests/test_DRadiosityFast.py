@@ -45,17 +45,22 @@ def test_compute_form_factors(sample_walls):
 
 def test_patch_2_out_dir_mapping():
     """Test patch centroid to brdf receiver direction map."""
+
+    # input: two orthogonal walls with flipped up vector
     p0 = [[0,0,0],[0,1,0],[0,1,1],[0,0,1]]
     n0=[1,0,0]
     u0=[0,0,1]
     p1 = [[0,0,0],[1,0,0],[1,0,1],[0,0,1]]
     n1=[0,1,0]
-    u1=[0,0,1]
+    u1=[0,0,-1]
 
     walls = [sp.geometry.Polygon(points=p0,normal=n0,up_vector=u0),
              sp.geometry.Polygon(points=p1,normal=n1,up_vector=u1)]
 
     radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
+
+    # set brdf sampling with 45º resolution:
+    # ensure predictable positions and some outgoing directions in horiz. plane
     samples = pf.samplings.sph_equal_angle(delta_angles=45)
     samples.weights=np.ones(samples.cshape[0])
 
@@ -74,22 +79,30 @@ def test_patch_2_out_dir_mapping():
 
     radiosity.bake_geometry()
 
+    # ensure that mapping has correct dimensions
     assert radiosity._patch_2_brdf_outgoing_index.ndim==2
     assert radiosity._patch_2_brdf_outgoing_index.shape[0]==radiosity.n_patches
     assert radiosity._patch_2_brdf_outgoing_index.shape[1]==radiosity.n_patches
 
-    assert radiosity._patch_2_brdf_outgoing_index[0,0]==-1
-    assert radiosity._patch_2_brdf_outgoing_index[1,1]==-1
+    # index of own centroid is NaN
+    assert np.isnan(radiosity._patch_2_brdf_outgoing_index[0,0])
+    assert np.isnan(radiosity._patch_2_brdf_outgoing_index[1,1])
 
+    # index of centroid 1 relative to patch 0
     i0 = radiosity._patch_2_brdf_outgoing_index[0,1]
+    # index of centroid 1 relative to patch 0
     i1 = radiosity._patch_2_brdf_outgoing_index[1,0]
-    assert (i0 != i1)
-    v0=radiosity._brdf_outgoing_directions[0].cartesian[i0]
 
-    v1=radiosity._brdf_outgoing_directions[1].cartesian[i1]
-
-    npt.assert_almost_equal(np.cross(v0,radiosity.patches_normal[0]),
-                            -np.cross(v1,radiosity.patches_normal[1]))
+    # indices are the same because the up vectors are flipped
+    # there is a symmetry over the x=y plane
+    assert (i0 == i1)
+    v0=radiosity._brdf_outgoing_directions[0].cartesian[int(i0)]
+    v1=radiosity._brdf_outgoing_directions[1].cartesian[int(i1)]
+    # corresponding directions in xy plane
+    npt.assert_almost_equal(v0[2],0)
+    npt.assert_almost_equal(v1[2],0)
+    # corresponding directions are symmetrical
+    npt.assert_almost_equal(v0,-v1)
 
 
 @pytest.mark.parametrize('walls', [
