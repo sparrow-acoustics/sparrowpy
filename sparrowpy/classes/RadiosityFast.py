@@ -723,7 +723,8 @@ class DirectionalRadiosityFast():
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[k,:]= (self._energy_exchange_etc[k,receiver_idx[k],:]
+                E_matrix[k,:]= (
+                    self._energy_exchange_etc[k,int(receiver_idx[k]),:]
                                                     * patch_receiver_energy[k])
 
             if propagation_fx:
