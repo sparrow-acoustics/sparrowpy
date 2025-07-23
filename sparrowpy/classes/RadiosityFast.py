@@ -845,7 +845,7 @@ class DirectionalRadiosityFast():
             'brdf_index': self._brdf_index,
             'brdf_incoming_directions': self._brdf_incoming_directions,
             'brdf_outgoing_directions': self._brdf_outgoing_directions,
-            'patch_2_scatt_receiver': self._patch_2_brdf_outgoing_index,
+            'patch_2_brdf_outgoing_index': self._patch_2_brdf_outgoing_index,
             'air_attenuation': self._air_attenuation,
             'speed_of_sound': self._speed_of_sound,
             'etc_time_resolution': self._etc_time_resolution,
