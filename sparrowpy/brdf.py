@@ -145,8 +145,8 @@ def create_from_directional_scattering(
 
     .. math::
         \rho(\mathbf{\Omega_i}, \mathbf{\Omega_o}) = \frac{(1-\alpha)}{
-        (\mathbf{\Omega_o} \cdot \mathbf{n}) \cdot w_o} s_{d}(\mathbf{\Omega_i},
-        \mathbf{\Omega_o})
+        (\mathbf{\Omega_o} \cdot \mathbf{n}) \cdot w_o} s_{d}(
+        \mathbf{\Omega_i}, mathbf{\Omega_o})
 
     where:
         - :math:`\mathbf{\Omega_i}` and :math:`\mathbf{\Omega_o}` are the
@@ -204,14 +204,11 @@ def create_from_directional_scattering(
         absorption_coefficient = pf.FrequencyData(
             np.zeros_like(directional_scattering.frequencies),
             directional_scattering.frequencies)
-    source_factor = np.cos(source_directions.colatitude)[
-        :, np.newaxis, np.newaxis]
     cos_receiver = np.cos(receiver_directions.colatitude)[
         np.newaxis, :, np.newaxis]
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
     receiver_factor = receiver_weights[..., np.newaxis]
-    factor = source_factor/cos_receiver
     brdf = directional_scattering.freq / receiver_factor / cos_receiver
 
     brdf *= (1 - absorption_coefficient.freq.flatten())
