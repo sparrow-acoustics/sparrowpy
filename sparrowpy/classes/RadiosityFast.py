@@ -1290,12 +1290,17 @@ def get_scattering_data_receiver_index(
     receiver_idx = np.empty((n_patches), dtype=np.float64)
 
     for i in range(n_patches):
-        difference_receiver = pos_i[i]-pos_j
-        difference_receiver /= np.linalg.norm(
+        difference_receiver = pos_j-pos_i[i]
+        norm = np.linalg.norm(
             difference_receiver)
-        receiver_idx[i] = np.argmin(np.sum(
+
+        if norm > 1e-6:
+            difference_receiver /= norm
+            receiver_idx[i] = np.argmin(np.sum(
                 (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
                 axis=-1)
+        else:
+            receiver_idx[i]=float("nan")
 
     return receiver_idx
 
