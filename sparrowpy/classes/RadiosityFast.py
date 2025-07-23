@@ -370,8 +370,11 @@ class DirectionalRadiosityFast():
         """Bake the geometry by calculating all the form factors.
 
         """
-        self._patch_2_brdf_outgoing_index = (self.n_patches *
+        # preload patch_2_brdf_outgoing_index map with invalid entries
+        self._patch_2_brdf_outgoing_index = (
+            self._brdf_outgoing_directions[0].cshape[0] *
                                                 np.ones((self.n_patches,self.n_patches),dtype=np.int64))
+
         # Check the visibility between patches.
         self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
