@@ -154,7 +154,8 @@ class DirectionalRadiosityFast():
         if form_factors_tilde is not None:
             form_factors_tilde = np.array(form_factors_tilde)
         if patch_2_brdf_outgoing_index is not None:
-            patch_2_brdf_outgoing_index = np.array(patch_2_brdf_outgoing_index)
+            patch_2_brdf_outgoing_index = np.array(patch_2_brdf_outgoing_index,
+                                                   dtype=np.int64)
         if brdf is not None:
             brdf = [np.array(b) for b in brdf]
         if air_attenuation is not None:
@@ -369,7 +370,7 @@ class DirectionalRadiosityFast():
         """Bake the geometry by calculating all the form factors.
 
         """
-        self._patch_2_brdf_outgoing_index=np.empty((self.n_patches,self.n_patches),dtype=int)
+        self._patch_2_brdf_outgoing_index=np.empty((self.n_patches,self.n_patches),dtype=np.int64)
         # Check the visibility between patches.
         self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
@@ -1288,7 +1289,7 @@ def get_scattering_data_receiver_index(
 
     """
     n_patches = pos_i.shape[0] if pos_i.ndim > 1 else 1
-    receiver_idx = np.empty((n_patches), dtype=int)
+    receiver_idx = np.empty((n_patches), dtype=np.int64)
 
     for i in range(n_patches):
         difference_receiver = pos_j-pos_i[i]
