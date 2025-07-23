@@ -85,8 +85,10 @@ def test_patch_2_out_dir_mapping():
     assert radiosity._patch_2_brdf_outgoing_index.shape[1]==radiosity.n_patches
 
     # index of own centroid stores invalid entry
-    assert radiosity._patch_2_brdf_outgoing_index[0,0] == radiosity.n_patches
-    assert radiosity._patch_2_brdf_outgoing_index[1,1] == radiosity.n_patches
+    assert (radiosity._patch_2_brdf_outgoing_index[0,0] ==
+            radiosity._brdf_outgoing_directions[0].cshape[0])
+    assert (radiosity._patch_2_brdf_outgoing_index[1,1] ==
+            radiosity._brdf_outgoing_directions[0].cshape[0])
 
     # index of centroid 1 relative to patch 0
     i0 = radiosity._patch_2_brdf_outgoing_index[0,1]
