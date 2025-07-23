@@ -369,8 +369,7 @@ class DirectionalRadiosityFast():
         """Bake the geometry by calculating all the form factors.
 
         """
-        self._patch_2_brdf_outgoing_index=np.zeros((self.n_patches,self.n_patches),
-                                                  dtype=int)
+        self._patch_2_brdf_outgoing_index=np.empty((self.n_patches,self.n_patches))
         # Check the visibility between patches.
         self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
@@ -1120,7 +1119,7 @@ def _energy_exchange(
                     j = visible_patches[ii, 0]
                     i = visible_patches[ii, 1]
 
-                dir_id = patch_2_out_directions[i,j]
+                dir_id = int(patch_2_out_directions[i,j])
 
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
@@ -1288,18 +1287,15 @@ def get_scattering_data_receiver_index(
 
     """
     n_patches = pos_i.shape[0] if pos_i.ndim > 1 else 1
-    receiver_idx = -1*np.ones((n_patches), dtype=np.int64)
+    receiver_idx = np.empty((n_patches), dtype=np.float64)
 
     for i in range(n_patches):
         difference_receiver = pos_i[i]-pos_j
-        norm = np.linalg.norm(
+        difference_receiver /= np.linalg.norm(
             difference_receiver)
-        if norm > 1e-6:
-            difference_receiver /= norm
-            receiver_idx[i] = np.argmin(np.sum(
+        receiver_idx[i] = np.argmin(np.sum(
                 (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
                 axis=-1)
-
 
     return receiver_idx
 
