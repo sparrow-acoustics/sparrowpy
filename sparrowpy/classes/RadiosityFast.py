@@ -34,7 +34,7 @@ class DirectionalRadiosityFast():
     _brdf_index: np.ndarray
     _brdf_incoming_directions: list[pf.Coordinates]
     _brdf_outgoing_directions: list[pf.Coordinates]
-    _patch_2_scatt_receiver: np.ndarray
+    _patch_2_brdf_outgoing_index: np.ndarray
 
     _air_attenuation: np.ndarray
     _speed_of_sound: float
@@ -66,7 +66,7 @@ class DirectionalRadiosityFast():
             brdf_index:np.ndarray=None,
             brdf_incoming_directions:list[pf.Coordinates]=None,
             brdf_outgoing_directions:list[pf.Coordinates]=None,
-            patch_2_scatt_receiver:np.ndarray=None,
+            patch_2_brdf_outgoing_index:np.ndarray=None,
             air_attenuation:np.ndarray=None,
             speed_of_sound:float=None,
             etc_time_resolution:float=None,
@@ -153,8 +153,8 @@ class DirectionalRadiosityFast():
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
             form_factors_tilde = np.array(form_factors_tilde)
-        if patch_2_scatt_receiver is not None:
-            patch_2_scatt_receiver = np.array(patch_2_scatt_receiver)
+        if patch_2_brdf_outgoing_index is not None:
+            patch_2_brdf_outgoing_index = np.array(patch_2_brdf_outgoing_index)
         if brdf is not None:
             brdf = [np.array(b) for b in brdf]
         if air_attenuation is not None:
@@ -191,7 +191,7 @@ class DirectionalRadiosityFast():
         self._brdf_index = brdf_index
         self._brdf_incoming_directions = brdf_incoming_directions
         self._brdf_outgoing_directions = brdf_outgoing_directions
-        self._patch_2_scatt_receiver = patch_2_scatt_receiver
+        self._patch_2_brdf_outgoing_index = patch_2_brdf_outgoing_index
 
         self._air_attenuation = air_attenuation
         self._speed_of_sound = speed_of_sound
@@ -369,7 +369,7 @@ class DirectionalRadiosityFast():
         """Bake the geometry by calculating all the form factors.
 
         """
-        self._patch_2_scatt_receiver=np.zeros((self.n_patches,self.n_patches),
+        self._patch_2_brdf_outgoing_index=np.zeros((self.n_patches,self.n_patches),
                                                   dtype=int)
         # Check the visibility between patches.
         self._visibility_matrix = geometry._check_patch2patch_visibility(
@@ -401,7 +401,7 @@ class DirectionalRadiosityFast():
             scattering = np.array(self._brdf)
 
             for j in range(self.n_patches):
-                self._patch_2_scatt_receiver[:,j]=np.array(get_scattering_data_receiver_index(
+                self._patch_2_brdf_outgoing_index[:,j]=np.array(get_scattering_data_receiver_index(
                         pos_i=self.patches_center,pos_j=self.patches_center[j],
                         receivers=receivers_array,
                         wall_id_i=self._patch_to_wall_ids,
@@ -549,7 +549,7 @@ class DirectionalRadiosityFast():
                 self._energy_exchange_etc = _energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
-                    self._patch_2_scatt_receiver,
+                    self._patch_2_brdf_outgoing_index,
                     speed_of_sound, etc_time_resolution,
                     max_reflection_order,
                     self._visible_patches)
@@ -846,7 +846,7 @@ class DirectionalRadiosityFast():
             'brdf_index': self._brdf_index,
             'brdf_incoming_directions': self._brdf_incoming_directions,
             'brdf_outgoing_directions': self._brdf_outgoing_directions,
-            'patch_2_scatt_receiver': self._patch_2_scatt_receiver,
+            'patch_2_scatt_receiver': self._patch_2_brdf_outgoing_index,
             'air_attenuation': self._air_attenuation,
             'speed_of_sound': self._speed_of_sound,
             'etc_time_resolution': self._etc_time_resolution,

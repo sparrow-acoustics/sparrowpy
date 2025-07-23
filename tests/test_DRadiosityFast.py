@@ -74,15 +74,15 @@ def test_patch_2_out_dir_mapping():
 
     radiosity.bake_geometry()
 
-    assert radiosity._patch_2_scatt_receiver.ndim==2
-    assert radiosity._patch_2_scatt_receiver.shape[0]==radiosity.n_patches
-    assert radiosity._patch_2_scatt_receiver.shape[1]==radiosity.n_patches
+    assert radiosity._patch_2_brdf_outgoing_index.ndim==2
+    assert radiosity._patch_2_brdf_outgoing_index.shape[0]==radiosity.n_patches
+    assert radiosity._patch_2_brdf_outgoing_index.shape[1]==radiosity.n_patches
 
-    assert radiosity._patch_2_scatt_receiver[0,0]==-1
-    assert radiosity._patch_2_scatt_receiver[1,1]==-1
+    assert radiosity._patch_2_brdf_outgoing_index[0,0]==-1
+    assert radiosity._patch_2_brdf_outgoing_index[1,1]==-1
 
-    i0 = radiosity._patch_2_scatt_receiver[0,1]
-    i1 = radiosity._patch_2_scatt_receiver[1,0]
+    i0 = radiosity._patch_2_brdf_outgoing_index[0,1]
+    i1 = radiosity._patch_2_brdf_outgoing_index[1,0]
     assert (i0 != i1)
     v0=radiosity._brdf_outgoing_directions[0].cartesian[i0]
 
