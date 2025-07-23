@@ -369,7 +369,7 @@ class DirectionalRadiosityFast():
         """Bake the geometry by calculating all the form factors.
 
         """
-        self._patch_2_brdf_outgoing_index=np.empty((self.n_patches,self.n_patches))
+        self._patch_2_brdf_outgoing_index=np.empty((self.n_patches,self.n_patches),dtype=int)
         # Check the visibility between patches.
         self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
@@ -400,11 +400,11 @@ class DirectionalRadiosityFast():
             scattering = np.array(self._brdf)
 
             for j in range(self.n_patches):
-                self._patch_2_brdf_outgoing_index[:,j]=np.array(get_scattering_data_receiver_index(
+                self._patch_2_brdf_outgoing_index[:,j]=get_scattering_data_receiver_index(
                         pos_i=self.patches_center,pos_j=self.patches_center[j],
                         receivers=receivers_array,
                         wall_id_i=self._patch_to_wall_ids,
-                    ))
+                    )
         else:
             sources_array = None
             receivers_array = None
@@ -1120,7 +1120,7 @@ def _energy_exchange(
                     j = visible_patches[ii, 0]
                     i = visible_patches[ii, 1]
 
-                dir_id = int(patch_2_out_directions[i,j])
+                dir_id = patch_2_out_directions[i,j]
 
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
@@ -1288,7 +1288,7 @@ def get_scattering_data_receiver_index(
 
     """
     n_patches = pos_i.shape[0] if pos_i.ndim > 1 else 1
-    receiver_idx = np.empty((n_patches), dtype=np.float64)
+    receiver_idx = np.empty((n_patches), dtype=int)
 
     for i in range(n_patches):
         difference_receiver = pos_j-pos_i[i]
@@ -1301,7 +1301,7 @@ def get_scattering_data_receiver_index(
                 (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
                 axis=-1)
         else:
-            receiver_idx[i]=float("nan")
+            receiver_idx[i]=n_patches
 
     return receiver_idx
 
