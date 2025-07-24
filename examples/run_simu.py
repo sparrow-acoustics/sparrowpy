@@ -6,6 +6,7 @@ import pyfar as pf
 import tracemalloc
 import pyrato
 import time
+from reduce_s_d import get_bsc
 
 def run_simu_mem(walls, source, receiver,
              patch_size=1, absorption=.1, scattering=1,
@@ -125,57 +126,75 @@ def run_simu(walls, source, receiver,
     return etc_radiosity,t
 
 def run_simu_pure(walls, source, receiver,
-             patch_size=1, absorption=.1, scattering=1,
-             speed_of_sound=343.26, time_step=.1, duration=.5,
-             refl_order=3, freq=np.array([1000]), res=4):
+             patch_size=2,
+             speed_of_sound=343.26, time_step=.002, duration=2.,
+             refl_order=50, freq=np.array([1000]),
+             file=None):
 
-    t = []
     att=10*np.log10(pyrato.air_attenuation_coefficient(freq))/1000
     att_np= att* 0.115129254650564
 
-    # set brdfs
-    samples = pf.samplings.sph_gaussian(res)
-    pos_hemisphere = np.where((samples.elevation*180/np.pi > 0))
-    brdf_sources = samples[pos_hemisphere].copy()
-    brdf_receivers = samples[pos_hemisphere].copy()
-
-    t0=time.time()
     # create object
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
+    abs_wall = pf.FrequencyData(.07*np.ones_like(freq), freq)
 
-    # create directional scattering data (totally diffuse)
-    brdf = sp.brdf.create_from_scattering(
-        brdf_sources,
-        brdf_receivers,
-        pf.FrequencyData(scattering, freq),
-        pf.FrequencyData(absorption, freq))
+    if file is None:
+        # set brdfs
+        samples = pf.samplings.sph_gaussian(1)
+        pos_hemisphere = np.where((samples.elevation*180/np.pi > 0))
+        brdf_sources = samples[pos_hemisphere].copy()
+        brdf_receivers = samples[pos_hemisphere].copy()
 
+        # create directional scattering data
+        brdf_ground = sp.brdf.create_from_scattering(
+            brdf_sources,
+            brdf_receivers,
+            pf.FrequencyData(np.ones_like(freq), freq),
+            pf.FrequencyData(.01*np.ones_like(freq), freq))
+        brdf_walls = sp.brdf.create_from_scattering(
+            brdf_sources,
+            brdf_receivers,
+            pf.FrequencyData(np.ones_like(freq), freq),
+            abs_wall)
+    else:
+        bsc,brdf_sources,brdf_receivers = get_bsc(file)
+        brdf_ground = sp.brdf.create_from_scattering(
+            brdf_sources,
+            brdf_receivers,
+            pf.FrequencyData(np.zeros_like(freq), freq),
+            pf.FrequencyData(.01*np.ones_like(freq), freq))
+
+        f_inds = bsc.find_nearest_frequency(freq)
+        brdf_walls = sp.brdf.create_from_directional_scattering(
+                                                            source_directions=brdf_sources,
+                                                            receiver_directions=brdf_receivers,
+                                                            directional_scattering=bsc[f_inds],
+                                                            absorption_coefficient=abs_wall)
+
+    ground_ind = np.where(np.dot(radi.walls_normal,np.array([0,0,1]))>.9)
+    wall_ind = np.where(
+        np.abs(np.dot(radi.walls_normal,np.array([0,0,1])))<1e-6
+        )
     # set directional scattering data
     radi.set_wall_brdf(
-        np.arange(len(walls)), brdf, brdf_sources, brdf_receivers)
+        ground_ind, brdf_ground, brdf_sources, brdf_receivers)
+    radi.set_wall_brdf(
+        wall_ind, brdf_walls, brdf_sources, brdf_receivers)
+
     # set air absorption
     radi.set_air_attenuation(
         pf.FrequencyData(
             att_np,
-            brdf.frequencies))
-    t.append(time.time()-t0)
+            freq))
 
-    t0=time.time()
     # calculate from factors including brdfs
     radi.bake_geometry()
-    t.append(time.time()-t0)
-
-    t0=time.time()
     radi.init_source_energy(source)
     radi.calculate_energy_exchange(
         speed_of_sound=speed_of_sound,
         etc_time_resolution=time_step,
         etc_duration=duration,
         max_reflection_order=refl_order)
-    t.append(time.time()-t0)
-
-    t0=time.time()
     etc_radiosity = radi.collect_energy_receiver_mono(receivers=receiver)
-    t.append(time.time()-t0)
 
-    return etc_radiosity,t
+    return etc_radiosity
