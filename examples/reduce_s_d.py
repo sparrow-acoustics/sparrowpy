@@ -36,16 +36,13 @@ def _calculate_f_mask(i_freq, frequencies_in, frequencies_out):
     f_mask = (frequencies_in >= f_lower) & (frequencies_in < f_upper)
     return f_mask
 
-def get_bsc(file_in = 'examples/resources/triangle_sim_optimal.s_d.sofa'):
+def get_bsc(file_in = 'examples/resources/triangle_sim_optimal.s_d.sofa', freq_out=None):
     sofa = sf.read_sofa(file_in)
     bsc, sources, receivers = pf.io.convert_sofa(sofa)
     sources.weights = sofa.SourceWeights
     receivers.weights = sofa.ReceiverWeights
 
-    print(bsc)
-
     # mirror missing data
-
     bsc_incident_directions = receivers.copy()
     bsc_scattering_directions = receivers.copy()
     bsc_mirrored = pf.FrequencyData(
@@ -83,16 +80,22 @@ def get_bsc(file_in = 'examples/resources/triangle_sim_optimal.s_d.sofa'):
                 radius_tol=1e-13)[0]
             bsc_mirrored.freq[i_source, :, :] = bsc.freq[i_source_mirror,
                                                          idx_scattering, :]
-    bsc_mirrored.freq /= np.sum(bsc_mirrored.freq, axis=1)
 
-    frequencies_out = pf.dsp.filter.fractional_octave_frequencies(
-        1, (np.min(bsc.frequencies/8), np.max(bsc.frequencies/8)),
-    )[1]
+    if freq_out is None:
+        frequencies_out = pf.dsp.filter.fractional_octave_frequencies(
+            1, (np.min(bsc.frequencies/8), np.max(bsc.frequencies/8)),
+        )[1]
+    else:
+        frequencies_out=freq_out
 
     bsc_octave = average_frequencies(
         bsc_mirrored, frequencies_out, domain='energy')
 
-    return bsc_octave, sources, receivers
+    for k in range(bsc_octave.freq.shape[1]):
+        if np.sum(bsc_octave.freq[:,k])!=0:
+            bsc_octave.freq[:,k] /= np.sum(bsc_octave.freq[:,k])
+
+    return bsc_octave, receivers, receivers
 
 
 if __name__=="__main__":
