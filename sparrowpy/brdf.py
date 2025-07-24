@@ -18,18 +18,20 @@ def create_from_scattering(
     The BRDF is discretized as follows:
 
     .. math::
-        \rho(\Omega_i, \Omega_e) = \frac{(1-s)(1-\alpha)}{\Omega_i \cdot
-        \mathbf{n}_i} \frac{1}{w_r} \delta(\Omega_i-M(\Omega_e)) +
+        \rho(\mathbf{\Omega_i}, \mathbf{\Omega_o}) =
+        \frac{(1-s)(1-\alpha)}{\mathbf{\Omega_i} \cdot \mathbf{n}}
+        \frac{1}{w_o} \delta(\mathbf{\Omega_i}-M(\mathbf{\Omega_o})) +
         \frac{s(1-\alpha)}{\pi}
 
     where:
-        - :math:`\Omega_i` and :math:`\Omega_e` are the incident and exitant
-          directions, respectively.
+        - :math:`\mathbf{\Omega_i}` and :math:`\mathbf{\Omega_o}` are the
+          incident and outgoing directions, respectively.
         - :math:`s` is the scattering coefficient.
         - :math:`\alpha` is the absorption coefficient.
-        - :math:`\mathbf{n}_i` is the normal vector.
+        - :math:`\mathbf{n}` is the normal vector of the surface.
         - :math:`\delta` is the Dirac delta function.
-        - :math:`w_r` is weighting factor of the angular sector (unit sphere).
+        - :math:`w_o` is weighting factor of the outgoing angular sector
+          (unit sphere).
         - :math:`M` s the mirror reflection transformation
           :math:`M(\theta, \phi)=M(\theta, \pi-\phi)`.
 
@@ -101,18 +103,19 @@ def create_from_scattering(
 
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
-    scattering_flattened = scattering_coefficient.freq.flatten()
+    scattering_flattened = np.real(scattering_coefficient.freq.flatten())
     image_source = source_directions.copy()
     image_source.azimuth += np.pi
     i_receiver = receiver_directions.find_nearest(image_source)[0][0]
     cos_factor = (np.cos(
-            receiver_directions.colatitude) * receiver_weights)
-    cos_factor = cos_factor[..., np.newaxis]
+            source_directions.colatitude[
+                np.newaxis, ...]) * receiver_weights[..., np.newaxis])
     scattering_factor = 1 - scattering_flattened[np.newaxis, ...]
     brdf[:, :, :] += (
         scattering_flattened) / np.pi
     i_sources = np.arange(source_directions.csize)
-    brdf[i_sources, i_receiver, :] += scattering_factor / cos_factor
+    brdf[i_sources, i_receiver, :] += scattering_factor / cos_factor[
+        i_sources, i_receiver, np.newaxis]
 
     brdf *= (1 - absorption_coefficient.freq.flatten())
     if file_path is not None:
@@ -141,16 +144,18 @@ def create_from_directional_scattering(
     Therefore the BRDF is calculated as follows:
 
     .. math::
-        \rho(\Omega_i, \Omega_r) = \frac{(1-\alpha)}{
-        (\Omega_r \cdot \mathbf{n}_r) \cdot w_r} s_{d}(\Omega_i, \Omega_r)
+        \rho(\mathbf{\Omega_i}, \mathbf{\Omega_o}) = \frac{(1-\alpha)}{
+        (\mathbf{\Omega_o} \cdot \mathbf{n}) \cdot w_o} s_{d}(
+        \mathbf{\Omega_i}, mathbf{\Omega_o})
 
     where:
-        - :math:`\Omega_i` and :math:`\Omega_r` are the incident and exitant
-          directions, respectively.
-        - :math:`s_{d}` is the directional scattering coefficient [1]_.
+        - :math:`\mathbf{\Omega_i}` and :math:`\mathbf{\Omega_o}` are the
+          incident and outgoing directions, respectively.
+        - :math:`s_{d}` is the directional scattering coefficient [#]_.
         - :math:`\alpha` is the absorption coefficient.
-        - :math:`\mathbf{n}_i` is the normal vector.
-        - :math:`w_r` is weighting factor of the angular sector (unit sphere).
+        - :math:`\mathbf{n}` is the normal vector of the surface.
+        - :math:`w_o` is weighting factor of the outgoing angular sector
+          (unit sphere).
 
     Note that the weights doesn't need to be normalized,
     they get scaled as required.
@@ -175,12 +180,10 @@ def create_from_directional_scattering(
 
     References
     ----------
-    .. [1]  A. Heimes and M. Vorländer, “A new scattering metric for
-            auralization in urban environments,” in Fortschritte der
-            Akustik - DAGA 2024, Hamburg: Deutsche Gesellschaft für Akustik
-            e.V. (DEGA), Berlin, 2023, 2024, pp. 1660-1661. [Online].
-            Available:
-            https://pub.dega-akustik.de/DAGA_2024/files/upload/paper/531.pdf
+    .. [#] A. Heimes and M. Vorländer, “Bidirectional surface scattering
+           coefficients,” Acta Acust., vol. 9, p. 41, 2025,
+           doi: 10.1051/aacus/2025026.
+
 
 
     """
@@ -201,19 +204,12 @@ def create_from_directional_scattering(
         absorption_coefficient = pf.FrequencyData(
             np.zeros_like(directional_scattering.frequencies),
             directional_scattering.frequencies)
+    cos_receiver = np.cos(receiver_directions.colatitude)[
+        np.newaxis, :, np.newaxis]
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
-    receiver_factor = (np.cos(
-            receiver_directions.colatitude) * receiver_weights)
-    receiver_factor = receiver_factor[..., np.newaxis]
-
-    source_weights = source_directions.weights
-    source_weights *= 2 * np.pi / np.sum(source_weights)
-    source_factor = (np.cos(
-            source_directions.colatitude)) * source_weights
-    source_factor = source_factor[..., np.newaxis, np.newaxis]
-
-    brdf = directional_scattering.freq / receiver_factor
+    receiver_factor = receiver_weights[..., np.newaxis]
+    brdf = directional_scattering.freq / receiver_factor / cos_receiver
 
     brdf *= (1 - absorption_coefficient.freq.flatten())
     if file_path is not None:
