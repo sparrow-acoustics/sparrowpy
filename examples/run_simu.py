@@ -140,7 +140,7 @@ def run_simu_pure(walls, source, receiver,
 
     if file is None:
         # set brdfs
-        samples = pf.samplings.sph_gaussian(1)
+        samples = pf.samplings.sph_gaussian(2)
         pos_hemisphere = np.where((samples.elevation*180/np.pi > 0))
         brdf_sources = samples[pos_hemisphere].copy()
         brdf_receivers = samples[pos_hemisphere].copy()
@@ -157,24 +157,23 @@ def run_simu_pure(walls, source, receiver,
             pf.FrequencyData(np.ones_like(freq), freq),
             abs_wall)
     else:
-        bsc,brdf_sources,brdf_receivers = get_bsc(file)
+        bsc,brdf_sources,brdf_receivers = get_bsc(file, freq_out=freq)
+
         brdf_ground = sp.brdf.create_from_scattering(
             brdf_sources,
             brdf_receivers,
             pf.FrequencyData(np.zeros_like(freq), freq),
             pf.FrequencyData(.01*np.ones_like(freq), freq))
-
-        f_inds = bsc.find_nearest_frequency(freq)
         brdf_walls = sp.brdf.create_from_directional_scattering(
                                                             source_directions=brdf_sources,
                                                             receiver_directions=brdf_receivers,
-                                                            directional_scattering=bsc[f_inds],
+                                                            directional_scattering=bsc,
                                                             absorption_coefficient=abs_wall)
 
-    ground_ind = np.where(np.dot(radi.walls_normal,np.array([0,0,1]))>.9)
+    ground_ind = np.where(np.dot(radi.walls_normal,np.array([0,0,1]))>.9)[0]
     wall_ind = np.where(
-        np.abs(np.dot(radi.walls_normal,np.array([0,0,1])))<1e-6
-        )
+        np.abs(np.dot(radi.walls_normal,np.array([0,0,1])))<1e-6)[0]
+
     # set directional scattering data
     radi.set_wall_brdf(
         ground_ind, brdf_ground, brdf_sources, brdf_receivers)
@@ -195,6 +194,7 @@ def run_simu_pure(walls, source, receiver,
         etc_time_resolution=time_step,
         etc_duration=duration,
         max_reflection_order=refl_order)
-    etc_radiosity = radi.collect_energy_receiver_mono(receivers=receiver)
+    etc_radiosity = radi.collect_energy_receiver_mono(receivers=receiver,
+                                                      direct_sound=True)
 
     return etc_radiosity
