@@ -463,8 +463,8 @@ def coincidence_check(p0: np.ndarray, p1: np.ndarray, thres = 1e-3) -> bool:
     """
     flag = False
 
-    for i in numba.prange(p0.shape[0]):
-        for j in numba.prange(p1.shape[0]):
+    for i in prange(p0.shape[0]):
+        for j in prange(p1.shape[0]):
             if np.linalg.norm(p0[i]-p1[j])<thres:
                 flag=True
                 break
