@@ -57,7 +57,7 @@ class Polygon():
         vec1 = np.array(self.pts[0])-np.array(self.pts[1])
         vec2 = np.array(self.pts[0])-np.array(self.pts[2])
         calc_normal = _norm(np.cross(vec1, vec2))
-        assert all(np.cross(normal, calc_normal) == 0), \
+        assert all(np.abs(np.cross(normal, calc_normal)) < 1e-10), \
             'The normal vector is not perpendicular to the polygon'
         self._normal = normal
 

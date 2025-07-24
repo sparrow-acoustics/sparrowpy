@@ -34,6 +34,7 @@ class DirectionalRadiosityFast():
     _brdf_index: np.ndarray
     _brdf_incoming_directions: list[pf.Coordinates]
     _brdf_outgoing_directions: list[pf.Coordinates]
+    _patch_2_brdf_outgoing_index: np.ndarray
 
     _air_attenuation: np.ndarray
     _speed_of_sound: float
@@ -65,6 +66,7 @@ class DirectionalRadiosityFast():
             brdf_index:np.ndarray=None,
             brdf_incoming_directions:list[pf.Coordinates]=None,
             brdf_outgoing_directions:list[pf.Coordinates]=None,
+            patch_2_brdf_outgoing_index:np.ndarray=None,
             air_attenuation:np.ndarray=None,
             speed_of_sound:float=None,
             etc_time_resolution:float=None,
@@ -111,6 +113,8 @@ class DirectionalRadiosityFast():
             incoming direction of brdfs per wall, by default None
         brdf_outgoing_directions : list[pf.Coordinates], optional
             outgoing directions of brdfs per wall, by default None
+        patch_2_brdf_outgoing_index: np.ndarray
+            map of patch positions to relative scattering directions indices
         air_attenuation : np.ndarray, optional
             air attenuation coefficients for each frequency, needs to be of
             shape (n_bins), by default None
@@ -149,6 +153,9 @@ class DirectionalRadiosityFast():
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
             form_factors_tilde = np.array(form_factors_tilde)
+        if patch_2_brdf_outgoing_index is not None:
+            patch_2_brdf_outgoing_index = np.array(patch_2_brdf_outgoing_index,
+                                                   dtype=np.int64)
         if brdf is not None:
             brdf = [np.array(b) for b in brdf]
         if air_attenuation is not None:
@@ -185,6 +192,7 @@ class DirectionalRadiosityFast():
         self._brdf_index = brdf_index
         self._brdf_incoming_directions = brdf_incoming_directions
         self._brdf_outgoing_directions = brdf_outgoing_directions
+        self._patch_2_brdf_outgoing_index = patch_2_brdf_outgoing_index
 
         self._air_attenuation = air_attenuation
         self._speed_of_sound = speed_of_sound
@@ -390,11 +398,28 @@ class DirectionalRadiosityFast():
                 [s.cartesian for s in self._brdf_outgoing_directions])
             scattering_index = np.array(self._brdf_index)
             scattering = np.array(self._brdf)
+
+            # preload patch_2_brdf_outgoing_index map with invalid entries
+            self._patch_2_brdf_outgoing_index = (
+                        receivers_array.shape[1] *
+                                np.ones((self.n_patches,self.n_patches),dtype=np.int64))
+
+            for j in range(self.n_patches):
+                vis = np.where(
+                    (self.visibility_matrix+self.visibility_matrix.T)[:,j])
+                self._patch_2_brdf_outgoing_index[vis,j]=get_scattering_data_receiver_index(
+                        pos_i=self.patches_center[vis],pos_j=self.patches_center[j],
+                        receivers=receivers_array,
+                        wall_id_i=self._patch_to_wall_ids[vis],
+                    )
         else:
             sources_array = None
             receivers_array = None
             scattering_index = None
             scattering = None
+            self._patch_2_brdf_outgoing_index = np.zeros(
+                                        (self.n_patches,self.n_patches),
+                                        dtype=np.int64)
 
         n_bins = 1 if self._frequencies is None else self.n_bins
 
@@ -406,6 +431,7 @@ class DirectionalRadiosityFast():
             self._patch_to_wall_ids, scattering,
             scattering_index,
             sources_array, receivers_array)
+
 
     def init_source_energy(
             self, source):
@@ -528,9 +554,11 @@ class DirectionalRadiosityFast():
                         speed_of_sound, etc_time_resolution,
                         )
             else:
+
                 self._energy_exchange_etc = _energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
+                    self._patch_2_brdf_outgoing_index,
                     speed_of_sound, etc_time_resolution,
                     max_reflection_order,
                     self._visible_patches)
@@ -705,7 +733,8 @@ class DirectionalRadiosityFast():
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[k,:]= (self._energy_exchange_etc[k,receiver_idx[k],:]
+                E_matrix[k,:]= (
+                    self._energy_exchange_etc[k,int(receiver_idx[k]),:]
                                                     * patch_receiver_energy[k])
 
             if propagation_fx:
@@ -827,6 +856,7 @@ class DirectionalRadiosityFast():
             'brdf_index': self._brdf_index,
             'brdf_incoming_directions': self._brdf_incoming_directions,
             'brdf_outgoing_directions': self._brdf_outgoing_directions,
+            'patch_2_brdf_outgoing_index': self._patch_2_brdf_outgoing_index,
             'air_attenuation': self._air_attenuation,
             'speed_of_sound': self._speed_of_sound,
             'etc_time_resolution': self._etc_time_resolution,
@@ -1042,7 +1072,7 @@ def _energy_exchange_init_energy(
 
 def _energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
-        form_factors_tilde,
+        form_factors_tilde, patch_2_out_directions,
         speed_of_sound, histogram_time_resolution, max_order, visible_patches):
     """Calculate energy exchange between patches.
 
@@ -1058,6 +1088,9 @@ def _energy_exchange(
         distance between all patches of shape (n_patches, n_patches)
     form_factors_tilde : np.ndarray
         form factors of shape (n_patches, n_patches, n_directions, n_bins)
+    patch_2_out_directions: np.ndarray
+        patchwise map of patch centers to
+        scattering outgoing directions of shape (n_patches,n_patches)
     speed_of_sound : float
         speed of sound in m/s.
     histogram_time_resolution : float
@@ -1096,15 +1129,18 @@ def _energy_exchange(
                 else:
                     j = visible_patches[ii, 0]
                     i = visible_patches[ii, 1]
+
+                dir_id = patch_2_out_directions[i,j]
+
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
                 if n_delay_samples > 0:
                     E_matrix[current_index, j, :, :, n_delay_samples:] += \
                         form_factors_tilde[i, j] * E_matrix[
-                            current_index-1, i, :, :, :-n_delay_samples]
+                            current_index-1, i, dir_id, :, :-n_delay_samples]
                 else:
                     E_matrix[current_index, j, :, :, :] += form_factors_tilde[
-                        i, j] * E_matrix[current_index-1, i, :, :, :]
+                        i, j] * E_matrix[current_index-1, i, dir_id, :, :]
         E_matrix_total += E_matrix[current_index]
     return E_matrix_total
 
@@ -1242,12 +1278,12 @@ def get_scattering_data_receiver_index(
         pos_i:np.ndarray, pos_j:np.ndarray,
         receivers:np.ndarray, wall_id_i:np.ndarray,
         ):
-    """Get scattering data depending on previous, current and next position.
+    """Get scattering receiver index based on current and next position.
 
     Parameters
     ----------
     pos_i : np.ndarray
-        current position of shape (3)
+        current position of shape (n,3)
     pos_j : np.ndarray
         next position of shape (3)
     receivers : np.ndarray
@@ -1265,13 +1301,13 @@ def get_scattering_data_receiver_index(
     receiver_idx = np.empty((n_patches), dtype=np.int64)
 
     for i in range(n_patches):
-        difference_receiver = pos_i[i]-pos_j
+        difference_receiver = pos_j-pos_i[i]
+
         difference_receiver /= np.linalg.norm(
             difference_receiver)
         receiver_idx[i] = np.argmin(np.sum(
             (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
             axis=-1)
-
 
     return receiver_idx
 
