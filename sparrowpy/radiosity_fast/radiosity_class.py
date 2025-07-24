@@ -263,6 +263,8 @@ class DirectionalRadiosityFast():
             method="universal", propagation_fx=False):
         """Collect patch histograms as detected by receiver.
 
+        The receiver is assumed visible to all patches.
+
         Parameters
         ----------
         receiver_pos : np.ndarray
