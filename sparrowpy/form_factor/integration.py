@@ -658,6 +658,7 @@ if numba is not None:
     load_stokes_entries = numba.njit(cache=True,parallel=False)(load_stokes_entries)
     _poly_estimation_Lagrange = numba.njit(cache=True,)(_poly_estimation_Lagrange)
     _poly_integration = numba.njit(cache=True,)(_poly_integration)
+    _newton_cotes_4th = numba.njit(cache=True,)(_newton_cotes_4th)
     _surf_sample_random = numba.njit(cache=True,)(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit(cache=True,)(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit(cache=True,)(_sample_boundary_regular)
