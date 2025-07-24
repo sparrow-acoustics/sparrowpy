@@ -6,3 +6,10 @@ History
 ------------------
 
 * First release on PyPI.
+
+0.1.1 (2025-07-24)
+------------------
+
+* Fix wrong definition of the brdf calculation in the `brdf` module (#104)
+* Fix form factor for patches of difference area (#62)
+* improve documentation structure and content (#66, #72, #92, #93)
