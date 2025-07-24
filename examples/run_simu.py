@@ -11,7 +11,8 @@ from reduce_s_d import get_bsc
 def run_simu_mem(walls, source, receiver,
              patch_size=1, absorption=.1, scattering=1,
              speed_of_sound=343.26, time_step=.1, duration=.5,
-             refl_order=3, freq=np.array([1000]), res=4):
+             refl_order=3, freq=np.array([1000]),
+             att=np.array([4.664731873821475/1000]),res=4):
 
     att=pyrato.air_attenuation_coefficient(freq)
     att_np= att* 0.115129254650564
@@ -72,10 +73,11 @@ def run_simu_mem(walls, source, receiver,
 def run_simu(walls, source, receiver,
              patch_size=1, absorption=.1, scattering=1,
              speed_of_sound=343.26, time_step=.1, duration=.5,
-             refl_order=3, freq=np.array([1000]), res=4):
+             refl_order=3, freq=np.array([1000]),
+             att=np.array([4.664731873821475/1000]),
+             res=4):
 
     t = []
-    att=10*np.log10(pyrato.air_attenuation_coefficient(freq))/1000
     att_np= att* 0.115129254650564
 
     # set brdfs
@@ -129,9 +131,9 @@ def run_simu_pure(walls, source, receiver,
              patch_size=2,
              speed_of_sound=343.26, time_step=.002, duration=2.,
              refl_order=50, freq=np.array([1000]),
+             att=np.array([4.664731873821475/1000]),
              file=None):
 
-    att=10*np.log10(pyrato.air_attenuation_coefficient(freq))/1000
     att_np= att* 0.115129254650564
 
     # create object
@@ -162,7 +164,7 @@ def run_simu_pure(walls, source, receiver,
         brdf_ground = sp.brdf.create_from_scattering(
             brdf_sources,
             brdf_receivers,
-            pf.FrequencyData(np.zeros_like(freq), freq),
+            pf.FrequencyData(.1*np.ones_like(freq), freq),
             pf.FrequencyData(.01*np.ones_like(freq), freq))
         brdf_walls = sp.brdf.create_from_directional_scattering(
                                                             source_directions=brdf_sources,
