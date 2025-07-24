@@ -12,4 +12,4 @@ History
 
 * Fix wrong definition of the brdf calculation in the `brdf` module (#104)
 * Fix form factor for patches of difference area (#62)
-* improve documentation structure and content (#66, #72, #92, #93)
+* improve documentation structure and content (#66, #72, #92, #93, #107)
