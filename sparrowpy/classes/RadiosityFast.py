@@ -568,7 +568,6 @@ class DirectionalRadiosityFast():
                         speed_of_sound, etc_time_resolution,
                         )
             else:
-
                 self._energy_exchange_etc = _energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
@@ -1086,7 +1085,7 @@ def _energy_exchange_init_energy(
 
 def _energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
-        form_factors_tilde, patch_2_out_directions,
+        form_factors_tilde, patch_2_brdf_outgoing_mask,
         speed_of_sound, histogram_time_resolution, max_order, visible_patches):
     """Calculate energy exchange between patches.
 
@@ -1102,9 +1101,9 @@ def _energy_exchange(
         distance between all patches of shape (n_patches, n_patches)
     form_factors_tilde : np.ndarray
         form factors of shape (n_patches, n_patches, n_directions, n_bins)
-    patch_2_out_directions: np.ndarray
-        patchwise map of patch centers to
-        scattering outgoing directions of shape (n_patches,n_patches)
+    patch_2_brdf_outgoing_mask: np.ndarray
+        mask for the outgoing directions from each patch to each other patch
+        of shape (n_patches, n_patches, n_directions)
     speed_of_sound : float
         speed of sound in m/s.
     histogram_time_resolution : float
@@ -1144,17 +1143,22 @@ def _energy_exchange(
                     j = visible_patches[ii, 0]
                     i = visible_patches[ii, 1]
 
-                dir_id = patch_2_out_directions[i,j]
+                outgoing_indexes = np.where(patch_2_brdf_outgoing_mask[i,j])[0]
 
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
                 if n_delay_samples > 0:
                     E_matrix[current_index, j, :, :, n_delay_samples:] += \
-                        form_factors_tilde[i, j] * E_matrix[
-                            current_index-1, i, dir_id, :, :-n_delay_samples]
+                        form_factors_tilde[i, j] * np.mean(E_matrix[
+                            current_index-1, i,
+                            outgoing_indexes, :, :-n_delay_samples],
+                            axis=0, keepdims=True)
                 else:
                     E_matrix[current_index, j, :, :, :] += form_factors_tilde[
-                        i, j] * E_matrix[current_index-1, i, dir_id, :, :]
+                        i, j] * np.mean(
+                            E_matrix[
+                                current_index-1, i, outgoing_indexes, :, :],
+                            axis=0, keepdims=True)
         E_matrix_total += E_matrix[current_index]
     return E_matrix_total
 
@@ -1474,7 +1478,7 @@ if numba is not None:
     _add_directional = numba.njit(parallel=True)(_add_directional)
     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
     _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
-    _energy_exchange = numba.njit()(_energy_exchange)
+    # _energy_exchange = numba.njit()(_energy_exchange)
     # _form_factors_with_directivity_dim = numba.njit(parallel=True)(
     #     _form_factors_with_directivity_dim)
     # get_brdf_incidence_directions_from_surface = numba.njit()(

@@ -188,13 +188,15 @@ def test_bake_patch_2_brdf_outgoing_mask():
         weights=[1, 1, 1, 1, 1, 1],
     )
     frequencies = np.array([1000])
+
+    # define specular brdf
     brdf = sp.brdf.create_from_scattering(
         brdf_directions.copy(),
         brdf_directions.copy(),
         pf.FrequencyData(0, frequencies),
         pf.FrequencyData(0, frequencies))
 
-    # create average
+    # create get parallel walls
     parallel_walls = sp.testing.shoebox_room_stub(1, 1, 1)[:2]
 
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
@@ -212,4 +214,40 @@ def test_bake_patch_2_brdf_outgoing_mask():
         radiosity._patch_2_brdf_outgoing_mask[0, 1, -2], True)
     npt.assert_array_equal(
         radiosity._patch_2_brdf_outgoing_mask[0, 1, :-2], False)
+
+
+def test_test_specular_reflections():
+    """
+    Test if specular reflections are larger than 0.
+
+    For two parallel walls, and more than one direction of brdf facting
+    towards it.
+    """
+
+    brdf_directions = pf.samplings.sph_equal_angle(10)
+    brdf_directions.weights = pf.samplings.calculate_sph_voronoi_weights(
+        brdf_directions)
+    brdf_directions = brdf_directions[brdf_directions.z>0]
+    frequencies = np.array([1000])
+    brdf = sp.brdf.create_from_scattering(
+        brdf_directions.copy(),
+        brdf_directions.copy(),
+        pf.FrequencyData(0, frequencies),
+        pf.FrequencyData(0, frequencies))
+
+    # create get parallel walls
+    parallel_walls = sp.testing.shoebox_room_stub(1, 1, 1)[:2]
+
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        parallel_walls, 1)
+    radiosity.set_wall_brdf(
+        np.arange(len(parallel_walls)),
+        brdf, brdf_directions, brdf_directions)
+    radiosity.bake_geometry()
+
+    radiosity.init_source_energy(pf.Coordinates(.5, .5, .5))
+    radiosity.calculate_energy_exchange(343, 1/100, 0.01, 4)
+    etc = radiosity.collect_energy_receiver_mono(pf.Coordinates(.5, .5, .5))
+
+    assert np.sum(etc.time)>0
 
