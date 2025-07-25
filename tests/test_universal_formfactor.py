@@ -172,11 +172,12 @@ def test_different_areas(
                        [0.,1.,1.],
                        [width,1.,1.],
                        [width,0.,1.]])
-
+    patches_points = np.array([patch1, patch2, patch2, patch1])
+    patches_normals = np.array(
+            [[0.,0.,1.],[0.,0.,-1.],[0.,0.,-1.],[0.,0.,1.]])
     ff = form_factor.patch2patch_ff_universal(
-        patches_points=np.array([patch1,patch2,patch2,patch1]),
-        patches_normals=np.array(
-            [[0.,0.,1.],[0.,0.,-1.],[0.,0.,-1.],[0.,0.,1.]]),
+        patches_points=patches_points,
+        patches_normals=patches_normals,
         patches_areas=np.array([width,1.,1.,width]),
         visible_patches=np.array([[0,1],[2,3]]))
 
@@ -198,6 +199,8 @@ def test_different_areas(
         scattering_index=None,
         sources=None,
         receivers=None,
+        patches_points=patches_points,
+        patches_normals=patches_normals,
     )
 
     assert ff_tilde[0,1,0,0]==ff_tilde[1,0,0,0]/width

@@ -172,3 +172,44 @@ def test_get_brdf_incidence_directions_from_surface_nearest():
 
     npt.assert_almost_equal(indexes, 25)
     npt.assert_almost_equal(indexes.shape, (1))
+
+
+def test_bake_patch_2_brdf_outgoing_mask():
+    """
+    Check if _patch_2_brdf_outgoing_mask parameter is set correctly.
+
+    Test for 2 opposite walls.
+    Last two directions are hitting the opposite wall.
+    """
+    brdf_directions = pf.Coordinates(
+        [-1, 1, 0, 0, 0, 0],
+        [0, 0, -1, 1, 0, 0.1],
+        [0, 0, 0, 0, 1, 1.1],
+        weights=[1, 1, 1, 1, 1, 1],
+    )
+    frequencies = np.array([1000])
+    brdf = sp.brdf.create_from_scattering(
+        brdf_directions.copy(),
+        brdf_directions.copy(),
+        pf.FrequencyData(0, frequencies),
+        pf.FrequencyData(0, frequencies))
+
+    # create average
+    parallel_walls = sp.testing.shoebox_room_stub(1, 1, 1)[:2]
+
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        parallel_walls, 1)
+    radiosity.set_wall_brdf(
+        np.arange(len(parallel_walls)),
+        brdf, brdf_directions, brdf_directions)
+    radiosity.bake_geometry()
+
+    assert radiosity._patch_2_brdf_outgoing_mask.shape == (2, 2, 6)
+    npt.assert_almost_equal(
+        radiosity._patch_2_brdf_outgoing_mask[0, 1],
+        radiosity._patch_2_brdf_outgoing_mask[1, 0])
+    npt.assert_array_equal(
+        radiosity._patch_2_brdf_outgoing_mask[0, 1, -2], True)
+    npt.assert_array_equal(
+        radiosity._patch_2_brdf_outgoing_mask[0, 1, :-2], False)
+

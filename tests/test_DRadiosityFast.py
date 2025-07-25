@@ -80,31 +80,18 @@ def test_patch_2_out_dir_mapping():
     radiosity.bake_geometry()
 
     # ensure that mapping has correct dimensions
-    assert radiosity._patch_2_brdf_outgoing_index.ndim==2
-    assert radiosity._patch_2_brdf_outgoing_index.shape[0]==radiosity.n_patches
-    assert radiosity._patch_2_brdf_outgoing_index.shape[1]==radiosity.n_patches
+    assert radiosity._patch_2_brdf_outgoing_mask.ndim == 3
+    assert radiosity._patch_2_brdf_outgoing_mask.shape[0]==radiosity.n_patches
+    assert radiosity._patch_2_brdf_outgoing_mask.shape[1]==radiosity.n_patches
 
     # index of own centroid stores invalid entry
-    assert (radiosity._patch_2_brdf_outgoing_index[0,0] ==
-            radiosity._brdf_outgoing_directions[0].cshape[0])
-    assert (radiosity._patch_2_brdf_outgoing_index[1,1] ==
-            radiosity._brdf_outgoing_directions[0].cshape[0])
+    assert np.sum(radiosity._patch_2_brdf_outgoing_mask[0,0]) == 0
+    assert np.sum(radiosity._patch_2_brdf_outgoing_mask[0,0]) == 0
 
-    # index of centroid 1 relative to patch 0
-    i0 = radiosity._patch_2_brdf_outgoing_index[0,1]
-    # index of centroid 1 relative to patch 0
-    i1 = radiosity._patch_2_brdf_outgoing_index[1,0]
 
-    # indices are the same because the up vectors are flipped
-    # there is a symmetry over the x=y plane
-    assert (i0 == i1)
-    v0=radiosity._brdf_outgoing_directions[0].cartesian[int(i0)]
-    v1=radiosity._brdf_outgoing_directions[1].cartesian[int(i1)]
-    # corresponding directions in xy plane
-    npt.assert_almost_equal(v0[2],0)
-    npt.assert_almost_equal(v1[2],0)
-    # corresponding directions are symmetrical
-    npt.assert_almost_equal(v0,-v1)
+    # check if any of the visible patches has a valid entry
+    assert np.sum(radiosity._patch_2_brdf_outgoing_mask[0,1]) > 0
+    assert np.sum(radiosity._patch_2_brdf_outgoing_mask[1,0]) > 0
 
 
 @pytest.mark.parametrize('walls', [

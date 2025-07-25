@@ -34,7 +34,7 @@ class DirectionalRadiosityFast():
     _brdf_index: np.ndarray
     _brdf_incoming_directions: list[pf.Coordinates]
     _brdf_outgoing_directions: list[pf.Coordinates]
-    _patch_2_brdf_outgoing_index: np.ndarray
+    _patch_2_brdf_outgoing_mask: np.ndarray
 
     _air_attenuation: np.ndarray
     _speed_of_sound: float
@@ -192,7 +192,7 @@ class DirectionalRadiosityFast():
         self._brdf_index = brdf_index
         self._brdf_incoming_directions = brdf_incoming_directions
         self._brdf_outgoing_directions = brdf_outgoing_directions
-        self._patch_2_brdf_outgoing_index = patch_2_brdf_outgoing_index
+        self._patch_2_brdf_outgoing_mask = patch_2_brdf_outgoing_index
 
         self._air_attenuation = air_attenuation
         self._speed_of_sound = speed_of_sound
@@ -399,38 +399,52 @@ class DirectionalRadiosityFast():
             scattering_index = np.array(self._brdf_index)
             scattering = np.array(self._brdf)
 
-            # preload patch_2_brdf_outgoing_index map with invalid entries
-            self._patch_2_brdf_outgoing_index = (
-                        receivers_array.shape[1] *
-                                np.ones((self.n_patches,self.n_patches),dtype=np.int64))
+            max_n_directions = np.max([
+                s.cshape[0] for s in self._brdf_outgoing_directions])
 
-            for j in range(self.n_patches):
-                vis = np.where(
-                    (self.visibility_matrix+self.visibility_matrix.T)[:,j])
-                self._patch_2_brdf_outgoing_index[vis,j]=get_scattering_data_receiver_index(
-                        pos_i=self.patches_center[vis],pos_j=self.patches_center[j],
-                        receivers=receivers_array,
-                        wall_id_i=self._patch_to_wall_ids[vis],
-                    )
+            # preallocate _patch_2_brdf_outgoing_mask of shape (
+            #    n_patches, n_patches, n_max_directions)
+            self._patch_2_brdf_outgoing_mask = np.zeros((
+                self.n_patches, self.n_patches, max_n_directions),
+                dtype=bool)
+            for i in range(self.n_patches):
+                for j in range(self.n_patches):
+                    is_visible = (
+                        self.visibility_matrix+self.visibility_matrix.T)[i,j]
+                    if not is_visible:
+                        continue
+                    bsc_directions = self._brdf_outgoing_directions[
+                        self._patch_to_wall_ids[i]].cartesian
+                    if bsc_directions.shape[0] == 1:
+                        # no outgoing directions
+                        self._patch_2_brdf_outgoing_mask[i, j, :] = True
+                    else:
+                        indexes = get_brdf_incidence_directions_from_surface(
+                                brdf_position=self.patches_center[i],
+                                brdf_directions=bsc_directions,
+                                patch_edges_points=self.patches_points[j],
+                                patch_normal=self.patches_normal[j],
+                            )
+                        self._patch_2_brdf_outgoing_mask[i, j, indexes] = True
         else:
             sources_array = None
             receivers_array = None
             scattering_index = None
             scattering = None
-            self._patch_2_brdf_outgoing_index = np.zeros(
-                                        (self.n_patches,self.n_patches),
-                                        dtype=np.int64)
+            self._patch_2_brdf_outgoing_mask = np.ones((
+                self.n_patches, self.n_patches, 1), dtype=bool)
 
         n_bins = 1 if self._frequencies is None else self.n_bins
 
         self._form_factors_tilde = \
             _form_factors_with_directivity_dim(
-            self.visibility_matrix, self.form_factors, n_bins,
-            self.patches_center, self.patches_area,
-            self._air_attenuation,
-            self._patch_to_wall_ids, scattering,
-            scattering_index,
-            sources_array, receivers_array)
+                self.visibility_matrix, self.form_factors, n_bins,
+                self.patches_center, self.patches_area,
+                self._air_attenuation,
+                self._patch_to_wall_ids, scattering,
+                scattering_index,
+                sources_array, receivers_array,
+                self.patches_points, self.patches_normal)
 
 
     def init_source_energy(
@@ -558,7 +572,7 @@ class DirectionalRadiosityFast():
                 self._energy_exchange_etc = _energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
-                    self._patch_2_brdf_outgoing_index,
+                    self._patch_2_brdf_outgoing_mask,
                     speed_of_sound, etc_time_resolution,
                     max_reflection_order,
                     self._visible_patches)
@@ -856,7 +870,7 @@ class DirectionalRadiosityFast():
             'brdf_index': self._brdf_index,
             'brdf_incoming_directions': self._brdf_incoming_directions,
             'brdf_outgoing_directions': self._brdf_outgoing_directions,
-            'patch_2_brdf_outgoing_index': self._patch_2_brdf_outgoing_index,
+            'patch_2_brdf_outgoing_index': self._patch_2_brdf_outgoing_mask,
             'air_attenuation': self._air_attenuation,
             'speed_of_sound': self._speed_of_sound,
             'etc_time_resolution': self._etc_time_resolution,
@@ -1236,14 +1250,15 @@ def _form_factors_with_directivity_dim(
         patches_area,
         air_attenuation,
         patch_to_wall_ids,
-        scattering, scattering_index, sources, receivers):
+        scattering, scattering_index, sources, receivers,
+        patches_points, patches_normals):
     """Calculate the form factors with directivity."""
     n_patches = patches_center.shape[0]
     n_directions = receivers.shape[1] if receivers is not None else 1
     form_factors_tilde = np.zeros((n_patches, n_patches, n_directions, n_bins))
-    # loop over previous patches, current and next patch
+    # loop over previous patches, current
 
-    for ii in prange(n_patches**2):
+    for ii in range(n_patches**2):
         i = ii % n_patches
         j = int(ii/n_patches) % n_patches
         visible_ij = visibility_matrix[
@@ -1252,20 +1267,27 @@ def _form_factors_with_directivity_dim(
             difference_receiver = patches_center[i]-patches_center[j]
             wall_id_i = int(patch_to_wall_ids[i])
             difference_receiver /= np.linalg.norm(difference_receiver)
-            ff = form_factors[i, j] if i<j else (form_factors[j, i]
-                                                 *patches_area[j]/patches_area[i])
+            ff = form_factors[i, j] if i<j else (
+                form_factors[j, i] * patches_area[j] / patches_area[i])
 
             distance = np.linalg.norm(difference_receiver)
             form_factors_tilde[i, j, :, :] = ff
+
             if air_attenuation is not None:
                 form_factors_tilde[i, j, :, :] = form_factors_tilde[
                     i, j, :, :] * np.exp(-air_attenuation * distance)
 
             if scattering is not None:
-                scattering_factor = get_scattering_data_source(
-                    patches_center[i], patches_center[j],
-                    sources, wall_id_i,
-                    scattering, scattering_index)
+                if sources[wall_id_i].shape[0] == 1:
+                    indexes = [0]
+                else:
+                    indexes = get_brdf_incidence_directions_from_surface(
+                        brdf_position=patches_center[j],
+                        brdf_directions=sources[wall_id_i],
+                        patch_edges_points=patches_points[i],
+                        patch_normal=patches_normals[i])
+                scattering_factor = np.mean(
+                    scattering[scattering_index[wall_id_i], indexes], axis=0)
                 form_factors_tilde[i, j, :, :] = form_factors_tilde[
                     i, j, :, :] * scattering_factor
 
@@ -1436,9 +1458,9 @@ def get_brdf_incidence_directions_from_surface(
     # if empty, find nearest direction
     if not hitting_indexes:
         directions = patch_edges_points - brdf_position
-        directions /= np.linalg.norm(directions, axis=-1)[:, np.newaxis]
-        brdf_directions /= np.linalg.norm(
-            brdf_directions, axis=-1)[:, np.newaxis]
+        directions /= np.sqrt(np.sum(directions**2, axis=-1))[:, np.newaxis]
+        brdf_directions /= np.sqrt(np.sum(
+            brdf_directions**2, axis=-1))[:, np.newaxis]
         distances = np.sqrt(
             np.sum((directions[:, np.newaxis, :]-brdf_directions)**2, axis=-1))
         # find the index of the closest direction
@@ -1453,8 +1475,10 @@ if numba is not None:
     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
     _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
     _energy_exchange = numba.njit()(_energy_exchange)
-    _form_factors_with_directivity_dim = numba.njit(parallel=True)(
-        _form_factors_with_directivity_dim)
+    # _form_factors_with_directivity_dim = numba.njit(parallel=True)(
+    #     _form_factors_with_directivity_dim)
+    # get_brdf_incidence_directions_from_surface = numba.njit()(
+    #     get_brdf_incidence_directions_from_surface)
     _form_factors_with_directivity = numba.njit(parallel=True)(
         _form_factors_with_directivity)
     get_scattering_data_receiver_index = numba.njit()(
