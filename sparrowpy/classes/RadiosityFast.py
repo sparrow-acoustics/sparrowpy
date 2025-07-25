@@ -1389,6 +1389,65 @@ def get_scattering_data_source(
         (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
 
+
+def get_brdf_incidence_directions_from_surface(
+        brdf_position:np.ndarray,
+        brdf_directions:np.ndarray,
+        patch_edges_points:np.ndarray,
+        patch_normal:np.ndarray,
+        ):
+    """Get indexes of the brdf direction hitting the patch.
+
+    If not hit, the closest brdf to any edge of the patch direction
+    index is returned.
+
+    Parameters
+    ----------
+    brdf_position : np.ndarray
+        position of the BRDF sample point of shape (3)
+    brdf_directions : np.ndarray
+        direction of the BRDF sample point of shape (n_directions, 3)
+    patch_edges_points : np.ndarray
+        edge points of the patch of shape (n_edges, 3)
+    patch_normal : np.ndarray
+        normal vector of the patch of shape (3)
+
+    Returns
+    -------
+    direction_indexes : np.ndarray
+        indexes of the BRDF directions hitting the patch.
+
+    """
+    distance_to_edges = np.sqrt(
+        np.sum((brdf_position - patch_edges_points)**2, axis=-1))
+    distance_max = np.max(distance_to_edges)
+
+    hitting_indexes = []
+    for i in range(brdf_directions.shape[0]):
+        is_visible = geometry._basic_visibility(
+            brdf_position,
+            brdf_position+brdf_directions[i] * 2 * distance_max,
+            patch_edges_points,
+            patch_normal,
+        )
+        if not is_visible:
+            hitting_indexes.append(i)
+
+    # if empty, find nearest direction
+    if not hitting_indexes:
+        directions = patch_edges_points - brdf_position
+        directions /= np.linalg.norm(directions, axis=-1)[:, np.newaxis]
+        brdf_directions /= np.linalg.norm(
+            brdf_directions, axis=-1)[:, np.newaxis]
+        distances = np.sqrt(
+            np.sum((directions[:, np.newaxis, :]-brdf_directions)**2, axis=-1))
+        # find the index of the closest direction
+        closest_index = np.unravel_index(np.argmin(
+            distances), distances.shape)[1]
+        hitting_indexes.append(closest_index)
+
+    return np.array(hitting_indexes, dtype=int)
+
 if numba is not None:
     _add_directional = numba.njit(parallel=True)(_add_directional)
     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)

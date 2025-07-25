@@ -3,6 +3,9 @@ import numpy as np
 import numpy.testing as npt
 import sparrowpy as sp
 import pyfar as pf
+from sparrowpy.classes.RadiosityFast import (
+    get_brdf_incidence_directions_from_surface,
+    )
 
 
 def test_init_default_single_wall():
@@ -123,3 +126,49 @@ def test_io_within_simulation(tmpdir):
 
     radiosity.collect_energy_receiver_mono(pf.Coordinates(.1, .5, .5))
     radiosity_read.collect_energy_receiver_mono(pf.Coordinates(.1, .5, .5))
+
+
+@pytest.mark.parametrize(("delta_degree", "desired"), [
+    (30, [25]),
+    (10, [253, 254, 288, 289, 290, 324, 325, 326, 360]),
+    ])
+def test_get_brdf_incidence_directions_from_surface(delta_degree, desired):
+
+    brdf_pos = pf.Coordinates(0, 0, 0, weights=1)
+    brdf_directions = pf.samplings.sph_equal_angle(delta_degree)
+    patch_edges = pf.Coordinates.from_spherical_elevation(
+        np.array([-15, 15, 15, -15])/180*np.pi,
+        np.array([-15, -15, 15, 15])/180*np.pi,
+        1,
+    )
+
+    # get brdf incidence directions
+    indexes = get_brdf_incidence_directions_from_surface(
+        brdf_pos.cartesian[0],
+        brdf_directions.cartesian,
+        patch_edges.cartesian,
+        np.array([-1, 0, 0], dtype=float))
+
+    npt.assert_almost_equal(indexes, desired)
+    npt.assert_almost_equal(indexes.shape, len(desired))
+
+
+def test_get_brdf_incidence_directions_from_surface_nearest():
+
+    brdf_pos = pf.Coordinates(0, 0, 0, weights=1)
+    brdf_directions = pf.samplings.sph_equal_angle(30)
+    patch_edges = pf.Coordinates.from_spherical_elevation(
+        np.array([10, 10, 5, 5])/180*np.pi,
+        np.array([10, 5, 5, 10])/180*np.pi,
+        1,
+    )
+
+    # get brdf incidence directions
+    indexes = get_brdf_incidence_directions_from_surface(
+        brdf_pos.cartesian[0],
+        brdf_directions.cartesian,
+        patch_edges.cartesian,
+        np.array([-1, 0, 0], dtype=float))
+
+    npt.assert_almost_equal(indexes, 25)
+    npt.assert_almost_equal(indexes.shape, (1))
