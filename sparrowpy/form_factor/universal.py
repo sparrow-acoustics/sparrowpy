@@ -1,6 +1,5 @@
 """methods for universal form factor calculation."""
 import numpy as np
-import sparrowpy.geometry as geom
 from sparrowpy.form_factor import integration
 try:
     import numba
@@ -10,7 +9,6 @@ except ImportError:
     prange = range
 
 def patch2patch_ff_universal(patches_points: np.ndarray,
-                             patches_normals: np.ndarray,
                              patches_areas: np.ndarray,
                              visible_patches:np.ndarray):
     """Calculate the form factors between patches (universal method).
@@ -46,15 +44,14 @@ def patch2patch_ff_universal(patches_points: np.ndarray,
         i = int(visible_patches[visID, 0])
         j = int(visible_patches[visID, 1])
         form_factors[i,j] = universal_form_factor(
-                    patches_points[i], patches_normals[i], patches_areas[i],
-                    patches_points[j], patches_normals[j])
+                    patches_points[i], patches_areas[i], patches_points[j])
 
     return form_factors
 
-def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
-                     source_area: np.ndarray, receiver_pts: np.ndarray,
-                     receiver_normal: np.ndarray,
-                     ) -> float:
+def universal_form_factor(source_pts: np.ndarray,
+                          source_area: np.ndarray,
+                          receiver_pts: np.ndarray,
+                         ) -> float:
     """Return the form factor based on input patches geometry.
 
     Parameters
@@ -83,13 +80,7 @@ def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
         form factor
 
     """
-    if geom._coincidence_check(receiver_pts, source_pts):
-        form_factor = integration.nusselt_integration(
-                    patch_i=source_pts, patch_i_normal=source_normal,
-                    patch_j=receiver_pts, patch_j_normal=receiver_normal,
-                    nsamples=64)
-    else:
-        form_factor = integration.stokes_integration(patch_i=source_pts,
+    form_factor = integration.stokes_integration(patch_i=source_pts,
                                              patch_j=receiver_pts,
                                              patch_i_area=source_area)
 
