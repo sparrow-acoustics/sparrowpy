@@ -82,8 +82,7 @@ def universal_form_factor(source_pts: np.ndarray,
     """
     form_factor = integration.stokes_integration(patch_i=source_pts,
                                              patch_j=receiver_pts,
-                                             patch_i_area=source_area,
-                                             approx_order=8)
+                                             patch_i_area=source_area)
 
     return form_factor
 
