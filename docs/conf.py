@@ -56,8 +56,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sparrowpy'
-copyright = "2024, The pyfar developers"
-author = "The pyfar developers"
+copyright = "2024, The sparrowpy developers"
+author = "The sparrowpy developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -111,7 +111,7 @@ html_static_path = ['_static']
 html_css_files = ['css/custom.css']
 html_logo = '_static/logo.png'
 html_title = "sparrowpy"
-html_favicon = '_static/favicon.ico'
+html_favicon = '_static/logo.png'
 
 # -- HTML theme options
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html
@@ -127,7 +127,7 @@ html_theme_options = {
     "icon_links": [
         {
           "name": "GitHub",
-          "url": "https://github.com/pyfar",
+          "url": "https://github.com/sparrow-acoustics/sparrowpy",
           "icon": "fa-brands fa-square-github",
           "type": "fontawesome",
         },
@@ -143,25 +143,3 @@ html_theme_options = {
 html_context = {
    "default_mode": "light"
 }
-
-
-# -- download navbar and style files from gallery -----------------------------
-branch = 'main'
-link = f'https://github.com/pyfar/gallery/raw/{branch}/docs/'
-folders_in = [
-    '_static/css/custom.css',
-    '_static/favicon.ico',
-    ]
-
-def download_files_from_gallery(link, folders_in):
-    c = urllib3.PoolManager()
-    for file in folders_in:
-        url = link + file
-        filename = file
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        with c.request('GET', url, preload_content=False) as res:
-            if res.status == 200:
-                with open(filename, 'wb') as out_file:
-                    shutil.copyfileobj(res, out_file)
-
-download_files_from_gallery(link, folders_in)

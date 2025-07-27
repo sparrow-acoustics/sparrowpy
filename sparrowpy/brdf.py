@@ -146,7 +146,7 @@ def create_from_directional_scattering(
     .. math::
         \rho(\mathbf{\Omega_i}, \mathbf{\Omega_o}) = \frac{(1-\alpha)}{
         (\mathbf{\Omega_o} \cdot \mathbf{n}) \cdot w_o} s_{d}(
-        \mathbf{\Omega_i}, mathbf{\Omega_o})
+        \mathbf{\Omega_i}, \mathbf{\Omega_o})
 
     where:
         - :math:`\mathbf{\Omega_i}` and :math:`\mathbf{\Omega_o}` are the
