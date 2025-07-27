@@ -216,15 +216,16 @@ def test_bake_patch_2_brdf_outgoing_mask():
         radiosity._patch_2_brdf_outgoing_mask[0, 1, :-2], False)
 
 
-def test_test_specular_reflections():
+@pytest.mark.parametrize("delta_angle", [
+    15, 30])
+def test_specular_reflections(delta_angle):
     """
     Test if specular reflections are larger than 0.
 
     For two parallel walls, and more than one direction of brdf facting
     towards it.
     """
-
-    brdf_directions = pf.samplings.sph_equal_angle(10)
+    brdf_directions = pf.samplings.sph_equal_angle(delta_angle)
     brdf_directions.weights = pf.samplings.calculate_sph_voronoi_weights(
         brdf_directions)
     brdf_directions = brdf_directions[brdf_directions.z>0]
@@ -246,8 +247,13 @@ def test_test_specular_reflections():
     radiosity.bake_geometry()
 
     radiosity.init_source_energy(pf.Coordinates(.5, .5, .5))
-    radiosity.calculate_energy_exchange(343, 1/100, 0.01, 4)
-    etc = radiosity.collect_energy_receiver_mono(pf.Coordinates(.5, .5, .5))
+    radiosity.calculate_energy_exchange(343, 1/100, 0.01, 2)
+    etc = radiosity.collect_energy_receiver_mono(
+        pf.Coordinates(.5, .5, .5))
 
+    r_is_1 = 1
+    r_is_2 = 2
+    reflected_energy_analytic = 2*(
+        1/(4 * np.pi * r_is_1**2) + 1/(4 * np.pi * r_is_2**2))
     assert np.sum(etc.time)>0
-
+    npt.assert_almost_equal(np.sum(etc.time), reflected_energy_analytic)
