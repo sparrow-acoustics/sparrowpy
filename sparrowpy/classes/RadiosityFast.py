@@ -394,6 +394,8 @@ class DirectionalRadiosityFast():
         if self._brdf_incoming_directions is not None:
             sources_array = np.array(
                 [s.cartesian for s in self._brdf_incoming_directions])
+            brdf_vi_weights = [
+                s.weights for s in self._brdf_incoming_directions]
             receivers_array = np.array(
                 [s.cartesian for s in self._brdf_outgoing_directions])
             scattering_index = np.array(self._brdf_index)
@@ -433,6 +435,8 @@ class DirectionalRadiosityFast():
             scattering = None
             self._patch_2_brdf_outgoing_mask = np.ones((
                 self.n_patches, self.n_patches, 1), dtype=bool)
+            brdf_vi_weights = [
+                s.weights for s in self._brdf_incoming_directions]
 
         n_bins = 1 if self._frequencies is None else self.n_bins
 
@@ -444,7 +448,8 @@ class DirectionalRadiosityFast():
                 self._patch_to_wall_ids, scattering,
                 scattering_index,
                 sources_array, receivers_array,
-                self.patches_points, self.patches_normal)
+                self.patches_points, self.patches_normal,
+                brdf_vi_weights)
 
 
     def init_source_energy(
@@ -799,15 +804,19 @@ class DirectionalRadiosityFast():
             BRDF data with shape
             (n_incoming_directions, n_outgoing_directions).
         incoming_directions : pf.Coordinates
-            Incoming directions of the BRDF data.
+            Incoming directions of the BRDF data, including the weights.
         outgoing_directions : pf.Coordinates
-            Outgoing directions of the BRDF data.
+            Outgoing directions of the BRDF data, including the weights.
 
         """
         assert (incoming_directions.z >= 0).all(), \
             "Sources must be in the positive half space"
         assert (outgoing_directions.z >= 0).all(), \
             "Receivers must be in the positive half space"
+        assert incoming_directions.weights is not None, \
+            "Incoming directions must have weights"
+        assert outgoing_directions.weights is not None, \
+            "Outgoing directions must have weights"
         self._check_set_frequency(brdf.frequencies)
         if self._brdf_incoming_directions is None:
             self._brdf_incoming_directions = np.empty(
@@ -1255,7 +1264,7 @@ def _form_factors_with_directivity_dim(
         air_attenuation,
         patch_to_wall_ids,
         scattering, scattering_index, sources, receivers,
-        patches_points, patches_normals):
+        patches_points, patches_normals, brdf_vi_weights):
     """Calculate the form factors with directivity."""
     n_patches = patches_center.shape[0]
     n_directions = receivers.shape[1] if receivers is not None else 1
@@ -1290,8 +1299,10 @@ def _form_factors_with_directivity_dim(
                         brdf_directions=sources[wall_id_i],
                         patch_edges_points=patches_points[i],
                         patch_normal=patches_normals[i])
-                scattering_factor = np.mean(
-                    scattering[scattering_index[wall_id_i], indexes], axis=0)
+                scattering_factor = np.sum(
+                    scattering[scattering_index[
+                        wall_id_i], indexes]*brdf_vi_weights[
+                            wall_id_i][indexes], axis=0)
                 form_factors_tilde[i, j, :, :] = form_factors_tilde[
                     i, j, :, :] * scattering_factor
 
