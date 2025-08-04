@@ -7,6 +7,7 @@ except ImportError:
     prange = range
 import numpy as np
 import sparrowpy.geometry as geom
+from scipy.special import sph_harm
 
 
 def load_stokes_entries(
@@ -156,6 +157,7 @@ def nusselt_analog(surf_origin, surf_normal,
                                                             patch_points,
                                                             npoints=3)
 
+
     hand = np.sign(np.dot(
                 np.cross(patch_points[1]-patch_points[0],
                          patch_points[2]-patch_points[1]), patch_normal) )
@@ -237,6 +239,135 @@ def nusselt_analog(surf_origin, surf_normal,
 
     return big_poly + hand*curved_area
 
+def nusselt_analog_sh(surf_origin, surf_normal,
+                      patch_points, patch_normal, sh_order):
+    """
+    Calculate the Nusselt analog spherical harmonic coefficients for a single point.
+
+    Projects a given receiver patch onto a hemisphere centered around a point
+    on a source patch surface.
+    The hemispherical projection is then projected onto the source patch plane.
+    The area of this projection relative to the unit circle area is the
+    differential form factor between the two patches.
+
+    Parameters
+    ----------
+    surf_origin : np.ndarray
+        point on source patch for differential form factor evaluation (3,)
+        (global origin)
+
+    surf_normal : np.ndarray
+        normal of source patch (3,)
+
+    patch_points : np.ndarray
+        vertex coordinates of the receiver patch (n_vertices, 3)
+
+    patch_normal: np.ndarray
+        normal of receiver patch (3,)
+
+    sh_order: int
+        maximum order of spherical harmonics (l)
+
+    Returns
+    -------
+    coeffs N_lm : np.ndarray, shape ((sh_order+1)**2,)
+        Complex spherical harmonic coefficients of the Nusselt kernel
+    """
+
+    # Sample boundary points and connectivity
+    boundary_points, connectivity = _sample_boundary_regular(patch_points, npoints=3)
+
+    hand = np.sign(np.dot(
+        np.cross(patch_points[1]-patch_points[0],
+                 patch_points[2]-patch_points[1]),
+        patch_normal))
+
+    curved_area = 0
+
+    sphPts = np.empty_like(boundary_points)
+    projPts = np.empty_like(boundary_points)
+    plnPts = np.empty((len(boundary_points), 2))
+
+    # Normalize and get directions from surf_origin to boundary points
+    for ii in prange(len(boundary_points)):
+        sphPts[ii] = (boundary_points[ii] - surf_origin) / np.linalg.norm(boundary_points[ii] - surf_origin)
+
+    rotmat = geom._rotation_matrix(n_in=surf_normal)
+
+    for ii in prange(len(sphPts)):
+        plnPts[ii, :] = geom._matrix_vector_product(matrix=rotmat, vector=sphPts[ii])[:-1]
+        projPts[ii, :-1] = plnPts[ii, :]
+        projPts[ii, -1] = 0.
+
+    big_poly = geom._polygon_area(projPts[0::2])
+
+    segmt = np.empty_like(connectivity[0])
+    leftseg = np.empty((3, 2))
+    rightseg = np.empty((3, 2))
+
+    for jj in prange(connectivity.shape[0]):
+        segmt = connectivity[jj]
+
+        if np.linalg.norm(np.cross(projPts[segmt[-1]], projPts[segmt[0]])) > 1e-6:
+            if np.dot(plnPts[segmt[-1]], plnPts[segmt[0]]) >= 1e-6:
+                curved_area += _area_under_curve(plnPts[segmt], order=2)
+            else:
+                mpoint = (sphPts[segmt[0]] + (sphPts[segmt[-1]] - sphPts[segmt[0]]) / 2)
+                marc = mpoint / np.linalg.norm(mpoint)
+                a = sphPts[segmt[0]] + (marc - sphPts[segmt[0]]) / 2
+                b = marc + (sphPts[segmt[-1]] - marc) / 2
+
+                mpoint = geom._matrix_vector_product(matrix=rotmat, vector=mpoint)[:-1]
+                marc = geom._matrix_vector_product(matrix=rotmat, vector=marc)[:-1]
+                a = a / np.linalg.norm(a)
+                a = geom._matrix_vector_product(matrix=rotmat, vector=a)[:-1]
+
+                b = b / np.linalg.norm(b)
+                b = geom._matrix_vector_product(matrix=rotmat, vector=b)[:-1]
+
+                linArea = (np.linalg.norm(plnPts[segmt[-1]] - plnPts[segmt[0]]) *
+                           np.linalg.norm(mpoint - marc) / 2)
+
+                leftseg[0] = plnPts[segmt[0]]
+                leftseg[1] = a
+                leftseg[2] = marc
+
+                rightseg[0] = marc
+                rightseg[1] = b
+                rightseg[2] = plnPts[segmt[-1]]
+
+                left = _area_under_curve(leftseg, order=2)
+                right = _area_under_curve(rightseg, order=2)
+                curved_area += (linArea * np.sign(left) + left + right)
+
+    # Final scalar Nusselt kernel value for this point
+    kernel_value = big_poly + hand * curved_area
+
+    # Prepare SH coefficients accumulator
+    n_coeffs = (sh_order + 1) ** 2
+    coeffs_Nlm = np.zeros(n_coeffs, dtype=np.complex128)
+
+    # Convert sphPts to local spherical coordinates and accumulate SH
+    for ii in prange(len(sphPts)):
+        vec = sphPts[ii]
+
+        # Rotate to local frame (already done above, so reuse)
+        local_dir = geom._matrix_vector_product(rotmat, vec)
+
+        x, y, z = local_dir
+        theta = np.arccos(np.clip(z, -1.0, 1.0))  # polar angle [0, pi]
+        phi = np.arctan2(y, x) % (2 * np.pi)       # azimuthal angle [0, 2pi]
+
+        idx = 0
+        for l in range(sh_order + 1):
+            for m in range(-l, l + 1):
+                Y_lm = sph_harm(m, l, phi, theta)
+                # Weight by kernel value divided by number of samples
+                coeffs_Nlm[idx] += kernel_value * Y_lm / len(sphPts)
+                idx += 1
+
+    return coeffs_Nlm
+
 def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
                         patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
                         nsamples=2, random=False) -> float:
@@ -290,12 +421,80 @@ def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
         out += nusselt_analog( surf_origin=p0_array[i],
                                surf_normal=patch_i_normal,
                                patch_points=patch_j,
-                               patch_normal=patch_j_normal )
+                               patch_normal=patch_j_normal)
 
     out *= 1 / ( np.pi * len(p0_array) )
 
     return out
 
+def nusselt_integration_sh(patch_i: np.ndarray, patch_j: np.ndarray,
+                        patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
+                        sh_order, brdf, brdf_weight, nsamples=2, random=False) -> float:
+    """Estimate the form factor based on the Nusselt analogue.
+
+    Integrates the differential form factor (Nusselt analogue output)
+    over the surface of the source patch
+
+    Parameters
+    ----------
+    patch_i: np.ndarray
+        vertex coordinates of the source patch
+
+    patch_j: np.ndarray
+        vertex coordinates of the receiver patch
+
+    patch_i_normal: np.ndarray
+        source patch normal (3,)
+
+    patch_j_normal: np.ndarray
+        receiver patch normal (3,)
+
+    patch_i_area: float
+        source patch area
+
+    patch_j_area: float
+        receiver patch area
+
+    nsamples: int
+        number of receiver surface samples for integration
+
+    random: bool
+        determines the distribution of the samples on patch_i surface
+        if True, the samples are randomly distributed in a uniform way
+        if False, a regular sampling of the surface is performed
+
+    Returns
+    -------
+    out: float
+        form factor between patches i and j
+
+    """
+    if random:
+        p0_array = _surf_sample_random(patch_i,nsamples)
+    else:
+        p0_array = _surf_sample_regulargrid(patch_i,nsamples)
+
+    out = 0
+
+    for i in prange(p0_array.shape[0]):
+        out += nusselt_analog_sh( surf_origin=p0_array[i],
+                               surf_normal=patch_i_normal,
+                               patch_points=patch_j,
+                               patch_normal=patch_j_normal,
+                               sh_order=sh_order)
+
+
+    # out is N_lm vector after sampling and averaging
+    N_lm = out
+
+    scalar_form_factor = 0.0
+    num_wi = brdf.shape[0]  # number of incoming directions
+    for idx_wi in range(num_wi):
+        c_lm = brdf[idx_wi]       # BRDF SH coeff vector at incoming direction w_i
+        w = brdf_weight[idx_wi]       # quadrature weight for w_i
+        scalar_form_factor += w * np.dot(c_lm, N_lm)
+
+    return scalar_form_factor
 
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################

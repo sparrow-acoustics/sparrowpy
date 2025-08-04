@@ -96,6 +96,52 @@ def universal_form_factor(source_pts: np.ndarray, source_normal: np.ndarray,
 
     return form_factor
 
+def universal_form_factor_sh(source_pts: np.ndarray, source_normal: np.ndarray,
+                     source_area: np.ndarray, receiver_pts: np.ndarray,
+                     receiver_normal: np.ndarray, sh_order, brdf, brdf_weight,
+                     ) -> float:
+    """Return the form factor based on input patches geometry.
+
+    Parameters
+    ----------
+    receiver_pts: np.ndarray
+        receiver patch vertex coordinates (n_vertices,3)
+
+    receiver_normal: np.ndarray
+        receiver patch normal (3,)
+
+    receiver_area: float
+        receiver patch area
+
+    source_pts: np.ndarray
+        source patch vertex coordinates (n_vertices,3)
+
+    source_normal: np.ndarray
+        source patch normal (3,)
+
+    source_area: float
+        source patch area
+
+    Returns
+    -------
+    form_factor: float
+        form factor
+
+    """
+    if geom._coincidence_check(receiver_pts, source_pts):
+        form_factor = integration.nusselt_integration_sh(
+                    patch_i=source_pts, patch_i_normal=source_normal,
+                    patch_j=receiver_pts, patch_j_normal=receiver_normal,sh_order = sh_order, 
+                    brdf = brdf, brdf_weight = brdf_weight,
+                    nsamples=64)
+    else:
+        form_factor = integration.stokes_integration(patch_i=source_pts,
+                                             patch_j=receiver_pts,
+                                             patch_i_area=source_area,
+                                             approx_order=4)
+
+    return form_factor
+
 def _source2patch_energy_universal(
         source_position: np.ndarray, patches_center: np.ndarray,
         patches_points: np.ndarray, source_visibility: np.ndarray,
