@@ -406,57 +406,6 @@ class DirectionalRadiosityFast():
             self._patch_to_wall_ids, scattering,
             scattering_index,
             sources_array, receivers_array)
-        
-    def bake_geometry_sh(self, brdf_weight):
-        """Bake the geometry by calculating all the form factors.
-
-        """
-        # Check the visibility between patches.
-        self._visibility_matrix = geometry._check_patch2patch_visibility(
-            self.patches_center, self.patches_normal, self.patches_points)
-
-        n_combinations = np.sum(self.visibility_matrix)
-        visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
-        i_counter = 0
-        for i_source in range(self.n_patches):
-            for i_receiver in range(self.n_patches):
-                if not self.visibility_matrix[i_source, i_receiver]:
-                    continue
-                visible_patches[i_counter, 0] = i_source
-                visible_patches[i_counter, 1] = i_receiver
-                i_counter += 1
-        self._visible_patches = visible_patches
-        sh_order = 5
-
-        # Calculate the form factors with directivity.
-        if self._brdf_incoming_directions is not None:
-            sources_array = np.array(
-                [s.cartesian for s in self._brdf_incoming_directions])
-            receivers_array = np.array(
-                [s.cartesian for s in self._brdf_outgoing_directions])
-            scattering_index = np.array(self._brdf_index)
-            scattering = np.array(self._brdf)
-        else:
-            sources_array = None
-            receivers_array = None
-            scattering_index = None
-            scattering = None
-
-        self._form_factors = form_factor.patch2patch_ff_universal_sh(
-            self.patches_points, self.patches_normal,
-            self.patches_area, self._visible_patches, sh_order, scattering, brdf_weight)
-
-
-        n_bins = 1 if self._frequencies is None else self.n_bins
-
-        self._form_factors_tilde = \
-            _form_factors_with_directivity_dim_sh(
-            self.visibility_matrix, self.form_factors, n_bins,
-            self.patches_center, self.patches_area,
-            self._air_attenuation,
-            self._patch_to_wall_ids, scattering,
-            scattering_index,
-            sources_array, receivers_array)
 
     def init_source_energy(
             self, source:pf.Coordinates):
@@ -1132,7 +1081,7 @@ def _form_factors_with_directivity(
     return form_factors_tilde
 
 
-def _form_factors_with_directivity_dim_sh(
+def _form_factors_with_directivity_dim(
         visibility_matrix, form_factors, n_bins, patches_center,
         patches_area,
         air_attenuation,
@@ -1162,13 +1111,13 @@ def _form_factors_with_directivity_dim_sh(
                 form_factors_tilde[i, j, :, :] = form_factors_tilde[
                     i, j, :, :] * np.exp(-air_attenuation * distance)
 
-            #if scattering is not None:
-            #    scattering_factor = get_scattering_data_source(
-            #        patches_center[i], patches_center[j],
-            #        sources, wall_id_i,
-            #        scattering, scattering_index)
-            #    form_factors_tilde[i, j, :, :] = form_factors_tilde[
-            #        i, j, :, :] * scattering_factor
+            if scattering is not None:
+                scattering_factor = get_scattering_data_source(
+                    patches_center[i], patches_center[j],
+                    sources, wall_id_i,
+                    scattering, scattering_index)
+                form_factors_tilde[i, j, :, :] = form_factors_tilde[
+                    i, j, :, :] * scattering_factor
 
     return form_factors_tilde
 
