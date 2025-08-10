@@ -6,7 +6,7 @@ import pyfar as pf
 import tracemalloc
 import pyrato
 import time
-from reduce_s_d import get_bsc
+from reduce_s_d import get_bsc, get_s_rand_from_bsc
 
 def run_simu_mem(walls, source, receiver,
              patch_size=1, absorption=.1, scattering=1,
@@ -132,7 +132,8 @@ def run_simu_pure(walls, source, receiver,
              speed_of_sound=343.26, time_step=.002, duration=2.,
              refl_order=50, freq=np.array([1000]),
              att=np.array([4.664731873821475/1000]),
-             file=None):
+             file=None,
+             classical_model=False):
 
     att_np= att* 0.115129254650564
 
@@ -140,23 +141,21 @@ def run_simu_pure(walls, source, receiver,
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
     abs_wall = pf.FrequencyData(.07*np.ones_like(freq), freq)
 
-    if file is None:
+    if classical_model:
         # set brdfs
-        samples = pf.samplings.sph_gaussian(2)
-        pos_hemisphere = np.where((samples.elevation*180/np.pi > 0))
-        brdf_sources = samples[pos_hemisphere].copy()
-        brdf_receivers = samples[pos_hemisphere].copy()
+        s_rand, brdf_sources, brdf_receivers = get_s_rand_from_bsc(
+            file, freq_out=freq)
 
         # create directional scattering data
         brdf_ground = sp.brdf.create_from_scattering(
-            brdf_sources,
+            brdf_receivers,
             brdf_receivers,
             pf.FrequencyData(np.ones_like(freq), freq),
             pf.FrequencyData(.01*np.ones_like(freq), freq))
         brdf_walls = sp.brdf.create_from_scattering(
-            brdf_sources,
             brdf_receivers,
-            pf.FrequencyData(np.ones_like(freq), freq),
+            brdf_receivers,
+            s_rand,
             abs_wall)
     else:
         bsc,brdf_sources,brdf_receivers = get_bsc(file, freq_out=freq)

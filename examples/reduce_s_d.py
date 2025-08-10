@@ -36,6 +36,100 @@ def _calculate_f_mask(i_freq, frequencies_in, frequencies_out):
     f_mask = (frequencies_in >= f_lower) & (frequencies_in < f_upper)
     return f_mask
 
+def random(
+        scattering_coefficients, incident_directions):
+    r"""
+    Calculate the random-incidence from the directional scattering coefficient.
+
+    Uses the Paris formula [#]_.
+
+    .. math::
+        s_{rand} = \sum s(\vartheta,\varphi) \cdot cos(\vartheta) \cdot
+        w(\vartheta,\varphi)
+
+    with the scattering coefficients :math:`s(\vartheta,\varphi)`, the area
+    weights ``w`` taken from the `incident_directions.weights`,
+    and :math:`\vartheta` and :math:`\varphi` are the ``colatitude``
+    angle and ``azimuth`` angles from the
+    :py:class:`~pyfar.classes.coordinates.Coordinates` object.
+    Note that the incident directions should be
+    equally distributed to get a valid result. See
+    :py:func:`freefield` to calculate the free-field scattering coefficient.
+
+    Parameters
+    ----------
+    scattering_coefficients : :py:class:`~pyfar.classes.audio.FrequencyData`
+        Scattering coefficients for different incident directions. Its cshape
+        needs to be (..., incident_directions.csize)
+    incident_directions : :py:class:`~pyfar.classes.coordinates.Coordinates`
+        Defines the incidence directions of each `scattering_coefficients`
+        in a :py:class:`~pyfar.classes.coordinates.Coordinates` object.
+        Its cshape needs to match
+        the last dimension of `scattering_coefficients`.
+        Points contained in `incident_directions` must have the same radii.
+        The weights need to reflect the area `incident_directions.weights`.
+
+    Returns
+    -------
+    random_scattering : :py:class:`~pyfar.classes.audio.FrequencyData`
+        The random-incidence scattering coefficient depending on frequency.
+
+    References
+    ----------
+    .. [#]  H. Kuttruff, Room acoustics, Sixth edition. Boca Raton:
+            CRC Press/Taylor & Francis Group, 2017.
+    """
+    if not isinstance(scattering_coefficients, pf.FrequencyData):
+        raise ValueError('coefficients has to be FrequencyData')
+    if not isinstance(incident_directions, pf.Coordinates):
+        raise ValueError('incident_directions have to be None or Coordinates')
+    if incident_directions.cshape[0] != scattering_coefficients.cshape[-1]:
+        raise ValueError(
+            'the last dimension of coefficients needs be same as '
+            'the incident_directions.cshape.')
+
+    theta = incident_directions.colatitude
+    weight = np.cos(theta) * incident_directions.weights
+    norm = np.sum(weight)
+    coefficients_freq = np.swapaxes(scattering_coefficients.freq, -1, -2)
+    random_scattering = pf.FrequencyData(
+        np.sum(coefficients_freq*weight/norm, axis=-1),
+        scattering_coefficients.frequencies
+    )
+    return random_scattering
+
+
+def get_s_rand_from_bsc(file_in = 'examples/resources/triangle_sim_optimal.s_d.sofa', freq_out=None):
+    sofa = sf.read_sofa(file_in)
+    bsc, sources, receivers = pf.io.convert_sofa(sofa)
+    sources.weights = sofa.SourceWeights
+    receivers.weights = sofa.ReceiverWeights
+
+    # apply scaling factor
+    bsc._frequencies /= 8
+
+    # calculate scattering coefficient from BSC
+    spec_direction = sources.copy()
+    spec_direction.azimuth += np.pi
+    i_spec_dir = sources.find_nearest(spec_direction)[0][0]
+    scattering = bsc[np.arange(len(i_spec_dir)), i_spec_dir]
+
+    # average scattering coefficient to random incident
+    scattering_rand = random(scattering, sources)
+
+    if freq_out is None:
+        frequencies_out = pf.dsp.filter.fractional_octave_frequencies(
+            1, (np.min(bsc.frequencies/8), np.max(bsc.frequencies/8)),
+        )[1]
+    else:
+        frequencies_out=freq_out
+
+    scattering_rand_oct = average_frequencies(
+        scattering_rand, frequencies_out, domain='energy')
+
+    return scattering_rand_oct, sources, receivers
+
+
 def get_bsc(file_in = 'examples/resources/triangle_sim_optimal.s_d.sofa', freq_out=None):
     sofa = sf.read_sofa(file_in)
     bsc, sources, receivers = pf.io.convert_sofa(sofa)
