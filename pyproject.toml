@@ -36,6 +36,11 @@ dependencies = [
 blender = ['bpy',]
 fast = ['numba',]
 progress = ['tqdm']
+examples = [
+    "memory_profiler",
+    "tqdm",
+    "pyrato",
+]
 deploy = [
     "twine",
     "wheel",
@@ -68,7 +73,7 @@ docs = [
     "nbsphinx_link",
     "ipython",
 ]
-dev = ["sparrowpy[deploy,tests,docs]"]
+dev = ["sparrowpy[deploy,tests,docs,examples]"]
 
 [project.urls]
 Tracker = "https://github.com/ahms5/sparrowpy/issues"
