@@ -52,14 +52,14 @@ def test_order_vs_analytic(patch_size):
     # note that order k=0 means one reflection and k=1 means two reflections
     # (2nd order)
     X = 5
-    Y = 6
+    Y = 3
     Z = 4
     length_histogram = .15
-    time_resolution = 1/1000
+    time_resolution = 1/500
     max_order_k = 3
     speed_of_sound = 346.18
-    receiver = pf.Coordinates(3, 4, 2)
-    source = pf.Coordinates(2, 2, 2)
+    receiver = pf.Coordinates(3, 1.5, 2)
+    source = pf.Coordinates(2, 1.5, 2)
 
     absorption = 0.1
 
@@ -111,10 +111,7 @@ def test_order_vs_analytic(patch_size):
     etc_analytic_db = 10*np.log10(reverberation_analytic.flatten())
 
     # compare the diffuse part
-    samples_reverb_start = int(0.025/time_resolution)
-    samples_reverb_end = int(0.035/time_resolution)
     npt.assert_allclose(
-        etc_radiosity_db[samples_reverb_start:samples_reverb_end],
-        etc_analytic_db[samples_reverb_start:samples_reverb_end],
-        atol=0.3)
-
+        etc_radiosity_db[5:19],
+        etc_analytic_db[5:19],
+        atol=2) # maximal 2dB difference

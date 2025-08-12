@@ -70,7 +70,7 @@ def test_io(apply_brdf, apply_attenuation, tmpdir):
 
 
 def test_io_within_simulation(tmpdir):
-    walls = sp.testing.shoebox_room_stub(5, 6, 4)
+    walls = sp.testing.shoebox_room_stub(1, 1, 1)
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
         walls, 1)
 

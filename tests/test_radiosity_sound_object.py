@@ -12,7 +12,7 @@ def test_directivity_ms():
     """Test DirectivityMS class."""
     path = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ITA_Dodecahedron.sofa')
-    directivity = so._DirectivityMS(path)
+    directivity = so.DirectivityMS(path)
     assert directivity.data.cshape[0] == directivity.receivers.cshape[0]
     assert isinstance(directivity.data, pf.FrequencyData)
     assert isinstance(directivity.receivers, pf.Coordinates)
@@ -22,7 +22,7 @@ def test_get_directivity():
     """Test get_directivity function."""
     path = os.path.join(
         os.path.dirname(__file__), 'test_data', 'ITA_Dodecahedron.sofa')
-    directivity = so._DirectivityMS(path)
+    directivity = so.DirectivityMS(path)
     target_pos_G = [-1, 0, -2]
     pos_G = [0, 0, 2]
     up_G = [0, 1, 0]
