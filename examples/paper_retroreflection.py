@@ -487,7 +487,7 @@ ax.set_xlim((0, 0.15))
 ax.set_title(f'Frequency: {bsc_octave.frequencies[i_band]} Hz')
 # %%
 
-raven = np.loadtxt(os.path.join(root_dir, 'raven_facade.csv'), delimiter=",")
+raven = np.loadtxt(os.path.join(root_dir, 'out', 'raven_facade.csv'), delimiter=",")
 
 print(raven[0, 3:-2])
 raven = pf.TimeData(
