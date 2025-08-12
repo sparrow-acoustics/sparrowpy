@@ -65,7 +65,7 @@ rpf.setMaterial(rpf.getRoomMaterialNames{6},myAbsorp1,myScatter1);
 rpf.setSourcePositions([20, 1, -6]);
 rpf.setSourceViewVectors([ 1     0     0]);
 rpf.setSourceUpVectors([ 0     1    0]);
-rpf.setSourceDirectivity('');
+rpf.setSourceDirectivity('Omnidirectional');
 
 
 rpf.setReceiverPositions([70, 2, -6]);
@@ -84,7 +84,7 @@ rpf.setGenerateBRIR(1);
 rpf.setSimulationTypeRT(1);
 rpf.setSimulationTypeIS(1);
 rpf.setNumParticles(5000000);
-rpf.setFilterLength(1900);
+rpf.setFilterLength(900);
 rpf.setTimeSlotLength(2); % ms
 
 rpf.setISOrder_PS(0);
@@ -102,6 +102,7 @@ hist.ptd
 
 %%
 histogram = hist.time;
+
 disp(['max histogram ' num2str(max(histogram))])
 size(histogram)
 histogram = [hist.timeVector histogram];
