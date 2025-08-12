@@ -521,16 +521,16 @@ for is_decay in [True, False]:
             color='C1',
         )
         ax = pf.plot.time(
-            edcs[1],
-            dB=True, log_prefix=10, unit='ms', log_reference=1e-12,
-            label='Random scattering',
-            color='C0',
-        )
-        ax = pf.plot.time(
             edcs[2],
             dB=True, log_prefix=10, unit='ms', log_reference=1e-12,
             label='BSC horizontal',
             color='C2',
+        )
+        ax = pf.plot.time(
+            edcs[1],
+            dB=True, log_prefix=10, unit='ms', log_reference=1e-12,
+            label='Random scattering',
+            color='C0',
         )
         ax = pf.plot.time(
             edcs[3],
