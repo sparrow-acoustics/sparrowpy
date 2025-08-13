@@ -168,3 +168,8 @@ replace = '\nversion = "{new_version}"'
 filename = "sparrowpy/__init__.py"
 search = "__version__ = '{current_version}'"
 replace = "__version__ = '{new_version}'"
+
+[[tool.bumpversion.files]]
+filename = "docs/_static/logo.svg"
+search = ">{current_version}</tspan>"
+replace = ">{new_version}</tspan>"
