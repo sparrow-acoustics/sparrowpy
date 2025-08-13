@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sparrowpy'
-copyright = "2025, The sparrowpy developers"
+copyright = "2024, The sparrowpy developers"
 author = "The sparrowpy developers"
 
 # The version info for the project you're documenting, acts as replacement
@@ -143,24 +143,3 @@ html_theme_options = {
 html_context = {
    "default_mode": "light"
 }
-
-
-# -- download navbar and style files from gallery -----------------------------
-branch = 'main'
-link = f'https://github.com/pyfar/gallery/raw/{branch}/docs/'
-folders_in = [
-    '_static/css/custom.css',
-    ]
-
-def download_files_from_gallery(link, folders_in):
-    c = urllib3.PoolManager()
-    for file in folders_in:
-        url = link + file
-        filename = file
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        with c.request('GET', url, preload_content=False) as res:
-            if res.status == 200:
-                with open(filename, 'wb') as out_file:
-                    shutil.copyfileobj(res, out_file)
-
-download_files_from_gallery(link, folders_in)
