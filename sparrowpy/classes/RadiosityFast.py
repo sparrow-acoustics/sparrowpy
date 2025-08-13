@@ -3,6 +3,7 @@ import numpy as np
 import deepdiff
 import pyfar as pf
 import sparrowpy.form_factor.universal as form_factor
+from sparrowpy.utils import blender
 from sparrowpy import ( geometry, sound_object )
 try:
     import numba
