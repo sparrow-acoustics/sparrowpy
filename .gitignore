@@ -118,4 +118,3 @@ tests/private/
 # ignore generated files
 *.pdf
 examples/radiosity_fast.far
-icon_dev/*_temp*
