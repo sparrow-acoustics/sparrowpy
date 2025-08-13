@@ -10,7 +10,6 @@ import pyrato
 # %matplotlib ipympl
 
 # %%
-
 def average_frequencies(data, new_frequencies, domain='pressure'):
     new_shape = np.array(data.freq.shape)
     new_shape[-1] = len(new_frequencies)
@@ -106,6 +105,37 @@ def random(
 # %%
 # read simulation results
 root_dir=os.path.join(os.getcwd())
+
+
+font={
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.sans-serif": "Helvetica",
+    "font.size": 12,
+}
+
+
+
+plt.rcParams.update(font)
+
+def create_fig():
+    figure,ax = plt.subplots(figsize=(3,2))
+    plt.grid()
+    return figure, ax
+
+def create_fig2():
+    figure,ax = plt.subplots(figsize=(5,3))
+    plt.grid()
+    return figure, ax
+
+def export_fig(fig, filename,out_dir=root_dir, fformat=".pdf"):
+    fig.savefig(os.path.join(out_dir,filename+fformat), bbox_inches='tight')
+
+tlabel="$$rt \\quad [\\mathrm{s}]$$"
+mlabel="peak memory [MiB]"
+mlegend=["baking", "propagation","collection"]
+tlegend=["baking", "propagation","collection","total"]
+
 # %%
 # set up the simulation parameters
 sofa_brdf = sf.read_sofa(
@@ -505,46 +535,49 @@ for is_decay in [True, False]:
 
         all_etcs =  pf.utils.concatenate_channels([
                 edc_new_vertical[i_receiver, i_band],
-                edc_rand[i_receiver, i_band],
                 edc_new_horizontal[i_receiver, i_band],
+                edc_rand[i_receiver, i_band],
                 raven[i_band]/(4*np.pi),
             ])
         if is_decay:
             edcs = pyrato.edc.schroeder_integration(all_etcs, True)
         else:
             edcs = all_etcs
-        fig = plt.figure()
+        fig, ax = create_fig2()
         ax = pf.plot.time(
             edcs[0],
-            dB=True, log_prefix=10, unit='ms', log_reference=1e-12,
+            dB=True, log_prefix=10, unit='ms', log_reference=1,
             label='BSC vertical',
             color='C1',
         )
         ax = pf.plot.time(
             edcs[2],
-            dB=True, log_prefix=10, unit='ms', log_reference=1e-12,
+            dB=True, log_prefix=10, unit='ms', log_reference=1,
             label='BSC horizontal',
             color='C2',
         )
         ax = pf.plot.time(
             edcs[1],
-            dB=True, log_prefix=10, unit='ms', log_reference=1e-12,
+            dB=True, log_prefix=10, unit='ms', log_reference=1,
             label='Random scattering',
             color='C0',
         )
         ax = pf.plot.time(
             edcs[3],
-            dB=True, log_prefix=10, unit='ms', log_reference=1e-12,
+            dB=True, log_prefix=10, unit='ms', log_reference=1,
             label='Raven',
             color='C3',
-            linestyle='--',
+            linestyle='-',
         )
 
-        plt.legend()
         ax.set_xlim((0, 150))
-        ax.set_ylim((20, 120))
 
-        ax.set_ylabel('Energy decay curve (dB)')
+        ax.set_xlabel("Time [ms]")
+        if is_decay:
+            ax.set_ylabel("Energy decay curve [dB]")
+        else:
+            ax.set_ylabel("Energy time curve [dB]")
+        ax.set_ylim([-150+40,-40+40])
         ff = frequencies_nom[i_band]
         frequency_str = f'{ff/1000:.0f}kHz' if ff >=1e3 else f'{ff:.0f}Hz'
         str_fig = 'edc' if is_decay else 'etc'
@@ -553,5 +586,7 @@ for is_decay in [True, False]:
             os.path.join(plot_path, f'facade_{str_fig}_{frequency_str}.pdf'),
             bbox_inches='tight',
         )
+        plt.legend(fontsize=8)
 
+        export_fig(fig,filename="etcs_500")
 # %%
