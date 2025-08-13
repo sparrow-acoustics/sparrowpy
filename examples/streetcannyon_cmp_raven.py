@@ -49,40 +49,34 @@ raven = pf.TimeData(
     raven[1:, 3:-2].T,
     raven[1:, 0],
 )
-
-
 custom=etcs["custom_etc"]
 diff = etcs["diffuse_etc"]
 
 print(etcs["freqs"])
 # %%
-is_decay = True
+# %matplotlib ipympl
+is_decay = False
 for iband in range(5):
     all_etcs =  pf.utils.concatenate_channels([
             custom[0, iband],
             diff[0, iband],
-            raven[iband]/(4*np.pi),
+            raven[iband]/(4*np.pi)**1,
         ])
     if is_decay:
-        edcs = pyrato.edc.schroeder_integration(all_etcs, True)
+        e_plot = pyrato.edc.schroeder_integration(all_etcs, True)
     else:
-        edcs = all_etcs
+        e_plot = all_etcs
 
     plt.figure()
-    pf.plot.time(edcs[0], dB=True, log_prefix=10,
-                label="custom",
+    pf.plot.time(e_plot, dB=True, log_prefix=10,
+                label=["custom", "diffuse", "Raven"],
                 linestyle="-")
-    pf.plot.time(edcs[1], dB=True, log_prefix=10,
-                label="diffuse",
-                linestyle="--")
-    pf.plot.time(edcs[2]/(4*np.pi), dB=True, log_prefix=10,
-                label="Raven",
-                linestyle="--")
     plt.legend()
     plt.xlabel("Time  [s]")
     if is_decay:
         plt.ylabel("Energy Decay Curve [dB]")
     else:
         plt.ylabel("Energy Time Curve [dB]")
-    plt.ylim([-150,-40])
+    plt.ylim([-120,-40])
+
 # %%
