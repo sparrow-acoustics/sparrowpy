@@ -118,23 +118,11 @@ font={
 
 plt.rcParams.update(font)
 
-def create_fig():
-    figure,ax = plt.subplots(figsize=(3,2))
-    plt.grid()
-    return figure, ax
 
 def create_fig2():
     figure,ax = plt.subplots(figsize=(5,3))
     plt.grid()
     return figure, ax
-
-def export_fig(fig, filename,out_dir=root_dir, fformat=".pdf"):
-    fig.savefig(os.path.join(out_dir,filename+fformat), bbox_inches='tight')
-
-tlabel="$$rt \\quad [\\mathrm{s}]$$"
-mlabel="peak memory [MiB]"
-mlegend=["baking", "propagation","collection"]
-tlegend=["baking", "propagation","collection","total"]
 
 # %%
 # set up the simulation parameters
@@ -160,65 +148,66 @@ def calc_plot_srand(bsc_sources, bsc_receivers, bsc, name=None):
     bsc_spec.azimuth += np.pi
     idx_spec = bsc_receivers.find_nearest(bsc_spec)[0][0]
     mask = (bsc_sources.azimuth < 1*np.pi/180) | (bsc_sources.azimuth > 359*np.pi/180)
-    spec_rand = random(
-        bsc[np.arange(bsc_sources.csize), idx_spec],
+    s_rand = random(
+        1-bsc[np.arange(bsc_sources.csize), idx_spec],
         bsc_sources)
 
     retro_rand = random(
         bsc[np.arange(bsc_sources.csize), idx_retro],
         bsc_sources)
 
-    fig = plt.figure()
+    fig, ax = create_fig2()
     ax = pf.plot.freq(
-        bsc[np.arange(bsc_sources.csize)[mask], idx_spec[mask]],
-        dB=False, color='C2', linestyle=':',
-        label='other incident directions')
-    ax = pf.plot.freq(
-        bsc[np.arange(bsc_sources.csize)[i_45], idx_spec[i_45]], 
-        dB=False, color='C1', label='45° incidence')
-    ax = pf.plot.freq(spec_rand, dB=False, color='C0', label='random incidence')
+        1-bsc[np.arange(bsc_sources.csize)[mask], idx_spec[mask]],
+        dB=False, color='C0', linestyle=':',
+        label='single incidence')
+    # ax = pf.plot.freq(
+    #     1-bsc[np.arange(bsc_sources.csize)[i_45], idx_spec[i_45]], 
+    #     dB=False, color='C1', label='45° incidence')
+    ax = pf.plot.freq(s_rand, dB=False, color='C0', label='random incidence')
 
-    ax.legend()
+    ax.legend(fontsize=8)
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(
-        handles[-3:], labels[-3:],
+        handles[-2:], labels[-2:],
     )
     ax.set_ylim((-0.05, 1))
-    ax.set_ylabel('energy ratio into specular direction')
+    ax.set_ylabel('scattering coefficient')
     if name is not None:
         fig.savefig(
             os.path.join(plot_path, f'{name}_specular.pdf'),
-            bbox_inches='tight'
-        )   
-
-    print(mask)
-    fig = plt.figure()
-    ax = pf.plot.freq(
-        bsc[np.arange(bsc_sources.csize)[mask], idx_retro[mask]],
-        dB=False, color='C2', linestyle=':',
-        label='single incident directions')
-    ax = pf.plot.freq(
-        bsc[np.arange(bsc_sources.csize)[i_45], idx_retro[i_45]], 
-        dB=False, color='C1', label='45° incidence')
-    ax = pf.plot.freq(
-        retro_rand, dB=False, color='C0',
-        label='random incidence')
-    ax.legend()
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(
-        handles[-3:], labels[-3:],
-    )
-    # ax.set_ylim((-0.05, .05))
-    ax.set_ylim((-0.05, 1))
-    ax.set_ylabel('energy ratio into retro-reflection direction')
-    # ax.set_ylabel('energy ratio into retro-reflection direction')
-    if name is not None:
-        fig.savefig(
-            os.path.join(plot_path, f'{name}_retroreflection.pdf'),
-            bbox_inches='tight'
+            bbox_inches='tight',
         )
+    return s_rand
+    # print(mask)
+    # fig, ax = create_fig2()
+    # ax = pf.plot.freq(
+    #     bsc[np.arange(bsc_sources.csize)[mask], idx_retro[mask]],
+    #     dB=False, color='C2', linestyle=':',
+    #     label='single incident directions')
+    # ax = pf.plot.freq(
+    #     bsc[np.arange(bsc_sources.csize)[i_45], idx_retro[i_45]], 
+    #     dB=False, color='C1', label='45° incidence')
+    # ax = pf.plot.freq(
+    #     retro_rand, dB=False, color='C0',
+    #     label='random incidence')
+    # ax.legend()
+    # handles, labels = ax.get_legend_handles_labels()
+    # ax.legend(
+    #     handles[-3:], labels[-3:],
+    # )
+    # # ax.set_ylim((-0.05, .05))
+    # ax.set_ylim((-0.05, 1))
+    # ax.set_ylabel('energy ratio into retro-reflection direction')
+    # # ax.set_ylabel('energy ratio into retro-reflection direction')
+    # if name is not None:
+    #     fig.savefig(
+    #         os.path.join(plot_path, f'{name}_retroreflection.pdf'),
+    #         bbox_inches='tight'
+        # )
 
-calc_plot_srand(bsc_sources, bsc_receivers, bsc, 'bsc')
+s_rand_orig = calc_plot_srand(bsc_sources, bsc_receivers, bsc, 'bsc')
+s_rand_orig._frequencies /= 8
 
 # # %%
 # plt.figure()
@@ -313,7 +302,10 @@ frequencies_nom, frequencies_out = pf.dsp.filter.fractional_octave_frequencies(
 bsc_octave = average_frequencies(
     bsc_mirrored_reduced, frequencies_out, domain='energy')
 
-calc_plot_srand(directions_bsc, directions_bsc, bsc_octave, 'bsc_mirrored_reduces_octave')
+s_rand_orig_oct = average_frequencies(
+    s_rand_orig, frequencies_out, domain='energy')
+
+s_rand_oct = calc_plot_srand(directions_bsc, directions_bsc, bsc_octave, 'bsc_mirrored_reduces_octave')
 
 
 # calc_plot_srand(directions_bsc, directions_bsc, bsc_octave)
@@ -323,13 +315,6 @@ idx_retro = directions_bsc.find_nearest(bsc_spec)[0]
 bsc_spec.azimuth += np.pi
 idx_spec = directions_bsc.find_nearest(bsc_spec)[0]
 
-s_rand = random(
-    1-bsc_octave[np.arange(directions_bsc.csize), idx_spec],
-    directions_bsc)
-
-retro_rand = random(
-    bsc_octave[np.arange(directions_bsc.csize), idx_retro],
-    directions_bsc)
 bsc_octave.freq /= np.sum(bsc_octave.freq, axis=1, keepdims=True)
 
 # %%
@@ -366,7 +351,7 @@ etc_time = etc_duration
 brdf_rand = sp.brdf.create_from_scattering(
     directions_bsc,
     directions_bsc,
-    s_rand,
+    s_rand_orig_oct,
     pf.FrequencyData(np.zeros_like(bsc_octave.frequencies), bsc_octave.frequencies),
 )
 
@@ -581,12 +566,139 @@ for is_decay in [True, False]:
         ff = frequencies_nom[i_band]
         frequency_str = f'{ff/1000:.0f}kHz' if ff >=1e3 else f'{ff:.0f}Hz'
         str_fig = 'edc' if is_decay else 'etc'
+        plt.legend(fontsize=8)
         fig.savefig(
 
             os.path.join(plot_path, f'facade_{str_fig}_{frequency_str}.pdf'),
             bbox_inches='tight',
         )
-        plt.legend(fontsize=8)
 
-        export_fig(fig,filename="etcs_500")
+# %%
+fig, ax = create_fig2()
+# ax = pf.plot.freq(
+#     s_rand_orig,
+#     dB=False, color='C0', linestyle=':',
+#     label='single incidence')
+ax = pf.plot.freq(
+    s_rand_orig_oct,
+    dB=False, color='C0', linestyle='-',
+    label='random incidence')
+ax.legend(fontsize=8)
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(
+    handles[-2:], labels[-2:],
+)
+ax.set_ylim((-0.05, 1))
+ax.set_ylabel('scattering coefficient')
+fig.savefig(
+
+    os.path.join(plot_path, 's_rand.pdf'),
+    bbox_inches='tight',
+)
+
+# plt.figure()
+# pf.plot.freq(s_rand_orig, dB=False, color='C0', label='random incidence')
+# pf.plot.freq(s_rand_orig_oct, dB=False, color='C1', label='s_rand_orig_oct')
+# # pf.plot.freq(s_rand_oct, dB=False, color='C2', label='s_rand_oct')
+
+# plt.legend(fontsize=8)
+# %%
+# plot brdf polar
+
+incident_direction = pf.Coordinates.from_spherical_colatitude(
+    0, np.pi/4, 1)
+
+i_in = directions_bsc.find_nearest(incident_direction)[0]
+
+i_out = np.where(directions_bsc.y==0)[0]
+i_out = i_out[np.argsort(directions_bsc[i_out].upper)]
+
+for iband in [-1]:
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='polar')
+    delta_angle = 0.25094759
+    ax.plot(
+        [3*np.pi/4, 3*np.pi/4], [19, 16],
+        color='C3', alpha=1,
+        label='Incident direction',
+    )
+    for i_an in range(len(i_out)):
+        center = np.pi-directions_bsc[i_out[i_an]].upper[0]
+        lower = center - delta_angle/2
+        upper = center + delta_angle/2
+
+        brdf = brdf_rand[i_in, i_out]
+        norm = np.max(brdf.freq[:, iband])
+        norm = .1
+        old = brdf.freq[i_an, iband] / norm
+        ax.plot(
+            [lower, upper], [old, old],
+            label=r'10$\times$BRDF from random-incidence', c='C1')
+        ax.plot(
+            [lower, lower], [0, old],
+            label='BRDF from random-incidence', c='C1')
+        ax.plot(
+            [upper, upper], [0, old],
+            label='BRDF from random-incidence', c='C1')
+
+    for i_an in range(len(i_out)):
+        center = np.pi-directions_bsc[i_out[i_an]].upper[0]
+        lower = center - delta_angle/2
+        upper = center + delta_angle/2
+        brdf = brdf_new[i_in, i_out]
+        norm = np.max(brdf.freq[:, iband])
+        norm = 1
+        new = brdf.freq[i_an, iband] / norm
+        ax.plot(
+            [lower, upper], [new, new],
+            label='BRDF from bidirectional', c='C0', linestyle='-')
+        ax.plot(
+            [lower, lower], [0, new],
+            label='BRDF from bidirectional', c='C0', linestyle='-')
+        ax.plot(
+            [upper, upper], [0, new],
+            label='BRDF from bidirectional', c='C0', linestyle='-')
+
+    ax.plot(
+        [0, np.pi], [10, 10],
+        color='k', alpha=1,
+        label='Incident direction',
+    )
+    ax.arrow(
+        3*np.pi/4, 19, 0, -3,
+        color='C3', alpha=1,
+        head_width=.1,
+        head_length=1,
+        linewidth=1,
+        label='Incident direction',
+    )
+    ax.arrow(
+        3*np.pi/4, 19, 0, 0,
+        color='C3', alpha=1,
+        head_width=.1,
+        head_length=1,
+        linewidth=1,
+        label='Incident direction',
+    )
+    ax.legend(fontsize=8)
+    handles, labels = ax.get_legend_handles_labels()
+    handles = np.array(handles)
+    labels = np.array(labels)
+    mask = np.zeros(len(handles), dtype=bool)
+    mask[1] = True
+    mask[-5] = True
+    mask[0] = True
+    ax.legend(
+        handles[mask], labels[mask], loc='right', bbox_to_anchor=(1.6, 0.6),
+    )
+    ff = frequencies_nom[iband]
+    frequency_str = f'{ff/1000:.0f}kHz' if ff >=1e3 else f'{ff:.0f}Hz'
+    ax.set_axis_off()
+    fig.savefig(
+        os.path.join(plot_path, f'BRDF_{frequency_str}.pdf'),
+        bbox_inches='tight', pad_inches=-0.1,
+    )
+# %%
+
+
 # %%
