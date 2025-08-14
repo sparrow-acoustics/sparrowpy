@@ -773,17 +773,20 @@ def _check_patch2patch_visibility(
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
 
-        surfid=0
-        while (visibility_matrix[i_source, i_receiver] and
-                                surfid!=len(surf_normal)):
+        if (1-np.dot(surf_normal[i_source],surf_normal[i_receiver])<1e-6):
+            visibility_matrix[i_source, i_receiver] = False
+        else:
+            surfid=0
+            while (visibility_matrix[i_source, i_receiver] and
+                                    surfid!=len(surf_normal)):
 
-            visibility_matrix[i_source, i_receiver]= _basic_visibility(
-                                                        patches_center[i_source],
-                                                        patches_center[i_receiver],
-                                                        surf_points[surfid],
-                                                        surf_normal[surfid])
+                visibility_matrix[i_source, i_receiver] = _basic_visibility(
+                                                            patches_center[i_source],
+                                                            patches_center[i_receiver],
+                                                            surf_points[surfid],
+                                                            surf_normal[surfid])
 
-            surfid+=1
+                surfid+=1
 
     return visibility_matrix
 
