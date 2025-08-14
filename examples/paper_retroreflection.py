@@ -629,11 +629,11 @@ for iband in [-1]:
 
         brdf = brdf_rand[i_in, i_out]
         norm = np.max(brdf.freq[:, iband])
-        norm = .1
+        norm = .2
         old = brdf.freq[i_an, iband] / norm
         ax.plot(
             [lower, upper], [old, old],
-            label=r'10$\times$BRDF from random-incidence', c='C1')
+            label=r'5$\times$BRDF from random-incidence', c='C1')
         ax.plot(
             [lower, lower], [0, old],
             label='BRDF from random-incidence', c='C1')
