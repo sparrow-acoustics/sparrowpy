@@ -773,7 +773,7 @@ def _check_patch2patch_visibility(
         i_source = indexes[i, 0]
         i_receiver = indexes[i, 1]
 
-        if (1-np.dot(surf_normal[i_source],surf_normal[i_receiver])<1e-6):
+        if (1-np.dot(surf_normal[i_source],surf_normal[i_receiver])<1e-4):
             visibility_matrix[i_source, i_receiver] = False
         else:
             surfid=0
