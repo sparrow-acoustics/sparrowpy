@@ -536,13 +536,14 @@ for is_decay in [True, False]:
             color='C1',
         )
         ax = pf.plot.time(
-            edcs[2],
+            edcs[1],
             dB=True, log_prefix=10, unit='ms', log_reference=1,
             label='BSC horizontal',
             color='C2',
+            linestyle='--',
         )
         ax = pf.plot.time(
-            edcs[1],
+            edcs[2],
             dB=True, log_prefix=10, unit='ms', log_reference=1,
             label='Random scattering',
             color='C0',
@@ -552,7 +553,7 @@ for is_decay in [True, False]:
             dB=True, log_prefix=10, unit='ms', log_reference=1,
             label='Raven',
             color='C3',
-            linestyle='-',
+            linestyle='--',
         )
 
         ax.set_xlim((0, 150))
@@ -700,5 +701,3 @@ for iband in [-1]:
     )
 # %%
 
-
-# %%

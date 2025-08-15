@@ -47,15 +47,16 @@ rpf.setProjectName(projectName);
 % source and receiver
 hs=1.2; %source height
 hr=1.2; %receiver height
+% scattering coefficient [0.05898381, 0.2288077 , 0.63353846, 0.78131131, 0.906805, 0.94444149]
 
 myAbsorpWall = 0 * ones(1,10);
 myScatterWall = 1 * ones(1,10);
-myScatterWall(3) = 0.18646731;
-myScatterWall(4) = 0.4809733;
-myScatterWall(5) = 0.82650344;
-myScatterWall(6) = 0.90453428;
-myScatterWall(7) = 0.95312613;
-myScatterWall(8) = 0.96773037;
+myScatterWall(3) = 0.05898381;
+myScatterWall(4) = 0.2288077;
+myScatterWall(5) = 0.63353846;
+myScatterWall(6) = 0.78131131;
+myScatterWall(7) = 0.906805;
+myScatterWall(8) = 0.94444149;
 myAbsorp = 1 * ones(1,10);
 myScatter = 0 * ones(1,10);
 
@@ -75,7 +76,7 @@ for iMat=2:nM
 end
 rpf.setMaterial(rpf.getRoomMaterialNames{1},myAbsorpWall,myScatterWall);
 
-
+% rpf.setSourceLevels(100+(10*log10(4*pi)))
 
 %% Check: Plane normals should point to the inner side of the room
 rpf.model.plotModel([], [1 2 3], 0,1)
@@ -86,8 +87,8 @@ rpf.setGenerateBRIR(1);
 rpf.setSimulationTypeRT(1);
 rpf.setSimulationTypeIS(1);
 rpf.setNumParticles(5000000);
-rpf.setFilterLength(200);
-rpf.setTimeSlotLength(2); % ms
+rpf.setFilterLength(400);
+rpf.setTimeSlotLength(1); % ms
 rpf.setISOrder_PS(0);
 rpf.disableAirAbsorption
 
@@ -119,6 +120,7 @@ hist = rpf.getHistogram_itaResult;
 hist.ptd
 %%
 histogram = hist.time;
+disp(['max histogram ' num2str(max(histogram))])
 size(histogram)
 histogram = [hist.timeVector histogram];
 histogram = [[0, rpf.freqVectorOct]; histogram];
