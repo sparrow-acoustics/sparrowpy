@@ -127,46 +127,20 @@ def run_simu(walls, source, receiver,
 
     return etc_radiosity,t
 
-def run_simu_pure(walls, source, receiver,
-             patch_size=2,
-             speed_of_sound=343.26, time_step=.002, duration=2.,
-             refl_order=50, freq=np.array([1000]),
-             file=None,
-             classical_model=False):
+def run_simu_pure(
+        walls, source, receiver,
+        patch_size=2,
+        speed_of_sound=343.26, time_step=.002, duration=2.,
+        refl_order=50,
+        file_wall=None,
+        file_ground=None):
 
     # create object
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
-    abs_wall = pf.FrequencyData(.07*np.ones_like(freq), freq)
 
-    if classical_model:
-        # set brdfs
-        s_rand, brdf_sources, brdf_receivers = get_s_rand_from_bsc(
-            file, freq_out=freq)
-
-        # create directional scattering data
-        brdf_ground = sp.brdf.create_from_scattering(
-            brdf_receivers,
-            brdf_receivers,
-            pf.FrequencyData(np.ones_like(freq), freq),
-            pf.FrequencyData(.01*np.ones_like(freq), freq))
-        brdf_walls = sp.brdf.create_from_scattering(
-            brdf_receivers,
-            brdf_receivers,
-            s_rand,
-            abs_wall)
-    else:
-        bsc,brdf_sources,brdf_receivers = get_bsc(file, freq_out=freq)
-
-        brdf_ground = sp.brdf.create_from_scattering(
-            brdf_sources,
-            brdf_receivers,
-            pf.FrequencyData(.1*np.ones_like(freq), freq),
-            pf.FrequencyData(.01*np.ones_like(freq), freq))
-        brdf_walls = sp.brdf.create_from_directional_scattering(
-                                                            source_directions=brdf_sources,
-                                                            receiver_directions=brdf_receivers,
-                                                            directional_scattering=bsc,
-                                                            absorption_coefficient=abs_wall)
+    # read brdfs
+    brdf_ground, brdf_sources, brdf_receivers = pf.io.read_sofa(file_ground)
+    brdf_walls, brdf_sources, brdf_receivers = pf.io.read_sofa(file_wall)
 
     ground_ind = np.where(np.dot(radi.walls_normal,np.array([0,0,1]))>.9)[0]
     wall_ind = np.where(
