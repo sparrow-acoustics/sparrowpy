@@ -22,7 +22,7 @@ font={
 plt.rcParams.update(font)
 
 def create_fig2():
-    figure,ax = plt.subplots(figsize=(5,3))
+    figure,ax = plt.subplots(figsize=(3,2))
     plt.grid()
     return figure, ax
 
@@ -171,7 +171,7 @@ for is_decay in [True, False]:
         ff = frequencies_nom[i_band]
         frequency_str = f'{ff/1000:.0f}kHz' if ff >=1e3 else f'{ff:.0f}Hz'
         str_fig = 'edc' if is_decay else 'etc'
-        plt.legend(fontsize=8)
+        plt.legend(fontsize=8,loc="upper right",bbox_to_anchor=(1.1, 1.2),shadow=True)
         fig.savefig(
 
             os.path.join(plot_path, f'facade_{str_fig}_{frequency_str}.pdf'),

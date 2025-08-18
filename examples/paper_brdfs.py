@@ -218,7 +218,7 @@ plt.rcParams.update(font)
 
 
 def create_fig2():
-    figure,ax = plt.subplots(figsize=(5,3))
+    figure,ax = plt.subplots(figsize=(3,2))
     plt.grid()
     return figure, ax
 
@@ -471,14 +471,14 @@ fig, ax = create_fig2()
 ax = pf.plot.freq(
     s_rand_orig_oct,
     dB=False, color='C0', linestyle='-',
-    label='random incidence')
+    label='RISC')
 ax.legend(fontsize=8)
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(
     handles[-2:], labels[-2:],
 )
 ax.set_ylim((-0.05, 1))
-ax.set_ylabel('scattering coefficient')
+ax.set_ylabel('$s_\mathrm{rand}$')
 fig.savefig(
 
     os.path.join(plot_path, 's_rand.pdf'),
@@ -523,13 +523,13 @@ for iband in [-1]:
         old = brdf.freq[i_an, iband] / norm
         ax.plot(
             [lower, upper], [old, old],
-            label=r'5$\times$BRDF from random-incidence', c='C1')
+            label=r'5$\times$RISC-based BRDF', c='C1')
         ax.plot(
             [lower, lower], [0, old],
-            label='BRDF from random-incidence', c='C1')
+            label='RISC-based BRDF', c='C1')
         ax.plot(
             [upper, upper], [0, old],
-            label='BRDF from random-incidence', c='C1')
+            label='RISC-based BRDF', c='C1')
 
     for i_an in range(len(i_out)):
         center = np.pi-directions_bsc[i_out[i_an]].upper[0]
@@ -541,13 +541,13 @@ for iband in [-1]:
         new = brdf.freq[i_an, iband] / norm
         ax.plot(
             [lower, upper], [new, new],
-            label='BRDF from bidirectional', c='C0', linestyle='-')
+            label='BSC-based BRDF', c='C0', linestyle='-')
         ax.plot(
             [lower, lower], [0, new],
-            label='BRDF from bidirectional', c='C0', linestyle='-')
+            label='BSC-based BRDF', c='C0', linestyle='-')
         ax.plot(
             [upper, upper], [0, new],
-            label='BRDF from bidirectional', c='C0', linestyle='-')
+            label='BSC-based BRDF', c='C0', linestyle='-')
 
     ax.plot(
         [0, np.pi], [10, 10],
@@ -557,19 +557,19 @@ for iband in [-1]:
     ax.arrow(
         3*np.pi/4, 19, 0, -3,
         color='C3', alpha=1,
-        head_width=.1,
-        head_length=1,
+        head_width=.07,
+        head_length=1.2,
         linewidth=1,
         label='Incident direction',
     )
-    ax.arrow(
-        3*np.pi/4, 19, 0, 0,
-        color='C3', alpha=1,
-        head_width=.1,
-        head_length=1,
-        linewidth=1,
-        label='Incident direction',
-    )
+    # ax.arrow(
+    #     3*np.pi/4, 19, 0, 0,
+    #     color='C3', alpha=1,
+    #     head_width=.1,
+    #     head_length=1,
+    #     linewidth=1,
+    #     label='Incident direction',
+    # )
     ax.legend(fontsize=8)
     handles, labels = ax.get_legend_handles_labels()
     handles = np.array(handles)
