@@ -5,6 +5,7 @@ import sparrowpy as sp
 import pyfar as pf
 import tracemalloc
 import pyrato
+import sofar as sf
 import time
 from reduce_s_d import get_bsc, get_s_rand_from_bsc
 
@@ -139,8 +140,13 @@ def run_simu_pure(
     radi = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
 
     # read brdfs
-    brdf_ground, brdf_sources, brdf_receivers = pf.io.read_sofa(file_ground)
-    brdf_walls, brdf_sources, brdf_receivers = pf.io.read_sofa(file_wall)
+    sofa_ground = sf.read_sofa(file_ground)
+    brdf_ground, brdf_sources, brdf_receivers = pf.io.convert_sofa(sofa_ground)
+    
+    sofa_wall = sf.read_sofa(file_wall)
+    brdf_walls, brdf_sources, brdf_receivers = pf.io.convert_sofa(sofa_wall)
+    brdf_sources.weights = sofa_wall.SourceWeights
+    brdf_receivers.weights = sofa_wall.ReceiverWeights
 
     ground_ind = np.where(np.dot(radi.walls_normal,np.array([0,0,1]))>.9)[0]
     wall_ind = np.where(

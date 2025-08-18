@@ -57,8 +57,8 @@ tests = [
     "watermark",
     "ipykernel",
     "sparrowpy[fast]",
-    "sparrowpy[blender]",
     "nbmake",
+    "sparrowpy[examples]"
 ]
 docs = [
     "sphinx",

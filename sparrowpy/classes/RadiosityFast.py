@@ -1394,8 +1394,8 @@ if numba is not None:
     _energy_exchange_init_energy = numba.njit(cache=True,parallel=True)(_energy_exchange_init_energy)
     _collect_receiver_energy = numba.njit(cache=True,)(_collect_receiver_energy)
     _energy_exchange = numba.njit(cache=True,)(_energy_exchange)
-    _form_factors_with_directivity_dim = numba.njit(cache=True,parallel=True)(
-        _form_factors_with_directivity_dim)
+    # _form_factors_with_directivity_dim = numba.njit(cache=True,parallel=True)(
+    #     _form_factors_with_directivity_dim)
     _form_factors_with_directivity = numba.njit(cache=True,parallel=True)(
         _form_factors_with_directivity)
     get_scattering_data_receiver_index = numba.njit(cache=True,)(
