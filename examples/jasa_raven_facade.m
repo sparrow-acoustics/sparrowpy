@@ -49,14 +49,19 @@ hs=1.2; %source height
 hr=1.2; %receiver height
 % scattering coefficient [0.05898381, 0.2288077 , 0.63353846, 0.78131131, 0.906805, 0.94444149]
 
-myAbsorpWall = 0 * ones(1,10);
+myAbsorpWall = 0.07 * ones(1,10);
 myScatterWall = 1 * ones(1,10);
+myAbsorpWall(1) = 1;
+myAbsorpWall(2) = 1;
 myScatterWall(3) = 0.05898381;
 myScatterWall(4) = 0.2288077;
 myScatterWall(5) = 0.63353846;
 myScatterWall(6) = 0.78131131;
 myScatterWall(7) = 0.906805;
 myScatterWall(8) = 0.94444149;
+myAbsorpWall(9) = 1;
+myAbsorpWall(10) = 1;
+
 myAbsorp = 1 * ones(1,10);
 myScatter = 0 * ones(1,10);
 
@@ -110,7 +115,7 @@ diff_r = receiver-facade;
 distance = diff_s.r+diff_r.r;
 delays = distance/343;
 direct = source-receiver;
-direct.r/343
+direct.r/343;
 delays*1000
 rpf.plotModel;
 
@@ -125,5 +130,5 @@ size(histogram)
 histogram = [hist.timeVector histogram];
 histogram = [[0, rpf.freqVectorOct]; histogram];
 size(histogram)
-writematrix(histogram, 'raven_facade.csv');
+writematrix(histogram, 'out/raven_facade.csv');
 

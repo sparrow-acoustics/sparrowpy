@@ -41,12 +41,12 @@ myAbsorpWall = 0.07 * ones(1,10);
 myScatterWall = 0 * ones(1,10);
 myAbsorpWall(1) = 1;
 myAbsorpWall(2) = 1;
-myScatterWall(3) = 0.18646731;
-myScatterWall(4) = 0.4809733;
-myScatterWall(5) = 0.82650344;
-myScatterWall(6) = 0.90453428;
-myScatterWall(7) = 0.95312613;
-myScatterWall(8) = 0.96773037;
+myScatterWall(3) = 0.05898381;
+myScatterWall(4) = 0.2288077;
+myScatterWall(5) = 0.63353846;
+myScatterWall(6) = 0.78131131;
+myScatterWall(7) = 0.906805;
+myScatterWall(8) = 0.94444149;
 myAbsorpWall(9) = 1;
 myAbsorpWall(10) = 1;
 
@@ -108,7 +108,7 @@ size(histogram)
 histogram = [hist.timeVector histogram];
 histogram = [[0, rpf.freqVectorOct]; histogram];
 size(histogram)
-writematrix(histogram, 'raven_streetcanyon.csv');
+writematrix(histogram, 'out/raven_streetcanyon.csv');
 
 
 %%
