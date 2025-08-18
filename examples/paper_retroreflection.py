@@ -135,27 +135,27 @@ for is_decay in [True, False]:
         ax = pf.plot.time(
             edcs[0],
             dB=True, log_prefix=10, unit='ms', log_reference=1,
-            label='sparrowpy: bidirectional, vertical profile',
+            label='BSC-based BRDF, vertical profile',
             color='C1',
         )
         ax = pf.plot.time(
             edcs[1],
             dB=True, log_prefix=10, unit='ms', log_reference=1,
-            label='sparrowpy: bidirectional, horizontal profile',
+            label='BSC-based BRDF, horizontal profile',
             color='C2',
             linestyle='--',
         )
         ax = pf.plot.time(
             edcs[2],
             dB=True, log_prefix=10, unit='ms', log_reference=1,
-            label='sparrowpy: random incidence',
+            label='RISC-based BRDF',
             color='C0',
             linestyle=':',
         )
         ax = pf.plot.time(
             edcs[3],
             dB=True, log_prefix=10, unit='ms', log_reference=1,
-            label='RAVEN: random incidence',
+            label='RAVEN reference (RISC)',
             color='C3',
             linestyle='--',
         )
