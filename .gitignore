@@ -129,3 +129,5 @@ raven_sim/
 
 # ignore working version blender files
 *.blend1
+figs/*
+examples/jasa_paper
