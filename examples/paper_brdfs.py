@@ -209,7 +209,7 @@ font={
     "text.usetex": True,
     "font.family": "serif",
     "font.sans-serif": "Helvetica",
-    "font.size": 12,
+    "font.size": 10,
 }
 
 
@@ -273,7 +273,7 @@ def calc_plot_srand(bsc_sources, bsc_receivers, bsc, name=None):
     ax.set_ylabel('scattering coefficient')
     if name is not None:
         fig.savefig(
-            os.path.join(plot_path, f'{name}_specular.pdf'),
+            os.path.join(plot_path, f'{name}_specular.eps'),
             bbox_inches='tight',
         )
     return s_rand
@@ -300,7 +300,7 @@ def calc_plot_srand(bsc_sources, bsc_receivers, bsc, name=None):
     # # ax.set_ylabel('energy ratio into retro-reflection direction')
     # if name is not None:
     #     fig.savefig(
-    #         os.path.join(plot_path, f'{name}_retroreflection.pdf'),
+    #         os.path.join(plot_path, f'{name}_retroreflection.eps'),
     #         bbox_inches='tight'
         # )
 
@@ -476,12 +476,13 @@ ax.legend(fontsize=8)
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(
     handles[-2:], labels[-2:],
+    fontsize=8,
 )
 ax.set_ylim((-0.05, 1))
 ax.set_ylabel('$s_\mathrm{rand}$')
 fig.savefig(
 
-    os.path.join(plot_path, 's_rand.pdf'),
+    os.path.join(plot_path, 'Figure8b.eps'),
     bbox_inches='tight',
 )
 
@@ -578,14 +579,14 @@ for iband in [-1]:
     mask[1] = True
     mask[-5] = True
     mask[0] = True
-    ax.legend(
-        handles[mask], labels[mask], loc='right', bbox_to_anchor=(1.6, 0.6),
-    )
+    ax.legend([])
+   #     handles[mask], labels[mask], loc='right', bbox_to_anchor=(1.6, 0.6),
     ff = frequencies_nom[iband]
     frequency_str = f'{ff/1000:.0f}kHz' if ff >=1e3 else f'{ff:.0f}Hz'
     ax.set_axis_off()
+    ax.set_thetamax(180)
     fig.savefig(
-        os.path.join(plot_path, f'BRDF_{frequency_str}.pdf'),
+        os.path.join(plot_path, f'BRDF_{frequency_str}.eps'),
         bbox_inches='tight', pad_inches=-0.1,
     )
 # %%

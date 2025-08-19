@@ -16,7 +16,7 @@ font={
     "text.usetex": True,
     "font.family": "serif",
     "font.sans-serif": "Helvetica",
-    "font.size": 12,
+    "font.size": 10,
 }
 
 plt.rcParams.update(font)
@@ -174,7 +174,7 @@ for is_decay in [True, False]:
         plt.legend(fontsize=8,loc="upper right",bbox_to_anchor=(1.1, 1.2),shadow=True)
         fig.savefig(
 
-            os.path.join(plot_path, f'facade_{str_fig}_{frequency_str}.pdf'),
+            os.path.join(plot_path, f'facade_{str_fig}_{frequency_str}.eps'),
             bbox_inches='tight',
         )
 # %%
