@@ -1,4 +1,3 @@
-
 """Runs sparrowpy simulation."""
 import numpy as np
 import sparrowpy as sp
@@ -61,7 +60,7 @@ def run_simu_mem(walls, source, receiver,
     mem_exchange = tracemalloc.get_traced_memory()
     tracemalloc.reset_peak()
 
-    etc_radiosity = radi.collect_energy_receiver_mono(receivers=receiver)
+    _ = radi.collect_energy_receiver_mono(receivers=receiver)
 
 
     mem_collect = tracemalloc.get_traced_memory()
