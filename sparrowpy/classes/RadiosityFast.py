@@ -10,6 +10,7 @@ try:
 except ImportError:
     numba = None
     prange = range
+import warnings
 
 
 class DirectionalRadiosityFast():
@@ -683,6 +684,78 @@ class DirectionalRadiosityFast():
         times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
 
+
+    def collect_energy_at_spherical_detector(
+        self,
+        receivers,               # pf.Coordinates, cshape (R,)
+        detector_sphere,         # pf.Coordinates, cshape (D,)
+        direct_sound=False,
+    ):
+        """
+        Collect energy per detector direction for each receiver.
+
+        Returns
+        -------
+        etc : pf.TimeData
+            data.shape == (R, D, B, S)  (receivers, dirs, bins, samples)
+        """
+        # --- detector KD-tree ---
+        det_dirs = detector_sphere.get_cart()                      # (D,3)
+        det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)
+        det_tree = cKDTree(det_dirs)
+        D = det_dirs.shape[0]
+
+        # --- geometry / sizes ---
+        rec_xyz = receivers.get_cart()                             # (R,3)
+        patch_centers = self.patches_center                        # (P,3)
+
+        # Patchwise energy for ALL receivers via public API: (R,P,B,S)
+        td_patch = self.collect_energy_receiver_patchwise(receivers)
+        data = td_patch.time
+        R, P, B, S = data.shape
+
+        out = np.zeros((R, D, B, S), dtype=data.dtype)
+
+        # --- bin patches -> detector dirs per receiver ---
+        eps = 1e-9
+        for r in range(R):
+            v = rec_xyz[r] - patch_centers                         # (P,3)
+            norms = np.linalg.norm(v, axis=1)                      # (P,)
+            if (norms < eps).any():
+                warnings.warn("Some patch->receiver vectors were clipped.", stacklevel=2)
+            u = v / np.maximum(norms, eps)[:, None]                # (P,3)
+            _, p2d = det_tree.query(u, k=1)                        # (P,)
+            np.add.at(out[r], (p2d, slice(None), slice(None)), data[r])  # (D,B,S) += (P,B,S)
+
+        # --- direct sound for ALL receivers at once ---
+        if direct_sound:
+            ds_all, n_delay_all = self.calculate_direct_sound(receivers)  # (R,B), (R,)
+
+            # nearest detector dir for source->receiver direction, batched
+            if isinstance(self._source, pf.Coordinates):
+                src = self._source.get_cart()[0]
+            else:
+                src = np.asarray(self._source.position, float).reshape(3)
+
+            svec = rec_xyz - src                                    # (R,3)
+            snorm = np.linalg.norm(svec, axis=1)
+            if (snorm < eps).any():
+                warnings.warn("Some source->receiver vectors were clipped.", stacklevel=2)
+            sdir = svec / np.maximum(snorm, eps)[:, None]           # (R,3)
+            d_idx_all = det_tree.query(sdir, k=1)[1]                # (R,)
+
+            # time indices per receiver
+            tt = np.clip(n_delay_all, 0, S - 1).astype(int)         # (R,)
+            rr = np.arange(R)
+
+            # Scatter-add across receivers and bins (shape (R,B))
+            np.add.at(out, (rr, d_idx_all, slice(None), tt), ds_all)
+
+        # wrap result with the same time axis
+        return pf.TimeData(out, td_patch.times)
+
+
+
     def _collect_energy_patches(
             self, receiver_pos,
             propagation_fx=False):
@@ -734,8 +807,7 @@ class DirectionalRadiosityFast():
 
             for k in range(n_patches):
                 E_matrix[k,:]= (
-                    self._energy_exchange_etc[k,int(receiver_idx[k]),:]
-                                                    * patch_receiver_energy[k])
+                    self._energy_exchange_etc[k,int(receiver_idx[k]),:] * patch_receiver_energy[k])
 
             if propagation_fx:
                 # accumulate the patch energies towards the receiver
