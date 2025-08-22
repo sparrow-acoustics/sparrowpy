@@ -10,10 +10,34 @@ However, in a commitment to the validation of the paper results, the authors rec
 
 Installation
 ============
-**NOTE:** the notebook examples will not perform correctly, unless the installation is perfectly followed. Since sparrowpy's development is continuous, the exact install version (1.0.0) must be respected
+**NOTE:** the notebook examples will not perform correctly, unless the installation is perfectly followed. Since sparrowpy's development is continuous, the exact install version (1.0.0) must be respected. The performance of the python scripts may also be affected unless the same dependencies are installed.
 
+### Requirements
+In order to run the examples, you must have Python=3.11 installed on your machine. The authors only guarantee functionality for this version.
 
-Getting Started
+### Environment
+We recommend the user create a local virtual environment and install the dependencies. This allows all examples to be run locally in the user's machine.
+
+**[Installation using virtualenv and pip]**
+
+1. Open a terminal window in the current directory.
+2. Input the following line to create your virtual environment in a local directory ``.venv/``:
+```
+python -m venv .venv
+```
+or, to create your environment with a specific version of python
+```
+path/to/the/desired/python/install/python.exe -m venv .venv
+```
+3. Then, the dependencies for the virtual environment should be installed. We recommend using the following to install the requirements used for the paper:
+```
+pip install -r requirements.txt
+```
+4. Done!
+
+In case issues arise
+
+Examples
 ===============
 These materials contain a set of jupyter notebooks which document the step-by-step simulations used to achieve the results of the application examples described in the paper. The prefixes of the notebook examples map to the relevant paper sections. 
 
