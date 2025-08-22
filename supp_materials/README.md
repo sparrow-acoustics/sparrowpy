@@ -10,7 +10,7 @@ However, in a commitment to the validation of the paper results, the authors rec
 
 Installation
 ============
-**NOTE:** the notebook examples will not perform correctly, unless
+**NOTE:** the notebook examples will not perform correctly, unless the installation is perfectly followed. Since sparrowpy's development is continuous, the exact install version (1.0.0) must be respected
 
 
 Getting Started
@@ -56,3 +56,18 @@ Note that some errors may occur, if the simulation output dependencies are not r
 
 Other content
 =============
+
+- ``utils/``
+-- This folder contains internal methods used in the different examples.
+    - [``utils/brdf_handling.py``](utils/brdf_handling.py) -- This file contains internal methods which handle the BSC spatial definition for the BRDF generation. Some formulas from the paper's Appendix are also implemented here.
+    - [``utils/run_simu.py``](utils/run_simu.py) -- This file contains specific methods used for complete sparrowpy simulations. The different methods include specific implementations computational performance measurement, and simulation with specific BRDF assignment from file.
+    - [``utils/fig_formatting.py``](utils/fig_formatting.py) -- Methods for formatting and export of figures in the same style as the paper.
+
+- ``resources/`` -- Includes datasets required to run the different examples.
+    - ``resources/paper/`` -- Includes the original datasets used in the paper.
+        - ``brdf_ground.sofa`` -- BRDF data for the ground surface in the street canyon simulation (Section VI.B.1)
+        - ``brdf_walls_BSC.sofa`` -- BSC-based BRDF data for the retro-reflective façade application example and the walls of the street canyon example (Sections VI.A and VI.B.1, respectively) 
+        - ``brdf_walls_RISC.sofa`` -- RISC-based BRDF data for the retro-reflective façade application example and the walls of the street canyon example (Sections VI.A and VI.B.1, respectively) 
+
+- ``figures/`` -- Includes all the figures used in the paper, following the same naming convention.
+    - **NOTE:** Figures exported by the examples will overwrite the existing figures, regardless of the origin of the datasets, unless their names are changed in the code. [``utils/fig_formatting.py``](utils/fig_formatting.py) can be changed to change formatting and export directory type.
