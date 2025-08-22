@@ -2,11 +2,11 @@ Introduction
 ============
 This folder containts the supplementary materials for the article Fatela, J., Heimes, A., Vorländer, M., Massimiliano, M. and Maffei, L. (2025). “Acoustic radiosity simulation with custom bidirectional reflectance distribution implementation in 3-D.", Journal of the Acoustical Society of America, **?**, 2025, **?**, pp. **?**.
 
-The authors recommend an attentive reading of this paper before exploring these materials: many of the concepts used here are only explained in the article.
+The authors recommend an attentive reading of this paper before exploring these materials: many of the concepts used here are only explained in the article. This documentation also refers extensively to specific sections in the paper.
 
 The original datasets used for the paper are accessible in folder ``resources/paper/``, and the original Figures can be found in ``figures/``.
 
-However, in a commitment to the validation of the paper results, the authors recommend exploring and running the different Jupyter notebooks (``.ipynb``) contained in the head directory. For this, a special installation is necessary.
+However, in a commitment to the validation of the paper results, the authors recommend exploring and running the different Jupyter notebooks (``.ipynb``) contained in the head directory. For this, a special installation is necessary (see next section). Some acquaintance with the Python programming language is needed for thorough understanding of these materials. 
 
 Installation
 ============
@@ -65,9 +65,15 @@ Other content
 
 - ``resources/`` -- Includes datasets required to run the different examples.
     - ``resources/paper/`` -- Includes the original datasets used in the paper.
-        - ``brdf_ground.sofa`` -- BRDF data for the ground surface in the street canyon simulation (Section VI.B.1)
-        - ``brdf_walls_BSC.sofa`` -- BSC-based BRDF data for the retro-reflective façade application example and the walls of the street canyon example (Sections VI.A and VI.B.1, respectively) 
-        - ``brdf_walls_RISC.sofa`` -- RISC-based BRDF data for the retro-reflective façade application example and the walls of the street canyon example (Sections VI.A and VI.B.1, respectively) 
+        - ``resources\paper\triangle_sim_optimal.s_d.sofa`` -- raw BSC simulation data for the triangular pattern cross-section surface (Appendix).
+        - ``brdf_ground.sofa`` -- BRDF data for the ground surface in the street canyon simulation (Section VI.B.1).
+        - ``brdf_walls_BSC.sofa`` -- BSC-based BRDF data for the retro-reflective façade application example and the walls of the street canyon example (Sections VI.A and VI.B.1, respectively).
+        - ``brdf_walls_RISC.sofa`` -- RISC-based BRDF data for the retro-reflective façade application example and the walls of the street canyon example (Sections VI.A and VI.B.1, respectively).
+        - ``\resources\paper\ETCs_psize3.far`` -- ETC data for the sparrowpy simulations of the street canyon application example (Section VI.B.1). *This data respects only to results given the specific simulation parameters stipulated in the paper*.
+        - ``resources\paper\inf_plane_data.csv`` -- Contains simulation output data for the infinite diffuse plane cases (Section V).
+        - ``resources\paper\street_canyon_perf.json`` -- Contains the raw computational performance measurement data respective to the street canyon simulation (Section VI.B.2).
+        - ``resources\paper\raven_facade.csv`` -- ray-tracing ([RAVEN](https://www.virtualacoustics.org/RAVEN/)) simulation output data of the retro-reflective façade application example (Section VI.A).
+        - ``resources\paper\streetcanyon_retro.csv.csv`` -- ray-tracing ([RAVEN](https://www.virtualacoustics.org/RAVEN/)) simulation output data of the retro-reflective street canyon application example (Section VI.B.1).
 
 - ``figures/`` -- Includes all the figures used in the paper, following the same naming convention.
     - **NOTE:** Figures exported by the examples will overwrite the existing figures, regardless of the origin of the datasets, unless their names are changed in the code. [``utils/fig_formatting.py``](utils/fig_formatting.py) can be changed to change formatting and export directory type.
