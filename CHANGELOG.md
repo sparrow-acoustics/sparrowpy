@@ -16,6 +16,7 @@ This is a major release, so backwards compatibility is not guaranteed.
 - Improved form-factor calculation (#77, #100)
 - Improved test performance (#99)
 - Updated icons (#87)
+- Replaced HISTORY.rst by CHANGELOG.md (#117)
 
 ### Removed
 
