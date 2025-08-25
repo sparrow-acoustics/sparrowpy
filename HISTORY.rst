@@ -18,6 +18,7 @@ Changed
 * Add a note on a known issue with the `DirectionalRadiosityFast` class for
   non-perfectly Lambertian surfaces (#108)
 * improve ci testing and release on Github Actions (#114, #115)
+* deprecate python 3.9 support (#116)
 
 0.1.0 (2025-03-18)
 ------------------
