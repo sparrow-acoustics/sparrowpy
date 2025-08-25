@@ -76,7 +76,7 @@ Documentation = "https://sparrowpy.readthedocs.io/"
 Download = "https://pypi.org/project/sparrowpy/"
 Homepage = "https://pyfar.org/"
 Source = "https://github.com/sparrow-acoustics/sparrowpy"
-Changelog = "https://github.com/sparrow-acoustics/sparrowpy/blob/main/HISTORY.rst"
+Changelog = "https://github.com/sparrow-acoustics/sparrowpy/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
