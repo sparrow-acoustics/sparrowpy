@@ -2,7 +2,7 @@
 History
 =======
 
-0.1.1 (2025-08-25)
+0.1.1 (2025-08-22)
 ------------------
 
 * Fix wrong definition of the brdf calculation in the `brdf` module (#104)
