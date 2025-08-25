@@ -1,6 +1,8 @@
 name: pytest
 
-on: [push]
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
 
 jobs:
   pytest_blender:
@@ -92,6 +94,7 @@ jobs:
             make html SPHINXOPTS="-W"
 
   pytest:
+    if: github.event.pull_request.merged == true
     needs: [build_docs, test_examples, ruff]
     runs-on: ubuntu-latest
     strategy:
