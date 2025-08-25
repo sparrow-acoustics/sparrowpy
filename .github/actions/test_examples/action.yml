@@ -1,0 +1,22 @@
+name: 'test_examples'
+description: 'test examples'
+inputs:
+  python-version:
+    description: 'The Python version'
+    required: false
+    default: '3.11'
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install ".[tests,docs,blender]"
+    - name: Test with examples and nbmake using pytest
+      run: |
+          pytest --nbmake examples/*.ipynb
