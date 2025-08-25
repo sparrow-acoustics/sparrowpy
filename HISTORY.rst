@@ -17,7 +17,7 @@ Added
 Changed
 ^^^^^^^
 
-* Improved API for RadiosityFast (#70, #97)
+* Improved API and documentation for RadiosityFast (#70, #97)
 * Improved form-factor calculation (#77, #100)
 * Improved test performance (#99)
 * Updated icons (#87)
