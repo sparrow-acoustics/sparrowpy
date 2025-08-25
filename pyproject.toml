@@ -3,7 +3,8 @@ name = "sparrowpy"
 version = "0.1.1"
 description = "Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [
     { name = "The sparrowpy developers" },
@@ -17,7 +18,6 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
