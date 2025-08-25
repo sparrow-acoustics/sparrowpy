@@ -8,8 +8,8 @@ jobs:
   pytest_blender:
     runs-on: ubuntu-latest
     steps:
-      - name: run pytest with blender
-        uses: ./.github/actions/pytest
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/pytest
         with:
           blender: true
 
@@ -17,19 +17,19 @@ jobs:
     needs: [pytest_blender]
     runs-on: ubuntu-latest
     steps:
-      - name: run examples
-        uses: ./.github/actions/test_examples
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/test_examples
 
   linting:
     needs: [pytest_blender]
     runs-on: ubuntu-latest
     steps:
-      - name: run linting
-        uses: ./.github/actions/linting
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/linting
 
   build_docs:
     needs: [pytest_blender]
     runs-on: ubuntu-latest
     steps:
-      - name: run build_docs
-        uses: ./.github/actions/build_docs
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build_docs
