@@ -33,10 +33,6 @@ Geometry import via blender or STL files will be supported in a future release, 
 
     pip install bpy
 
-to show progress bars install tqdm
-
-    pip install tqdm
-
 by default these packages are not installed
 
 Troubleshooting

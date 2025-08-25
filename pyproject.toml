@@ -37,7 +37,6 @@ dependencies = [
 [project.optional-dependencies]
 blender = ['bpy',]
 fast = ['numba',]
-progress = ['tqdm']
 deploy = [
     "twine",
     "wheel",
