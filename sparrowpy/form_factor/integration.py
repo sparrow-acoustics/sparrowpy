@@ -27,11 +27,14 @@ def load_stokes_entries(
         f function value matrix (n_boundary_points_i , n_boundary_points_j)
 
     """
-    form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)))
+    eps=1e-10
+    form_mat = eps*np.ones((len(i_bpoints) , len(j_bpoints)))
 
     for i in prange(i_bpoints.shape[0]):
         for j in prange(j_bpoints.shape[0]):
-            form_mat[i][j] = np.log(np.linalg.norm(i_bpoints[i]-j_bpoints[j]))
+            rs = (np.linalg.norm(i_bpoints[i]-j_bpoints[j]))**2
+            if rs > eps:
+                form_mat[i][j] = rs
 
     return form_mat
 
@@ -72,7 +75,7 @@ def stokes_integration(
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
                                                          npoints=5)
     j_bpoints, j_conn = _sample_boundary_regular(patch_j,
-                                                         npoints=5)
+                                                         npoints=3)
 
     subsecj = np.zeros((j_conn.shape[1]))
     subseci = np.zeros((i_conn.shape[1]))
@@ -97,8 +100,9 @@ def stokes_integration(
                     for k in range(len(segj)):
                         subsecj[k] = form_mat[i][segj[k]]
 
-                    inner_integral[i][dim]+=_newton_cotes_4th(xj,subsecj)
-
+                    # analytical integration of the approx polynomials
+                    inner_integral[i][dim]+=_first_integration_analytical(x=xj,
+                                                                         rsquared=subsecj)
 
 
         # integrate previously computed integral over patch i
@@ -229,66 +233,6 @@ def nusselt_analog(surf_origin, surf_normal,
 
     return big_poly + hand*curved_area
 
-def nusselt_integration(patch_i: np.ndarray, patch_j: np.ndarray,
-                        patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
-                        nsamples=2, random=False) -> float:
-    """Estimate the form factor based on the Nusselt analogue.
-
-    Integrates the differential form factor (Nusselt analogue output)
-    over the surface of the source patch
-
-    Parameters
-    ----------
-    patch_i: np.ndarray
-        vertex coordinates of the source patch
-
-    patch_j: np.ndarray
-        vertex coordinates of the receiver patch
-
-    patch_i_normal: np.ndarray
-        source patch normal (3,)
-
-    patch_j_normal: np.ndarray
-        receiver patch normal (3,)
-
-    patch_i_area: float
-        source patch area
-
-    patch_j_area: float
-        receiver patch area
-
-    nsamples: int
-        number of receiver surface samples for integration
-
-    random: bool
-        determines the distribution of the samples on patch_i surface
-        if True, the samples are randomly distributed in a uniform way
-        if False, a regular sampling of the surface is performed
-
-    Returns
-    -------
-    out: float
-        form factor between patches i and j
-
-    """
-    if random:
-        p0_array = _surf_sample_random(patch_i,nsamples)
-    else:
-        p0_array = _surf_sample_regulargrid(patch_i,nsamples)
-
-    out = 0
-
-    for i in prange(p0_array.shape[0]):
-        out += nusselt_analog( surf_origin=p0_array[i],
-                               surf_normal=patch_i_normal,
-                               patch_points=patch_j,
-                               patch_normal=patch_j_normal )
-
-    out *= 1 / ( np.pi * len(p0_array) )
-
-    return out
-
-
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 ### point-to-patch and patch-to-point
@@ -381,7 +325,6 @@ def _poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     return b
 
-
 def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
     """Integrate a polynomial curve.
 
@@ -410,6 +353,48 @@ def _poly_integration(c: np.ndarray, x: np.ndarray)-> float:
         out -= c[i] * x[0]**(len(c)-i) / (len(c)-i)
 
     return out
+
+def _first_integration_analytical(x: np.ndarray,
+                                 rsquared: np.ndarray):
+    """Calculate first integral analytically."""
+
+    a = np.zeros((2,))
+    g = np.zeros((2,))
+
+    a=np.log(np.sqrt(rsquared))*x
+
+    poly_factors = _poly_estimation_Lagrange(x=x,y=rsquared)
+
+    poly_factors[poly_factors==0]=1e-14
+
+    g = _g_integral(abc=poly_factors,x=x)
+
+    integral = a+g
+
+    return integral[-1]-integral[0]
+
+def _g_integral(abc:np.ndarray, x:np.ndarray):
+    """Calculate second half of integral."""
+
+    g = np.empty_like(x)
+    a = abc[0]
+    b = abc[1]
+    c = abc[2]
+
+    k = 4*a*c-b**2
+    kk=a*x**2+b*x+c
+    if k<=0:
+        k=1e-20
+
+    kk[kk<=0]=1e-20
+
+    A = 2*np.sqrt(k)
+    B = np.arctan((2*a*x+b)/np.sqrt(k))
+    C = b*np.log(kk)-4*a*x
+
+    g = (A*B+C)/4*a
+
+    return g
 
 ################# surface areas
 
@@ -652,12 +637,13 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
 
 if numba is not None:
     pt_solution = numba.njit(parallel=True)(pt_solution)
-    nusselt_integration = numba.njit(parallel=False)(nusselt_integration)
     stokes_integration = numba.njit(parallel=False)(stokes_integration)
     nusselt_analog = numba.njit(parallel=False)(nusselt_analog)
     load_stokes_entries = numba.njit(parallel=True)(load_stokes_entries)
     _poly_estimation_Lagrange = numba.njit()(_poly_estimation_Lagrange)
     _poly_integration = numba.njit()(_poly_integration)
+    _first_integration_analytical = numba.njit()(_first_integration_analytical)
+    _g_integral = numba.njit()(_g_integral)
     _surf_sample_random = numba.njit()(_surf_sample_random)
     _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
