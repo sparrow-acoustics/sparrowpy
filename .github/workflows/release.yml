@@ -18,29 +18,7 @@ jobs:
         with:
           blender: true
 
-  test_examples:
-    needs: [pytest_blender]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/test_examples
-
-  linting:
-    needs: [pytest_blender]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/linting
-
-  build_docs:
-    needs: [pytest_blender]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/build_docs
-
   pytest_no_blender:
-    needs: [build_docs, test_examples, linting]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -52,9 +30,30 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           blender: false
+          
+  test_examples:
+    needs: [pytest_blender, pytest_no_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/test_examples
+
+  linting:
+    needs: [pytest_blender, pytest_no_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/linting
+
+  build_docs:
+    needs: [pytest_blender, pytest_no_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build_docs
+
 
   details:
-    needs: [pytest_no_blender]
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.release.outputs.new_version }}
@@ -68,8 +67,8 @@ jobs:
         run: |
           if [ "${{ github.ref_type }}" = "tag" ]; then
             TAG_NAME=${GITHUB_REF#refs/tags/}
-            NEW_VERSION=$(echo $TAG_NAME | awk -F'-' '{print $1}')
-            SUFFIX=$(echo $TAG_NAME | grep -oP '[a-z]+[0-9]+' || echo "")
+            NEW_VERSION=$(echo $TAG_NAME | awk -F'-' '{print substr($1,2)}')
+            SUFFIX=$(echo $NEW_VERSION | grep -oP '[a-z]+[0-9]+' || echo "")
             echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
             echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
             echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
@@ -82,7 +81,7 @@ jobs:
           fi
 
   check_pypi:
-    needs: details
+    needs: [details]
     runs-on: ubuntu-latest
     steps:
       - name: Fetch information from PyPI
@@ -137,7 +136,7 @@ jobs:
 
   pypi_publish:
     name: Upload release to PyPI
-    needs: [setup_and_build, details]
+    needs: [setup_and_build, details, test_examples, linting, build_docs]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -153,7 +152,7 @@ jobs:
 
   github_release:
     name: Create GitHub Release
-    needs: [setup_and_build, details]
+    needs: [setup_and_build, details, test_examples, linting, build_docs]
     runs-on: ubuntu-latest
     permissions:
       contents: write
