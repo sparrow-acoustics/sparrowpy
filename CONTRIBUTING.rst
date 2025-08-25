@@ -75,17 +75,16 @@ Deploying
 
 A reminder for the maintainers on how to deploy.
 
-- Merge develop into main if major or minor release.
-- Update CHANGELOG.md in develop.
+1. If major or minor release, merge develop into main.
+2. Update CHANGELOG.md on main.
+3. run the following commands to bump the version and push the changes to GitHub::
 
-Switch to main to update the version::
+    $ bump-my-version bump patch --verbose  # possible version bumps: major / minor / patch
+    $ git push --follow-tags
 
-$ bump-my-version bump patch --verbose  # possible version bumps: major / minor / patch
-$ git push --follow-tags
+   The testing platform will then deploy to PyPI and GitHub if tests pass.
 
-The testing platform will then deploy to PyPI and GitHub if tests pass.
-
-- Copy and paste the CHANGELOG information into the GitHub release draft and release it finally.
-- Merge main back into develop.
+4. Copy and paste the CHANGELOG information into the GitHub release draft and release it finally.
+5. Merge main back into develop.
 
 .. _general contributing guidelines: https://pyfar-gallery.readthedocs.io/en/latest/contribute/index.html
