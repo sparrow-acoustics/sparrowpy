@@ -1,0 +1,35 @@
+name: pytest_pr
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  pytest_blender:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/pytest
+        with:
+          blender: true
+
+  test_examples:
+    needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/test_examples
+
+  linting:
+    needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/linting
+
+  build_docs:
+    needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build_docs

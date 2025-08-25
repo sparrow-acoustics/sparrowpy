@@ -1,0 +1,51 @@
+name: pytest_merged
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  pytest_blender:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/pytest
+        with:
+          blender: true
+
+  test_examples:
+    needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/test_examples
+
+  linting:
+    needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/linting
+
+  build_docs:
+    needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build_docs
+
+  pytest_no_blender:
+    needs: [build_docs, test_examples, linting]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/pytest
+        with:
+          python-version: ${{ matrix.python-version }}
+          blender: false

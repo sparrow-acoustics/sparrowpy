@@ -44,6 +44,8 @@ deploy = [
     "build",
     "setuptools",
     "bump-my-version",
+    "sparrowpy[fast]",
+    "sparrowpy[blender]",
 ]
 tests = [
     "pytest",
@@ -54,7 +56,6 @@ tests = [
     "watermark",
     "ipykernel",
     "sparrowpy[fast]",
-    "sparrowpy[blender]",
     "nbmake",
 ]
 docs = [
@@ -69,7 +70,7 @@ docs = [
     "nbsphinx_link",
     "ipython",
 ]
-dev = ["sparrowpy[deploy,tests,docs]"]
+dev = ["sparrowpy[deploy,tests,docs,blender]"]
 
 [project.urls]
 Tracker = "https://github.com/sparrow-acoustics/sparrowpy/issues"
