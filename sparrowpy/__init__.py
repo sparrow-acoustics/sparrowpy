@@ -4,7 +4,7 @@
 
 __author__ = """The sparrowpy developers"""
 __email__ = ''
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 from . import geometry
