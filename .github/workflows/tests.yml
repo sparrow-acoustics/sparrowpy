@@ -23,9 +23,76 @@ jobs:
       - name: Test with pytest
         run: |
             pytest
-            
-  pytest:
+        
+
+  test_examples:
     needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+            python -m pip install --upgrade pip
+            pip install ".[tests,docs,blender]"
+      - name: Test with examples and nbmake using pytest
+        run: |
+            pytest --nbmake examples/*.ipynb
+
+  ruff:
+    needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+            python -m pip install --upgrade pip
+            pip install ".[tests]"
+      - name: test ruff
+        run: |
+            ruff check --output-format=github
+
+  build_docs:
+    needs: [pytest_blender]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - name: Install pandoc
+        uses: pandoc/actions/setup@v1
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+            python -m pip install --upgrade pip
+            pip install ".[docs]"
+      - name: build docs
+        run: |            
+            cd docs/
+            make html SPHINXOPTS="-W"
+
+  pytest:
+    needs: [build_docs, test_examples, ruff]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -50,69 +117,3 @@ jobs:
       - name: Test with pytest
         run: |
             pytest
-
-  test_examples:
-    needs: [pytest]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-            python -m pip install --upgrade pip
-            pip install ".[tests,docs,blender]"
-      - name: Test with examples and nbmake using pytest
-        run: |
-            pytest --nbmake examples/*.ipynb
-
-  ruff:
-    needs: [pytest]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-            python -m pip install --upgrade pip
-            pip install ".[tests]"
-      - name: test ruff
-        run: |
-            ruff check --output-format=github
-
-  build_docs:
-    needs: [pytest]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
-
-    steps:
-      - name: Install pandoc
-        uses: pandoc/actions/setup@v1
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-            python -m pip install --upgrade pip
-            pip install ".[docs]"
-      - name: build docs
-        run: |            
-            cd docs/
-            make html SPHINXOPTS="-W"
