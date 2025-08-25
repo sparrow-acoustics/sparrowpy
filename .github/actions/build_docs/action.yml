@@ -8,6 +8,8 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Install pandoc
+      uses: pandoc/actions/setup@v1
     - name: Set up Python ${{ inputs.python-version }}
       uses: actions/setup-python@v5
       with:
