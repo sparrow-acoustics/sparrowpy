@@ -2,6 +2,32 @@
 History
 =======
 
+1.0.0 (2025-08-25)
+----------
+
+This is a major release, so backwards compatibility is not guaranteed.
+
+Added
+^^^^^
+
+* Read and write support for DirectionalRadiosityFast (#81)
+* Source-patch and patch-receiver visibility (#90, #91)
+* Source directivity (#98)
+
+Changed
+^^^^^^^
+
+* Improved API for RadiosityFast (#70, #97)
+* Improved form-factor calculation (#77, #100)
+* Improved test performance (#99)
+* Updated icons (#87)
+
+Removed
+^^^^^^^
+
+* Removed progress bar and its dependency tqdm (#113)
+
+
 0.1.1 (2025-08-25)
 ------------------
 
