@@ -27,6 +27,10 @@ Removed
 
 * Removed progress bar and its dependency tqdm (#113)
 
+Fixed
+^^^^^
+
+* Fixed license definition in project config (#118)
 
 0.1.1 (2025-08-25)
 ------------------
