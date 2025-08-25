@@ -3,7 +3,7 @@ History
 =======
 
 1.0.0 (2025-08-25)
-----------
+------------------
 
 This is a major release, so backwards compatibility is not guaranteed.
 
