@@ -93,8 +93,6 @@ rpf.disableAirAbsorption
 %% run simulation
 rpf.run;
 
-
-
 %%
 
 hist = rpf.getHistogram_itaResult;
