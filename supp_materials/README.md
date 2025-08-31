@@ -1,6 +1,6 @@
 Introduction
 ============
-This folder containts the supplementary materials for the article Fatela, J., Heimes, A., Vorländer, M., Massimiliano, M. and Maffei, L. (2025). “Acoustic radiosity simulation with custom bidirectional reflectance distribution implementation in 3-D.", Journal of the Acoustical Society of America, **?**, 2025, **?**, pp. **?**.
+This folder containts the supplementary materials for the article Fatela, J., Heimes, A., Vorländer, M., Massimiliano, M. and Maffei, L. (2025). “Acoustic radiosity simulation with custom bidirectional reflectance distribution implementation in 3-D.", Journal of the Acoustical Society of America, 2025.
 
 The authors recommend an attentive reading of this paper before exploring these materials: many of the concepts used here are only explained in the article. This documentation also refers extensively to specific sections in the paper.
 
@@ -10,17 +10,20 @@ However, in a commitment to the validation of the paper results, the authors rec
 
 Installation
 ============
-**NOTE:** the notebook examples will not perform correctly, unless the installation is perfectly followed. Since sparrowpy's development is continuous, the exact install version (1.0.0) must be respected. The performance of the python scripts may also be affected unless the same dependencies are installed. The installation is described in the following subsections.
+**NOTE:** the notebook examples will not perform correctly, unless the installation is perfectly followed. Since sparrowpy's development is continuous, the exact install version (1.0.0) must be respected. The performance of the Python scripts may also be affected unless the same dependencies are installed. The installation is described in the following subsections.
 
 ### Requirements
 In order to run the examples, you must have Python=3.11 installed on your machine. The authors only guarantee functionality for this version.
+
+The ray-tracing simulation output of the application examples (see Sections VI.A and VI.B in the paper) is provided in these materials. The authors also provide the original scripts used for the generation of this data.
+Should the user want to run them locally, this requires a [MATLAB](https://it.mathworks.com/products/matlab.html) installation. These scripts also require an install of the [ita toolbox](https://www.ita-toolbox.org/) and [RAVEN](https://www.virtualacoustics.org/RAVEN/). The latter requires a valid license (free for research and educational purposes), which the authors cannot distribute.
 
 ### Environment
 We recommend the user create and activate a [local virtual environment](https://docs.python.org/3/library/venv.html). Installing the requirements and running the simulations in such an environment is a way to avoid potential conflicts with other installations and programs. It's also possible to create and activate a [virtual environment using conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
 
 ### Installation using pip
 
-Once your environment is activated, the exact version of sparrowpy and requirements for these materials are installed by running the following line in the command line
+Once your environment is activated, the exact version of sparrowpy and requirements for these materials are installed by running the following command line in the current directory.
 
 ```
 pip install -r requirements.txt
@@ -34,7 +37,7 @@ We recommend running these examples step by step, and getting acquainted with th
 However, we encourage the user to use these files to experiment with their own setup, simulation, or approach.
 
 ### [``V_infinite_diffuse_plane.ipynb``](V_infinite_diffuse_plane.ipynb)
-This example details the simulation performed in Section V of the paper, where an "infinite" diffuse reflecting plane is simulated. The accuracy of this simulation is assessed by comparison with the results put forth by [Svensson and Savioja, 2020](https://pubs.aip.org/asa/jasa/article-abstract/156/6/3788/3324169/The-Lambert-diffuse-reflection-model-revisited?redirectedFrom=fulltext).
+This example details the simulation performed in Section V of the paper, where an "infinite" diffuse reflecting plane is simulated. The accuracy of this simulation is assessed by comparison with the results put forth by [Svensson and Savioja, 2025](https://pubs.aip.org/asa/jasa/article-abstract/156/6/3788/3324169/The-Lambert-diffuse-reflection-model-revisited?redirectedFrom=fulltext).
 
 ### [``VIA_triangular_facade.ipynb``](VIA_triangular_facade.ipynb)
 This example lays out the different steps of the retro-reflective façade simulation described in Section VI.A of the paper.
@@ -43,8 +46,7 @@ This example lays out the different steps of the retro-reflective façade simula
 This notebook plots the figures in Section VI.B of the paper. These figures describe the simulation of a street canyon. The example is divided into two main sections:
 
 1. The plotting of the energetic decay relative to a scene with complex scattering walls, in a retro-reflective source-receiver setup. Different scattering modeling approaches are compared and a ray-tracing simulation reference is also plotted. This data can be generated by the user in notebook [``VIB1_street_canyon_decay.ipynb``](VIB1_street_canyon_decay.ipynb)
-    - **NOTE:** The simulation files for the generation of the ray-tracing data are not provided in these materials. They can be made available upon reasonable request to the authors. 
-
+ 
 2. The plotting of the computational performance measures as a function of different simulation parameters. This data can be generated in example [``VIB2_street_canyon_performance.ipynb``](VIB2_street_canyon_performance.ipynb)
 
 ### [``VIB1_street_canyon_decay.ipynb``](VIB1_street_canyon_decay.ipynb)
@@ -53,13 +55,13 @@ This example lays out the different steps of the simulation of the ETC of a stre
 ### [``VIB2_street_canyon_performance.ipynb``](VIB2_street_canyon_performance.ipynb)
 This example runs all the computational performance profiling routines used for the results presented in Section VI.B.2 of the paper. The output is stored in local files and can be visualized in [``VIB_street_canyon_plots.ipynb``](VI_street_canyon_plots.ipynb).
 
-**NOTE:** These routines are *extremely time consuming*. The authors recommend against running this example unless the user is certain of their objective. 
+- **NOTE:** These routines are *extremely time consuming*. The authors recommend against running this example unless the user is certain of their goal. 
 
-**NOTE:** The output of these routines *will not match* the results from the paper perfectly. The simulation will likely be run in a different machine. Furthermore, there may not be full control over the management of a given machine's resources, depending on the operating system and general machine properties. In any case, the observations made in Section VI.B.2 are expected to still be applicable.
+- **NOTE:** The output of these routines *will not match* the results from the paper perfectly. The simulation will likely be run in a different machine. Furthermore, there may not be full control over the management of a given machine's computational resources, depending on the operating system and general machine properties. In any case, the observations made in Section VI.B.2 are expected to still be applicable.
 
 Simulation datasets: original vs. user-generated
 ====================
-By default, all examples run with the original datasets used for the paper. However, the user can can run the examples based on their own local simulation results: by changing the variable ``self_data=True``, the examples will pick the results of your previously simulated data. This option is highlighted in the beginning of each relevant document.
+By default, all examples run with the original datasets used for the paper. However, the user can can run the examples based on their own local simulation results: by changing the variable ``self_data=True``, the examples will pick the results of your previously simulated data. This option is highlighted in the beginning of each relevant document. Analogously, the variable ``self_RT=True`` will select RAVEN simulation outputs from the user-generated data.
 
 Note that some errors may occur, if the simulation output dependencies are not respected. If you decide to run the examples on your own results:
 - [``App_BRDF_generation.ipynb``](App_BRDF_generation.ipynb) must be run before [``VIA_triangular_facade.ipynb``](VIA_triangular_facade.ipynb) and [``VIB1_street_canyon_decay.ipynb``](VIB_street_canyon_decay.ipynb) 
@@ -75,20 +77,24 @@ Other content
     - [``utils/brdf_handling.py``](utils/brdf_handling.py) -- This file contains internal methods which handle the BSC spatial definition for the BRDF generation. Some formulas from the paper's Appendix are also implemented here.
     - [``utils/run_simu.py``](utils/run_simu.py) -- This file contains specific methods used for complete sparrowpy simulations. The different methods include specific implementations computational performance measurement, and simulation with specific BRDF assignment from file.
     - [``utils/fig_formatting.py``](utils/fig_formatting.py) -- Methods for formatting and export of figures in the same style as the paper.
+    - [``jasa_raven_facade.m``](jasa_raven_facade.m) -- MATLAB script for the ray-tracing (RAVEN) simulation of the façade application example (Section VI.A of the paper)
+    - [``jasa_raven_streetcanyon.m``](jasa_raven_facade.m) -- MATLAB script for the ray-tracing (RAVEN) simulation of the street canyon application example (Section VI.B of the paper)
+        
+        **NOTE:** in order to run the ray-tracing simulations of the application examples, an install of the [ita toolbox](https://www.ita-toolbox.org/) and of [RAVEN](https://www.virtualacoustics.org/RAVEN/) are required. The latter requires a valid license, which the authors cannot distribute.
 
 - ``resources/`` -- Includes datasets required to run the different examples.
     - ``resources/paper/`` -- Includes the original datasets used in the paper.
-        - ``resources\paper\triangle_sim_optimal.s_d.sofa`` -- raw BSC simulation data for the triangular pattern cross-section surface (Appendix).
+        - ``triangle_sim_optimal.s_d.sofa`` -- raw BSC simulation data for the triangular pattern cross-section surface (Appendix).
         - ``brdf_ground.sofa`` -- BRDF data for the ground surface in the street canyon simulation (Section VI.B.1).
         - ``brdf_walls_BSC.sofa`` -- BSC-based BRDF data for the retro-reflective façade application example and the walls of the street canyon example (Sections VI.A and VI.B.1, respectively).
         - ``brdf_walls_RISC.sofa`` -- RISC-based BRDF data for the retro-reflective façade application example and the walls of the street canyon example (Sections VI.A and VI.B.1, respectively).
-        - ``resources\paper\ETCs_psize3.far`` -- ETC data for the sparrowpy simulations of the street canyon application example (Section VI.B.1). *This data respects only to results given the specific simulation parameters stipulated in the paper*. The suffix "``psize<patch side dimension>``" determines the patch dimensions corresponding to the simulation.
-        - ``resources\paper\inf_plane_data.csv`` -- Contains simulation output data for the infinite diffuse plane cases (Section V).
-        - ``resources\paper\street_canyon_perf.json`` -- Contains the raw computational performance measurement data respective to the street canyon simulation (Section VI.B.2).
-        - ``resources\paper\raven_facade.csv`` -- ray-tracing ([RAVEN](https://www.virtualacoustics.org/RAVEN/)) simulation output data of the retro-reflective façade application example (Section VI.A).
-        - ``resources\paper\streetcanyon_retro.csv`` -- ray-tracing ([RAVEN](https://www.virtualacoustics.org/RAVEN/)) simulation output data of the retro-reflective street canyon application example (Section VI.B.1).
+        - ``ETCs_psize3.far`` -- ETC data for the sparrowpy simulations of the street canyon application example (Section VI.B.1). *This data respects only to results given the specific simulation parameters stipulated in the paper*. The suffix "``psize<patch side dimension>``" determines the patch dimensions corresponding to the simulation.
+        - ``inf_plane_data.csv`` -- Contains simulation output data for the infinite diffuse plane cases (Section V).
+        - ``street_canyon_perf.json`` -- Contains the raw computational performance measurement data respective to the street canyon simulation (Section VI.B.2).
+        - ``raven_facade.csv`` -- ray-tracing ([RAVEN](https://www.virtualacoustics.org/RAVEN/)) simulation output data of the retro-reflective façade application example (Section VI.A).
+        - ``raven_streetcanyon_retro.csv`` -- ray-tracing ([RAVEN](https://www.virtualacoustics.org/RAVEN/)) simulation output data of the retro-reflective street canyon application example (Section VI.B.1).
 
-    - ``resources/user/`` -- Includes the datasets generated by the user in these examples. Generally, the data in this directory will respect the naming conventions described above.
+    - ``resources/user/`` -- Includes the datasets generated by the user in these examples. Generally, the data in this directory will respect the naming conventions of ``resources/paper/``.
 
 - ``figures/`` -- Includes all the figures used in the paper, following the same naming convention.
     - **NOTE:** Figures exported by the examples will overwrite the existing figures, regardless of the origin of the datasets, unless their names are changed in the code. [``utils/fig_formatting.py``](utils/fig_formatting.py) can be changed to change formatting and export directory, and file format.
