@@ -691,6 +691,7 @@ class DirectionalRadiosityFast():
         detector_sphere,         # pf.Coordinates, cshape (D,)
         direct_sound=False,
     ):
+        from scipy.spatial import cKDTree
         """
         Collect energy per detector direction for each receiver.
 
@@ -720,10 +721,14 @@ class DirectionalRadiosityFast():
         eps = 1e-9
         for r in range(R):
             v = rec_xyz[r] - patch_centers                         # (P,3)
-            norms = np.linalg.norm(v, axis=1)                      # (P,)
+            norms = np.linalg.norm(v, axis=1)  # (P,)
             if (norms < eps).any():
-                warnings.warn("Some patch->receiver vectors were clipped.", stacklevel=2)
-            u = v / np.maximum(norms, eps)[:, None]                # (P,3)
+                raise ValueError(
+                    "Some patch->receiver vectors have zero (or near-zero) distance to the receiver. "
+                    "Receiver positions must not coincide with patch centers."
+                )
+            u = v / norms[:, None]  # safe, since norms > eps now
+
             _, p2d = det_tree.query(u, k=1)                        # (P,)
             np.add.at(out[r], (p2d, slice(None), slice(None)), data[r])  # (D,B,S) += (P,B,S)
 
