@@ -11,6 +11,7 @@ except ImportError:
     numba = None
     prange = range
 import warnings
+from scipy.spatial import cKDTree
 
 
 class DirectionalRadiosityFast():
@@ -1466,6 +1467,73 @@ def get_scattering_data_source(
         (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
 
+
+
+def _collect_energy_at_spherical_detector_direct_sound(
+        source,
+        receivers,               # pf.Coordinates, cshape (R,)
+        detector_sphere,         # pf.Coordinates, cshape (D,)
+    ):
+    """
+    Collect energy per detector direction for each receiver.
+
+    Returns
+    -------
+    etc : pf.TimeData
+        data.shape == (R, D, B, S)  (receivers, dirs, bins, samples)
+    """
+    pass
+
+def _collect_energy_at_spherical_detector_patchwise(
+        patches_center,
+        patchwise_etc,
+        receivers,               # pf.Coordinates, cshape (R,)
+        detector_sphere,         # pf.Coordinates, cshape (D,)
+    ):
+    """
+    Collect energy per detector direction for each receiver.
+
+    Returns
+    -------
+    etc : pf.TimeData
+        data.shape == (R, D, B, S)  (receivers, dirs, bins, samples)
+    """
+    # --- detector KD-tree ---
+    det_dirs = detector_sphere.get_cart()                      # (D,3)
+    det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)
+    det_tree = cKDTree(det_dirs)
+    D = det_dirs.shape[0]
+
+    # --- geometry / sizes ---
+    rec_xyz = receivers.get_cart()                             # (R,3)
+    patch_centers = patches_center                        # (P,3)
+
+    # Patchwise energy for ALL receivers via public API: (R,P,B,S)
+    td_patch = patchwise_etc
+    data = td_patch.time
+    R, P, B, S = data.shape
+
+    out = np.zeros((R, D, B, S), dtype=data.dtype)
+
+    # --- bin patches -> detector dirs per receiver ---
+    eps = 1e-9
+    for r in range(R):
+        v = rec_xyz[r] - patch_centers                         # (P,3)
+        norms = np.linalg.norm(v, axis=1)  # (P,)
+        if (norms < eps).any():
+            raise ValueError(
+                "Some patch->receiver vectors have zero (or near-zero) distance to the receiver. "
+                "Receiver positions must not coincide with patch centers."
+            )
+        u = v / norms[:, None]  # safe, since norms > eps now
+
+        _, p2d = det_tree.query(u, k=1)                        # (P,)
+        np.add.at(out[r], (p2d, slice(None), slice(None)), data[r])  # (D,B,S) += (P,B,S)
+
+    # wrap result with the same time axis
+    return pf.TimeData(out, td_patch.times)
+
+
 if numba is not None:
     _add_directional = numba.njit(parallel=True)(_add_directional)
     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
@@ -1479,6 +1547,7 @@ if numba is not None:
         get_scattering_data_receiver_index)
     get_scattering_data = numba.njit()(get_scattering_data)
     get_scattering_data_source = numba.njit()(get_scattering_data_source)
+
 
 
 
