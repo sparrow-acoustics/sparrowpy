@@ -1,29 +1,28 @@
 <h1 align="center">
-<img src="docs/_static/logo.svg" width="300">
+<p align="center">
+    <img src="docs/_static/logo.svg" width="300"
+             onerror="this.onerror=null;this.src='https://github.com/sparrow-acoustics/sparrowpy/raw/main/docs/_static/logo.svg';">
+</p>
 </h1><br>
 
 [![PyPI version](https://badge.fury.io/py/sparrowpy.svg)](https://badge.fury.io/py/sparrowpy)
 [![Documentation Status](https://readthedocs.org/projects/sparrowpy/badge/?version=latest)](https://sparrowpy.readthedocs.io/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sparrow-acoustics/sparrowpy/main?urlpath=%2Fdoc%2Ftree%2Fexamples%2Ffast_radiosity.ipynb)
-![pytest](https://github.com/sparrow-acoustics/sparrowpy/actions/workflows/tests.yml/badge.svg)
-![ruff](https://github.com/sparrow-acoustics/sparrowpy/actions/workflows/ruff.yml/badge.svg)
-![examples](https://github.com/sparrow-acoustics/sparrowpy/actions/workflows/test_examples.yml/badge.svg)
+![testing](https://github.com/sparrow-acoustics/sparrowpy/actions/workflows/pytest_pr.yml/badge.svg)
 
 Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds.
 
-Getting Started
-===============
+# Getting Started
 
-Follow our [example notebooks](https://sparrowpy.readthedocs.io/en/latest/examples.html) to get a sense of the structure and functions of sparrowpy.
+Follow our [example notebooks](https://sparrowpy.readthedocs.io/en/stable/examples.html) to get a sense of the structure and functions of sparrowpy.
 
-Installation
-============
+## Installation
 
 Use pip to install sparrowpy
 
     pip install sparrowpy
 
-(Requires Python >= 3.9)
+(Requires Python >= 3.10)
 
 if numba is installed the code will be precompiled and will run faster. We strongly recommend to use numba to accelerate the simulations significantly
 
@@ -33,21 +32,8 @@ Geometry import via blender or STL files will be supported in a future release, 
 
     pip install bpy
 
-to show progress bars install tqdm
-
-    pip install tqdm
-
 by default these packages are not installed
 
-Troubleshooting
-===============
+## Contributing
 
-Audio file reading/writing in pyfar is supported through [SoundFile](https://python-soundfile.readthedocs.io), which is based on
-[libsndfile](http://www.mega-nerd.com/libsndfile/). On Windows and OS X, it will be installed automatically.
-On Linux, you need to install libsndfile using your distribution’s package manager, for example ``sudo apt-get install libsndfile1``.
-If the installation fails, please check out the [help section](https://pyfar-gallery.readthedocs.io/en/latest/help).
-
-Contributing
-============
-
-Check out the [contributing guidelines](https://sparrowpy.readthedocs.io/en/latest/contributing.html) if you want to become part of sparrowpy.
+Check out the [contributing guidelines](https://sparrowpy.readthedocs.io/en/stable/contributing.html) if you want to become part of sparrowpy.
