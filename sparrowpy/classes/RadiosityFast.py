@@ -711,8 +711,8 @@ class DirectionalRadiosityFast():
         Returns
         -------
         etc : pf.TimeData
-            Multidimensional time data with shape (n_receivers, n_dirs, n_bins, n_samples),
-            where
+            Multidimensional time data with shape 
+            (n_receivers, n_dirs, n_bins, n_samples), where
             - n_receivers = number of receiver positions (R)
             - n_dirs      = number of detector directions (D)
             - n_bins      = number of frequency/energy bands (B)
@@ -723,7 +723,7 @@ class DirectionalRadiosityFast():
         """
         # detector unit vectors
         det_dirs = detector_sphere.cartesian()                        # (D,3)
-        det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)   # normalized
+        det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)   
 
         # geometry
         rec_xyz = receivers.cartesian()                               # (R,3)
@@ -744,7 +744,7 @@ class DirectionalRadiosityFast():
 
         # 2) optionally add direct sound with "non-verbose" in place mod
         if direct_sound:
-            ds_all, n_delay_all = self.calculate_direct_sound(receivers)  # (R,B), (R,)
+            ds_all, n_delay_all = self.calculate_direct_sound(receivers)
 
             if isinstance(self._source, pf.Coordinates):
                 src = self._source.cartesian()[0]
@@ -814,7 +814,8 @@ class DirectionalRadiosityFast():
 
             for k in range(n_patches):
                 E_matrix[k,:]= (
-                    self._energy_exchange_etc[k,int(receiver_idx[k]),:] * patch_receiver_energy[k])
+                    self._energy_exchange_etc[k,int(receiver_idx[k]),:] 
+                    * patch_receiver_energy[k])
 
             if propagation_fx:
                 # accumulate the patch energies towards the receiver
@@ -1477,7 +1478,8 @@ def _bin_patch_energy_to_detector_dirs(
     eps: float = 1e-9,
 ) -> np.ndarray:
     """Return (n_receiver, n_detectors, n_bins, n_samples)
-    with patch energies binned into nearest detector dirs."""
+    with patch energies binned into nearest detector dirs.
+    """
     R, P, B, S = data_rpbs.shape
     D = det_dirs_unit.shape[0]
     out = np.zeros((R, D, B, S), dtype=data_rpbs.dtype)
@@ -1488,12 +1490,13 @@ def _bin_patch_energy_to_detector_dirs(
         norms = np.linalg.norm(v, axis=1)           # (P,)
         if (norms < eps).any():
             raise ValueError(
-                "Some patch->receiver vectors have zero (or near-zero) distance to the receiver. "
-                "Receiver positions must not coincide with patch centers."
+                "Some patch->receiver vectors have zero (or near-zero) "
+                "distance to the receiver. "
+                "Receiver positions must not coincide with patch centers.",
             )
         u = v / norms[:, None]                      # (P,3) unit vectors
-        _, p2d = det_tree.query(u, k=1)             # (P,) nearest detector dir index
-        np.add.at(out[r], (p2d, slice(None), slice(None)), data_rpbs[r])  # (D,B,S) += (P,B,S)
+        _, p2d = det_tree.query(u, k=1)             # (P,) nearest detector
+        np.add.at(out[r], (p2d, slice(None), slice(None)), data_rpbs[r])
     return out
 
 
@@ -1515,8 +1518,9 @@ def _accumulate_direct_sound_into_bins(
     snorm = np.linalg.norm(svec, axis=1) # (R,)
     if (snorm < eps).any():
         raise ValueError(
-            "Some source->receiver vectors have zero (or near-zero) distance to the source. "
-            "Receiver positions must not coincide with the source position."
+            "Some source->receiver vectors have zero (or near-zero) distance"
+            " to the source. "
+            "Receiver positions must not coincide with the source position.",
         )
     sdir = svec / snorm[:, None]         # (R,3) unit vectors
 
