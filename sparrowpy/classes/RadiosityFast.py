@@ -10,7 +10,6 @@ try:
 except ImportError:
     numba = None
     prange = range
-import warnings
 from scipy.spatial import cKDTree
 
 
@@ -711,7 +710,7 @@ class DirectionalRadiosityFast():
         Returns
         -------
         etc : pf.TimeData
-            Multidimensional time data with shape 
+            Multidimensional time data with shape
             (n_receivers, n_dirs, n_bins, n_samples), where
             - n_receivers = number of receiver positions (R)
             - n_dirs      = number of detector directions (D)
@@ -723,7 +722,7 @@ class DirectionalRadiosityFast():
         """
         # detector unit vectors
         det_dirs = detector_sphere.cartesian()                        # (D,3)
-        det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)   
+        det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)
 
         # geometry
         rec_xyz = receivers.cartesian()                               # (R,3)
@@ -1506,11 +1505,12 @@ def _accumulate_direct_sound_into_bins(
     src_pos: np.ndarray,          # (3,)
     det_dirs_unit: np.ndarray,    # (D,3) normalized
     ds_all_rb: np.ndarray,        # (R,B)
-    n_delay_all_r: np.ndarray,    # (R,) 
+    n_delay_all_r: np.ndarray,    # (R,)
     eps: float = 1e-9,
 ) -> None:
-    """Scatter-add direct sound into `out_rdbs` (in-place 
-    modification of out) at the nearest detector dir/time index."""
+    """Scatter-add direct sound into `out_rdbs` (in-place
+    modification of out) at the nearest detector dir/time index.
+    """
     R, D, B, S = out_rdbs.shape
     det_tree = cKDTree(det_dirs_unit)
 
