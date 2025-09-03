@@ -1,142 +1,103 @@
-# --- spherical detector tests for DirectionalRadiosityFast -------------------
-
 import numpy as np
 import numpy.testing as npt
-import pyfar as pf
 import pytest
-import sparrowpy as sp
+from sparrowpy.classes.RadiosityFast import _bin_patch_energy_to_detector_dirs
+from sparrowpy.classes.RadiosityFast import _accumulate_direct_sound_into_bins
 
 
-def _six_axis_pf_coords():
-    """±x, ±y, ±z as pf.Coordinates (cartesian)."""
-    x = np.array([ 1, -1,  0,  0,  0,  0], float)
-    y = np.array([ 0,  0,  1, -1,  0,  0], float)
-    z = np.array([ 0,  0,  0,  0,  1, -1], float)
-    # Normalize (robust even if you change vectors later)
-    n = np.sqrt(x**2 + y**2 + z**2)
-    x, y, z = x / n, y / n, z / n
-    return pf.Coordinates(x, y, z)  # same pattern you use elsewhere
+### TEST PRIVATE HELPERS ###
+def test_binning_sum_conservation_per_RBS(six_axis_unit):
+    """Binning from patches to detector directions conserves energy.
+
+    The sum over detector directions (R,D,B,S → R,B,S) must equal the
+    sum over patches (R,P,B,S → R,B,S). This ensures that no energy
+    is lost or double-counted in the mapping.
+    """
+    rng = np.random.default_rng(0)
+    R,P,B,S = 2, 7, 3, 5
+    rec_xyz       = rng.normal(size=(R,3))
+    patch_centers = rng.normal(size=(P,3))
+    data_rpbs     = rng.random((R,P,B,S))
+
+    out = _bin_patch_energy_to_detector_dirs(
+        rec_xyz=rec_xyz,
+        patch_centers=patch_centers,
+        det_dirs_unit=six_axis_unit,
+        data_rpbs=data_rpbs,
+        eps=1e-9,
+    )  # (R,D,B,S)
+
+    npt.assert_allclose(out.sum(axis=1), data_rpbs.sum(axis=1), rtol=0, atol=1e-12)
 
 
-def test_spherical_detector_shape_and_time_axis():
-    """Returns pf.TimeData with shape (R,D,B,S) and preserves the time axis."""
-    walls = sp.testing.shoebox_room_stub(1, 1, 1)
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
+def test_binning_maps_expected_directions(six_axis_unit):
+    """Binning assigns patches to the correct detector direction.
 
-    radiosity.bake_geometry()
-    radiosity.init_source_energy(pf.Coordinates(.5, .5, .5))
-    radiosity.calculate_energy_exchange(343, 1/1000, 1, 3)
+    With a receiver at the origin and three patches placed at -x, -y, -z,
+    the arrival vectors are +x, +y, +z. Each patch has a distinct constant
+    energy signature (1, 2, 3). The test checks that these signatures
+    appear only in the matching detector bins (+x=0, +y=2, +z=4) and that
+    all other detector bins remain zero.
+    """
+    rec_xyz       = np.array([[0.0, 0.0, 0.0]])  # (R=1,3)
+    patch_centers = np.array([[-1,0,0],[0,-1,0],[0,0,-1]], float)  # -> +x,+y,+z
+    B,S = 2,4
+    data = np.zeros((1,3,B,S)); data[0,0]=1.0; data[0,1]=2.0; data[0,2]=3.0
 
-    # Two receivers → pass as pf.Coordinates with vectorized xyz
-    receivers = pf.Coordinates(
-        np.array([.25, .75]),
-        np.array([.25, .50]),
-        np.array([.25, .25]),
+    out = _bin_patch_energy_to_detector_dirs(
+        rec_xyz, patch_centers, six_axis_unit, data, eps=1e-9
+    )  # (1,6,B,S)
+
+    npt.assert_allclose(out[0,0], 1.0)  # +x
+    npt.assert_allclose(out[0,2], 2.0)  # +y
+    npt.assert_allclose(out[0,4], 3.0)  # +z
+    for d in (1,3,5): npt.assert_allclose(out[0,d], 0.0)
+
+def test_accumulate_direct_sound_adds_to_correct_dir_and_sample(six_axis_unit):
+    """
+    Verify that direct sound energies are inserted into the correct detector
+    direction and time sample.
+
+    This test sets up two receivers located along the +x axis from a source at
+    the origin. Both receivers should therefore map their direct sound into the
+    +x detector bin (index 0). Each receiver is assigned a distinct vector of
+    band energies (ds_all) and an arrival time index (tt). After calling
+    `_accumulate_direct_sound_into_bins`, the output tensor must contain these
+    energies exactly at [receiver, +x direction, :, time_index], with all other
+    entries remaining zero.
+    """
+    R,D,B,S = 2, 6, 3, 16
+    out = np.zeros((R,D,B,S))
+    rec_xyz = np.array([[1.0,0.0,0.0], [2.0,0.0,0.0]])  # both point +x from src
+    src_pos = np.array([0.0,0.0,0.0])
+    det_dirs = six_axis_unit
+    ds_all   = np.array([[1.0,2.0,3.0],
+                         [0.5,0.0,4.0]])  # (R,B)
+    tt = np.array([3, 10])               # (R,)
+
+    _accumulate_direct_sound_into_bins(
+        out_rdbs=out,
+        rec_xyz=rec_xyz,
+        src_pos=src_pos,
+        det_dirs_unit=det_dirs,
+        ds_all_rb=ds_all,
+        n_delay_all_r=tt,
+        eps=1e-9,
     )
-    detector_sphere = _six_axis_pf_coords()  # D = 6
 
-    td_sph   = radiosity.collect_energy_at_spherical_detector(
-        receivers, detector_sphere, direct_sound=False)
-    td_patch = radiosity.collect_energy_receiver_patchwise(receivers)
+    exp = np.zeros_like(out)
+    exp[0, 0, :,  3] += ds_all[0]  # +x is index 0
+    exp[1, 0, :, 10] += ds_all[1]
+    npt.assert_allclose(out, exp, rtol=0, atol=0.0)
 
-    # Infer sizes from patchwise output (R,P,B,S); D from detector_sphere
-    R, P, B, S = td_patch.time.shape
-    D = detector_sphere.get_cart().shape[0]
+def test_accumulate_direct_sound_raises_on_coincident_src_rec(six_axis_unit):
+    '''Raise error when receiver is placed a a ptach'''
+    out = np.zeros((1,6,1,8))
+    rec_xyz = np.array([[0.0,0.0,0.0]])
+    src_pos = np.array([0.0,0.0,0.0])  # coincident → should raise
+    det_dirs = six_axis_unit
+    ds_all = np.ones((1,1))
+    tt = np.array([0])
 
-    assert isinstance(td_sph, pf.TimeData)
-    assert td_sph.time.shape == (R, D, B, S)
-    npt.assert_array_equal(td_sph.times, td_patch.times)
-
-
-def test_spherical_sum_matches_patch_sum_without_direct_sound():
-    """Sum over detector directions equals sum over patches (per R,B,S)."""
-    walls = sp.testing.shoebox_room_stub(1, 1, 1)
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
-
-    radiosity.bake_geometry()
-    radiosity.init_source_energy(pf.Coordinates(.5, .5, .5))
-    radiosity.calculate_energy_exchange(343, 1/1000, 1, 3)
-
-    receivers = pf.Coordinates(.40, .40, .40)  # R = 1
-    detector_sphere = _six_axis_pf_coords()    # D = 6
-
-    td_sph   = radiosity.collect_energy_at_spherical_detector(
-        receivers, detector_sphere, direct_sound=False)
-    td_patch = radiosity.collect_energy_receiver_patchwise(receivers)
-
-    # Values should be finite and non-zero somewhere
-    assert np.isfinite(td_sph.time).all()
-    assert np.isfinite(td_patch.time).all()
-    assert np.any(td_sph.time != 0)
-    assert np.any(td_patch.time != 0)
-
-    # print("td_sph.time shape:", td_sph.time.shape)
-    # print("td_sph.time sample:", td_sph.time[0, 0, 0, :50])
-    # print("td_patch.time shape:", td_patch.time.shape)
-    # print("td_patch.time sample:", td_patch.time[0, 0, 0, :50])
-
-    # (R,D,B,S) → (R,B,S) vs (R,P,B,S) → (R,B,S)
-    sph_sum   = td_sph.time.sum(axis=1)
-    patch_sum = td_patch.time.sum(axis=1)
-
-    # print("td_sph.time shape:",sph_sum.shape)
-    # print("td_sph.time sample:",  sph_sum[0, 0, :50])
-    # print("td_patch.time shape:", patch_sum.shape)
-    # print("td_patch.time sample:", patch_sum[0, 0, :50])
-
-    npt.assert_allclose(sph_sum, patch_sum, rtol=0, atol=1e-12)
-
-
-def test_direct_sound_added_correctly_when_enabled():
-    walls = sp.testing.shoebox_room_stub(1, 1, 1)
-    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
-
-    radiosity.bake_geometry()
-    radiosity.init_source_energy(pf.Coordinates(.25, .5, .5))
-    radiosity.calculate_energy_exchange(343, 1/1000, 1, 3)
-
-    receivers = pf.Coordinates(.75, .5, .5)
-    detector  = _six_axis_pf_coords()
-
-    td_sph_off = radiosity.collect_energy_at_spherical_detector(
-        receivers, detector, direct_sound=False)
-    td_sph_on  = radiosity.collect_energy_at_spherical_detector(
-        receivers, detector, direct_sound=True)
-
-    sum_off = td_sph_off.time.sum(axis=1)
-    sum_on  = td_sph_on.time.sum(axis=1)
-
-    if hasattr(radiosity, "calculate_direct_sound"):
-        ds_all, n_delay_all = radiosity.calculate_direct_sound(receivers)
-        R, B, S = sum_off.shape
-        expected = sum_off.copy()
-        tt = np.clip(n_delay_all, 0, S - 1).astype(int)
-        for r in range(R):
-            expected[r, :, tt[r]] += ds_all[r]
-        npt.assert_allclose(sum_on, expected, rtol=0, atol=1e-12)
-    else:
-        assert np.all(sum_on >= sum_off)
-        assert np.any(sum_on > sum_off)
-
-
-def test_spherical_detector_raises_if_receiver_on_patch_center():
-    """If a receiver coincides with a patch center, a ValueError is raised."""
-    # Build a small scene
-    walls = sp.testing.shoebox_room_stub(1, 1, 1)
-    rad = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
-
-    rad.bake_geometry()
-    rad.init_source_energy(pf.Coordinates(.5, .5, .5))
-    rad.calculate_energy_exchange(343, 1/1000, 1, 3)
-
-    # Place receiver exactly at the FIRST patch center to force zero distance
-    pc = rad.patches_center[0]          # (3,)
-    receivers = pf.Coordinates(pc[0], pc[1], pc[2])
-
-    # Simple 6-axis detector
-    detector = _six_axis_pf_coords()
-
-    # Expect a ValueError instead of a warning
-    with pytest.raises(ValueError, match="patch->receiver"):
-        rad.collect_energy_at_spherical_detector(
-            receivers, detector, direct_sound=False)
+    with pytest.raises(ValueError, match="source->receiver"):
+        _accumulate_direct_sound_into_bins(out, rec_xyz, src_pos, det_dirs, ds_all, tt, eps=1e-9)
