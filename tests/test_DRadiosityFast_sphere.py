@@ -48,13 +48,14 @@ def test_binning_maps_expected_directions(six_axis_unit):
     data[0,2]=3.0
 
     out = _bin_patch_energy_to_detector_dirs(
-        rec_xyz, patch_centers, six_axis_unit, data, eps=1e-9
+        rec_xyz, patch_centers, six_axis_unit, data, eps=1e-9,
     )  # (1,6,B,S)
 
     npt.assert_allclose(out[0,0], 1.0)  # +x
     npt.assert_allclose(out[0,2], 2.0)  # +y
     npt.assert_allclose(out[0,4], 3.0)  # +z
-    for d in (1,3,5): npt.assert_allclose(out[0,d], 0.0)
+    for d in (1,3,5):
+        npt.assert_allclose(out[0,d], 0.0)
 
 def test_accumulate_direct_sound_adds_to_correct_dir_and_sample(six_axis_unit):
     """
@@ -62,7 +63,7 @@ def test_accumulate_direct_sound_adds_to_correct_dir_and_sample(six_axis_unit):
     direction and time sample.
 
     This test sets up two receivers located along the +x axis from a source at
-    the origin. Both receivers should therefore map their direct sound into 
+    the origin. Both receivers should therefore map their direct sound into
     the +x detector bin (index 0). Each receiver is assigned a distinct vector
     of band energies (ds_all) and an arrival time index (tt). After calling
     `_accumulate_direct_sound_into_bins`, the output tensor must contain these
@@ -71,7 +72,7 @@ def test_accumulate_direct_sound_adds_to_correct_dir_and_sample(six_axis_unit):
     """
     R,D,B,S = 2, 6, 3, 16
     out = np.zeros((R,D,B,S))
-    rec_xyz = np.array([[1.0,0.0,0.0], [2.0,0.0,0.0]])  # both point +x from src
+    rec_xyz = np.array([[1.0,0.0,0.0], [2.0,0.0,0.0]])
     src_pos = np.array([0.0,0.0,0.0])
     det_dirs = six_axis_unit
     ds_all   = np.array([[1.0,2.0,3.0],
@@ -94,7 +95,7 @@ def test_accumulate_direct_sound_adds_to_correct_dir_and_sample(six_axis_unit):
     npt.assert_allclose(out, exp, rtol=0, atol=0.0)
 
 def test_accumulate_direct_sound_raises_on_coincident_src_rec(six_axis_unit):
-    """Raise error when receiver is placed at a patch"""
+    """Raise error when receiver is placed at a patch."""
     out = np.zeros((1,6,1,8))
     rec_xyz = np.array([[0.0,0.0,0.0]])
     src_pos = np.array([0.0,0.0,0.0])  # coincident → should raise
