@@ -91,7 +91,7 @@ def test_accumulate_direct_sound_adds_to_correct_dir_and_sample(six_axis_unit):
     npt.assert_allclose(out, exp, rtol=0, atol=0.0)
 
 def test_accumulate_direct_sound_raises_on_coincident_src_rec(six_axis_unit):
-    '''Raise error when receiver is placed a a ptach'''
+    """Raise error when receiver is placed at a patch"""
     out = np.zeros((1,6,1,8))
     rec_xyz = np.array([[0.0,0.0,0.0]])
     src_pos = np.array([0.0,0.0,0.0])  # coincident → should raise
