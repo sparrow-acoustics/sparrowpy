@@ -5,7 +5,7 @@ from sparrowpy.classes.RadiosityFast import _bin_patch_energy_to_detector_dirs
 from sparrowpy.classes.RadiosityFast import _accumulate_direct_sound_into_bins
 
 
-### TEST PRIVATE HELPERS ###
+### TEST PRIVATE FUNCITONS###
 def test_binning_sum_conservation_per_RBS(six_axis_unit):
     """Binning from patches to detector directions conserves energy.
 
