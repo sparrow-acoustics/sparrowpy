@@ -685,41 +685,6 @@ class DirectionalRadiosityFast():
         times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
 
-def collect_energy_at_spherical_detector(
-    self,
-    receivers,            # pf.Coordinates, cshape (R,)
-    detector_sphere,      # pf.Coordinates, cshape (D,)
-    direct_sound: bool = False,
-):
-    """
-    Collect energy per detector direction for each receiver.
-
-    Parameters
-    ----------
-    receivers : pf.Coordinates, cshape (R,)
-        Receiver positions in Cartesian coordinates. May be vectorized
-        to define multiple receiver points.
-    detector_sphere : pf.Coordinates, cshape (D,)
-        Unit direction vectors defining the spherical detector axes.
-        Typically contains ±x, ±y, ±z or a denser sphere tessellation.
-    direct_sound : bool, optional
-        If True, add the direct source-to-receiver contribution
-        into the nearest detector direction and appropriate sample index.
-        Default is False.
-
-    Returns
-    -------
-    etc : pf.TimeData
-        Multidimensional time data with shape (n_receivers, n_dirs, n_bins, n_samples),
-        where
-          - n_receivers = number of receiver positions (R)
-          - n_dirs      = number of detector directions (D)
-          - n_bins      = number of frequency/energy bands (B)
-          - n_samples   = number of time samples (S)
-
-        The `.times` attribute matches the time axis of
-        `collect_energy_receiver_patchwise`.
-    """
 
     def collect_energy_at_spherical_detector(
         self,
@@ -745,7 +710,16 @@ def collect_energy_at_spherical_detector(
 
         Returns
         -------
-        etc : pf.TimeData (n_receivers, n_dirs, n_bins, n_samples)
+        etc : pf.TimeData
+            Multidimensional time data with shape (n_receivers, n_dirs, n_bins, n_samples),
+            where
+            - n_receivers = number of receiver positions (R)
+            - n_dirs      = number of detector directions (D)
+            - n_bins      = number of frequency/energy bands (B)
+            - n_samples   = number of time samples (S)
+
+            The `.times` attribute matches the time axis of
+            `collect_energy_receiver_patchwise`.
         """
         # detector unit vectors
         det_dirs = detector_sphere.cartesian()                        # (D,3)
