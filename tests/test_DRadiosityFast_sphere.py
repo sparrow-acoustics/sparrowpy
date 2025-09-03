@@ -26,7 +26,8 @@ def test_binning_sum_conservation_per_RBS(six_axis_unit):
         eps=1e-9,
     )  # (R,D,B,S)
 
-    npt.assert_allclose(out.sum(axis=1), data_rpbs.sum(axis=1), rtol=0, atol=1e-12)
+    npt.assert_allclose(out.sum(axis=1), data_rpbs.sum(axis=1),
+                        rtol=0, atol=1e-12)
 
 
 def test_binning_maps_expected_directions(six_axis_unit):
@@ -39,9 +40,12 @@ def test_binning_maps_expected_directions(six_axis_unit):
     all other detector bins remain zero.
     """
     rec_xyz       = np.array([[0.0, 0.0, 0.0]])  # (R=1,3)
-    patch_centers = np.array([[-1,0,0],[0,-1,0],[0,0,-1]], float)  # -> +x,+y,+z
+    patch_centers = np.array([[-1,0,0],[0,-1,0],[0,0,-1]], float)
     B,S = 2,4
-    data = np.zeros((1,3,B,S)); data[0,0]=1.0; data[0,1]=2.0; data[0,2]=3.0
+    data = np.zeros((1,3,B,S))
+    data[0,0]=1.0
+    data[0,1]=2.0
+    data[0,2]=3.0
 
     out = _bin_patch_energy_to_detector_dirs(
         rec_xyz, patch_centers, six_axis_unit, data, eps=1e-9
@@ -58,12 +62,12 @@ def test_accumulate_direct_sound_adds_to_correct_dir_and_sample(six_axis_unit):
     direction and time sample.
 
     This test sets up two receivers located along the +x axis from a source at
-    the origin. Both receivers should therefore map their direct sound into the
-    +x detector bin (index 0). Each receiver is assigned a distinct vector of
-    band energies (ds_all) and an arrival time index (tt). After calling
+    the origin. Both receivers should therefore map their direct sound into 
+    the +x detector bin (index 0). Each receiver is assigned a distinct vector
+    of band energies (ds_all) and an arrival time index (tt). After calling
     `_accumulate_direct_sound_into_bins`, the output tensor must contain these
-    energies exactly at [receiver, +x direction, :, time_index], with all other
-    entries remaining zero.
+    energies exactly at [receiver, +x direction, :, time_index], with all
+    other entries remaining zero.
     """
     R,D,B,S = 2, 6, 3, 16
     out = np.zeros((R,D,B,S))
@@ -99,4 +103,5 @@ def test_accumulate_direct_sound_raises_on_coincident_src_rec(six_axis_unit):
     tt = np.array([0])
 
     with pytest.raises(ValueError, match="source->receiver"):
-        _accumulate_direct_sound_into_bins(out, rec_xyz, src_pos, det_dirs, ds_all, tt, eps=1e-9)
+        _accumulate_direct_sound_into_bins(out, rec_xyz, src_pos, det_dirs,
+                                                    ds_all, tt, eps=1e-9)

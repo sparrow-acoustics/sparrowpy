@@ -813,7 +813,7 @@ class DirectionalRadiosityFast():
 
             for k in range(n_patches):
                 E_matrix[k,:]= (
-                    self._energy_exchange_etc[k,int(receiver_idx[k]),:] 
+                    self._energy_exchange_etc[k,int(receiver_idx[k]),:]
                     * patch_receiver_energy[k])
 
             if propagation_fx:
