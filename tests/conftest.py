@@ -57,7 +57,7 @@ def sample_walls():
 
 @pytest.fixture
 def sofa_data_diffuse():
-    """Return a list of 6 walls, which form a cube."""
+    """Return a diffuse brdf set for five octave bands."""
     gaussian = pf.samplings.sph_gaussian(sh_order=1)
     gaussian = gaussian[gaussian.z>0]
     sources = gaussian.copy()
@@ -67,6 +67,25 @@ def sofa_data_diffuse():
         sources, receivers,
         pf.FrequencyData(np.ones_like(frequencies), frequencies))
     return (brdf, sources, receivers)
+
+
+@pytest.fixture
+def sofa_data_diffuse_full_third_octave():
+    """Return a diffuse brdf set for the full third octave band."""
+    gaussian = pf.samplings.sph_gaussian(sh_order=1)
+    gaussian = gaussian[gaussian.z>0]
+    sources = gaussian.copy()
+    receivers = gaussian.copy()
+    frequencies = np.array(
+        [20.0, 25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0,
+         250.0, 315.0, 400.0, 500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0,
+         2000.0, 2500.0, 3150.0, 4000.0, 5000.0, 6300.0, 8000.0, 10000.0,
+         12500.0, 16000.0, 20000.0])
+    brdf = sp.brdf.create_from_scattering(
+        sources, receivers,
+        pf.FrequencyData(np.ones_like(frequencies), frequencies))
+    return (brdf, sources, receivers)
+
 
 @pytest.fixture
 def basicscene():
