@@ -285,6 +285,9 @@ def weight_by_etc(
         weighted_noise = weighted_noise[:,np.newaxis,:,:]
         etc.time = etc.time[:,np.newaxis]
 
+    if len(band_filtered_noise.cshape)>1:
+        band_filtered_noise=band_filtered_noise[:,0]
+
     for rec_ix in range(etc.cshape[0]):
         for dir_ix in range(etc.cshape[1]):
             for band_ix,filter_ix in enumerate(f_band_idcs):
@@ -293,7 +296,7 @@ def weight_by_etc(
                     lower = int(sample_i * resampling_factor)
                     upper = int((sample_i+1) * resampling_factor)
 
-                    noise_sec = band_filtered_noise.time[filter_ix,0,lower:upper]
+                    noise_sec = band_filtered_noise.time[filter_ix,lower:upper]
                     div = np.sum(noise_sec**2)
 
                     if div != 0:
@@ -312,42 +315,6 @@ def weight_by_etc(
 
     return ir
 
-def etc_from_signal(signal:pf.Signal, time_step:float):
-    """Calculate ETC from a given signal.
-
-    some more details
-
-    Parameters
-    ----------
-    signal: pyfar.Signal
-        Signal of a given Impulse Response or acoustic propagation.
-
-    time_step: float
-        time resolution of the resulting Energy Time Curve in second.
-
-    Returns
-    -------
-    etc: pyfar.TimeData
-        Resulting energy time curve of the signal
-    """
-    sampling_factor = signal.sampling_rate*time_step
-
-    etc_array = np.zeros(signal.cshape +
-                         (int(signal.n_samples/sampling_factor),))
-
-    for i in range(etc_array.shape[-1]):
-        lower = int(i * sampling_factor)
-        upper = int((i+1) * sampling_factor)
-
-        etc_array[:,:,i] = np.sum(signal.time[:,:,lower:upper]**2, axis=-1)
-
-    etc = pf.TimeData(data=etc_array,
-                      times=np.arange(signal.times[0],
-                                      signal.times[-1],
-                                      time_step),
-                      )
-
-    return etc
 
 def _get_freq_band_idx(freq_bands:np.ndarray, num_fractions=1):
     """Return frac octave filter indices corresp. to user freq bands."""
