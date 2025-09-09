@@ -33,5 +33,6 @@ __all__ = [
     'form_factor',
     'testing',
     'brdf',
+    'dsp',
     'utils',
 ]
