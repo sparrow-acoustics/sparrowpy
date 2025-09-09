@@ -240,7 +240,7 @@ def weight_by_etc(
     Parameters
     ----------
     etc: pf.TimeData
-        ETC of a soudn propagation simulation.
+        ETC of a sound propagation simulation.
     noise_signal: pf.Signal
         Noise sequence
 
@@ -287,14 +287,15 @@ def weight_by_etc(
 
     for band_ix,filter_ix in enumerate(f_band_idcs):
         for sample_i in range(etc.time.shape[-1]):
-            low = int(sample_i * resampling_factor)
-            high = (
-                int(sample_i * resampling_factor + resampling_factor)
-            )
-            div = sum(band_filtered_noise.time[filter_ix, 0, low:high] ** 2)
+
+            lower = int(sample_i * resampling_factor)
+            upper = int((sample_i+1) * resampling_factor)
+
+            div = sum(band_filtered_noise.time[filter_ix, 0, lower:upper] ** 2)
+
             if div != 0:
-                weighted_noise[:,filter_ix, low:high] = (
-                    band_filtered_noise.time[filter_ix, :, low:high]
+                weighted_noise[:,filter_ix, lower:upper] = (
+                    band_filtered_noise.time[filter_ix, :, lower:upper]
                     * np.sqrt(etc.time[:,band_ix,sample_i] / div)
                     * np.sqrt(bandwiths[band_ix] / (noise_signal.sampling_rate/2))
                 )
@@ -303,6 +304,43 @@ def weight_by_etc(
                                noise_signal.sampling_rate)
 
     return ir
+
+def etc_from_signal(signal:pf.Signal, time_step:float):
+    """Calculate ETC from a given signal.
+
+    some more details
+
+    Parameters
+    ----------
+    signal: pyfar.Signal
+        Signal of a given Impulse Response or acoustic propagation.
+
+    time_step: float
+        time resolution of the resulting Energy Time Curve in second.
+
+    Returns
+    -------
+    etc: pyfar.TimeData
+        Resulting energy time curve of the signal
+    """
+    sampling_factor = signal.sampling_rate*time_step
+
+    etc_array = np.zeros(signal.cshape +
+                         (int(sampling_factor*signal.n_samples)))
+
+    for i in range(etc_array.shape[-1]):
+        lower = int(i * sampling_factor)
+        upper = int((i+1) * sampling_factor)
+
+        etc_array[:,:,i] = np.sum(signal.time[lower:upper]**2, axis=-1)
+
+    etc = pf.TimeData(data=etc_array,
+                      times=np.arange(signal.times[0],
+                                      signal.times[-1],
+                                      time_step),
+                      )
+
+    return etc
 
 def _get_freq_band_idx(freq_bands:np.ndarray, num_fractions=1):
     """Return frac octave filter indices corresp. to user freq bands."""
