@@ -3,6 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import sparrowpy as sp
 import pyfar as pf
+import matplotlib.pyplot as plt
 
 @pytest.mark.parametrize("room_volume", [200, 500])
 @pytest.mark.parametrize("speed_of_sound", [320, 343])
@@ -161,6 +162,11 @@ def test_dsp_weighting(noise,etc_step,freqs):
                                noise_signal=noise,
                                freq_bands=freqs)
 
-    etc_sig = sp.dsp.etc_from_signal(sig, time_step=etc.times[1]-etc.times[0])
+    etc_sig = sp.dsp.etc_from_signal(sig, time_step=etc_step)
+
+    pf.plot.time(etc[:,0,0],label="og")
+    pf.plot.time(etc_sig[:,0], label="after")
+    plt.legend()
+    plt.show()
 
     npt.assert_allclose(etc.time,etc_sig.time)
