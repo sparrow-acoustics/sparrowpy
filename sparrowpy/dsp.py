@@ -331,8 +331,7 @@ def energy_time_curve_from_impulse_response(
         np.arange(n_samples_E) * delta_time,
         )
     bw_factor = np.asarray((signal.sampling_rate/2)/bandwidth)
-    for _ in range(signal.cdim-1):
-        bw_factor = bw_factor[..., np.newaxis]
+    bw_factor = bw_factor.reshape(bw_factor.shape + (1,) * (signal.cdim - 1))
 
     for k in range(n_samples_E):
         upper = g_k[k+1] if k < n_samples_E-1 else signal.n_samples
