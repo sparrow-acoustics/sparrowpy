@@ -157,9 +157,9 @@ def test_etc_weighting(sr,etc_step,fracs,roomvol):
                                                 n_samples=sr,
                                                 sampling_rate=sr,
                                                 max_reflection_density=22000)
-    noise = sp.dsp.dirac_sequence(reflection_density=mu,n_samples=sr,
-                                  t_start=t_start, sampling_rate=sr) 
-    # noise = pf.signals.noise(sampling_rate=sr,n_samples=sr) # works!
+    #noise = sp.dsp.dirac_sequence(reflection_density=mu,n_samples=sr,
+    #                              t_start=t_start, sampling_rate=sr) 
+    noise = pf.signals.noise(sampling_rate=sr,n_samples=sr) # works!
     times = np.arange(0,1,etc_step)
 
     # 2 receivers with different etcs
@@ -174,6 +174,7 @@ def test_etc_weighting(sr,etc_step,fracs,roomvol):
     sig = sp.dsp.weight_by_etc(etc=etc,
                                noise_signal=noise,
                                freq_bands=freqs,
+                               num_fractions=fracs,
                                split=True)
 
     _,bandwidths=sp.dsp._get_freq_band_idx(freqs,num_fractions=fracs)
@@ -188,10 +189,6 @@ def test_etc_weighting(sr,etc_step,fracs,roomvol):
 
         k = np.sum(etc[:,0,i].time)-np.sum(etc_sig.time)
 
-        pf.plot.time(etc_sig,label="sig")
-        pf.plot.time(etc[:,0,i],label="og")
-        plt.legend()
-        plt.show()
         assert k/np.sum(etc[:,0,i].time)>-1e-10
         assert np.abs(k/np.sum(etc[:,:,0].time))<0.01
 
