@@ -91,7 +91,8 @@ def test_etc_from_ir_filtered_noise():
 
 
 def test_etc_from_ir_type_error_signal():
-    with pytest.raises(TypeError, match="signal must be a pyfar Signal object."):
+    with pytest.raises(
+            TypeError, match="signal must be a pyfar Signal object."):
         dsp.energy_time_curve_from_impulse_response(np.array([1, 2, 3]))
 
 
@@ -118,7 +119,8 @@ def test_etc_from_ir_value_error_bandwidth_array_negative():
     bw = np.array([-1, 2])
     # Adjust signal to have 2 bands
     signal = pf.Signal(np.ones((2, 10)), 44100)
-    with pytest.raises(ValueError, match="All bandwidth values must be positive."):
+    with pytest.raises(
+            ValueError, match="All bandwidth values must be positive."):
         dsp.energy_time_curve_from_impulse_response(signal, bandwidth=bw)
 
 
