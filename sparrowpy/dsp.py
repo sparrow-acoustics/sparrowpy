@@ -82,7 +82,7 @@ def reflection_density_room(
 
     """
     if speed_of_sound is None:
-        speed_of_sound = pf.constants.reference_speed_of_sound
+        speed_of_sound = 343.2
 
     # check input
     room_volume = float(room_volume)
@@ -187,7 +187,7 @@ def dirac_sequence(
         >>> import pyfar as pf
         >>> import numpy as np
         >>> n_samples = 22050
-        >>> reflection_density = pf.TimeData(
+        >>> reflection_density = pyfar.TimeData(
         ...     np.ones(n_samples)*10000, np.arange(n_samples)/44100)
         >>> dirac_sequence = pf.signals.dirac_sequence(
         ...     reflection_density, n_samples, t_start=0)
@@ -197,7 +197,7 @@ def dirac_sequence(
     # check input
     if not isinstance(reflection_density, pf.TimeData):
         raise ValueError(
-            "reflection_density must be a pf.TimeData object.")
+            "reflection_density must be a pyfar.TimeData object.")
     if t_start < 0:
         raise ValueError("t_start must be positive.")
     if np.any(reflection_density.time > sampling_rate / 2):
