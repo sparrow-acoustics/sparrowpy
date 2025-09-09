@@ -133,7 +133,7 @@ def test_dirac_sequence_inputs():
 
 
 @pytest.mark.parametrize("noise", [
-    pf.signals.noise(n_samples=44100, spectrum="flat"),
+    pf.signals.noise(n_samples=44100, spectrum="white"),
     sp.dsp.dirac_sequence(pf.TimeData([500],[0]), 44100),
     ])
 @pytest.mark.parametrize("etc",[
@@ -142,8 +142,10 @@ def test_dirac_sequence_inputs():
 ])
 def test_dsp_weighting(noise,etc):
     """Test that noise is correctly weighted by the etc."""
-    sig = sp.dsp.weight_by_etc(noise,etc)
+    sig = sp.dsp.weight_by_etc(etc=etc,
+                               noise_signal=noise,
+                               freq_bands=[1000])
 
-    etc_sig = sp.dsp.etc_from_signal(sig, time_step=1/441)
+    etc_sig = sp.dsp.etc_from_signal(sig, time_step=etc.times[1]-etc.times[0])
 
     npt.assert_allclose(etc.time,etc_sig.time)
