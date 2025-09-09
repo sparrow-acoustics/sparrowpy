@@ -64,9 +64,13 @@ def test_etc_from_ir_pulsed_dirac():
     n_samples = 44100
     pulsed_dirac = pf.signals.impulse(
         n_samples, delay=np.arange(0, n_samples, 441))*0.5
-    pulsed_dirac.time = np.sum(pulsed_dirac.time, axis=0, keepdims=True)
+    # Create a new signal object with summed time data to avoid in-place modification
+    pulsed_dirac_summed = pf.Signal(
+        np.sum(pulsed_dirac.time, axis=0, keepdims=True),
+        pulsed_dirac.sampling_rate
+    )
     etc = dsp.energy_time_curve_from_impulse_response(
-        pulsed_dirac, delta_time=0.01)
+        pulsed_dirac_summed, delta_time=0.01)
     assert isinstance(etc, pf.TimeData)
     assert etc.n_samples == 100
     npt.assert_allclose(etc.time, 0.25)

@@ -235,7 +235,7 @@ def energy_time_curve_from_impulse_response(
     r"""Calculate the energy time curve from impulse responses.
 
     .. math::
-        E_n = \sum_{g(k)+1}^{g(k-1)} h(i)^2 \cdot \frac{f_s/2}{BW}
+        E_n = \sum_{g(k)}^{g(k+1)} h(i)^2 \cdot \frac{f_s/2}{BW}
 
     where :math:`g(k)=floor(k \cdot f_s \cdot \Delta t)` representing the
     range of each energy window with length :math:`\Delta t` and
