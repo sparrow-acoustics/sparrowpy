@@ -1,8 +1,7 @@
 """Contain functions to generate IRs from sparrowpy ETCs."""
 import numpy as np
-import sofar as sf
 import pyfar as pf
-import sparrowpy
+import warnings
 
 def reflection_density_room(
         room_volume, n_samples, speed_of_sound=None,
@@ -261,17 +260,21 @@ def weight_by_etc(
         if freq_bands.shape[0] != etc.cshape[1]:
             raise ValueError(
         "freq_bands length does not match the number of frequency-wise ETC's.")
+        if (freq_bands<20).any() or (freq_bands>20000).any():
+            raise ValueError(
+        "freq_bands entries above max does not match the number of frequency-wise ETC's.")
 
-    factor_s = noise_signal.sampling_rate*(etc.times[1]-etc.times[0])
+    resampling_factor = noise_signal.sampling_rate*(etc.times[1]-etc.times[0])
 
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
         signal=noise_signal,
-        num_fractions=1,
+        num_fractions=num_fractions,
+        frequency_range=(np.min(freq_bands),np.max(freq_bands)),
         order=4,
     )
-    center_freq = pf.dsp.filter.fractional_octave_frequencies(
-        num_fractions=1,
-    )
+
+    f_band_idcs, bandwiths = _get_freq_band_idx(freq_bands=freq_bands,
+                                     num_fractions=num_fractions)
 
     weighted_noise = np.zeros(
         (
@@ -280,31 +283,43 @@ def weight_by_etc(
             band_filtered_noise.time.shape[2],
         ),
     )
-    bw_size = [
-        center_freq[1][i] * np.sqrt(2) - center_freq[1][i] / np.sqrt(2)
-        for i in range(len(center_freq[1]))
-    ]
 
 
-    for band_ix,fband in enumerate(freq_bands):
-        for i,f in enumerate(center_freq[0]):
-            if f == fband:
-                filter_ix=i
-                for sample_i in range(etc.time.shape[-1]):
-                    low = int(sample_i * factor_s)
-                    high = (
-                        int(sample_i * factor_s + factor_s)
-                    )
-                    div = sum(band_filtered_noise.time[filter_ix, 0, low:high] ** 2)
-                    if div != 0:
-                        weighted_noise[:,filter_ix, low:high] = (
-                            band_filtered_noise.time[filter_ix, :, low:high]
-                            * np.sqrt(etc.time[:,band_ix,sample_i] / div)
-                            * np.sqrt(bw_size[filter_ix] / (noise_signal.sampling_rate/2))
-                        )
-                break
+    for band_ix,filter_ix in enumerate(f_band_idcs):
+        for sample_i in range(etc.time.shape[-1]):
+            low = int(sample_i * resampling_factor)
+            high = (
+                int(sample_i * resampling_factor + resampling_factor)
+            )
+            div = sum(band_filtered_noise.time[filter_ix, 0, low:high] ** 2)
+            if div != 0:
+                weighted_noise[:,filter_ix, low:high] = (
+                    band_filtered_noise.time[filter_ix, :, low:high]
+                    * np.sqrt(etc.time[:,band_ix,sample_i] / div)
+                    * np.sqrt(bandwiths[band_ix] / (noise_signal.sampling_rate/2))
+                )
 
     ir = pf.Signal(np.sum(weighted_noise, axis=1),
                                noise_signal.sampling_rate)
 
     return ir
+
+def _get_freq_band_idx(freq_bands:np.ndarray, num_fractions=1):
+    """Return frac octave filter indices corresp. to user freq bands."""
+    _,_,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
+        num_fractions=num_fractions,
+        frequency_range=(np.min(freq_bands),np.max(freq_bands)),
+        )
+
+    idcs = np.empty_like(freq_bands,dtype=int)
+
+    for i,f in enumerate(freq_bands):
+        idcs[i] = np.where((freq_cutoffs[0]<f)*(freq_cutoffs[1]<f))[0][0]
+
+    if np.unique(idcs).shape[0]<idcs.shape[0]:
+        warnings.warn(
+            "WARNING: multiple ETCs in same freq. band.\n" +
+            "This may lead to overestimation of the energy in said frequency",
+            stacklevel=2)
+
+    return idcs, freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
