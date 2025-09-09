@@ -137,20 +137,29 @@ def test_dirac_sequence_inputs():
             pf.TimeData([44100], [0]), 500)
 
 
-@pytest.mark.parametrize("noise", [
-    pf.signals.noise(n_samples=44100, spectrum="white"),
-    sp.dsp.dirac_sequence(pf.TimeData([500],[0]), 44100),
+@pytest.mark.parametrize("sr", [
+    44100,
     ])
 @pytest.mark.parametrize("etc_step",[
     1/441, 1/500,
 ])
-@pytest.mark.parametrize("freqs",[
-    [1000],
-    pf.dsp.filter.fractional_octave_frequencies()[0]
+@pytest.mark.parametrize("fracs",[
+    1,3,
 ])
-def test_dsp_weighting(noise,etc_step,freqs):
+@pytest.mark.parametrize("roomvol",[
+    100, 1000,
+])
+def test_etc_weighting(sr,etc_step,fracs,roomvol):
     """Test that noise is correctly weighted by the etc."""
 
+    freqs = pf.dsp.filter.fractional_octave_frequencies(num_fractions=fracs)[0]
+    mu,t_start = sp.dsp.reflection_density_room(room_volume=roomvol,
+                                                n_samples=sr,
+                                                sampling_rate=sr,
+                                                max_reflection_density=22000)
+    # noise = sp.dsp.dirac_sequence(reflection_density=mu,n_samples=sr,
+    #                               t_start=t_start, sampling_rate=sr) 
+    noise = pf.signals.noise(sampling_rate=sr,n_samples=sr) # works!
     times = np.arange(0,1,etc_step)
 
     # 2 receivers with different etcs
@@ -164,5 +173,19 @@ def test_dsp_weighting(noise,etc_step,freqs):
 
     sig = sp.dsp.weight_by_etc(etc=etc,
                                noise_signal=noise,
-                               freq_bands=freqs)
+                               freq_bands=freqs,
+                               split=True)
+
+    _,bandwidths=sp.dsp._get_freq_band_idx(freqs,num_fractions=fracs)
+
+    etc_sig = sp.dsp.energy_time_curve_from_impulse_response(
+        signal=sig,
+        delta_time=etc_step,
+        bandwidth=bandwidths,
+    )
+
+    k = np.sum(etc[:,:,0].time)-np.sum(etc_sig.time)
+
+    assert k/np.sum(etc[:,:,0].time)>0
+    assert np.abs(k/np.sum(etc[:,:,0].time))<0.01
 
