@@ -8,21 +8,45 @@ import matplotlib.pyplot as plt
 @pytest.mark.parametrize("room_volume", [200, 500])
 @pytest.mark.parametrize("speed_of_sound", [320, 343])
 @pytest.mark.parametrize("n_samples", [22050, 44100])
-def test_reflection_density_room(n_samples, speed_of_sound, room_volume):
+@pytest.mark.parametrize("max_reflection_density", [None, 5000])
+def test_reflection_density_room(
+        n_samples, speed_of_sound, room_volume, max_reflection_density):
     reflection_density, t_start = sp.dsp.reflection_density_room(
         room_volume, n_samples, speed_of_sound=speed_of_sound,
-        max_reflection_density=None)
+        max_reflection_density=max_reflection_density)
 
     # test reflection_density
     assert isinstance(reflection_density, pf.TimeData)
     t = reflection_density.times
     desired = 4*np.pi*speed_of_sound**3*t**2/room_volume
+    if max_reflection_density is not None:
+        desired[desired > max_reflection_density] = max_reflection_density
     npt.assert_almost_equal(
         reflection_density.time.flatten(), desired)
 
     # test t_start
     t_desired = (2*room_volume*np.log(2)/(4*np.pi*speed_of_sound**3))**(1/3)
     npt.assert_almost_equal(t_start, t_desired, decimal=3)
+
+
+def test_reflection_density_room_inputs():
+    """Test that inputs must be positive."""
+    with pytest.raises(ValueError, match="speed_of_sound must be positive."):
+        sp.dsp.reflection_density_room(
+            room_volume=500, n_samples=44100, speed_of_sound=-343)
+
+    with pytest.raises(ValueError, match="room_volume must be positive."):
+        sp.dsp.reflection_density_room(
+            room_volume=-500, n_samples=44100)
+
+    with pytest.raises(ValueError, match="n_samples must be positive."):
+        sp.dsp.reflection_density_room(
+            room_volume=500, n_samples=-44100)
+
+    with pytest.raises(
+            ValueError, match="max_reflection_density must be positive."):
+        sp.dsp.reflection_density_room(
+            room_volume=500, n_samples=44100, max_reflection_density=-10000)
 
 
 @pytest.mark.parametrize("t_start", [0, 0.01])
@@ -60,7 +84,7 @@ def test_dirac_sequence_dirac(
 
 @pytest.mark.parametrize("n_samples", [22050, 44100])
 @pytest.mark.parametrize("sampling_rate", [44100, 48000])
-def test_dirac_sequence_const(
+def test_dirac_sequence_constant_reflection_density(
         n_samples, sampling_rate):
     mu = 200
     times = pf.Signal(np.zeros(n_samples), sampling_rate).times
@@ -93,26 +117,6 @@ def test_dirac_sequence_const(
             delta_time = 0
 
     npt.assert_almost_equal(1/np.mean(delta_times)/mu, 1, decimal=1)
-
-
-def test_reflection_density_room_inputs():
-    """Test that inputs must be positive."""
-    with pytest.raises(ValueError, match="speed_of_sound must be positive."):
-        sp.dsp.reflection_density_room(
-            room_volume=500, n_samples=44100, speed_of_sound=-343)
-
-    with pytest.raises(ValueError, match="room_volume must be positive."):
-        sp.dsp.reflection_density_room(
-            room_volume=-500, n_samples=44100)
-
-    with pytest.raises(ValueError, match="n_samples must be positive."):
-        sp.dsp.reflection_density_room(
-            room_volume=500, n_samples=-44100)
-
-    with pytest.raises(
-            ValueError, match="max_reflection_density must be positive."):
-        sp.dsp.reflection_density_room(
-            room_volume=500, n_samples=44100, max_reflection_density=-10000)
 
 
 def test_dirac_sequence_inputs():

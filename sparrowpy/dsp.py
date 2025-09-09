@@ -1,4 +1,5 @@
-"""Contain functions to generate IRs from sparrowpy ETCs."""
+
+"""Module for filter generation and signal processing in sparrowpy."""
 import numpy as np
 import pyfar as pf
 import warnings
@@ -29,7 +30,7 @@ def reflection_density_room(
     .. note::
         This function can be used to generate the Dirac sequence for the
         room impulse response synthesis using
-        :py:func:`pyfar.signals.dirac_sequence`.
+        :py:func:`sparrowpy.dsp.dirac_sequence`.
 
     Parameters
     ----------
@@ -39,8 +40,7 @@ def reflection_density_room(
         The length of the signal in samples.
     speed_of_sound : float, None, optional
         Speed of sound in the room.
-        By default, the :py:attr:`~pyfar.constants.reference_speed_of_sound`
-        is used.
+        By default, 343.2 m/s is used.
     max_reflection_density : int, optional
         The maximum reflection density. The default is None, which means
         that the reflection density is not limited.
@@ -49,10 +49,10 @@ def reflection_density_room(
 
     Returns
     -------
-    reflection_density : pyfar.TimeData
+    reflection_density : :py:class:`pyfar.TimeData`
         reflection density :math:`\mu` in :math:`1/s^2` over time.
     t_start : float
-        The dirac sequence generation starts after :math:`t_start`.
+        The dirac sequence generation starts after :math:`t_\text{start}`.
 
     References
     ----------
@@ -126,7 +126,7 @@ def dirac_sequence(
     .. math:: \Delta t_a = \frac{1}{\mu} \cdot \ln{\frac{1}{z}}
 
     with z being a random number in the range of :math:`z \in (0, 1]`
-    and :math:`\mu` being the ``reflection_density`` in a room.
+    and :math:`\mu` being the ``reflection_density`` over time.
     Each dirac has an amplitude of 1 or -1, which is chosen
     randomly with equal probability.
     The dirac sequence generation starts after :math:`t_\text{start}`.
@@ -145,7 +145,7 @@ def dirac_sequence(
         in seconds. The default is ``0``.
     sampling_rate : int, optional
         The sampling rate of the dirac sequence in Hz.
-        The default is 44100.
+        The default is 44100 Hz.
     seed : int, None, optional
         The seed for the random generator. Pass a seed to obtain identical
         results for multiple calls. The default is ``None``, which will yield
@@ -154,7 +154,7 @@ def dirac_sequence(
 
     Returns
     -------
-    dirac_sequence : pyfar.Signal
+    dirac_sequence : :py:class:`pyfar.Signal`
         Signal of the generated dirac impulse sequence.
 
     References
@@ -171,28 +171,28 @@ def dirac_sequence(
 
     .. plot::
 
-        >>> import sparrowpy as sp
         >>> import pyfar as pf
+        >>> import sparrowpy as sp
         >>> n_samples = 22050
         >>> reflection_density, t_0 = sp.dsp.reflection_density_room(
-        ...     5000, n_samples)
+        ...     5000, n_samples, max_reflection_density=5e3)
         >>> dirac_sequence = sp.dsp.dirac_sequence(
-        ...     reflection_density, n_samples, t_start=t_0)
+        ...     reflection_density, n_samples, t_start=t_0, seed=0)
         >>> ax = pf.plot.time(dirac_sequence, linewidth=.5)
         >>> ax.set_title("Dirac sequence")
 
-    Generate a Dirac sequence based on a custom reflection density.
+    Generate a Dirac sequence based on a constant reflection density.
 
     .. plot::
 
-        >>> import sparrowpy as sp
         >>> import pyfar as pf
         >>> import numpy as np
+        >>> import sparrowpy as sp
         >>> n_samples = 22050
-        >>> reflection_density = pyfar.TimeData(
-        ...     np.ones(n_samples)*10000, np.arange(n_samples)/44100)
+        >>> reflection_density = pf.TimeData(
+        ...     np.ones(n_samples)*100, np.arange(n_samples)/44100)
         >>> dirac_sequence = sp.dsp.dirac_sequence(
-        ...     reflection_density, n_samples, t_start=0)
+        ...     reflection_density, n_samples, t_start=0, seed=0)
         >>> ax = pf.plot.time(dirac_sequence, linewidth=.5)
         >>> ax.set_title("Dirac sequence")
     """
