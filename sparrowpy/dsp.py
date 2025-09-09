@@ -68,11 +68,12 @@ def reflection_density_room(
 
     .. plot::
 
+        >>> import sparrowpy as sp
         >>> import pyfar as pf
         >>> n_samples = 8800
         >>> sampling_rate = 44100
         >>> for v in [100, 500, 1000, 5000]:
-        >>>     reflection_density, t_0 = pf.signals.reflection_density_room(
+        >>>     reflection_density, t_0 = sp.dsp.reflection_density_room(
         ...         v, n_samples, sampling_rate)
         >>>     ax = pf.plot.time(
         ...         reflection_density,
@@ -171,11 +172,12 @@ def dirac_sequence(
 
     .. plot::
 
+        >>> import sparrowpy as sp
         >>> import pyfar as pf
         >>> n_samples = 22050
-        >>> reflection_density, t_0 = pf.signals.reflection_density_room(
+        >>> reflection_density, t_0 = sp.dsp.reflection_density_room(
         ...     5000, n_samples)
-        >>> dirac_sequence = pf.signals.dirac_sequence(
+        >>> dirac_sequence = sp.dsp.dirac_sequence(
         ...     reflection_density, n_samples, t_start=t_0)
         >>> ax = pf.plot.time(dirac_sequence, linewidth=.5)
         >>> ax.set_title("Dirac sequence")
@@ -184,12 +186,13 @@ def dirac_sequence(
 
     .. plot::
 
+        >>> import sparrowpy as sp
         >>> import pyfar as pf
         >>> import numpy as np
         >>> n_samples = 22050
         >>> reflection_density = pyfar.TimeData(
         ...     np.ones(n_samples)*10000, np.arange(n_samples)/44100)
-        >>> dirac_sequence = pf.signals.dirac_sequence(
+        >>> dirac_sequence = sp.dsp.dirac_sequence(
         ...     reflection_density, n_samples, t_start=0)
         >>> ax = pf.plot.time(dirac_sequence, linewidth=.5)
         >>> ax.set_title("Dirac sequence")
