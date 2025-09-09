@@ -252,7 +252,7 @@ def weight_by_etc(
     if freq_bands is None:
         raise ValueError(
             "The frequency bands simulated in the ETC must be defined.")
-    elif not (isinstance(freq_bands,list) or isinstance(freq_bands,list)):
+    elif not (isinstance(freq_bands,np.ndarray) or isinstance(freq_bands,list)):
         raise ValueError(
             "freq_bands must be a 1-D list or numpy.array().")
     else:
@@ -262,7 +262,7 @@ def weight_by_etc(
         "freq_bands length does not match the number of frequency-wise ETC's.")
         if (freq_bands<20).any() or (freq_bands>20000).any():
             raise ValueError(
-        "freq_bands entries above max does not match the number of frequency-wise ETC's.")
+        "freq_bands entries above max does not match the number of frequency-wise ETCs.")
 
     resampling_factor = noise_signal.sampling_rate*(etc.times[1]-etc.times[0])
 
@@ -293,7 +293,7 @@ def weight_by_etc(
                     lower = int(sample_i * resampling_factor)
                     upper = int((sample_i+1) * resampling_factor)
 
-                    noise_sec = band_filtered_noise.time[filter_ix,lower:upper]
+                    noise_sec = band_filtered_noise.time[filter_ix,0,lower:upper]
                     div = np.sum(noise_sec**2)
 
                     if div != 0:
@@ -307,7 +307,7 @@ def weight_by_etc(
                                       (noise_signal.sampling_rate/2))
                         )
 
-    ir = pf.Signal(np.sum(weighted_noise, axis=1),
+    ir = pf.Signal(np.sum(weighted_noise, axis=2),
                                noise_signal.sampling_rate)
 
     return ir
@@ -333,13 +333,13 @@ def etc_from_signal(signal:pf.Signal, time_step:float):
     sampling_factor = signal.sampling_rate*time_step
 
     etc_array = np.zeros(signal.cshape +
-                         (int(sampling_factor*signal.n_samples)))
+                         (int(signal.n_samples/sampling_factor),))
 
     for i in range(etc_array.shape[-1]):
         lower = int(i * sampling_factor)
         upper = int((i+1) * sampling_factor)
 
-        etc_array[:,:,i] = np.sum(signal.time[lower:upper]**2, axis=-1)
+        etc_array[:,:,i] = np.sum(signal.time[:,:,lower:upper]**2, axis=-1)
 
     etc = pf.TimeData(data=etc_array,
                       times=np.arange(signal.times[0],
