@@ -228,3 +228,83 @@ def dirac_sequence(
         dirac_sequence.time[..., i_current] = rng.choice([-1, 1], p=[0.5, 0.5])
 
     return dirac_sequence
+
+def weight_by_etc(
+    etc: pf.TimeData,
+    noise_signal: pf.Signal,
+    freq_bands=None,
+    num_fractions=1,
+) -> pf.Signal:
+    """
+    Generate the impulse response for a given ETC.
+
+    Parameters
+    ----------
+    etc: pf.TimeData
+        ETC of a soudn propagation simulation.
+    noise_signal: pf.Signal
+        Noise sequence
+
+    Returns
+    -------
+    ir : pf.Signal
+        Dirac impulse response of the room.
+    """
+    if freq_bands is None:
+        raise ValueError(
+            "The frequency bands simulated in the ETC must be defined.")
+    elif not (isinstance(freq_bands,list) or isinstance(freq_bands,list)):
+        raise ValueError(
+            "freq_bands must be a 1-D list or numpy.array().")
+    else:
+        freq_bands=np.array(freq_bands).flatten()
+        if freq_bands.shape[0] != etc.cshape[1]:
+            raise ValueError(
+        "freq_bands length does not match the number of frequency-wise ETC's.")
+
+    factor_s = noise_signal.sampling_rate*(etc.times[1]-etc.times[0])
+
+    band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
+        signal=noise_signal,
+        num_fractions=1,
+        order=4,
+    )
+    center_freq = pf.dsp.filter.fractional_octave_frequencies(
+        num_fractions=1,
+    )
+
+    weighted_noise = np.zeros(
+        (
+            etc.cshape[0],
+            etc.cshape[-1],
+            band_filtered_noise.time.shape[2],
+        ),
+    )
+    bw_size = [
+        center_freq[1][i] * np.sqrt(2) - center_freq[1][i] / np.sqrt(2)
+        for i in range(len(center_freq[1]))
+    ]
+
+
+    for band_ix,fband in enumerate(freq_bands):
+        for i,f in enumerate(center_freq[0]):
+            if f == fband:
+                filter_ix=i
+                for sample_i in range(etc.time.shape[-1]):
+                    low = int(sample_i * factor_s)
+                    high = (
+                        int(sample_i * factor_s + factor_s)
+                    )
+                    div = sum(band_filtered_noise.time[filter_ix, 0, low:high] ** 2)
+                    if div != 0:
+                        weighted_noise[:,filter_ix, low:high] = (
+                            band_filtered_noise.time[filter_ix, :, low:high]
+                            * np.sqrt(etc.time[:,band_ix,sample_i] / div)
+                            * np.sqrt(bw_size[filter_ix] / (noise_signal.sampling_rate/2))
+                        )
+                break
+
+    ir = pf.Signal(np.sum(weighted_noise, axis=1),
+                               noise_signal.sampling_rate)
+
+    return ir
