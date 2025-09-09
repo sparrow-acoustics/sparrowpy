@@ -130,3 +130,20 @@ def test_dirac_sequence_inputs():
             match="The reflection density must be less than sampling_rate/2."):
         sp.dsp.dirac_sequence(
             pf.TimeData([44100], [0]), 500)
+
+
+@pytest.mark.parametrize("noise", [
+    pf.signals.noise(n_samples=44100, spectrum="flat"),
+    sp.dsp.dirac_sequence(pf.TimeData([500],[0]), 44100),
+    ])
+@pytest.mark.parametrize("etc",[
+    pf.TimeData(np.exp(-10*np.arange(0,1,1/441)),np.arange(0,1,1/441)),
+    pf.TimeData(4*(np.arange(0,1,1/441)-.5)**2,np.arange(0,1,1/441)),
+])
+def test_dsp_weighting(noise,etc):
+    """Test that noise is correctly weighted by the etc."""
+    sig = sp.dsp.weight_by_etc(noise,etc)
+
+    etc_sig = sp.dsp.etc_from_signal(sig, time_step=1/441)
+
+    npt.assert_allclose(etc.time,etc_sig.time)
