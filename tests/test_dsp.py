@@ -153,22 +153,13 @@ def test_etc_weighting(sr,etc_step,fracs,roomvol):
     """Test that noise is correctly weighted by the etc."""
 
     freqs = pf.dsp.filter.fractional_octave_frequencies(num_fractions=fracs)[0]
-    mu,t_start = sp.dsp.reflection_density_room(room_volume=roomvol,
-                                                n_samples=sr,
-                                                sampling_rate=sr,
-                                                max_reflection_density=22000)
-    #noise = sp.dsp.dirac_sequence(reflection_density=mu,n_samples=sr,
-    #                              t_start=t_start, sampling_rate=sr) 
-    noise = pf.signals.noise(sampling_rate=sr,n_samples=sr) # works!
+    noise = pf.signals.noise(sampling_rate=sr,n_samples=sr)
     times = np.arange(0,1,etc_step)
 
-    # 2 receivers with different etcs
     etcs = np.array([np.exp(-10*times),
                      (4*(times-.5)**2)])
 
-    # across multiple frequencies
     etcs = np.repeat(etcs[:,np.newaxis,:],len(freqs),axis=1)
-
     etc = pf.TimeData(etcs, times)
 
     sig = sp.dsp.weight_by_etc(etc=etc,
@@ -186,9 +177,5 @@ def test_etc_weighting(sr,etc_step,fracs,roomvol):
             delta_time=etc_step,
             bandwidth=bw,
         )
-
-        k = np.sum(etc[:,0,i].time)-np.sum(etc_sig.time)
-
-        assert k/np.sum(etc[:,0,i].time)>-1e-10
-        assert np.abs(k/np.sum(etc[:,:,0].time))<0.01
+        npt.assert_allclose(etc[:,0,i].time,etc_sig.time)
 
