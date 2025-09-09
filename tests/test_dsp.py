@@ -136,15 +136,30 @@ def test_dirac_sequence_inputs():
     pf.signals.noise(n_samples=44100, spectrum="white"),
     sp.dsp.dirac_sequence(pf.TimeData([500],[0]), 44100),
     ])
-@pytest.mark.parametrize("etc",[
-    pf.TimeData(np.exp(-10*np.arange(0,1,1/441)),np.arange(0,1,1/441)),
-    pf.TimeData(4*(np.arange(0,1,1/441)-.5)**2,np.arange(0,1,1/441)),
+@pytest.mark.parametrize("etc_step",[
+    1/441, 1/500,
 ])
-def test_dsp_weighting(noise,etc):
+@pytest.mark.parametrize("freqs",[
+    [1000],
+    pf.dsp.filter.fractional_octave_frequencies()[0]
+])
+def test_dsp_weighting(noise,etc_step,freqs):
     """Test that noise is correctly weighted by the etc."""
+
+    times = np.arange(0,1,etc_step)
+
+    # 2 receivers with different etcs
+    etcs = np.array([np.exp(-10*times),
+                     (4*(times-.5)**2)])
+
+    # across multiple frequencies
+    etcs = np.repeat(etcs[:,np.newaxis,:],len(freqs),axis=1)
+
+    etc = pf.TimeData(etcs, times)
+
     sig = sp.dsp.weight_by_etc(etc=etc,
                                noise_signal=noise,
-                               freq_bands=[1000])
+                               freq_bands=freqs)
 
     etc_sig = sp.dsp.etc_from_signal(sig, time_step=etc.times[1]-etc.times[0])
 
