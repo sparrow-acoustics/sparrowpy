@@ -118,3 +118,5 @@ tests/private/
 # ignore generated files
 *.pdf
 examples/radiosity_fast.far
+# ignore temporary examples folder
+examples/TMPs/

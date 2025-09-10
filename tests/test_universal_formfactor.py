@@ -271,6 +271,45 @@ def source_cast(src, rpatch, absor):
 
     return rpatch
 
+def source_cast_dblquad(src, rpatch, absor):
+    """Cast and test source-to-patch factor calculation."""
+    nuss = form_factor.integration.point_patch_factor_dblquad(point=src.position,
+                                       patch_points=rpatch.pts)
+
+    true = sum(rpatch.E_matrix[rpatch.E_matrix != 0])
+
+    rel_error_nuss = abs(true - nuss * (1 - absor)) / true * 100
+
+    assert rel_error_nuss < 1.0
+
+    return rpatch
+
+
+def source_cast_leggaussplanar(src, rpatch, absor):
+    """Cast and test source-to-patch factor calculation."""
+    nuss = form_factor.integration.point_patch_factor_leggaus_planar(point=src.position,
+                                       patch_points=rpatch.pts)
+
+    true = sum(rpatch.E_matrix[rpatch.E_matrix != 0])
+
+    rel_error_nuss = abs(true - nuss * (1 - absor)) / true * 100
+
+    assert rel_error_nuss < 1.0
+
+    return rpatch
+
+def source_cast_montecarlo(src, rpatch, absor):
+    """Cast and test source-to-patch factor calculation."""
+    nuss = form_factor.integration.point_patch_factor_mc_planar(point=src.position,
+                                       patch_points=rpatch.pts)
+
+    true = sum(rpatch.E_matrix[rpatch.E_matrix != 0])
+
+    rel_error_nuss = abs(true - nuss * (1 - absor)) / true * 100
+
+    assert rel_error_nuss < 1.0
+
+    return rpatch
 
 def receiver_cast(rcv, patch, sr, c):
     """Cast and test patch-to-receiver factor calculation."""
