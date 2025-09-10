@@ -175,7 +175,7 @@ def test_etc_weighting(sr,etc_step,freqs):
                                freqs=freqs,
                                num_fractions=fracs)
 
-    bandwidths=sp.dsp._get_frac_octave_bandwidth(freqs,num_fractions=fracs)
+    _,_,bandwidths=sp.dsp.get_frac_octave_data(freqs,num_fractions=fracs)
 
     for i,bw in enumerate(bandwidths):
         etc_sig = sp.dsp.energy_time_curve_from_impulse_response(

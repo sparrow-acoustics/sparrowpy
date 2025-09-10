@@ -284,7 +284,7 @@ def weight_filters_by_etc(
 
     rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
 
-    bandwidths = _get_frac_octave_bandwidth(freq_bands=freqs,
+    _,_,bandwidths = get_frac_octave_data(freq_bands=freqs,
                                      num_fractions=num_fractions)
 
     weighted_noise = np.zeros(etc.cshape +
@@ -318,10 +318,13 @@ def band_filter_signal(signal:pf.Signal,
     if freq_bands is None:
         freq_bands=[20,20e3]
 
+    tru_bands,_,_ = get_frac_octave_data(freq_bands=freq_bands,
+                                         num_fractions=num_fractions)
+
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
         signal=signal,
         num_fractions=num_fractions,
-        frequency_range=(np.min(freq_bands),np.max(freq_bands)),
+        frequency_range=(np.min(tru_bands),np.max(tru_bands)),
         order=4,
     )
 
@@ -330,11 +333,14 @@ def band_filter_signal(signal:pf.Signal,
     return band_filtered_noise
 
 
-def _get_frac_octave_bandwidth(freq_bands:np.ndarray, num_fractions=1):
+def get_frac_octave_data(freq_bands:np.ndarray, num_fractions=1):
     """Return frac octave filter indices corresp. to user freq bands."""
-    _,_,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
+    low = max(np.min(freq_bands)*.67,20)
+    high = min(np.max(freq_bands)*1.5,20e3)
+
+    n,e,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
         num_fractions=num_fractions,
-        frequency_range=(np.min(freq_bands),np.max(freq_bands)),
+        frequency_range=(low,high),
         return_cutoff=True,
         )
 
@@ -345,11 +351,11 @@ def _get_frac_octave_bandwidth(freq_bands:np.ndarray, num_fractions=1):
 
     if np.unique(idcs).shape[0]<idcs.shape[0]:
         warnings.warn(
-            "WARNING: multiple ETCs in same freq. band.\n" +
+            "WARNING: multiple frequencies in the same freq. band.\n" +
             "This may lead to overestimation of the energy in said frequency",
             stacklevel=2)
 
-    return freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
+    return n[idcs], e[idcs], freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
 
 
 
