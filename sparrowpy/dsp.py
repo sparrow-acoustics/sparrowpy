@@ -228,90 +228,102 @@ def dirac_sequence(
 
     return dirac_sequence
 
-def weight_by_etc(
+def weight_filters_by_etc(
     etc: pf.TimeData,
-    noise_signal: pf.Signal,
-    freq_bands=None,
+    noise_filters: pf.Signal,
+    freq_bands=np.ndarray,
     num_fractions=1,
-    split=False,
 ) -> pf.Signal:
     """
     Generate the impulse response for a given ETC.
 
     Parameters
     ----------
-    etc: pf.TimeData
+    etc: :py:class:`pyfar.TimeData'
         ETC of a sound propagation simulation.
-    noise_signal: pf.Signal
-        Noise sequence
+    noise_filters: :py:class:`pyfar.Signal'
+        frequency-wise IR filters
+        (frequency-band-wise noise sequences)
+    freq_bands: np.ndarray (n_freqs)
+        array of frequencies simulated by the ETC
+        length must match the right-most channel
+        of the etc and noise_filters objects.
 
     Returns
     -------
-    ir : pf.Signal
-        Dirac impulse response of the room.
+    bandwise_ir : :py:class:`pyfar.Signal'
+        frequency-band-wise impulse response of the space simulated by the ETC.
     """
     if freq_bands is None:
         raise ValueError(
             "The frequency bands simulated in the ETC must be defined.")
-    elif not (isinstance(freq_bands,np.ndarray) or isinstance(freq_bands,list)):
-        raise ValueError(
-            "freq_bands must be a 1-D list or numpy.array().")
+    elif not isinstance(freq_bands,np.ndarray):
+        raise ValueError("freq_bands must be a 1-D numpy.ndarray.")
     else:
-        freq_bands=np.array(freq_bands).flatten()
+        if freq_bands.ndim>1:
+            raise ValueError("freq_bands must be 1-dimensional.")
         if freq_bands.shape[0] != etc.cshape[-1]:
             raise ValueError(
         "freq_bands length does not match the number of frequency-wise ETC's.")
-        if (freq_bands<20).any() or (freq_bands>20000).any():
+        if freq_bands.shape[0] != noise_filters.cshape[-1]:
             raise ValueError(
-        "freq_bands entries above max does not match the number of frequency-wise ETCs.")
+        "freq_bands length does not match the number of noise filters.")
+        if (freq_bands<20).any() or (freq_bands>20e3).any():
+            raise ValueError(
+        "freq_bands entries outside [20 Hz , 20000 Hz] interval.")
 
-    resampling_factor = noise_signal.sampling_rate*(etc.times[1]-etc.times[0])
+    if (etc.times[1:]-etc.times[:-1] == etc.times[1]-etc.times[0]).all():
+        raise ValueError("ETC entries must be equally spaced in time.")
 
-    band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
-        signal=noise_signal,
-        num_fractions=num_fractions,
-        frequency_range=(np.min(freq_bands)*.67,np.max(freq_bands)*1.5),
-        order=4,
-    )
+    if len(etc.cshape)==1:
+        etc.time = etc.time[np.newaxis]
+    if len(etc.cshape)==2:
+        etc.time = etc.time[:,np.newaxis]
+
+    rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
 
     f_band_idcs, bandwidths = _get_freq_band_idx(freq_bands=freq_bands,
                                      num_fractions=num_fractions)
 
     weighted_noise = np.zeros(etc.cshape +
-                              (band_filtered_noise.time.shape[-1],),
-                              )
-
-    # in case it's a mono etc -> "single direction"
-    if len(etc.cshape)==2:
-        weighted_noise = weighted_noise[:,np.newaxis,:,:]
-        etc.time = etc.time[:,np.newaxis]
-
-    if len(band_filtered_noise.cshape)>1:
-        band_filtered_noise=band_filtered_noise[:,0]
+                              (noise_filters.time.shape[-1],))
 
     for band_ix,filter_ix in enumerate(f_band_idcs):
         for sample_i in range(etc.time.shape[-1]):
-            lower = int(sample_i * resampling_factor)
-            upper = int((sample_i+1) * resampling_factor)
+            lower = int(sample_i * rs_factor)
+            upper = int((sample_i+1) * rs_factor)
 
-            noise_sec = band_filtered_noise.time[filter_ix,lower:upper]
+            noise_sec = noise_filters.time[filter_ix,lower:upper]
             div = np.sum(noise_sec**2)
 
             if div != 0:
                 etc_weight = np.sqrt(etc.time[:,:,band_ix,sample_i] / div)  \
                             * np.sqrt(bandwidths[band_ix] /
-                                      (noise_signal.sampling_rate/2))
+                                      (noise_filters.sampling_rate/2))
 
                 weighted_noise[:,:,band_ix, lower:upper]=(
                     np.multiply.outer(etc_weight,noise_sec)
                 )
 
-    if not split:
-        weighted_noise=np.sum(weighted_noise, axis=2)
+    bandwise_ir = pf.Signal(weighted_noise, noise_filters.sampling_rate)
 
-    ir = pf.Signal(weighted_noise, noise_signal.sampling_rate)
+    return bandwise_ir
 
-    return ir
+def band_filter_signal(signal:pf.Signal,
+                       freq_bands=None,
+                       num_fractions=1):
+    """Band filter input signal."""
+    if freq_bands is None:
+        freq_bands=[20,20e3]
+
+    band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
+        signal=signal,
+        num_fractions=num_fractions,
+        frequency_range=(np.min(freq_bands)*.67,np.max(freq_bands)*1.5),
+        order=4,
+    )
+
+    return band_filtered_noise
 
 
 def _get_freq_band_idx(freq_bands:np.ndarray, num_fractions=1):
