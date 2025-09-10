@@ -138,21 +138,25 @@ def test_dirac_sequence_inputs():
 
 
 @pytest.mark.parametrize("sr", [
-    44100,
+    44100, 48000,
     ])
 @pytest.mark.parametrize("etc_step",[
     1/441, 1/500,
 ])
-@pytest.mark.parametrize("fracs",[
-    1,3,
+@pytest.mark.parametrize("freqs",[
+    pf.dsp.filter.fractional_octave_frequencies(num_fractions=1)[0],
+    pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0],
+    np.array([1000]),
+    np.array([1500,730]),
 ])
-@pytest.mark.parametrize("roomvol",[
-    100, 1000,
-])
-def test_etc_weighting(sr,etc_step,fracs,roomvol):
+def test_etc_weighting(sr,etc_step,freqs):
     """Test that noise is correctly weighted by the etc."""
 
-    freqs = pf.dsp.filter.fractional_octave_frequencies(num_fractions=fracs)[0]
+    if len(freqs)>10:
+        fracs=3
+    else:
+        fracs=1
+
     noise = pf.signals.noise(sampling_rate=sr,n_samples=sr)
     times = np.arange(0,1,etc_step)
 

@@ -233,7 +233,7 @@ def weight_by_etc(
     noise_signal: pf.Signal,
     freq_bands=None,
     num_fractions=1,
-    split=False
+    split=False,
 ) -> pf.Signal:
     """
     Generate the impulse response for a given ETC.
@@ -270,7 +270,7 @@ def weight_by_etc(
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
         signal=noise_signal,
         num_fractions=num_fractions,
-        frequency_range=(np.min(freq_bands),np.max(freq_bands)),
+        frequency_range=(np.min(freq_bands)*.67,np.max(freq_bands)*1.5),
         order=4,
     )
 
@@ -289,33 +289,27 @@ def weight_by_etc(
     if len(band_filtered_noise.cshape)>1:
         band_filtered_noise=band_filtered_noise[:,0]
 
-    for rec_ix in range(etc.cshape[0]):
-        for dir_ix in range(etc.cshape[1]):
-            for band_ix,filter_ix in enumerate(f_band_idcs):
-                for sample_i in range(etc.time.shape[-1]):
+    for band_ix,filter_ix in enumerate(f_band_idcs):
+        for sample_i in range(etc.time.shape[-1]):
+            lower = int(sample_i * resampling_factor)
+            upper = int((sample_i+1) * resampling_factor)
 
-                    lower = int(sample_i * resampling_factor)
-                    upper = int((sample_i+1) * resampling_factor)
+            noise_sec = band_filtered_noise.time[filter_ix,lower:upper]
+            div = np.sum(noise_sec**2)
 
-                    noise_sec = band_filtered_noise.time[filter_ix,lower:upper]
-                    div = np.sum(noise_sec**2)
-
-                    if div != 0:
-                        weighted_noise[rec_ix,dir_ix,filter_ix, lower:upper]=(
-                            noise_sec
-                            * np.sqrt(etc.time[rec_ix,
-                                               dir_ix,
-                                               band_ix,
-                                               sample_i] / div)
+            if div != 0:
+                etc_weight = np.sqrt(etc.time[:,:,band_ix,sample_i] / div)  \
                             * np.sqrt(bandwidths[band_ix] /
                                       (noise_signal.sampling_rate/2))
-                        )
+
+                weighted_noise[:,:,band_ix, lower:upper]=(
+                    np.multiply.outer(etc_weight,noise_sec)
+                )
+
     if not split:
-        ir = pf.Signal(np.sum(weighted_noise, axis=2),
-                                noise_signal.sampling_rate)
-    else:
-        ir = pf.Signal(weighted_noise,
-                            noise_signal.sampling_rate)
+        weighted_noise=np.sum(weighted_noise, axis=2)
+
+    ir = pf.Signal(weighted_noise, noise_signal.sampling_rate)
 
     return ir
 
@@ -324,7 +318,7 @@ def _get_freq_band_idx(freq_bands:np.ndarray, num_fractions=1):
     """Return frac octave filter indices corresp. to user freq bands."""
     _,_,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
         num_fractions=num_fractions,
-        frequency_range=(np.min(freq_bands),np.max(freq_bands)),
+        frequency_range=(np.min(freq_bands)*.67,np.max(freq_bands)*1.5),
         return_cutoff=True,
         )
 
