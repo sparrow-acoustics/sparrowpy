@@ -149,7 +149,7 @@ def test_dirac_sequence_inputs():
     np.array([1000]),
     np.array([1500,730]),
 ])
-def test_etc_weighting(sr,etc_step,freqs):
+def test_etc_weighting_dimensions(sr,etc_step,freqs):
     """Test that noise is correctly weighted by the etc."""
 
     if len(freqs)>10:
@@ -177,10 +177,79 @@ def test_etc_weighting(sr,etc_step,freqs):
     _,_,bandwidths=sp.dsp._closest_frac_octave_data(freqs,num_fractions=fracs)
 
     for i,bw in enumerate(bandwidths):
-        etc_sig = sp.dsp.energy_time_curve_from_impulse_response(
+        etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
             signal=sig[:,i],
             delta_time=etc_step,
             bandwidth=bw,
         )
-        npt.assert_allclose(etc[:,i].time,etc_sig.time)
+        npt.assert_allclose(etc[:,i].time,etc_from_sig.time)
+
+
+@pytest.mark.parametrize("sr", [
+    44100, 48000,
+    ])
+@pytest.mark.parametrize("etc_step",[
+    1/441, 1/500,
+])
+def test_etc_weighting_broadspectrum(sr,etc_step):
+    """Test that broadband noise is correctly weighted by the etc."""
+    noise = pf.signals.noise(sampling_rate=sr,n_samples=.1*sr)
+    times = np.arange(0,.1,etc_step)
+
+    etc = pf.TimeData(np.random.rand(times.shape[0]), times)
+
+    sig = sp.dsp.weight_filters_by_etc(etc=etc,
+                                       noise_filters=noise,
+                                       )
+
+    etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
+        signal=sig,
+        delta_time=etc_step,
+    )
+    npt.assert_allclose(etc.time,etc_from_sig.time)
+
+
+@pytest.mark.parametrize("n_receivers", [
+    0,1,2,
+    ])
+@pytest.mark.parametrize("n_directions",[
+    0,1,2,
+])
+@pytest.mark.parametrize("n_freqs",[
+    1,2,3,
+])
+def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs):
+    """Test that channel handling of etc weighting is done correctly."""
+    noise = pf.signals.noise(n_samples=4410)
+    noise.time=np.repeat(noise.time,n_freqs,axis=0)
+
+    times = np.arange(0,.1,.01)
+    data = np.random.rand(n_freqs,times.shape[0])
+
+    if n_directions>0:
+        data = data[np.newaxis,:]
+        data = np.repeat(data,n_directions,axis=0)
+
+    if n_receivers>0:
+        data = data[np.newaxis,:]
+        data = np.repeat(data,n_receivers,axis=0)
+
+    etc = pf.TimeData(data, times)
+
+    bandwidths = np.random.rand(n_freqs)**2 * 1000
+
+    sig = sp.dsp.weight_filters_by_etc(etc=etc,
+                                       noise_filters=noise,
+                                       bandwidths=bandwidths,
+                                       )
+
+    etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
+        signal=sig,
+        delta_time=.01,
+        bandwidth=bandwidths,
+    )
+
+    assert(etc_from_sig.cshape==etc.cshape)
+
+    npt.assert_allclose(etc.time,etc_from_sig.time)
 
