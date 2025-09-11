@@ -232,7 +232,6 @@ def weight_filters_by_etc(
     etc: pf.TimeData,
     noise_filters: pf.Signal,
     bandwidths=None,
-    num_fractions=1,
 ) -> pf.Signal:
     r"""
     Generate the frequency-wise impulse response for a given ETC.
@@ -254,9 +253,6 @@ def weight_filters_by_etc(
         bandwidths corresponding to the noise filter channels
         *Note:* length must match the number of right-most channels
         of the etc and noise_filters objects.
-    num_fractions: int
-        number of octave fractions of the input freq bands
-        (either 1 or 3)
 
     Returns
     -------
@@ -279,7 +275,7 @@ def weight_filters_by_etc(
             stacklevel=1,
             )
 
-        bandwidths = (20e3-20)*np.ones((noise_filters.cshape))
+        bandwidths = 22364.824174297697*np.ones((noise_filters.cshape))
 
     if not isinstance(bandwidths,np.ndarray):
         raise ValueError("bandwidths must be a 1-D numpy.ndarray.")
@@ -305,11 +301,6 @@ def weight_filters_by_etc(
 
     if (etc.times[1:]-etc.times[:-1] == etc.times[1]-etc.times[0]).all():
         raise ValueError("ETC entries must be equally spaced in time.")
-
-    if ((num_fractions!=1) and (num_fractions!=3)):
-        raise ValueError(
-            f"{num_fractions}th octave bands not supported."+
-            "Octave fractions must be either 1 or 3.")
 
     rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
 
@@ -338,20 +329,50 @@ def weight_filters_by_etc(
     return bandwise_ir
 
 def band_filter_signal(signal:pf.Signal,
-                       freq_bands=None,
-                       num_fractions=1):
-    """Band filter input signal."""
-    if freq_bands is None:
-        freq_bands=[20,20e3]
+                       freqs=np.ndarray,
+                       num_fractions=1,
+                       order=4):
+    r"""Band filter input signal and return corresponding bandwidths.
 
-    tru_bands,_,bw = get_frac_octave_data(freq_bands=freq_bands,
+    This method filters an input signal into octave/3rd octave bands
+    with Butterworth filtering. By default, the filter order is set
+    as 4.
+    The user may input an arbitrary array of frequencies in
+    which to filter the signal. The closest octave/3rd octave bands
+    to the input frequencies will be returned in the same order.
+
+    Returns the band-filtered signal in individual signal channels.
+
+    Parameters
+    ----------
+    signal: :py:class:`pyfar.Signal'
+        input broad-spectrum signal.
+    freqs: np.ndarray
+        frequencies in which to filter the signal.
+    num_fractions: int
+        number of octave fractions of the input freq bands
+        (either 1 or 3)
+    order: int
+        Butterworth filter order for the signal filtering.
+
+    Returns
+    -------
+    band_filtered_noise: :py:class:`pyfar.Signal'
+        band filtered signal of cshape (signal.cshape + (len(freqs))
+    """
+    if ((num_fractions!=1) and (num_fractions!=3)):
+        raise ValueError(
+            f"{num_fractions}th octave bands not supported."+
+            "Octave fractions must be either 1 or 3.")
+
+    tru_bands,bw = get_frac_octave_data(freq_bands=freqs,
                                          num_fractions=num_fractions)
 
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
         signal=signal,
         num_fractions=num_fractions,
         frequency_range=(np.min(tru_bands),np.max(tru_bands)),
-        order=4,
+        order=order,
     )
 
     band_filtered_noise.time = np.squeeze(band_filtered_noise.time)
@@ -364,7 +385,7 @@ def get_frac_octave_data(freq_bands:np.ndarray, num_fractions=1):
     low = max(np.min(freq_bands)*.67,20)
     high = min(np.max(freq_bands)*1.5,20e3)
 
-    n,e,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
+    _,e,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
         num_fractions=num_fractions,
         frequency_range=(low,high),
         return_cutoff=True,
@@ -376,12 +397,19 @@ def get_frac_octave_data(freq_bands:np.ndarray, num_fractions=1):
         idcs[i] = np.where((freq_cutoffs[0]<f)*(freq_cutoffs[1]>f))[0][0]
 
     if np.unique(idcs).shape[0]<idcs.shape[0]:
-        warnings.warn(
-            "WARNING: multiple frequencies in the same freq. band.\n" +
-            "This may lead to overestimation of the energy in said frequency",
-            stacklevel=1)
+        if num_fractions==3:
+            raise ValueError(
+                "Multiple input frequencies in the same freq. band.\n" +
+                "Remove one of the entries.",
+            )
+        else:
+            raise ValueError(
+                "Multiple input frequencies in the same freq. band.\n" +
+                "Remove one of the entries or reduce the bandwidth" +
+                "to 3rd octave.",
+            )
 
-    return n[idcs], e[idcs], freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
+    return e[idcs], freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
 
 
 
