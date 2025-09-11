@@ -743,7 +743,7 @@ def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarra
     
     """Calculate the geometric factor between a point and a patch.
 
-    using scipy dblquad to integrate over the patch surface. Need to set the parameter epsilons
+    using Gauss-Legendre quadrature to integrate over the patch surface. Need to set the parameter N (order of quadrature)
 
     Parameters
     ----------
