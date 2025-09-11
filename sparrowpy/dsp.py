@@ -234,25 +234,44 @@ def weight_filters_by_etc(
     freqs=np.ndarray,
     num_fractions=1,
 ) -> pf.Signal:
-    """
-    Generate the impulse response for a given ETC.
+    r"""
+    Generate the frequency-wise impulse response for a given ETC.
+
+    The frequency-band-wise noise filters are weighed by the respective
+    ETC over time after Chapter 5.3.4 of [#]_.
+    This creates
 
     Parameters
     ----------
     etc: :py:class:`pyfar.TimeData'
         ETC of a sound propagation simulation.
+        The number of right-most channels must match the number of freq bands.
+        *Note:* The ETC entries must be equally spaced in time.
     noise_filters: :py:class:`pyfar.Signal'
-        frequency-wise IR filters
-        (frequency-band-wise noise sequences)
-    freq_bands: np.ndarray (n_freqs)
+        frequency-wise IR filters in the form of noise sequences
+        of cshape (n_freq_bands,)
+    freqs: np.ndarray (n_freqs)
         array of frequencies simulated by the ETC
-        length must match the right-most channel
+        *Note:* length must match the number of right-most channels
         of the etc and noise_filters objects.
+    num_fractions: int
+        number of octave fractions of the input freq bands
+        (either 1 or 3)
 
     Returns
     -------
     bandwise_ir : :py:class:`pyfar.Signal'
-        frequency-band-wise impulse response of the space simulated by the ETC.
+        impulse response of the space simulated by the ETC.
+        different frequency bands of the IR are split over different channels.
+        
+        
+        
+    References
+    ----------
+    .. [#] D. Schröder, “Physically based real-time auralization of
+           interactive virtual environments,” PhD Thesis, Logos-Verlag,
+           Berlin, 2011. [Online].
+           Available: https://publications.rwth-aachen.de/record/50580
     """
     if freqs is None:
         raise ValueError(
@@ -275,12 +294,10 @@ def weight_filters_by_etc(
     if (etc.times[1:]-etc.times[:-1] == etc.times[1]-etc.times[0]).all():
         raise ValueError("ETC entries must be equally spaced in time.")
 
-
-    if len(etc.cshape)==1:
-        etc.time = etc.time[np.newaxis]
-    if len(etc.cshape)==2:
-        etc.time = etc.time[:,np.newaxis]
-
+    if ((num_fractions!=1) and (num_fractions!=3)):
+        raise ValueError(
+            f"{num_fractions}th octave bands not supported."+
+            "Octave fractions must be either 1 or 3.")
 
     rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
 
@@ -288,7 +305,7 @@ def weight_filters_by_etc(
                                      num_fractions=num_fractions)
 
     weighted_noise = np.zeros(etc.cshape +
-                              (noise_filters.time.shape[-1],))
+                              (noise_filters.time.shape[-1],)).T
 
     for band_ix in range(freqs.shape[0]):
         for sample_i in range(etc.time.shape[-1]):
@@ -299,15 +316,15 @@ def weight_filters_by_etc(
             div = np.sum(noise_sec**2)
 
             if div != 0:
-                etc_weight = np.sqrt(etc.time[:,:,band_ix,sample_i] / div)  \
+                etc_weight = np.sqrt(etc.time.T[sample_i,band_ix] / div)  \
                             * np.sqrt(bandwidths[band_ix] /
                                       (noise_filters.sampling_rate/2))
 
-                weighted_noise[:,:,band_ix, lower:upper]=(
-                    np.multiply.outer(etc_weight,noise_sec)
+                weighted_noise[lower:upper,band_ix]=(
+                    np.multiply.outer(noise_sec, etc_weight)
                 )
 
-    bandwise_ir = pf.Signal(weighted_noise, noise_filters.sampling_rate)
+    bandwise_ir = pf.Signal(weighted_noise.T, noise_filters.sampling_rate)
 
     return bandwise_ir
 
