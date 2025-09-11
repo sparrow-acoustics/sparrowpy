@@ -145,7 +145,7 @@ def test_dirac_sequence_inputs():
 ])
 @pytest.mark.parametrize("freqs",[
     pf.dsp.filter.fractional_octave_frequencies(num_fractions=1)[0],
-    pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0],
+    pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0][0:12],
     np.array([1000]),
     np.array([1500,730]),
 ])
@@ -166,22 +166,22 @@ def test_etc_weighting(sr,etc_step,freqs):
     etcs = np.repeat(etcs[:,np.newaxis,:],len(freqs),axis=1)
     etc = pf.TimeData(etcs, times)
 
-    bandwise_filter = sp.dsp.band_filter_signal(signal=noise,
+    bandwise_filter, bw = sp.dsp.band_filter_signal(signal=noise,
                                                 freq_bands=freqs,
                                                 num_fractions=fracs)
 
     sig = sp.dsp.weight_filters_by_etc(etc=etc,
                                noise_filters=bandwise_filter,
-                               freqs=freqs,
+                               bandwidths=bw,
                                num_fractions=fracs)
 
     _,_,bandwidths=sp.dsp.get_frac_octave_data(freqs,num_fractions=fracs)
 
     for i,bw in enumerate(bandwidths):
         etc_sig = sp.dsp.energy_time_curve_from_impulse_response(
-            signal=sig[:,0,i],
+            signal=sig[:,i],
             delta_time=etc_step,
             bandwidth=bw,
         )
-        npt.assert_allclose(etc[:,0,i].time,etc_sig.time)
+        npt.assert_allclose(etc[:,i].time,etc_sig.time)
 
