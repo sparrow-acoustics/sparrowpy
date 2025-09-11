@@ -247,17 +247,17 @@ def weight_filters_by_etc(
         The number of right-most channels must match the number of freq bands.
         *Note:* The ETC entries must be equally spaced in time.
     noise_filters: :py:class:`pyfar.Signal'
-        frequency-wise IR filters in the form of noise sequences
+        Frequency-wise IR filters in the form of noise sequences
         of cshape (n_freq_bands,)
     bandwidths: np.ndarray
-        bandwidths corresponding to the noise filter channels
+        Bandwidths corresponding to the noise filter channels in Hz.
         *Note:* length must match the number of right-most channels
         of the etc and noise_filters objects.
 
     Returns
     -------
     bandwise_ir : :py:class:`pyfar.Signal'
-        impulse response of the space simulated by the ETC.
+        Impulse response of the space simulated by the ETC.
         the IR channels match the ETC channels.
 
     References
@@ -346,11 +346,11 @@ def band_filter_signal(signal:pf.Signal,
     Parameters
     ----------
     signal: :py:class:`pyfar.Signal'
-        input broad-spectrum signal.
+        Input broad-spectrum signal.
     freqs: np.ndarray
-        frequencies in which to filter the signal.
+        Frequencies in which to filter the signal. In Hz.
     num_fractions: int
-        number of octave fractions of the input freq bands
+        Number of octave fractions of the input freq bands
         (either 1 or 3)
     order: int
         Butterworth filter order for the signal filtering.
@@ -358,14 +358,14 @@ def band_filter_signal(signal:pf.Signal,
     Returns
     -------
     band_filtered_noise: :py:class:`pyfar.Signal'
-        band filtered signal of cshape (signal.cshape + (len(freqs))
+        Band-filtered signal of cshape (signal.cshape + (len(freqs))
     """
     if ((num_fractions!=1) and (num_fractions!=3)):
         raise ValueError(
             f"{num_fractions}th octave bands not supported."+
             "Octave fractions must be either 1 or 3.")
 
-    tru_bands,bw = get_frac_octave_data(freq_bands=freqs,
+    tru_bands,bw = _closest_frac_octave_data(freqs=freqs,
                                          num_fractions=num_fractions)
 
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
@@ -380,20 +380,49 @@ def band_filter_signal(signal:pf.Signal,
     return band_filtered_noise, bw
 
 
-def get_frac_octave_data(freq_bands:np.ndarray, num_fractions=1):
-    """Return frac octave filter indices corresp. to user freq bands."""
-    low = max(np.min(freq_bands)*.67,20)
-    high = min(np.max(freq_bands)*1.5,20e3)
+def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
+    """
+    Determine frac. octave filter data of custom input frequencies.
 
-    _,e,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
+    Given an array of arbitrary frequencies, finds closest fractional
+    octave filters and returns corresponding exact center frequencies
+    and bandwidth.
+
+    Parameters
+    ----------
+    freqs: np.ndarray
+        Input frequency values in Hz.
+    num_fractions: int
+        Number of octave fractions of the output freq bands.
+        (either 1 or 3)
+
+    Returns
+    -------
+    nominal_freqs: np.ndarray
+        Nominal center frequencies of the output frequency bands in Hz.
+    exact_freqs: np.ndarray
+        Exact center frequencies of the output frequency bands in Hz.
+    band_widths: np.ndarray
+        Bandwidths of the output frequency bands in Hz.
+    """
+    if (freqs<20).any() or (freqs>20e3).any():
+        raise ValueError(
+            "Input frequencies must belong in the listening spectrum "+
+            "(20 Hz <--> 20000 Hz)",
+        )
+
+    low = max(np.min(freqs)*.67,20)
+    high = min(np.max(freqs)*1.5,20e3)
+
+    n,e,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
         num_fractions=num_fractions,
         frequency_range=(low,high),
         return_cutoff=True,
         )
 
-    idcs = np.empty_like(freq_bands,dtype=int)
+    idcs = np.empty_like(freqs,dtype=int)
 
-    for i,f in enumerate(freq_bands):
+    for i,f in enumerate(freqs):
         idcs[i] = np.where((freq_cutoffs[0]<f)*(freq_cutoffs[1]>f))[0][0]
 
     if np.unique(idcs).shape[0]<idcs.shape[0]:
@@ -409,7 +438,11 @@ def get_frac_octave_data(freq_bands:np.ndarray, num_fractions=1):
                 "to 3rd octave.",
             )
 
-    return e[idcs], freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
+    nominal_freqs = n[idcs]
+    exact_freqs   = e[idcs]
+    band_widths   = freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
+
+    return nominal_freqs,exact_freqs,band_widths
 
 
 
