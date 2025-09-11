@@ -218,13 +218,15 @@ def test_etc_weighting_broadspectrum(sr,etc_step):
 @pytest.mark.parametrize("n_freqs",[
     1,2,3,
 ])
-def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs):
+@pytest.mark.parametrize("bw_depth",[
+    1,
+])
+def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs,bw_depth):
     """Test that channel handling of etc weighting is done correctly."""
-    noise = pf.signals.noise(n_samples=4410)
-    noise.time=np.repeat(noise.time,n_freqs,axis=0)
-
-    times = np.arange(0,.1,.01)
-    data = np.random.rand(n_freqs,times.shape[0])
+    sr = 100
+    delta=1/sr*10
+    times = np.arange(0,1,delta)
+    data = np.ones((n_freqs,times.shape[0]))#np.random.rand(n_freqs,times.shape[0])
 
     if n_directions>0:
         data = data[np.newaxis,:]
@@ -236,7 +238,10 @@ def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs):
 
     etc = pf.TimeData(data, times)
 
-    bandwidths = np.random.rand(n_freqs)**2 * 1000
+    bandwidths = 3*np.ones(etc.cshape[-bw_depth:])#np.random.rand(*etc.cshape[-bw_depth:])**2 * sr/4
+
+    noise = pf.signals.noise(n_samples=sr, sampling_rate=sr)
+    noise.time=np.broadcast_to(noise.time,bandwidths.shape+(noise.time.shape[-1],))
 
     sig = sp.dsp.weight_filters_by_etc(etc=etc,
                                        noise_filters=noise,
@@ -245,11 +250,15 @@ def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs):
 
     etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
         signal=sig,
-        delta_time=.01,
+        delta_time=delta,
         bandwidth=bandwidths,
     )
 
-    assert(etc_from_sig.cshape==etc.cshape)
+    pf.plot.time(etc)
+    pf.plot.time(etc_from_sig, linestyle="--")
+    plt.show()
 
-    npt.assert_allclose(etc.time,etc_from_sig.time)
+    assert(etc_from_sig.cshape==etc.cshape)
+    npt.assert_allclose(np.sum(etc.time),np.sum(etc_from_sig.time*bandwidths.ndim))
+    npt.assert_allclose(etc.time,etc_from_sig.time*bandwidths.ndim)
 

@@ -269,36 +269,21 @@ def weight_filters_by_etc(
 
     """
     if bandwidths is None:
-        warnings.warn(
-            "No bandwidth array was input." +
-            "All filters will be processed as broad spectrum filters.",
-            stacklevel=1,
-            )
+        bandwidths = noise_filters.sampling_rate / 2
 
-        bandwidths = (np.ones((noise_filters.cshape))*
-                                noise_filters.sampling_rate/2)
-
-    if not isinstance(bandwidths,np.ndarray):
-        raise ValueError("bandwidths must be a 1-D numpy.ndarray.")
-    else:
-        if bandwidths.ndim>1:
-            raise ValueError("bandwidth array must be 1-dimensional.")
-        if bandwidths.shape[0] != etc.cshape[-1]:
-            raise ValueError(
-                "bandwidth array length does not" +
-                "match the number of ETC frequency channels.",
-            )
-        if bandwidths.shape[0] != noise_filters.cshape[-1]:
-            raise ValueError(
-        "bandwidth array length does not match the number of noise filters.",
-            )
-
-    if len(noise_filters.cshape)>1:
-        raise ValueError(
-            "Noise filter channels are" +
-            f"{len(noise_filters.cshape)}-dimensional."+
-            "Channels must be 1-D.",
-        )
+    if bandwidths is not None:
+        if isinstance(bandwidths, (float, int)):
+            if bandwidths <= 0:
+                raise ValueError("bandwidth must be positive.")
+        else:
+            bandwidths = np.asarray(bandwidths)
+            if np.any(bandwidths <= 0):
+                raise ValueError("All bandwidth values must be positive.")
+            if bandwidths.shape != noise_filters.cshape[(-bandwidths.ndim):]:
+                raise ValueError(
+                    f"bandwidth shape {bandwidths.shape} does not "
+                    f"match signal bands {noise_filters.cshape[-bandwidths.ndim:]}",
+                )
 
     if (etc.times[1:]-etc.times[:-1] == etc.times[1]-etc.times[0]).all():
         raise ValueError("ETC entries must be equally spaced in time.")
@@ -308,22 +293,21 @@ def weight_filters_by_etc(
     weighted_noise = np.zeros(etc.cshape +
                               (noise_filters.time.shape[-1],))
 
-    for band_ix in range(bandwidths.shape[0]):
-        for sample_i in range(etc.time.shape[-1]):
-            lower = int(sample_i * rs_factor)
-            upper = int((sample_i+1) * rs_factor)
+    for sample_i in range(etc.time.shape[-1]):
+        lower = int(sample_i * rs_factor)
+        upper = int((sample_i+1) * rs_factor)
 
-            noise_sec = noise_filters.time[band_ix,lower:upper]
-            div = np.sum(noise_sec**2)
+        noise_sec = noise_filters.time[...,lower:upper]
+        div = np.sum(noise_sec**2)
 
-            if div != 0:
-                etc_weight = np.sqrt(etc.time[...,band_ix,sample_i] / div)  \
-                            * np.sqrt(bandwidths[band_ix] /
-                                      (noise_filters.sampling_rate/2))
+        if div != 0:
+            etc_weight = np.sqrt(etc.time[...,sample_i] / div)  \
+                        * np.sqrt(bandwidths /
+                                    (noise_filters.sampling_rate/2))
 
-                weighted_noise[...,band_ix,lower:upper]=(
-                    np.multiply.outer(etc_weight,noise_sec)
-                )
+            weighted_noise[...,lower:upper]=(
+                etc_weight[...,None]*noise_sec
+            )
 
     bandwise_ir = pf.Signal(weighted_noise, noise_filters.sampling_rate)
 
@@ -530,10 +514,10 @@ def energy_time_curve_from_impulse_response(
             bandwidth = np.asarray(bandwidth)
             if np.any(bandwidth <= 0):
                 raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape[-1] != signal.cshape[-1]:
+            if bandwidth.shape != signal.cshape[(-bandwidth.ndim):]:
                 raise ValueError(
                     f"bandwidth shape {bandwidth.shape} does not "
-                    f"match signal bands {signal.cshape[-1]}",
+                    f"match signal bands {signal.cshape[-bandwidth.ndim:]}",
                 )
 
     if bandwidth is None:
@@ -548,7 +532,7 @@ def energy_time_curve_from_impulse_response(
         np.arange(n_samples_E) * delta_time,
         )
     bw_factor = np.asarray((signal.sampling_rate/2)/bandwidth)
-    bw_factor = bw_factor.reshape(bw_factor.shape + (1,) * (signal.cdim - 1))
+    #bw_factor = bw_factor.reshape(bw_factor.shape + (1,) * (signal.cdim - 1))
 
     for k in range(n_samples_E):
         upper = g_k[k+1] if k < n_samples_E-1 else signal.n_samples
