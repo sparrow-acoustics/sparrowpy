@@ -305,19 +305,32 @@ def test_point_surface_interactions_multipleMethods(side, source, receiver, patc
     patch.init_energy_exchange(
         0, 0.1, source, sampling_rate=sr, speed_of_sound=c,
     )
+
     for cast_fn in (
+        source_cast,
         source_cast_dblquad,
         source_cast_leggaussplanar,
         source_cast_montecarlo,
     ):
         try:
             patch = cast_fn(src=source, rpatch=patch, absor=absor_factor)
+            for cast_fn2 in (
+                source_cast,
+                receiver_cast_dblquad,
+                receiver_cast_leggaussplanar,
+                receiver_cast_montecarlo,
+            ):
+                try:
+                    patch = cast_fn2(receiver, patch, sr, c)
+                    break
+                except Exception:
+                    # ignore methods that fail and try the next implementation
+                    continue
             break
         except Exception:
             # ignore methods that fail and try the next implementation
             continue
-
-    receiver_cast(receiver, patch, sr, c)
+        
 
 
 def source_cast(src, rpatch, absor):
@@ -387,6 +400,69 @@ def receiver_cast(rcv, patch, sr, c):
     patch_energy = np.sum(patch.E_matrix)
 
     nuss = form_factor.integration.pt_solution(
+            point=rcv.position, patch_points=patch.pts, mode="receiver",
+            ) * patch_energy
+
+    rel_error_nuss = abs(true_rec_energy - nuss) / true_rec_energy * 100
+
+    assert rel_error_nuss < 1.0
+
+def receiver_cast_dblquad(rcv, patch, sr, c):
+    """Cast and test patch-to-receiver factor calculation."""
+    true_rec_energy = np.sum(
+        patch.energy_at_receiver(
+            receiver=rcv,
+            max_order=0,
+            speed_of_sound=c,
+            sampling_rate=sr,
+        ),
+    )
+
+    patch_energy = np.sum(patch.E_matrix)
+
+    nuss = form_factor.integration.point_patch_factor_dblquad(
+            point=rcv.position, patch_points=patch.pts, mode="receiver",
+            ) * patch_energy
+
+    rel_error_nuss = abs(true_rec_energy - nuss) / true_rec_energy * 100
+
+    assert rel_error_nuss < 1.0
+
+def receiver_cast_leggaussplanar(rcv, patch, sr, c):
+    """Cast and test patch-to-receiver factor calculation."""
+    true_rec_energy = np.sum(
+        patch.energy_at_receiver(
+            receiver=rcv,
+            max_order=0,
+            speed_of_sound=c,
+            sampling_rate=sr,
+        ),
+    )
+
+    patch_energy = np.sum(patch.E_matrix)
+
+    nuss = form_factor.integration.point_patch_factor_leggaus_planar(
+            point=rcv.position, patch_points=patch.pts, mode="receiver",
+            ) * patch_energy
+
+    rel_error_nuss = abs(true_rec_energy - nuss) / true_rec_energy * 100
+
+    assert rel_error_nuss < 1.0
+
+def receiver_cast_montecarlo(rcv, patch, sr, c):
+    """Cast and test patch-to-receiver factor calculation."""
+    true_rec_energy = np.sum(
+        patch.energy_at_receiver(
+            receiver=rcv,
+            max_order=0,
+            speed_of_sound=c,
+            sampling_rate=sr,
+        ),
+    )
+
+    patch_energy = np.sum(patch.E_matrix)
+
+    nuss = form_factor.integration.point_patch_factor_mc_planar(
             point=rcv.position, patch_points=patch.pts, mode="receiver",
             ) * patch_energy
 

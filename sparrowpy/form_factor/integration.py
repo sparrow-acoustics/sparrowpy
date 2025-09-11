@@ -681,6 +681,11 @@ def point_patch_factor_dblquad(point: np.ndarray, patch_points: np.ndarray, mode
     epsabs = 1e-4
     fr = 1/np.pi
     
+    if mode == 'receiver':
+        source_area = geom._polygon_area(patch_points)
+    elif mode == 'source':
+        source_area = 4
+
     # Compute patch normal
     edge1 = patch_points[1] - patch_points[0]
     edge2 = patch_points[3] - patch_points[0]
@@ -720,7 +725,7 @@ def point_patch_factor_dblquad(point: np.ndarray, patch_points: np.ndarray, mode
             
             dS = np.linalg.norm(np.cross(dPdu, dPdv))
             
-            # Integrand: L * cos(θ_i) * cos(θ_o) * dS / (π * r²)
+            # Integrand: L * cos(θ_i) * cos(θ_o) * dS / (pi * r^2)
             return  fr * cos_theta_i * dS / r_dist**2
 
 
@@ -729,13 +734,43 @@ def point_patch_factor_dblquad(point: np.ndarray, patch_points: np.ndarray, mode
                        0.0, 1.0,
                        lambda u: 0.0, lambda u: 1.0,
                        epsabs=epsabs, epsrel=epsrel)
-    if mode == 'source':
-        result *= 0.25
+
+    result *= 1/source_area
 
     return result, error
 
 def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarray, mode='source'):
+    
+    """Calculate the geometric factor between a point and a patch.
+
+    using scipy dblquad to integrate over the patch surface. Need to set the parameter epsilons
+
+    Parameters
+    ----------
+    point: np.ndarray
+        source or receiver point
+
+    patch_points: np.ndarray
+        vertex coordinates of the patch
+
+    mode: string
+        determines if point is acting as a source ('source')
+        or as a receiver ('receiver')
+
+    Returns
+    -------
+    geometric factor, error estimate of integral
+    """
+
+    ## N = number of Gauss-Legendre samples per dimension
     N = 4
+    fr = 1/np.pi
+    if mode == 'receiver':
+        source_area = geom._polygon_area(patch_points)
+    elif mode == 'source':
+        source_area = 4
+    
+    
     p0 = patch_points[0]
     edge_u = patch_points[1] - p0   # vector for u-direction
     edge_v = patch_points[3] - p0   # vector for v-direction
@@ -755,11 +790,11 @@ def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarra
         
         r_dir = r_vec / r_dist
         cos_theta = np.dot(patch_normal, r_dir)
-        if cos_theta <= 0:  # back-facing
+        if cos_theta <= 0:  # back-facing excluded
             return 0.0
         
         # constant dS, so no per-sample Jacobian
-        return (1/np.pi) * cos_theta * dS / r_dist**2
+        return fr * cos_theta * dS / r_dist**2
 
     u_nodes, u_weights = leggauss(N)
     v_nodes, v_weights = leggauss(N)
@@ -772,8 +807,7 @@ def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarra
             wv = 0.5*v_weights[j]
             result += integrand(u, v) * wu * wv
 
-    if mode == 'source':
-        result *= 0.25
+    result *= 1 / source_area
     return result
 
 def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, mode='source'):
@@ -781,7 +815,7 @@ def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, mo
     Monte Carlo estimate of irradiance factor from a planar rectangular patch to a point,
     assuming a Lambertian BRDF.
 
-    patch_points : (4×3) array of corner coordinates [p0, p1, p2, p3]
+    patch_points : (4x3) array of corner coordinates [p0, p1, p2, p3]
     point        : (3,)   array of the receiver point
     N            : number of Monte Carlo samples
 
@@ -792,6 +826,12 @@ def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, mo
     # Setup patch geometry
     N = 1000
     fr = 1/np.pi
+
+    if mode == 'receiver':
+        source_area = geom._polygon_area(patch_points)
+    elif mode == 'source':
+        source_area = 4
+
     p0      = patch_points[0]
     edge_u  = patch_points[1] - p0
     edge_v  = patch_points[3] - p0
@@ -824,13 +864,11 @@ def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, mo
         if cos_theta <= 0:
             continue
 
-        # Contribution = fr * cosθ * (dA / r²)
+        # Contribution = fr * cosθ * (dA / r^2)
         total += fr * cos_theta * patch_area / r2
 
     # Average over samples
-    total = total / N
-    if mode == 'source':
-        total *= 0.25
+    total = total / (source_area * N)
     
     return total
 
