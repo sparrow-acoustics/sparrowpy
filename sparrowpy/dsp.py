@@ -365,7 +365,7 @@ def band_filter_signal(signal:pf.Signal,
             f"{num_fractions}th octave bands not supported."+
             "Octave fractions must be either 1 or 3.")
 
-    tru_bands,bw = _closest_frac_octave_data(freqs=freqs,
+    tru_bands,_,bw = _closest_frac_octave_data(freqs=freqs,
                                          num_fractions=num_fractions)
 
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(

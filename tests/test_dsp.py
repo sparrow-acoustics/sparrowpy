@@ -167,15 +167,14 @@ def test_etc_weighting(sr,etc_step,freqs):
     etc = pf.TimeData(etcs, times)
 
     bandwise_filter, bw = sp.dsp.band_filter_signal(signal=noise,
-                                                freq_bands=freqs,
+                                                freqs=freqs,
                                                 num_fractions=fracs)
 
     sig = sp.dsp.weight_filters_by_etc(etc=etc,
-                               noise_filters=bandwise_filter,
-                               bandwidths=bw,
-                               num_fractions=fracs)
+                                       noise_filters=bandwise_filter,
+                                       bandwidths=bw)
 
-    _,_,bandwidths=sp.dsp.get_frac_octave_data(freqs,num_fractions=fracs)
+    _,_,bandwidths=sp.dsp._closest_frac_octave_data(freqs,num_fractions=fracs)
 
     for i,bw in enumerate(bandwidths):
         etc_sig = sp.dsp.energy_time_curve_from_impulse_response(
