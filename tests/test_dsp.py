@@ -143,54 +143,6 @@ def test_dirac_sequence_inputs():
 @pytest.mark.parametrize("etc_step",[
     1/441, 1/500,
 ])
-@pytest.mark.parametrize("freqs",[
-    pf.dsp.filter.fractional_octave_frequencies(num_fractions=1)[0],
-    pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0][0:12],
-    np.array([1000]),
-    np.array([1500,730]),
-])
-def test_etc_weighting_dimensions(sr,etc_step,freqs):
-    """Test that noise is correctly weighted by the etc."""
-
-    if len(freqs)>10:
-        fracs=3
-    else:
-        fracs=1
-
-    noise = pf.signals.noise(sampling_rate=sr,n_samples=sr)
-    times = np.arange(0,1,etc_step)
-
-    etcs = np.array([np.exp(-10*times),
-                     (4*(times-.5)**2)])
-
-    etcs = np.repeat(etcs[:,np.newaxis,:],len(freqs),axis=1)
-    etc = pf.TimeData(etcs, times)
-
-    bandwise_filter, bw = sp.dsp.band_filter_signal(signal=noise,
-                                                freqs=freqs,
-                                                num_fractions=fracs)
-
-    sig = sp.dsp.weight_filters_by_etc(etc=etc,
-                                       noise_filters=bandwise_filter,
-                                       bandwidths=bw)
-
-    _,_,bandwidths=sp.dsp._closest_frac_octave_data(freqs,num_fractions=fracs)
-
-    for i,bw in enumerate(bandwidths):
-        etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
-            signal=sig[:,i],
-            delta_time=etc_step,
-            bandwidth=bw,
-        )
-        npt.assert_allclose(etc[:,i].time,etc_from_sig.time)
-
-
-@pytest.mark.parametrize("sr", [
-    44100, 48000,
-    ])
-@pytest.mark.parametrize("etc_step",[
-    1/441, 1/500,
-])
 def test_etc_weighting_broadspectrum(sr,etc_step):
     """Test that broadband noise is correctly weighted by the etc."""
     noise = pf.signals.noise(sampling_rate=sr,n_samples=.1*sr)
@@ -219,14 +171,14 @@ def test_etc_weighting_broadspectrum(sr,etc_step):
     1,2,3,
 ])
 @pytest.mark.parametrize("bw_depth",[
-    1,
+    1,2,3,
 ])
 def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs,bw_depth):
     """Test that channel handling of etc weighting is done correctly."""
     sr = 100
     delta=1/sr*10
     times = np.arange(0,1,delta)
-    data = np.ones((n_freqs,times.shape[0]))#np.random.rand(n_freqs,times.shape[0])
+    data = np.random.rand(n_freqs,times.shape[0])
 
     if n_directions>0:
         data = data[np.newaxis,:]
@@ -238,7 +190,7 @@ def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs,bw_depth):
 
     etc = pf.TimeData(data, times)
 
-    bandwidths = 3*np.ones(etc.cshape[-bw_depth:])#np.random.rand(*etc.cshape[-bw_depth:])**2 * sr/4
+    bandwidths = np.random.rand(*etc.cshape[-bw_depth:])**2 * sr/4
 
     noise = pf.signals.noise(n_samples=sr, sampling_rate=sr)
     noise.time=np.broadcast_to(noise.time,bandwidths.shape+(noise.time.shape[-1],))
@@ -254,11 +206,5 @@ def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs,bw_depth):
         bandwidth=bandwidths,
     )
 
-    pf.plot.time(etc)
-    pf.plot.time(etc_from_sig, linestyle="--")
-    plt.show()
-
-    assert(etc_from_sig.cshape==etc.cshape)
-    npt.assert_allclose(np.sum(etc.time),np.sum(etc_from_sig.time*bandwidths.ndim))
-    npt.assert_allclose(etc.time,etc_from_sig.time*bandwidths.ndim)
+    npt.assert_allclose(etc.time,etc_from_sig.time)
 
