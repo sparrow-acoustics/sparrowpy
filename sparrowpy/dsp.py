@@ -231,7 +231,7 @@ def dirac_sequence(
 def weight_filters_by_etc(
     etc: pf.TimeData,
     noise_filters: pf.Signal,
-    freqs=np.ndarray,
+    bandwidths=None,
     num_fractions=1,
 ) -> pf.Signal:
     r"""
@@ -250,8 +250,8 @@ def weight_filters_by_etc(
     noise_filters: :py:class:`pyfar.Signal'
         frequency-wise IR filters in the form of noise sequences
         of cshape (n_freq_bands,)
-    freqs: np.ndarray (n_freqs)
-        array of frequencies simulated by the ETC
+    bandwidths: np.ndarray
+        bandwidths corresponding to the noise filter channels
         *Note:* length must match the number of right-most channels
         of the etc and noise_filters objects.
     num_fractions: int
@@ -262,34 +262,46 @@ def weight_filters_by_etc(
     -------
     bandwise_ir : :py:class:`pyfar.Signal'
         impulse response of the space simulated by the ETC.
-        different frequency bands of the IR are split over different channels.
-        
-        
-        
+        the IR channels match the ETC channels.
+
     References
     ----------
     .. [#] D. Schröder, “Physically based real-time auralization of
            interactive virtual environments,” PhD Thesis, Logos-Verlag,
            Berlin, 2011. [Online].
            Available: https://publications.rwth-aachen.de/record/50580
+
     """
-    if freqs is None:
-        raise ValueError(
-            "The frequency bands simulated in the ETC must be defined.")
-    elif not isinstance(freqs,np.ndarray):
-        raise ValueError("freq_bands must be a 1-D numpy.ndarray.")
+    if bandwidths is None:
+        warnings.warn(
+            "No bandwidth array was input." +
+            "All filters will be processed as broad spectrum filters.",
+            stacklevel=1,
+            )
+
+        bandwidths = (20e3-20)*np.ones((noise_filters.cshape))
+
+    if not isinstance(bandwidths,np.ndarray):
+        raise ValueError("bandwidths must be a 1-D numpy.ndarray.")
     else:
-        if freqs.ndim>1:
-            raise ValueError("freq_bands must be 1-dimensional.")
-        if freqs.shape[0] != etc.cshape[-1]:
+        if bandwidths.ndim>1:
+            raise ValueError("bandwidth array must be 1-dimensional.")
+        if bandwidths.shape[0] != etc.cshape[-1]:
             raise ValueError(
-        "freq_bands length does not match the number of frequency-wise ETC's.")
-        if freqs.shape[0] != noise_filters.cshape[-1]:
+                "bandwidth array length does not" +
+                "match the number of ETC frequency channels.",
+            )
+        if bandwidths.shape[0] != noise_filters.cshape[-1]:
             raise ValueError(
-        "freq_bands length does not match the number of noise filters.")
-        if (freqs<20).any() or (freqs>20e3).any():
-            raise ValueError(
-        "freq_bands entries outside [20 Hz , 20000 Hz] interval.")
+        "bandwidth array length does not match the number of noise filters.",
+            )
+
+    if len(noise_filters.cshape)>1:
+        raise ValueError(
+            "Noise filter channels are" +
+            f"{len(noise_filters.cshape)}-dimensional."+
+            "Channels must be 1-D.",
+        )
 
     if (etc.times[1:]-etc.times[:-1] == etc.times[1]-etc.times[0]).all():
         raise ValueError("ETC entries must be equally spaced in time.")
@@ -301,13 +313,10 @@ def weight_filters_by_etc(
 
     rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
 
-    _,_,bandwidths = get_frac_octave_data(freq_bands=freqs,
-                                     num_fractions=num_fractions)
-
     weighted_noise = np.zeros(etc.cshape +
                               (noise_filters.time.shape[-1],)).T
 
-    for band_ix in range(freqs.shape[0]):
+    for band_ix in range(bandwidths.shape[0]):
         for sample_i in range(etc.time.shape[-1]):
             lower = int(sample_i * rs_factor)
             upper = int((sample_i+1) * rs_factor)
@@ -335,7 +344,7 @@ def band_filter_signal(signal:pf.Signal,
     if freq_bands is None:
         freq_bands=[20,20e3]
 
-    tru_bands,_,_ = get_frac_octave_data(freq_bands=freq_bands,
+    tru_bands,_,bw = get_frac_octave_data(freq_bands=freq_bands,
                                          num_fractions=num_fractions)
 
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
@@ -347,7 +356,7 @@ def band_filter_signal(signal:pf.Signal,
 
     band_filtered_noise.time = np.squeeze(band_filtered_noise.time)
 
-    return band_filtered_noise
+    return band_filtered_noise, bw
 
 
 def get_frac_octave_data(freq_bands:np.ndarray, num_fractions=1):
@@ -370,7 +379,7 @@ def get_frac_octave_data(freq_bands:np.ndarray, num_fractions=1):
         warnings.warn(
             "WARNING: multiple frequencies in the same freq. band.\n" +
             "This may lead to overestimation of the energy in said frequency",
-            stacklevel=2)
+            stacklevel=1)
 
     return n[idcs], e[idcs], freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
 
