@@ -275,7 +275,8 @@ def weight_filters_by_etc(
             stacklevel=1,
             )
 
-        bandwidths = 22364.824174297697*np.ones((noise_filters.cshape))
+        bandwidths = (np.ones((noise_filters.cshape))*
+                                noise_filters.sampling_rate/2)
 
     if not isinstance(bandwidths,np.ndarray):
         raise ValueError("bandwidths must be a 1-D numpy.ndarray.")
@@ -305,7 +306,7 @@ def weight_filters_by_etc(
     rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
 
     weighted_noise = np.zeros(etc.cshape +
-                              (noise_filters.time.shape[-1],)).T
+                              (noise_filters.time.shape[-1],))
 
     for band_ix in range(bandwidths.shape[0]):
         for sample_i in range(etc.time.shape[-1]):
@@ -316,15 +317,15 @@ def weight_filters_by_etc(
             div = np.sum(noise_sec**2)
 
             if div != 0:
-                etc_weight = np.sqrt(etc.time.T[sample_i,band_ix] / div)  \
+                etc_weight = np.sqrt(etc.time[...,band_ix,sample_i] / div)  \
                             * np.sqrt(bandwidths[band_ix] /
                                       (noise_filters.sampling_rate/2))
 
-                weighted_noise[lower:upper,band_ix]=(
-                    np.multiply.outer(noise_sec, etc_weight)
+                weighted_noise[...,band_ix,lower:upper]=(
+                    np.multiply.outer(etc_weight,noise_sec)
                 )
 
-    bandwise_ir = pf.Signal(weighted_noise.T, noise_filters.sampling_rate)
+    bandwise_ir = pf.Signal(weighted_noise, noise_filters.sampling_rate)
 
     return bandwise_ir
 
@@ -529,10 +530,10 @@ def energy_time_curve_from_impulse_response(
             bandwidth = np.asarray(bandwidth)
             if np.any(bandwidth <= 0):
                 raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape != signal.cshape[:1]:
+            if bandwidth.shape[-1] != signal.cshape[-1]:
                 raise ValueError(
                     f"bandwidth shape {bandwidth.shape} does not "
-                    f"match signal bands {signal.cshape[:1]}",
+                    f"match signal bands {signal.cshape[-1]}",
                 )
 
     if bandwidth is None:
