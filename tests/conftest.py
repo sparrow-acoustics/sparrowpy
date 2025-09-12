@@ -99,3 +99,31 @@ def basicscene():
     scene["walls"] = sp.testing.shoebox_room_stub(1, 1, 1)
 
     return scene
+
+
+@pytest.fixture
+def patch_energy_diffuse():
+
+    def patch_energy(x, y, z):
+        return 1
+
+    return patch_energy
+
+@pytest.fixture
+def patch_energy_normal_direction_10_degree():
+    sampling = pf.samplings.sph_equal_angle(10)
+    sampling.weights = pf.samplings.calculate_sph_voronoi_weights(sampling)
+    sampling = sampling[sampling.z>0]
+    sampling.weights *= 4*np.pi
+    brdf_data = sp.brdf.create_from_scattering(
+        sampling,
+        sampling, pf.FrequencyData([0], [100]))
+    idx = sampling.find_nearest(
+        pf.Coordinates.from_spherical_colatitude(0, 0, 1))[0][0]
+    brdf_data = brdf_data[idx]
+
+    def patch_energy(x, y, z):
+        point = pf.Coordinates(x,y,z)
+        index = sampling.find_nearest(point)[0]
+        return brdf_data.freq[index]
+    return patch_energy
