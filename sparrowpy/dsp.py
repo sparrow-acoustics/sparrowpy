@@ -231,7 +231,7 @@ def dirac_sequence(
 def weight_filters_by_etc(
     etc: pf.TimeData,
     noise_filters: pf.Signal,
-    bandwidths=None,
+    bandwidth=None,
 ) -> pf.Signal:
     r"""
     Generate the frequency-wise impulse response for a given ETC.
@@ -268,24 +268,31 @@ def weight_filters_by_etc(
            Available: https://publications.rwth-aachen.de/record/50580
 
     """
-    if bandwidths is None:
-        bandwidths = noise_filters.sampling_rate / 2
+    if bandwidth is None:
+        bandwidth = noise_filters.sampling_rate / 2
 
-    if bandwidths is not None:
-        if isinstance(bandwidths, (float, int)):
-            if bandwidths <= 0:
-                raise ValueError("bandwidth must be positive.")
+    if bandwidth is not None:
+        if isinstance(bandwidth, (float, int)):
+            if bandwidth <= 0:
+                raise ValueError("Bandwidth must be positive.")
         else:
-            bandwidths = np.asarray(bandwidths)
-            if np.any(bandwidths <= 0):
+            bandwidth = np.asarray(bandwidth)
+            if np.any(bandwidth <= 0):
                 raise ValueError("All bandwidth values must be positive.")
-            if bandwidths.shape != noise_filters.cshape[(-bandwidths.ndim):]:
+            if bandwidth.shape != noise_filters.cshape[(-bandwidth.ndim):]:
                 raise ValueError(
-                    f"bandwidth shape {bandwidths.shape} does not "
-                    f"match signal bands {noise_filters.cshape[-bandwidths.ndim:]}",
+                    f"bandwidth shape {bandwidth.shape} does not " +
+                    "match signal bands " +
+                    f"{noise_filters.cshape[-bandwidth.ndim:]}",
+                )
+            if bandwidth.shape != etc.cshape[(-bandwidth.ndim):]:
+                raise ValueError(
+                    f"bandwidth shape {bandwidth.shape} does not " +
+                    "match etc shape "+
+                    f"{etc.cshape[-bandwidth.ndim:]}",
                 )
 
-    if (etc.times[1:]-etc.times[:-1] == etc.times[1]-etc.times[0]).all():
+    if not (etc.times[1:]-etc.times[:-1] == etc.times[1]-etc.times[0]).all():
         raise ValueError("ETC entries must be equally spaced in time.")
 
     rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
@@ -304,7 +311,7 @@ def weight_filters_by_etc(
                               out=np.zeros_like(etc.time[...,sample_i]),
                               where=div!=0)
 
-        etc_weight = np.sqrt(scale) * np.sqrt(bandwidths /
+        etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
                                               (noise_filters.sampling_rate/2))
 
         weighted_noise[...,lower:upper]=(
@@ -352,17 +359,16 @@ def band_filter_signal(signal:pf.Signal,
             f"{num_fractions}th octave bands not supported."+
             "Octave fractions must be either 1 or 3.")
 
-    tru_bands,_,bw = _closest_frac_octave_data(freqs=freqs,
+    bw,idcs = _closest_frac_octave_data(freqs=freqs,
                                          num_fractions=num_fractions)
 
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
         signal=signal,
         num_fractions=num_fractions,
-        frequency_range=(np.min(tru_bands),np.max(tru_bands)),
         order=order,
     )
 
-    band_filtered_noise.time = np.squeeze(band_filtered_noise.time)
+    band_filtered_noise.time = np.squeeze(band_filtered_noise.time[idcs])
 
     return band_filtered_noise, bw
 
@@ -372,8 +378,9 @@ def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
     Determine frac. octave filter data of custom input frequencies.
 
     Given an array of arbitrary frequencies, finds closest fractional
-    octave filters and returns corresponding exact center frequencies
-    and bandwidth.
+    octave filters and returns corresponding bandwidth and a list of indices.
+    The indices map the input frequencies to the corresponding fractional
+    octave filters from the full listening spectrum.
 
     Parameters
     ----------
@@ -385,12 +392,11 @@ def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
 
     Returns
     -------
-    nominal_freqs: np.ndarray
-        Nominal center frequencies of the output frequency bands in Hz.
-    exact_freqs: np.ndarray
-        Exact center frequencies of the output frequency bands in Hz.
     band_widths: np.ndarray
         Bandwidths of the output frequency bands in Hz.
+    idcs: np.ndarray
+        list of indices of the fractional octave bands to which the input
+        frequencies belong.
     """
     if (freqs<20).any() or (freqs>20e3).any():
         raise ValueError(
@@ -398,12 +404,8 @@ def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
             "(20 Hz <--> 20000 Hz)",
         )
 
-    low = max(np.min(freqs)*.67,20)
-    high = min(np.max(freqs)*1.5,20e3)
-
-    n,e,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
+    _,_,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
         num_fractions=num_fractions,
-        frequency_range=(low,high),
         return_cutoff=True,
         )
 
@@ -425,11 +427,9 @@ def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
                 "to 3rd octave.",
             )
 
-    nominal_freqs = n[idcs]
-    exact_freqs   = e[idcs]
-    band_widths   = freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
+    band_widths = freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
 
-    return nominal_freqs,exact_freqs,band_widths
+    return band_widths,idcs
 
 
 
