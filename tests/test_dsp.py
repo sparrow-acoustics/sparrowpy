@@ -173,7 +173,7 @@ def test_etc_weighting_broadspectrum(sr,etc_step):
 @pytest.mark.parametrize("bw_depth",[
     1,2,3,
 ])
-def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs,bw_depth):
+def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
     """Test that channel handling of etc weighting is done correctly."""
     sr = 100
     delta=1/sr*10
@@ -200,6 +200,8 @@ def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs,bw_depth):
                                        bandwidths=bandwidths,
                                        )
 
+    assert(sig.cshape==etc.cshape)
+
     etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
         signal=sig,
         delta_time=delta,
@@ -208,3 +210,25 @@ def test_etc_weighting_shapes(n_receivers,n_directions,n_freqs,bw_depth):
 
     npt.assert_allclose(etc.time,etc_from_sig.time)
 
+
+@pytest.mark.parametrize("freq",[
+    (3,np.array([1000])),
+    (1,np.array([1000, 2000])),
+    (1,pf.dsp.filter.fractional_octave_frequencies(num_fractions=1)[0]),
+    (3,pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0][10:20]),
+])
+def test_closest_freq_band(freq):
+    """Test freq band data estimation."""
+
+    np.random.shuffle(freq[1])
+
+    n,e,bw = sp.dsp._closest_frac_octave_data(freqs=freq[1],
+                                              num_fractions=freq[0])
+
+    npt.assert_equal(n,freq[1])
+
+    octave_ratio = 10**(3/10)
+    upper = e * octave_ratio**(1/2/freq[0])
+    lower = e * octave_ratio**(-1/2/freq[0])
+
+    npt.assert_allclose(bw,upper-lower)
