@@ -160,7 +160,6 @@ def test_etc_weighting_broadspectrum(sr,etc_step):
     )
     npt.assert_allclose(etc.time,etc_from_sig.time)
 
-
 @pytest.mark.parametrize("n_receivers", [
     0,1,2,
     ])
@@ -197,7 +196,7 @@ def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
 
     sig = sp.dsp.weight_filters_by_etc(etc=etc,
                                        noise_filters=noise,
-                                       bandwidths=bandwidths,
+                                       bandwidth=bandwidths,
                                        )
 
     assert(sig.cshape==etc.cshape)
@@ -210,25 +209,85 @@ def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
 
     npt.assert_allclose(etc.time,etc_from_sig.time)
 
+def test_etc_weighting_inputs():
+    """Test that inputs respect formatting."""
+    noise_filters = pf.signals.noise(n_samples=100)
+    noise_filters.time = np.repeat(noise_filters.time,2,axis=0)
+    etc = pf.TimeData(np.array([[1,1],[1,1]]),times=np.array([0,0.001]))
+
+    with pytest.raises(
+            ValueError,
+            match="Bandwidth must be positive."):
+        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,bandwidth=-1)
+
+    with pytest.raises(
+            ValueError,
+            match="All bandwidth values must be positive."):
+        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,
+                                     bandwidth=[50,-30])
+
+    etc = pf.TimeData(np.array([[1,1,1],[1,1,1]]),
+                      times=np.array([0,0.001,0.2]))
+
+    with pytest.raises(
+            ValueError,
+            match="ETC entries must be equally spaced in time."):
+        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,
+                                     bandwidth=[50,50])
+
+
+
+@pytest.mark.parametrize("freq",[
+    np.array([1000]),
+    np.array([1000, 2000]),
+    np.array([500,1200,6700,15200]),
+])
+@pytest.mark.parametrize("frac",[
+    1,3,
+])
+def test_band_filtering(freq,frac):
+    """Test freq band data estimation."""
+
+    np.random.shuffle(freq)
+    scale = np.random.rand(freq.shape[0])
+
+    signal_split_freqs = pf.signals.sine(frequency=freq, n_samples=441)
+    signal_split_freqs.time = (scale*signal_split_freqs.time.T).T
+
+    signal_combined = pf.Signal(data=np.sum(signal_split_freqs.time, axis=0),
+                                sampling_rate=signal_split_freqs.sampling_rate)
+
+    band_sig,_ = sp.dsp.band_filter_signal(signal=signal_combined,
+                                         freqs=freq,
+                                         num_fractions=frac)
+
+    assert band_sig.cshape==signal_split_freqs.cshape
+
+    npt.assert_allclose(np.argmax(np.abs(band_sig.freq),axis=-1),
+                        np.argmax(np.abs(signal_split_freqs.freq),axis=-1))
+
 
 @pytest.mark.parametrize("freq",[
     (3,np.array([1000])),
     (1,np.array([1000, 2000])),
     (1,pf.dsp.filter.fractional_octave_frequencies(num_fractions=1)[0]),
-    (3,pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0][10:20]),
+    (3,pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0][0:30:5]),
 ])
 def test_closest_freq_band(freq):
     """Test freq band data estimation."""
 
     np.random.shuffle(freq[1])
 
-    n,e,bw = sp.dsp._closest_frac_octave_data(freqs=freq[1],
+    bw, idcs = sp.dsp._closest_frac_octave_data(freqs=freq[1],
                                               num_fractions=freq[0])
 
-    npt.assert_equal(n,freq[1])
+    fband_centers,cutoffs = pf.dsp.filter.fractional_octave_frequencies(
+        num_fractions=freq[0],
+        return_cutoff=True,
+        )[1:]
 
-    octave_ratio = 10**(3/10)
-    upper = e * octave_ratio**(1/2/freq[0])
-    lower = e * octave_ratio**(-1/2/freq[0])
+    assert (fband_centers[idcs]>cutoffs[0][idcs]).all()
+    assert (fband_centers[idcs]<cutoffs[1][idcs]).all()
+    assert (freq[1]>cutoffs[0][idcs]).all()
+    assert (freq[1]<cutoffs[1][idcs]).all()
 
-    npt.assert_allclose(bw,upper-lower)
