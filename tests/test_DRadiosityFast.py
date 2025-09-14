@@ -152,7 +152,7 @@ def test_form_factors_directivity_for_diffuse(
 
 def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
     (data, sources, receivers) = sofa_data_diffuse
     radiosity.set_wall_brdf(np.arange(6), data, sources, receivers)
     # check shape of scattering matrix
@@ -174,7 +174,7 @@ def test_set_wall_scattering(sample_walls, sofa_data_diffuse):
 
 def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
     (data, sources, receivers) = sofa_data_diffuse
     radiosity.set_wall_brdf([0, 1, 2], data, sources, receivers)
     radiosity.set_wall_brdf([3, 4, 5], data, sources, receivers)
@@ -199,7 +199,7 @@ def test_set_wall_scattering_different(sample_walls, sofa_data_diffuse):
 
 def test_set_air_attenuation(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
     radiosity.set_air_attenuation(pf.FrequencyData([0.1, 0.2], [500, 1000]))
     npt.assert_array_equal(radiosity._air_attenuation, [0.1, 0.2])
 
