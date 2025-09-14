@@ -396,3 +396,102 @@ def test_collect_receiver_mono_direct_sound_with_brdf(
     npt.assert_almost_equal(
         etc.time[
             np.arange(len(delay_samples)), : , delay_samples], direct_sound)
+
+
+def test_set_wall_brdf_valid_input(sample_walls):
+    """Test set_wall_brdf with valid inputs."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    radiosity.set_wall_brdf(
+        wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+    assert len(radiosity._brdf) == 1
+    assert radiosity._brdf_index[0] == 0
+    assert radiosity._brdf_index[1] == 0
+
+
+def test_set_wall_brdf_invalid_wall_indexes(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = "invalid"
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(AssertionError, match="Wall indexes must be a list"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_invalid_incoming_directions(sample_walls):
+    """Test set_wall_brdf with invalid incoming_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = "invalid"
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Incoming directions must be of type pf.Coordinates"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_invalid_outgoing_directions(sample_walls):
+    """Test set_wall_brdf with invalid outgoing_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = "invalid"
+
+    with pytest.raises(
+            AssertionError,
+            match="Outgoing directions must be of type pf.Coordinates"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_negative_z_incoming(sample_walls):
+    """Test set_wall_brdf with negative z-component in incoming_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, -1], [0, 1, 0], [-1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Sources must be in the positive half space"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_negative_z_outgoing(sample_walls):
+    """Test set_wall_brdf with negative z-component in outgoing_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls[:2], 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, -1], [0, 1, 0], [-1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Receivers must be in the positive half space"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
