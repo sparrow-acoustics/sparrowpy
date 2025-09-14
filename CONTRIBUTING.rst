@@ -16,12 +16,12 @@ Types of Contributions
 Report Bugs or Suggest Features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The best place for this is https://github.com/ahms5/sparrowpy/issues.
+The best place for this is https://github.com/sparrow-acoustics/sparrowpy/issues.
 
 Fix Bugs or Implement Features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Look through https://github.com/ahms5/sparrowpy/issues for bugs or feature request
+Look through https://github.com/sparrow-acoustics/sparrowpy/issues for bugs or feature request
 and contact us or comment if you are interested in implementing.
 
 Write Documentation

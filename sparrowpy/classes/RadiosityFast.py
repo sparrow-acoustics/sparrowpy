@@ -3,13 +3,14 @@ import numpy as np
 import deepdiff
 import pyfar as pf
 import sparrowpy.form_factor.universal as form_factor
-from sparrowpy import ( geometry )
+from sparrowpy import ( geometry, sound_object )
 try:
     import numba
     prange = numba.prange
 except ImportError:
     numba = None
     prange = range
+from scipy.spatial import cKDTree
 
 
 class DirectionalRadiosityFast():
@@ -34,6 +35,7 @@ class DirectionalRadiosityFast():
     _brdf_index: np.ndarray
     _brdf_incoming_directions: list[pf.Coordinates]
     _brdf_outgoing_directions: list[pf.Coordinates]
+    _patch_2_brdf_outgoing_index: np.ndarray
 
     _air_attenuation: np.ndarray
     _speed_of_sound: float
@@ -65,6 +67,7 @@ class DirectionalRadiosityFast():
             brdf_index:np.ndarray=None,
             brdf_incoming_directions:list[pf.Coordinates]=None,
             brdf_outgoing_directions:list[pf.Coordinates]=None,
+            patch_2_brdf_outgoing_index:np.ndarray=None,
             air_attenuation:np.ndarray=None,
             speed_of_sound:float=None,
             etc_time_resolution:float=None,
@@ -111,6 +114,8 @@ class DirectionalRadiosityFast():
             incoming direction of brdfs per wall, by default None
         brdf_outgoing_directions : list[pf.Coordinates], optional
             outgoing directions of brdfs per wall, by default None
+        patch_2_brdf_outgoing_index: np.ndarray
+            map of patch positions to relative scattering directions indices
         air_attenuation : np.ndarray, optional
             air attenuation coefficients for each frequency, needs to be of
             shape (n_bins), by default None
@@ -149,6 +154,9 @@ class DirectionalRadiosityFast():
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
             form_factors_tilde = np.array(form_factors_tilde)
+        if patch_2_brdf_outgoing_index is not None:
+            patch_2_brdf_outgoing_index = np.array(patch_2_brdf_outgoing_index,
+                                                   dtype=np.int64)
         if brdf is not None:
             brdf = [np.array(b) for b in brdf]
         if air_attenuation is not None:
@@ -185,6 +193,7 @@ class DirectionalRadiosityFast():
         self._brdf_index = brdf_index
         self._brdf_incoming_directions = brdf_incoming_directions
         self._brdf_outgoing_directions = brdf_outgoing_directions
+        self._patch_2_brdf_outgoing_index = patch_2_brdf_outgoing_index
 
         self._air_attenuation = air_attenuation
         self._speed_of_sound = speed_of_sound
@@ -363,7 +372,7 @@ class DirectionalRadiosityFast():
 
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry._check_visibility(
+        self._visibility_matrix = geometry._check_patch2patch_visibility(
             self.patches_center, self.patches_normal, self.patches_points)
 
         n_combinations = np.sum(self.visibility_matrix)
@@ -390,11 +399,28 @@ class DirectionalRadiosityFast():
                 [s.cartesian for s in self._brdf_outgoing_directions])
             scattering_index = np.array(self._brdf_index)
             scattering = np.array(self._brdf)
+
+            # preload patch_2_brdf_outgoing_index map with invalid entries
+            self._patch_2_brdf_outgoing_index = (
+                        receivers_array.shape[1] *
+                                np.ones((self.n_patches,self.n_patches),dtype=np.int64))
+
+            for j in range(self.n_patches):
+                vis = np.where(
+                    (self.visibility_matrix+self.visibility_matrix.T)[:,j])
+                self._patch_2_brdf_outgoing_index[vis,j]=get_scattering_data_receiver_index(
+                        pos_i=self.patches_center[vis],pos_j=self.patches_center[j],
+                        receivers=receivers_array,
+                        wall_id_i=self._patch_to_wall_ids[vis],
+                    )
         else:
             sources_array = None
             receivers_array = None
             scattering_index = None
             scattering = None
+            self._patch_2_brdf_outgoing_index = np.zeros(
+                                        (self.n_patches,self.n_patches),
+                                        dtype=np.int64)
 
         n_bins = 1 if self._frequencies is None else self.n_bins
 
@@ -407,10 +433,29 @@ class DirectionalRadiosityFast():
             scattering_index,
             sources_array, receivers_array)
 
+
     def init_source_energy(
-            self, source:pf.Coordinates):
-        """Initialize the source energy."""
-        source_position = source.cartesian
+            self, source):
+        """Initialize the source energy.
+
+        Parameters
+        ----------
+        source : pf.Coordinates, sparrowpy.sound_object.SoundSource
+            definition of the source position for Coordinates object and
+            orientation and directivity for SoundSource object. If no
+            directivity is given, the directivity is set to 1 for all
+            frequencies.
+
+        """
+        if isinstance(source, pf.Coordinates):
+            if source.cshape != (1, ):
+                raise ValueError('just one source position is allowed.')
+            source_position = source.cartesian[0]
+        elif isinstance(source, sound_object.SoundSource):
+            source_position = source.position
+        self._source = source
+
+
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
             frequencies = np.array([0]) if self._frequencies is None else \
@@ -421,6 +466,12 @@ class DirectionalRadiosityFast():
                 pf.Coordinates(0, 0, 1, weights=1),
                 pf.Coordinates(0, 0, 1, weights=1))
             self._frequencies = frequencies
+        if self._air_attenuation is None:
+            frequencies = np.array([0]) if self._frequencies is None else \
+                self._frequencies
+            self.set_air_attenuation(
+                pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+            self._frequencies = frequencies
         n_bins = self.n_bins
         vi = np.array(
             [s.cartesian for s in self._brdf_incoming_directions])
@@ -429,13 +480,45 @@ class DirectionalRadiosityFast():
         brdf = np.array(self._brdf)
         brdf_index = self._brdf_index
         patches_center = self.patches_center
+        source_visibility = geometry._check_point2patch_visibility(
+                                        eval_point=source_position,
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+        self._source_visibility = source_visibility
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
+            source_visibility,
             self._air_attenuation, n_bins)
+
+        # of shape (n_patches, n_directions, n_bins)
         energy_0_dir = _add_directional(
             energy_0, source_position,
             patches_center, n_bins, patch_to_wall_ids,
             vi, vo, brdf, brdf_index)
+
+        # add directivity if given
+        if isinstance(source, sound_object.SoundSource):
+            n_patches = patches_center.shape[0]
+            n_directions = vo.shape[1]
+
+            if source.directivity is not None:
+                directivity = np.zeros((n_patches, n_directions, n_bins))
+                for i_frequency in range(n_bins):
+                    directivity_local = np.real(source.get_directivity(
+                        patches_center, self._frequencies[i_frequency]))
+                    if n_directions == 1:
+                        directivity[:, :, i_frequency] = directivity_local[
+                            :, np.newaxis]
+                    else:
+                        directivity[:, :, i_frequency] = np.repeat(
+                            directivity_local[..., np.newaxis],
+                            n_directions,
+                            axis=-1)
+                energy_0_dir *= directivity
+            else:
+                energy_0_dir *= 1
+
         self._energy_init_source = energy_0_dir
         self._distance_patches_to_source = distance_0
 
@@ -463,6 +546,8 @@ class DirectionalRadiosityFast():
         energy_0_dir = self._energy_init_source
 
         if self._energy_exchange_etc is None or recalculate:
+            # energy exchange etc
+            # of shape (n_patches, n_directions, n_bins, n_samples)
             if max_reflection_order < 1:
                 self._energy_exchange_etc = \
                     _energy_exchange_init_energy(
@@ -470,9 +555,11 @@ class DirectionalRadiosityFast():
                         speed_of_sound, etc_time_resolution,
                         )
             else:
+
                 self._energy_exchange_etc = _energy_exchange(
                     n_samples, energy_0_dir, distance_0, distance_i_j,
                     self._form_factors_tilde,
+                    self._patch_2_brdf_outgoing_index,
                     speed_of_sound, etc_time_resolution,
                     max_reflection_order,
                     self._visible_patches)
@@ -481,8 +568,46 @@ class DirectionalRadiosityFast():
         self._speed_of_sound = float(speed_of_sound)
         self._etc_duration = float(etc_duration)
 
-    def collect_energy_receiver_mono(self, receivers):
+    def collect_energy_receiver_mono(self, receivers, direct_sound=False):
         """Collect the energy at the receivers.
+
+        Parameters
+        ----------
+        receivers : pf.Coordinates
+            receiver Coordinates in of cshape (n_receivers).
+        direct_sound : bool, optional
+            If True, the direct sound is collected as well, by default False.
+            The direct sound includes spreading loss, air attenuation and
+            source directivity.
+
+        Returns
+        -------
+        etc : pf.TimeData
+            energy collected at the receiver in cshape
+            (n_receivers, n_bins)
+        """
+        if not isinstance(direct_sound, bool):
+            raise ValueError(
+                "direct_sound must be of type boolean")
+        etc = self.collect_energy_receiver_patchwise(receivers)
+        etc.time = np.sum(etc.time, axis=1)
+
+        if direct_sound:
+            direct_sound, n_sample_delay = self.calculate_direct_sound(
+                receivers)
+
+            # add the direct sound to the etc
+            i_receivers = np.arange(len(n_sample_delay))
+            etc.time[i_receivers, :, n_sample_delay] += direct_sound
+
+        return etc
+
+
+    def calculate_direct_sound(self, receivers):
+        """Calculate the direct sound at the receivers.
+
+        It includes the spreading loss, air attenuation and
+        source directivity.
 
         Parameters
         ----------
@@ -491,13 +616,47 @@ class DirectionalRadiosityFast():
 
         Returns
         -------
-        etc : pf.TimeData
-            energy collected at the receiver in cshape
+        direct_sound : np.ndarray
+            energy of the direct sound at the receivers in shape
             (n_receivers, n_bins)
+        n_sample_delay : np.ndarray
+            number of samples for the delay at the receivers in shape
+            (n_receivers, )
         """
-        etc = self.collect_energy_receiver_patchwise(receivers)
-        etc.time = np.sum(etc.time, axis=1)
-        return etc
+        if not isinstance(receivers, pf.Coordinates):
+            raise ValueError(
+                "Receiver positions must be of type pf.Coordinates")
+
+        # calculate distance from source to receivers
+        if isinstance(self._source, pf.Coordinates):
+            source_position = self._source
+        else:
+            source_position = pf.Coordinates(*self._source.position)
+        r = (receivers-source_position).radius
+
+        # calculate spreading loss for direct sound
+        direct_sound = np.ones(
+            (receivers.cshape[0], self.n_bins), dtype=float)
+        direct_sound *= (1/(4 * np.pi * r**2))[:, np.newaxis]
+
+        # add air attenuation
+        if self._air_attenuation is not None:
+            for i in range(self.n_bins):
+                direct_sound[:, i] *= np.exp(
+                    -self._air_attenuation[i] * r)
+
+        # add source directivity
+        if isinstance(self._source, sound_object.SoundSource):
+            for i in range(self.n_bins):
+                direct_sound[:, i] *= np.real(self._source.get_directivity(
+                    np.squeeze(receivers.cartesian), self._frequencies[i]))
+
+        # calculate the number of samples for the delay
+        n_sample_delay = np.array(
+            r/self.speed_of_sound/self._etc_time_resolution, dtype=int)
+
+        return direct_sound, n_sample_delay
+
 
     def collect_energy_receiver_patchwise(self, receivers):
         """Collect the energy for each patch at the receivers without summing
@@ -525,6 +684,84 @@ class DirectionalRadiosityFast():
         times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
 
+
+    def collect_energy_at_spherical_detector(
+        self,
+        receivers,            # pf.Coordinates, cshape (R,)
+        detector_sphere,      # pf.Coordinates, cshape (D,)
+        direct_sound: bool = False,
+    ):
+        """
+        Collect energy per detector direction for each receiver.
+
+        Parameters
+        ----------
+        receivers : pf.Coordinates, cshape (R,)
+            Receiver positions in Cartesian coordinates. May be vectorized
+            to define multiple receiver points.
+        detector_sphere : pf.Coordinates, cshape (D,)
+            Unit direction vectors defining the spherical detector axes.
+            Typically contains ±x, ±y, ±z or a denser sphere tessellation.
+        direct_sound : bool, optional
+            If True, add the direct source-to-receiver contribution
+            into the nearest detector direction and appropriate sample index.
+            Default is False.
+
+        Returns
+        -------
+        etc : pf.TimeData
+            Multidimensional time data with shape
+            (n_receivers, n_dirs, n_bins, n_samples), where
+            - n_receivers = number of receiver positions (R)
+            - n_dirs      = number of detector directions (D)
+            - n_bins      = number of frequency/energy bands (B)
+            - n_samples   = number of time samples (S)
+
+            The `.times` attribute matches the time axis of
+            `collect_energy_receiver_patchwise`.
+        """
+        # detector unit vectors
+        det_dirs = detector_sphere.cartesian()                        # (D,3)
+        det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)
+
+        # geometry
+        rec_xyz = receivers.cartesian()                               # (R,3)
+        patch_centers = self.patches_center                           # (P,3)
+
+        # (R,P,B,S) patchwise energies and time axis from your existing API
+        td_patch = self.collect_energy_receiver_patchwise(receivers)
+        data = td_patch.time
+        times = td_patch.times
+
+        # 1) bin patch energies into detector directions
+        out = _bin_patch_energy_to_detector_dirs(
+            rec_xyz=rec_xyz,
+            patch_centers=patch_centers,
+            det_dirs_unit=det_dirs,
+            data_rpbs=data,
+        )
+
+        # 2) optionally add direct sound with "non-verbose" in place mod
+        if direct_sound:
+            ds_all, n_delay_all = self.calculate_direct_sound(receivers)
+
+            if isinstance(self._source, pf.Coordinates):
+                src = self._source.cartesian()[0]
+            else:
+                src = np.asarray(self._source.position, float).reshape(3)
+
+            _accumulate_direct_sound_into_bins(
+                out_rdbs=out,
+                rec_xyz=rec_xyz,
+                src_pos=src,
+                det_dirs_unit=det_dirs,
+                ds_all_rb=ds_all,
+                n_delay_all_r=n_delay_all,
+            )
+
+        return pf.TimeData(out, times)
+
+
     def _collect_energy_patches(
             self, receiver_pos,
             propagation_fx=False):
@@ -548,12 +785,20 @@ class DirectionalRadiosityFast():
             n_receivers, n_patches, n_bins,
             self._energy_exchange_etc.shape[-1]))
 
+        receiver_visibility=np.empty((n_receivers,n_patches),dtype=bool)
+
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
 
+            receiver_visibility[i] = geometry._check_point2patch_visibility(
+                                        eval_point=receiver_pos[i],
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+
             # geometrical weighting
             patch_receiver_energy=form_factor._patch2receiver_energy_universal(
-                    receiver_pos[i], patches_points)
+                    receiver_pos[i], patches_points, receiver_visibility[i])
 
             # access histograms with correct scattering weighting
             receivers_array = np.array(
@@ -567,8 +812,9 @@ class DirectionalRadiosityFast():
             assert len(receiver_idx.shape) == 1
 
             for k in range(n_patches):
-                E_matrix[k,:]= (self._energy_exchange_etc[k,receiver_idx[k],:]
-                                                    * patch_receiver_energy[k])
+                E_matrix[k,:]= (
+                    self._energy_exchange_etc[k,int(receiver_idx[k]),:]
+                    * patch_receiver_energy[k])
 
             if propagation_fx:
                 # accumulate the patch energies towards the receiver
@@ -704,6 +950,7 @@ class DirectionalRadiosityFast():
             'brdf_index': self._brdf_index,
             'brdf_incoming_directions': self._brdf_incoming_directions,
             'brdf_outgoing_directions': self._brdf_outgoing_directions,
+            'patch_2_brdf_outgoing_index': self._patch_2_brdf_outgoing_index,
             'air_attenuation': self._air_attenuation,
             'speed_of_sound': self._speed_of_sound,
             'etc_time_resolution': self._etc_time_resolution,
@@ -876,7 +1123,7 @@ def _add_directional(
             sources, wall_id_i, scattering, scattering_index)
 
         energy_0_directivity[i, :, :] = energy_0[i] \
-            * scattering_factor
+            * np.real(scattering_factor)
 
     return energy_0_directivity
 
@@ -919,7 +1166,7 @@ def _energy_exchange_init_energy(
 
 def _energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
-        form_factors_tilde,
+        form_factors_tilde, patch_2_out_directions,
         speed_of_sound, histogram_time_resolution, max_order, visible_patches):
     """Calculate energy exchange between patches.
 
@@ -935,6 +1182,9 @@ def _energy_exchange(
         distance between all patches of shape (n_patches, n_patches)
     form_factors_tilde : np.ndarray
         form factors of shape (n_patches, n_patches, n_directions, n_bins)
+    patch_2_out_directions: np.ndarray
+        patchwise map of patch centers to
+        scattering outgoing directions of shape (n_patches,n_patches)
     speed_of_sound : float
         speed of sound in m/s.
     histogram_time_resolution : float
@@ -973,15 +1223,18 @@ def _energy_exchange(
                 else:
                     j = visible_patches[ii, 0]
                     i = visible_patches[ii, 1]
+
+                dir_id = patch_2_out_directions[i,j]
+
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
                 if n_delay_samples > 0:
                     E_matrix[current_index, j, :, :, n_delay_samples:] += \
                         form_factors_tilde[i, j] * E_matrix[
-                            current_index-1, i, :, :, :-n_delay_samples]
+                            current_index-1, i, dir_id, :, :-n_delay_samples]
                 else:
                     E_matrix[current_index, j, :, :, :] += form_factors_tilde[
-                        i, j] * E_matrix[current_index-1, i, :, :, :]
+                        i, j] * E_matrix[current_index-1, i, dir_id, :, :]
         E_matrix_total += E_matrix[current_index]
     return E_matrix_total
 
@@ -1119,12 +1372,12 @@ def get_scattering_data_receiver_index(
         pos_i:np.ndarray, pos_j:np.ndarray,
         receivers:np.ndarray, wall_id_i:np.ndarray,
         ):
-    """Get scattering data depending on previous, current and next position.
+    """Get scattering receiver index based on current and next position.
 
     Parameters
     ----------
     pos_i : np.ndarray
-        current position of shape (3)
+        current position of shape (n,3)
     pos_j : np.ndarray
         next position of shape (3)
     receivers : np.ndarray
@@ -1142,13 +1395,13 @@ def get_scattering_data_receiver_index(
     receiver_idx = np.empty((n_patches), dtype=np.int64)
 
     for i in range(n_patches):
-        difference_receiver = pos_i[i]-pos_j
+        difference_receiver = pos_j-pos_i[i]
+
         difference_receiver /= np.linalg.norm(
             difference_receiver)
         receiver_idx[i] = np.argmin(np.sum(
             (receivers[wall_id_i[i], :]-difference_receiver)**2, axis=-1),
             axis=-1)
-
 
     return receiver_idx
 
@@ -1230,6 +1483,70 @@ def get_scattering_data_source(
         (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
 
+
+def _bin_patch_energy_to_detector_dirs(
+    rec_xyz: np.ndarray,          # (R,3)
+    patch_centers: np.ndarray,    # (P,3)
+    det_dirs_unit: np.ndarray,    # (D,3) normed
+    data_rpbs: np.ndarray,        # (R,P,B,S)
+    eps: float = 1e-9,
+) -> np.ndarray:
+    """Return (n_receiver, n_detectors, n_bins, n_samples)
+    with patch energies binned into nearest detector dirs.
+    """
+    R, P, B, S = data_rpbs.shape
+    D = det_dirs_unit.shape[0]
+    out = np.zeros((R, D, B, S), dtype=data_rpbs.dtype)
+    det_tree = cKDTree(det_dirs_unit)
+
+    for r in range(R):
+        v = rec_xyz[r] - patch_centers              # (P,3)
+        norms = np.linalg.norm(v, axis=1)           # (P,)
+        if (norms < eps).any():
+            raise ValueError(
+                "Some patch->receiver vectors have zero (or near-zero) "
+                "distance to the receiver. "
+                "Receiver positions must not coincide with patch centers.",
+            )
+        u = v / norms[:, None]                      # (P,3) unit vectors
+        _, p2d = det_tree.query(u, k=1)             # (P,) nearest detector
+        np.add.at(out[r], (p2d, slice(None), slice(None)), data_rpbs[r])
+    return out
+
+
+def _accumulate_direct_sound_into_bins(
+    out_rdbs: np.ndarray,         # (R,D,B,S) in-place accumulation target
+    rec_xyz: np.ndarray,          # (R,3)
+    src_pos: np.ndarray,          # (3,)
+    det_dirs_unit: np.ndarray,    # (D,3) normalized
+    ds_all_rb: np.ndarray,        # (R,B)
+    n_delay_all_r: np.ndarray,    # (R,)
+    eps: float = 1e-9,
+) -> None:
+    """Scatter-add direct sound into `out_rdbs` (in-place
+    modification of out) at the nearest detector dir/time index.
+    """
+    R, D, B, S = out_rdbs.shape
+    det_tree = cKDTree(det_dirs_unit)
+
+    svec  = rec_xyz - src_pos[None, :]   # (R,3)
+    snorm = np.linalg.norm(svec, axis=1) # (R,)
+    if (snorm < eps).any():
+        raise ValueError(
+            "Some source->receiver vectors have zero (or near-zero) distance"
+            " to the source. "
+            "Receiver positions must not coincide with the source position.",
+        )
+    sdir = svec / snorm[:, None]         # (R,3) unit vectors
+
+    d_idx_all = det_tree.query(sdir, k=1)[1]       # (R,)
+    # clipping should raise an error, this should not happen?
+    tt = np.clip(n_delay_all_r, 0, S - 1).astype(int)  # (R,)
+    rr = np.arange(R)
+
+    np.add.at(out_rdbs, (rr, d_idx_all, slice(None), tt), ds_all_rb)
+
+
 if numba is not None:
     _add_directional = numba.njit(parallel=True)(_add_directional)
     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
@@ -1243,6 +1560,7 @@ if numba is not None:
         get_scattering_data_receiver_index)
     get_scattering_data = numba.njit()(get_scattering_data)
     get_scattering_data_source = numba.njit()(get_scattering_data_source)
+
 
 
 
