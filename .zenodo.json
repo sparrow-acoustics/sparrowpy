@@ -9,7 +9,7 @@
     "radiosity",
     "sound propagation",
     "auralization",
-    "BRDFs",
+    "BRDF",
     "bidirectional scattering"
   ],
   "access_right": "open",
