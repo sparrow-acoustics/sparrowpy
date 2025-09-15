@@ -227,101 +227,6 @@ def dirac_sequence(
 
     return dirac_sequence
 
-def weight_filters_by_etc(
-    etc: pf.TimeData,
-    noise_filters: pf.Signal,
-    bandwidth=None,
-) -> pf.Signal:
-    r"""
-    Generate the frequency-wise impulse response for a given ETC.
-
-    The frequency-band-wise noise filters are weighed by the respective
-    ETC over time after Chapter 5.3.4 of [#]_.
-    This creates
-
-    Parameters
-    ----------
-    etc: :py:class:`pyfar.TimeData'
-        ETC of a sound propagation simulation of cshape
-        ``(..., n_freq_bands)``.
-        *Note:* The ETC entries must be equally spaced in time.
-     signal :py:class:`pyfar.Signal'
-        signal to be weighted by the etc of cshape
-        ``(n_freq_bands)``.
-    bandwidths: np.ndarray
-        Bandwidths corresponding to the noise filter channels in Hz.
-        *Note:* length must match the number of right-most channels
-        of the etc and noise_filters objects.
-
-    Returns
-    -------
-    bandwise_ir : :py:class:`pyfar.Signal'
-        Impulse response of the space simulated by the ETC.
-        the IR channels match the ETC channels.
-
-    References
-    ----------
-    .. [#] D. Schröder, “Physically based real-time auralization of
-           interactive virtual environments,” PhD Thesis, Logos-Verlag,
-           Berlin, 2011. [Online].
-           Available: https://publications.rwth-aachen.de/record/50580
-
-    """
-    if bandwidth is None:
-        bandwidth = noise_filters.sampling_rate / 2
-
-    if bandwidth is not None:
-        if isinstance(bandwidth, (float, int)):
-            if bandwidth <= 0:
-                raise ValueError("Bandwidth must be positive.")
-        else:
-            bandwidth = np.asarray(bandwidth)
-            if np.any(bandwidth <= 0):
-                raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape != noise_filters.cshape[(-bandwidth.ndim):]:
-                raise ValueError(
-                    f"bandwidth shape {bandwidth.shape} does not "
-                    "match signal bands "
-                    f"{noise_filters.cshape[-bandwidth.ndim:]}",
-                )
-            if bandwidth.shape != etc.cshape[(-bandwidth.ndim):]:
-                raise ValueError(
-                    f"bandwidth shape {bandwidth.shape} does not "
-                    "match etc shape "
-                    f"{etc.cshape[-bandwidth.ndim:]}",
-                )
-
-    if not (np.abs(etc.times[1:]-etc.times[:-1] -
-                   etc.times[1]-etc.times[0]) < 1e-12 ).all():
-        raise ValueError("ETC entries must be equally spaced in time.")
-
-    rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
-
-    weighted_noise = np.zeros(etc.cshape +
-                              (noise_filters.time.shape[-1],))
-
-    for sample_i in range(etc.time.shape[-1]):
-        lower = int(sample_i * rs_factor)
-        upper = int((sample_i+1) * rs_factor)
-
-        noise_sec = noise_filters.time[...,lower:upper]
-        div = np.sum(noise_sec**2,axis=-1)
-
-        scale = np.divide(etc.time[...,sample_i],div,
-                              out=np.zeros_like(etc.time[...,sample_i]),
-                              where=div!=0)
-
-        etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
-                                              (noise_filters.sampling_rate/2))
-
-        weighted_noise[...,lower:upper]=(
-            etc_weight[...,None]*noise_sec
-        )
-
-    bandwise_ir = pf.Signal(weighted_noise, noise_filters.sampling_rate)
-
-    return bandwise_ir
-
 
 def energy_time_curve_from_impulse_response(
         signal, delta_time=0.01, bandwidth=None):
@@ -513,6 +418,11 @@ def _closest_frac_octave_data(freqs:np.ndarray,
     num_fractions: int
         Number of octave fractions of the output freq bands.
         (either 1 or 3)
+    frequency_range: tuple (2,)
+        lower and upper bounds of the input frequency range.
+        Note: for certain input frequencies, this range must
+        include a tolerance for the lower and upper bounds. Otherwise,
+        the output frequency band data may be incorrect.
 
     Returns
     -------
