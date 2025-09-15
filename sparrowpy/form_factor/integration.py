@@ -7,6 +7,7 @@ except ImportError:
     prange = range
 import numpy as np
 import sparrowpy.geometry as geom
+import scipy.interpolate as intp
 
 
 def load_stokes_entries(
@@ -73,7 +74,7 @@ def stokes_integration(
 
     """
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
-                                                         npoints=5)
+                                                         npoints=7)
     j_bpoints, j_conn = _sample_boundary_regular(patch_j,
                                                          npoints=3)
 
@@ -113,7 +114,16 @@ def stokes_integration(
             if np.abs(xi[-1]-xi[0])>1e-3:
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
-                outer_integral+= _newton_cotes_4th(xi,subseci)
+
+                si=1
+
+                if xi[-1]-xi[0]<0:
+                    si = -1
+                    xi.sort()
+
+                interpolator = intp.CubicSpline(x=xi,y=subseci)
+
+                outer_integral+= si*interpolator.integrate(xi[0],xi[-1])
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
@@ -445,6 +455,32 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
     return area
 
 def _newton_cotes_4th(x: np.ndarray,y):
+    """Integrate 1D function after Boole's rule.
+
+    Returns the approximate integral of a given function f(x)
+    given 5 equally spaced samples (x,y).
+    x samples the function input, while y samples the respective f(x) values.
+
+    The integral is numerically estimated via the closed 4th-order
+    Newton-Cotes formula (aka Boole's Rule).
+    This formula *requires* 5 equidistant sample input.
+
+    Parameters
+    ----------
+    x: np.ndarray(float)
+        x-coordinate of the input samples.
+    y: np.ndarray(float)
+        f(x) of the input samples.
+    """
+
+    h=x[1]-x[0]
+    return 2*h/45 *(7*y[0] +
+                    32*y[1] +
+                    12*y[2] +
+                    32*y[3] +
+                    7*y[4])
+
+def _newton_cotes_6th(x: np.ndarray,y):
     """Integrate 1D function after Boole's rule.
 
     Returns the approximate integral of a given function f(x)
