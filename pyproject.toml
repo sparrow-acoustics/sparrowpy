@@ -14,7 +14,7 @@ keywords = [
     "radiosity",
     "sound propagation",
     "auralization",
-    "BRDFs",
+    "BRDF",
     "bidirectional scattering",
 ]
 classifiers = [
