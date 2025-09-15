@@ -2,7 +2,6 @@
 """Module for filter generation and signal processing in sparrowpy."""
 import numpy as np
 import pyfar as pf
-import warnings
 
 def reflection_density_room(
         room_volume, n_samples, speed_of_sound=None,
@@ -249,8 +248,8 @@ def weight_filters_by_etc(
     noise_filters: :py:class:`pyfar.Signal'
         Frequency-wise IR filters in the form of noise sequences
         of cshape (n_freq_bands,)
-    bandwidths: np.ndarray
-        Bandwidths corresponding to the noise filter channels in Hz.
+    bandwidth: np.ndarray
+        Bandwidth corresponding to the noise filter channels in Hz.
         *Note:* length must match the number of right-most channels
         of the etc and noise_filters objects.
 
@@ -292,7 +291,8 @@ def weight_filters_by_etc(
                     f"{etc.cshape[-bandwidth.ndim:]}",
                 )
 
-    if not (etc.times[1:]-etc.times[:-1] == etc.times[1]-etc.times[0]).all():
+    if not (np.abs(etc.times[1:]-etc.times[:-1] -
+                   etc.times[1]-etc.times[0]) < 1e-12 ).all():
         raise ValueError("ETC entries must be equally spaced in time.")
 
     rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
@@ -424,7 +424,6 @@ def energy_time_curve_from_impulse_response(
         np.arange(n_samples_E) * delta_time,
         )
     bw_factor = np.asarray((signal.sampling_rate/2)/bandwidth)
-    #bw_factor = bw_factor.reshape(bw_factor.shape + (1,) * (signal.cdim - 1))
 
     for k in range(n_samples_E):
         upper = g_k[k+1] if k < n_samples_E-1 else signal.n_samples
@@ -465,13 +464,16 @@ def band_filter_signal(signal:pf.Signal,
     -------
     band_filtered_noise: :py:class:`pyfar.Signal'
         Band-filtered signal of cshape (signal.cshape + (len(freqs))
+    bandwidth: np.ndarray
+        array of bandwidth values in Hz of the fractional octave bands
+        corresponding to the input frequencies.
     """
     if ((num_fractions!=1) and (num_fractions!=3)):
         raise ValueError(
             f"{num_fractions}th octave bands not supported."+
             "Octave fractions must be either 1 or 3.")
 
-    bw,idcs = _closest_frac_octave_data(freqs=freqs,
+    bandwidth,idcs = _closest_frac_octave_data(freqs=freqs,
                                          num_fractions=num_fractions)
 
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
@@ -482,7 +484,7 @@ def band_filter_signal(signal:pf.Signal,
 
     band_filtered_noise.time = np.squeeze(band_filtered_noise.time[idcs])
 
-    return band_filtered_noise, bw
+    return band_filtered_noise, bandwidth
 
 
 def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
@@ -511,15 +513,15 @@ def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
         frequencies belong.
     """
     freqs = np.asarray(freqs)
-    if (freqs<20).any() or (freqs>20e3).any():
+    if (freqs<=0).any():
         raise ValueError(
-            "Input frequencies must belong in the listening spectrum "+
-            "(20 Hz <--> 20000 Hz)",
+            "Input frequencies must be positive.",
         )
 
     _,_,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
         num_fractions=num_fractions,
         return_cutoff=True,
+        frequency_range=(np.min(freqs),np.max(freqs)*1.5)
         )
 
     idcs = np.empty_like(freqs,dtype=int)
@@ -540,6 +542,6 @@ def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
                 "to 3rd octave.",
             )
 
-    band_widths = freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
+    bandwidths = freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
 
-    return band_widths,idcs
+    return bandwidths,idcs
