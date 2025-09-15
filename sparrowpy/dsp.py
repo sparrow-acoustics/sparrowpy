@@ -356,7 +356,7 @@ def band_filter_signal(signal:pf.Signal,
 
     Parameters
     ----------
-    signal: :py:class:`pyfar.Signal'
+    signal: :py:class:`pyfar.Signal`
         Input broad-spectrum signal.
     freqs: np.ndarray
         Frequencies in which to filter the signal. In Hz.
@@ -368,7 +368,7 @@ def band_filter_signal(signal:pf.Signal,
 
     Returns
     -------
-    band_filtered_noise: :py:class:`pyfar.Signal'
+    band_filtered_noise: :py:class:`pyfar.Signal`
         Band-filtered signal of cshape (signal.cshape + (len(freqs))
     bandwidth: np.ndarray
         array of bandwidth values in Hz of the fractional octave bands
