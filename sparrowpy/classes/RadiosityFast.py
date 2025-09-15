@@ -10,6 +10,7 @@ try:
 except ImportError:
     numba = None
     prange = range
+from scipy.spatial import cKDTree
 
 
 class DirectionalRadiosityFast():
@@ -684,6 +685,84 @@ class DirectionalRadiosityFast():
         times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
 
+
+    def collect_energy_at_spherical_detector(
+        self,
+        receivers,            # pf.Coordinates, cshape (R,)
+        detector_sphere,      # pf.Coordinates, cshape (D,)
+        direct_sound: bool = False,
+    ):
+        """
+        Collect energy per detector direction for each receiver.
+
+        Parameters
+        ----------
+        receivers : pf.Coordinates, cshape (R,)
+            Receiver positions in Cartesian coordinates. May be vectorized
+            to define multiple receiver points.
+        detector_sphere : pf.Coordinates, cshape (D,)
+            Unit direction vectors defining the spherical detector axes.
+            Typically contains ±x, ±y, ±z or a denser sphere tessellation.
+        direct_sound : bool, optional
+            If True, add the direct source-to-receiver contribution
+            into the nearest detector direction and appropriate sample index.
+            Default is False.
+
+        Returns
+        -------
+        etc : pf.TimeData
+            Multidimensional time data with shape
+            (n_receivers, n_dirs, n_bins, n_samples), where
+            - n_receivers = number of receiver positions (R)
+            - n_dirs      = number of detector directions (D)
+            - n_bins      = number of frequency/energy bands (B)
+            - n_samples   = number of time samples (S)
+
+            The `.times` attribute matches the time axis of
+            `collect_energy_receiver_patchwise`.
+        """
+        # detector unit vectors
+        det_dirs = detector_sphere.cartesian()                        # (D,3)
+        det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)
+
+        # geometry
+        rec_xyz = receivers.cartesian()                               # (R,3)
+        patch_centers = self.patches_center                           # (P,3)
+
+        # (R,P,B,S) patchwise energies and time axis from your existing API
+        td_patch = self.collect_energy_receiver_patchwise(receivers)
+        data = td_patch.time
+        times = td_patch.times
+
+        # 1) bin patch energies into detector directions
+        out = _bin_patch_energy_to_detector_dirs(
+            rec_xyz=rec_xyz,
+            patch_centers=patch_centers,
+            det_dirs_unit=det_dirs,
+            data_rpbs=data,
+        )
+
+        # 2) optionally add direct sound with "non-verbose" in place mod
+        if direct_sound:
+            ds_all, n_delay_all = self.calculate_direct_sound(receivers)
+
+            if isinstance(self._source, pf.Coordinates):
+                src = self._source.cartesian()[0]
+            else:
+                src = np.asarray(self._source.position, float).reshape(3)
+
+            _accumulate_direct_sound_into_bins(
+                out_rdbs=out,
+                rec_xyz=rec_xyz,
+                src_pos=src,
+                det_dirs_unit=det_dirs,
+                ds_all_rb=ds_all,
+                n_delay_all_r=n_delay_all,
+            )
+
+        return pf.TimeData(out, times)
+
+
     def _collect_energy_patches(
             self, receiver_pos,
             propagation_fx=False):
@@ -736,7 +815,7 @@ class DirectionalRadiosityFast():
             for k in range(n_patches):
                 E_matrix[k,:]= (
                     self._energy_exchange_etc[k,int(receiver_idx[k]),:]
-                                                    * patch_receiver_energy[k])
+                    * patch_receiver_energy[k])
 
             if propagation_fx:
                 # accumulate the patch energies towards the receiver
@@ -1390,6 +1469,70 @@ def get_scattering_data_source(
         (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
     return scattering[scattering_index[wall_id_i], source_idx]
 
+
+def _bin_patch_energy_to_detector_dirs(
+    rec_xyz: np.ndarray,          # (R,3)
+    patch_centers: np.ndarray,    # (P,3)
+    det_dirs_unit: np.ndarray,    # (D,3) normed
+    data_rpbs: np.ndarray,        # (R,P,B,S)
+    eps: float = 1e-9,
+) -> np.ndarray:
+    """Return (n_receiver, n_detectors, n_bins, n_samples)
+    with patch energies binned into nearest detector dirs.
+    """
+    R, P, B, S = data_rpbs.shape
+    D = det_dirs_unit.shape[0]
+    out = np.zeros((R, D, B, S), dtype=data_rpbs.dtype)
+    det_tree = cKDTree(det_dirs_unit)
+
+    for r in range(R):
+        v = rec_xyz[r] - patch_centers              # (P,3)
+        norms = np.linalg.norm(v, axis=1)           # (P,)
+        if (norms < eps).any():
+            raise ValueError(
+                "Some patch->receiver vectors have zero (or near-zero) "
+                "distance to the receiver. "
+                "Receiver positions must not coincide with patch centers.",
+            )
+        u = v / norms[:, None]                      # (P,3) unit vectors
+        _, p2d = det_tree.query(u, k=1)             # (P,) nearest detector
+        np.add.at(out[r], (p2d, slice(None), slice(None)), data_rpbs[r])
+    return out
+
+
+def _accumulate_direct_sound_into_bins(
+    out_rdbs: np.ndarray,         # (R,D,B,S) in-place accumulation target
+    rec_xyz: np.ndarray,          # (R,3)
+    src_pos: np.ndarray,          # (3,)
+    det_dirs_unit: np.ndarray,    # (D,3) normalized
+    ds_all_rb: np.ndarray,        # (R,B)
+    n_delay_all_r: np.ndarray,    # (R,)
+    eps: float = 1e-9,
+) -> None:
+    """Scatter-add direct sound into `out_rdbs` (in-place
+    modification of out) at the nearest detector dir/time index.
+    """
+    R, D, B, S = out_rdbs.shape
+    det_tree = cKDTree(det_dirs_unit)
+
+    svec  = rec_xyz - src_pos[None, :]   # (R,3)
+    snorm = np.linalg.norm(svec, axis=1) # (R,)
+    if (snorm < eps).any():
+        raise ValueError(
+            "Some source->receiver vectors have zero (or near-zero) distance"
+            " to the source. "
+            "Receiver positions must not coincide with the source position.",
+        )
+    sdir = svec / snorm[:, None]         # (R,3) unit vectors
+
+    d_idx_all = det_tree.query(sdir, k=1)[1]       # (R,)
+    # clipping should raise an error, this should not happen?
+    tt = np.clip(n_delay_all_r, 0, S - 1).astype(int)  # (R,)
+    rr = np.arange(R)
+
+    np.add.at(out_rdbs, (rr, d_idx_all, slice(None), tt), ds_all_rb)
+
+
 if numba is not None:
     _add_directional = numba.njit(parallel=True)(_add_directional)
     _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
@@ -1403,6 +1546,7 @@ if numba is not None:
         get_scattering_data_receiver_index)
     get_scattering_data = numba.njit()(get_scattering_data)
     get_scattering_data_source = numba.njit()(get_scattering_data_source)
+
 
 
 

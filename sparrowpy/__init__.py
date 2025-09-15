@@ -2,9 +2,9 @@
 
 """Top-level package for sparrowpy."""
 
-__author__ = """The pyfar developers"""
+__author__ = """The sparrowpy developers"""
 __email__ = ''
-__version__ = '0.1.0'
+__version__ = '1.0.0'
 
 
 from . import geometry
