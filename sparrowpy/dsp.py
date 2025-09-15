@@ -246,9 +246,9 @@ def weight_filters_by_etc(
         ETC of a sound propagation simulation of cshape
         ``(..., n_freq_bands)``.
         *Note:* The ETC entries must be equally spaced in time.
-    noise_filters: :py:class:`pyfar.Signal'
-        Frequency-wise IR filters in the form of noise sequences
-        of cshape (n_freq_bands,)
+     signal :py:class:`pyfar.Signal'
+        signal to be weighted by the etc of cshape
+        ``(n_freq_bands)``.
     bandwidths: np.ndarray
         Bandwidths corresponding to the noise filter channels in Hz.
         *Note:* length must match the number of right-most channels
