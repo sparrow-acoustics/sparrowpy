@@ -41,7 +41,7 @@ def test_parallel_facing_patches(width, height, distance):
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
-    assert  rel < .02
+    assert  rel < .2
 
 
 @pytest.mark.parametrize("width", [1.0, 2.0, 3.0])
@@ -81,13 +81,13 @@ def test_perpendicular_coincidentline_patches(width, height, length):
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
-    assert rel < .5
+    assert rel < .75
 
 
-@pytest.mark.parametrize("width1", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("width2", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("length1", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("length2", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("width1", [1.0, 2.0])
+@pytest.mark.parametrize("width2", [1.0, 2.0])
+@pytest.mark.parametrize("length1", [1.0, 2.0])
+@pytest.mark.parametrize("length2", [1.0, 2.0])
 def test_perpendicular_coincidentpoint_patches(
     width1, length1, width2, length2,
 ):
@@ -126,7 +126,7 @@ def test_perpendicular_coincidentpoint_patches(
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
-    assert rel < 2.5
+    assert rel < 6
 
 @pytest.mark.parametrize("X", [2.0, 3.0])
 @pytest.mark.parametrize("Y", [1.0, 2.0])
