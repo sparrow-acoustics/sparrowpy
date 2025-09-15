@@ -243,8 +243,8 @@ def weight_filters_by_etc(
     Parameters
     ----------
     etc: :py:class:`pyfar.TimeData'
-        ETC of a sound propagation simulation.
-        The number of right-most channels must match the number of freq bands.
+        ETC of a sound propagation simulation of cshape
+        ``(..., n_freq_bands)``.
         *Note:* The ETC entries must be equally spaced in time.
     noise_filters: :py:class:`pyfar.Signal'
         Frequency-wise IR filters in the form of noise sequences
