@@ -468,18 +468,26 @@ def band_filter_signal(signal:pf.Signal,
         array of bandwidth values in Hz of the fractional octave bands
         corresponding to the input frequencies.
     """
+    if (freqs<=0).any():
+        raise ValueError(
+            "Input frequencies must be positive.",
+        )
     if ((num_fractions!=1) and (num_fractions!=3)):
         raise ValueError(
             f"{num_fractions}th octave bands not supported."+
             "Octave fractions must be either 1 or 3.")
 
+    frequency_range = (.67*np.min(freqs),1.5*np.max(freqs))
+
     bandwidth,idcs = _closest_frac_octave_data(freqs=freqs,
-                                         num_fractions=num_fractions)
+                                         num_fractions=num_fractions,
+                                         frequency_range=frequency_range)
 
     band_filtered_noise = pf.dsp.filter.fractional_octave_bands(
         signal=signal,
         num_fractions=num_fractions,
         order=order,
+        frequency_range=frequency_range,
     )
 
     band_filtered_noise.time = np.squeeze(band_filtered_noise.time[idcs])
@@ -487,7 +495,9 @@ def band_filter_signal(signal:pf.Signal,
     return band_filtered_noise, bandwidth
 
 
-def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
+def _closest_frac_octave_data(freqs:np.ndarray,
+                              num_fractions=1,
+                              frequency_range=(20,20000)):
     """
     Determine frac. octave filter data of custom input frequencies.
 
@@ -517,11 +527,17 @@ def _closest_frac_octave_data(freqs:np.ndarray, num_fractions=1):
         raise ValueError(
             "Input frequencies must be positive.",
         )
+    if ((np.min(freqs)<frequency_range[0])
+        or (np.max(freqs)>frequency_range[1])):
+        raise ValueError(
+           "Input frequencies outside of input"
+            f" {frequency_range} frequency range.",
+        )
 
     _,_,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
         num_fractions=num_fractions,
         return_cutoff=True,
-        frequency_range=(np.min(freqs),np.max(freqs)*1.5)
+        frequency_range=frequency_range,
         )
 
     idcs = np.empty_like(freqs,dtype=int)
