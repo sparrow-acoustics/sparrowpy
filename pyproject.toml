@@ -172,3 +172,8 @@ replace = "__version__ = '{new_version}'"
 filename = "docs/_static/logo.svg"
 search = ">{current_version}</tspan>"
 replace = ">{new_version}</tspan>"
+
+[[tool.bumpversion.files]]
+filename = ".zenodo.json"
+search = '"version": "{current_version}",'
+replace = '"version": "{new_version}",'

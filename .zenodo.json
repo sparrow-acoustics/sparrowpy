@@ -1,0 +1,34 @@
+{
+  "title": "sparrowpy: Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds",
+  "version": "1.0.0",
+  "license": "MIT",
+  "upload_type": "software",
+  "description": "<p>Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds.<\/p>",
+  "keywords": [
+    "acoustics",
+    "radiosity",
+    "sound propagation",
+    "auralization",
+    "BRDF",
+    "bidirectional scattering"
+  ],
+  "access_right": "open",
+  "language": "eng",
+  "creators": [
+    {
+        "name": "Heimes, Anne",
+        "affiliation": "Institute for Hearing Technology and Acoustics, RWTH Aachen University",
+        "orcid": "0000-0002-4360-0271"
+    },
+    {
+        "name": "Fatela, João",
+        "affiliation": "Department of Architecture and Industrial Design, University of Campania 'Luigi Vanvitelli'",
+        "orcid": "0009-0009-4474-171X"
+    }
+],
+  "communities": [
+    {
+      "identifier": "sparrowpy"
+    }
+  ]
+}
