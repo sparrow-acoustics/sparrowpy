@@ -230,7 +230,7 @@ def dirac_sequence(
 
 def weight_filters_by_etc(
     etc: pf.TimeData,
-    noise_filters: pf.Signal,
+    signal: pf.Signal,
     bandwidth=None,
 ) -> pf.Signal:
     r"""
@@ -246,11 +246,11 @@ def weight_filters_by_etc(
         ETC of a sound propagation simulation of cshape
         ``(..., n_freq_bands)``.
         *Note:* The ETC entries must be equally spaced in time.
-     signal :py:class:`pyfar.Signal'
+    signal: :py:class:`pyfar.Signal'
         signal to be weighted by the etc of cshape
-        ``(n_freq_bands)``.
-    bandwidths: np.ndarray
-        Bandwidths corresponding to the noise filter channels in Hz.
+        ``(..., n_freq_bands)``.
+    bandwidth: np.ndarray
+        Bandwidth array corresponding to the noise filter channels in Hz.
         *Note:* length must match the number of right-most channels
         of the etc and noise_filters objects.
 
@@ -269,7 +269,7 @@ def weight_filters_by_etc(
 
     """
     if bandwidth is None:
-        bandwidth = noise_filters.sampling_rate / 2
+        bandwidth = signal.sampling_rate / 2
 
     if bandwidth is not None:
         if isinstance(bandwidth, (float, int)):
@@ -279,11 +279,11 @@ def weight_filters_by_etc(
             bandwidth = np.asarray(bandwidth)
             if np.any(bandwidth <= 0):
                 raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape != noise_filters.cshape[(-bandwidth.ndim):]:
+            if bandwidth.shape != signal.cshape[(-bandwidth.ndim):]:
                 raise ValueError(
                     f"bandwidth shape {bandwidth.shape} does not "
                     "match signal bands "
-                    f"{noise_filters.cshape[-bandwidth.ndim:]}",
+                    f"{signal.cshape[-bandwidth.ndim:]}",
                 )
             if bandwidth.shape != etc.cshape[(-bandwidth.ndim):]:
                 raise ValueError(
@@ -296,16 +296,16 @@ def weight_filters_by_etc(
                    etc.times[1]-etc.times[0]) < 1e-12 ).all():
         raise ValueError("ETC entries must be equally spaced in time.")
 
-    rs_factor = noise_filters.sampling_rate*(etc.times[1]-etc.times[0])
+    rs_factor = signal.sampling_rate*(etc.times[1]-etc.times[0])
 
     weighted_noise = np.zeros(etc.cshape +
-                              (noise_filters.time.shape[-1],))
+                              (signal.time.shape[-1],))
 
     for sample_i in range(etc.time.shape[-1]):
         lower = int(sample_i * rs_factor)
         upper = int((sample_i+1) * rs_factor)
 
-        noise_sec = noise_filters.time[...,lower:upper]
+        noise_sec = signal.time[...,lower:upper]
         div = np.sum(noise_sec**2,axis=-1)
 
         scale = np.divide(etc.time[...,sample_i],div,
@@ -313,13 +313,13 @@ def weight_filters_by_etc(
                               where=div!=0)
 
         etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
-                                              (noise_filters.sampling_rate/2))
+                                              (signal.sampling_rate/2))
 
         weighted_noise[...,lower:upper]=(
             etc_weight[...,None]*noise_sec
         )
 
-    bandwise_ir = pf.Signal(weighted_noise, noise_filters.sampling_rate)
+    bandwise_ir = pf.Signal(weighted_noise, signal.sampling_rate)
 
     return bandwise_ir
 
