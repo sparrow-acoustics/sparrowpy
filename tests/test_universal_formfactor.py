@@ -84,10 +84,10 @@ def test_perpendicular_coincidentline_patches(width, height, length):
     assert rel < .75
 
 
-@pytest.mark.parametrize("width1", [1.0, 2.0])
-@pytest.mark.parametrize("width2", [1.0, 2.0])
-@pytest.mark.parametrize("length1", [1.0, 2.0])
-@pytest.mark.parametrize("length2", [1.0, 2.0])
+@pytest.mark.parametrize("width1", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("width2", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("length1", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("length2", [1.0, 2.0, 3.0])
 def test_perpendicular_coincidentpoint_patches(
     width1, length1, width2, length2,
 ):
@@ -125,8 +125,8 @@ def test_perpendicular_coincidentpoint_patches(
         visible_patches=np.array([[0,1]]))
 
     rel = 100 * abs(univ[0,1] - exact) / exact
-
-    assert rel < 6
+    print(rel)
+    assert rel < 5
 
 @pytest.mark.parametrize("X", [2.0, 3.0])
 @pytest.mark.parametrize("Y", [1.0, 2.0])
