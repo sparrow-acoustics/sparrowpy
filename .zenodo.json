@@ -29,6 +29,9 @@
   "communities": [
     {
       "identifier": "sparrowpy"
+    },
+    {
+      "identifier": "ihta"
     }
   ]
 }
