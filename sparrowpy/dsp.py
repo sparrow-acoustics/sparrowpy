@@ -340,8 +340,8 @@ def energy_time_curve_from_impulse_response(
     return etc
 
 def band_filter_signal(signal:pf.Signal,
-                       freqs=np.ndarray,
-                       num_fractions=1,
+                       frequencies:np.ndarray,
+                       num_fractions:int,
                        order=4):
     r"""Band filter input signal and return corresponding bandwidths.
 
@@ -358,7 +358,7 @@ def band_filter_signal(signal:pf.Signal,
     ----------
     signal: :py:class:`pyfar.Signal`
         Input broad-spectrum signal.
-    freqs: np.ndarray
+    frequencies: np.ndarray
         Frequencies in which to filter the signal. In Hz.
     num_fractions: int
         Number of octave fractions of the input freq bands
@@ -374,18 +374,17 @@ def band_filter_signal(signal:pf.Signal,
         array of bandwidth values in Hz of the fractional octave bands
         corresponding to the input frequencies.
     """
-    if (freqs<=0).any():
+    if (frequencies<=0).any():
         raise ValueError(
             "Input frequencies must be positive.",
         )
-    if ((num_fractions!=1) and (num_fractions!=3)):
+    if num_fractions<=0:
         raise ValueError(
-            f"{num_fractions}th octave bands not supported."+
-            "Octave fractions must be either 1 or 3.")
+            "Number of octave fractions must be greater than zero.")
 
-    frequency_range = (.67*np.min(freqs),1.5*np.max(freqs))
+    frequency_range = (.67*np.min(frequencies),1.5*np.max(frequencies))
 
-    bandwidth,idcs = _closest_frac_octave_data(freqs=freqs,
+    bandwidth,idcs = _closest_frac_octave_data(frequencies=frequencies,
                                          num_fractions=num_fractions,
                                          frequency_range=frequency_range)
 
@@ -401,7 +400,7 @@ def band_filter_signal(signal:pf.Signal,
     return band_filtered_noise, bandwidth
 
 
-def _closest_frac_octave_data(freqs:np.ndarray,
+def _closest_frac_octave_data(frequencies:np.ndarray,
                               num_fractions=1,
                               frequency_range=(20,20000)):
     """
@@ -414,11 +413,12 @@ def _closest_frac_octave_data(freqs:np.ndarray,
 
     Parameters
     ----------
-    freqs: np.ndarray
+    frequencies: np.ndarray
         Input frequency values in Hz.
     num_fractions: int
-        Number of octave fractions of the output freq bands.
-        (either 1 or 3)
+        The number of bands an octave is divided into. E.g., ``1`` refers to
+        octave bands and ``3`` to third octave bands.
+        All positive integers are allowed.
     frequency_range: tuple (2,)
         lower and upper bounds of the input frequency range.
         Note: for certain input frequencies, this range must
@@ -433,13 +433,13 @@ def _closest_frac_octave_data(freqs:np.ndarray,
         list of indices of the fractional octave bands to which the input
         frequencies belong.
     """
-    freqs = np.asarray(freqs)
-    if (freqs<=0).any():
+    frequencies = np.asarray(frequencies)
+    if (frequencies<=0).any():
         raise ValueError(
             "Input frequencies must be positive.",
         )
-    if ((np.min(freqs)<frequency_range[0])
-        or (np.max(freqs)>frequency_range[1])):
+    if ((np.min(frequencies)<frequency_range[0])
+        or (np.max(frequencies)>frequency_range[1])):
         raise ValueError(
            "Input frequencies outside of input"
             f" {frequency_range} frequency range.",
@@ -451,22 +451,15 @@ def _closest_frac_octave_data(freqs:np.ndarray,
         frequency_range=frequency_range,
         )
 
-    idcs = np.empty_like(freqs,dtype=int)
+    idcs = np.empty_like(frequencies,dtype=int)
 
-    for i,f in enumerate(freqs):
+    for i,f in enumerate(frequencies):
         idcs[i] = np.where((freq_cutoffs[0]<f)*(freq_cutoffs[1]>f))[0][0]
 
     if np.unique(idcs).shape[0]<idcs.shape[0]:
-        if num_fractions==3:
             raise ValueError(
                 "Multiple input frequencies in the same freq. band.\n" +
-                "Remove one of the entries.",
-            )
-        else:
-            raise ValueError(
-                "Multiple input frequencies in the same freq. band.\n" +
-                "Remove one of the entries or reduce the bandwidth" +
-                "to 3rd octave.",
+                "Remove one of the entries or reduce the bandwidths.",
             )
 
     bandwidths = freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
