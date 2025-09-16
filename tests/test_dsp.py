@@ -156,7 +156,7 @@ def test_band_filtering(freq,frac):
                                 sampling_rate=signal_split_freqs.sampling_rate)
 
     band_sig,_ = sp.dsp.band_filter_signal(signal=signal_combined,
-                                         freqs=freq,
+                                         frequencies=freq,
                                          num_fractions=frac,
                                          )
 
@@ -177,7 +177,7 @@ def test_closest_freq_band(freq):
 
     np.random.shuffle(freq[1])
 
-    bw, idcs = sp.dsp._closest_frac_octave_data(freqs=freq[1],
+    bw, idcs = sp.dsp._closest_frac_octave_data(frequencies=freq[1],
                                               num_fractions=freq[0])
 
     fband_centers,cutoffs = pf.dsp.filter.fractional_octave_frequencies(
