@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 (2025-09-16)
+
+### Added
+
+- added deploy instructions to contribution guidelines (#121)
+- added Zenodo publication config (#130)
+
 ## 1.0.0 (2025-08-25)
 
 This is a major release, so backwards compatibility is not guaranteed.
