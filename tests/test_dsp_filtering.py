@@ -39,40 +39,40 @@ def test_band_filtering_inputs():
     with pytest.raises(
             ValueError,
             match="Input frequencies must be greater than zero."):
-            sp.dsp.band_filter_signal(frequencies=frequencies,
-                                  signal=pf.signals.noise(n_samples=400),
-                                  num_fractions=1)
+        sp.dsp.band_filter_signal(frequencies=frequencies,
+                                signal=pf.signals.noise(n_samples=400),
+                                num_fractions=1)
 
 
     frequencies = np.array([10,20000,-3])
     with pytest.raises(
             ValueError,
             match="Input frequencies must be greater than zero."):
-            sp.dsp.band_filter_signal(frequencies=frequencies,
-                                  signal=pf.signals.noise(n_samples=400),
-                                  num_fractions=1)
+        sp.dsp.band_filter_signal(frequencies=frequencies,
+                                signal=pf.signals.noise(n_samples=400),
+                                num_fractions=1)
 
 
     with pytest.raises(
             ValueError,
             match="Number of octave fractions must be greater than zero."):
-            sp.dsp.band_filter_signal(frequencies=np.array([1,2,3]),
-                                  signal=pf.signals.noise(n_samples=400),
-                                  num_fractions=0)
+        sp.dsp.band_filter_signal(frequencies=np.array([1,2,3]),
+                                signal=pf.signals.noise(n_samples=400),
+                                num_fractions=0)
 
     with pytest.raises(
             ValueError,
             match="Number of octave fractions must be greater than zero."):
-            sp.dsp.band_filter_signal(frequencies=np.array([1,2,3]),
-                                  signal=pf.signals.noise(n_samples=400),
-                                  num_fractions=-5)
+        sp.dsp.band_filter_signal(frequencies=np.array([1,2,3]),
+                            signal=pf.signals.noise(n_samples=400),
+                            num_fractions=-5)
 
 
 @pytest.mark.parametrize("freq",[
     (3,np.array([1000])),
     (1,np.array([1000, 2000])),
-    (1,pf.dsp.filter.fractional_octave_frequencies(num_fractions=1)[0]),
-    (3,pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0][0:30:5]),
+    (2,pf.dsp.filter.fractional_octave_frequencies(num_fractions=1)[0]),
+    (8,pf.dsp.filter.fractional_octave_frequencies(num_fractions=3)[0][0:30:5]),
 ])
 def test_closest_freq_band(freq):
     """Test freq band data estimation."""
@@ -91,3 +91,40 @@ def test_closest_freq_band(freq):
     assert (fband_centers[idcs]<cutoffs[1][idcs]).all()
     assert (freq[1]>cutoffs[0][idcs]).all()
     assert (freq[1]<cutoffs[1][idcs]).all()
+
+def test_closest_freq_band_inputs():
+    frequencies = np.array([0,1,2,3])
+    with pytest.raises(
+            ValueError,
+            match="Input frequencies must be greater than zero."):
+        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+                                        num_fractions=1)
+
+    frequencies = np.array([10,20000,-3])
+    with pytest.raises(
+            ValueError,
+            match="Input frequencies must be greater than zero."):
+        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+                                        num_fractions=1)
+
+    frequencies=np.array([100,200,300])
+    with pytest.raises(
+            ValueError,
+            match="Number of octave fractions must be greater than zero."):
+        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+                                        num_fractions=0)
+
+    with pytest.raises(
+            ValueError,
+            match="Number of octave fractions must be greater than zero."):
+        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+                                        num_fractions=-5)
+
+    frequencies=np.array([1000,1001])
+    with pytest.warns(
+          match="Multiple input frequencies in the same freq. band.\n" +
+                "You may want to revise your input frequencies or " +
+                "increase the filter bandwidths.",
+                ):
+        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+                                        num_fractions=1)
