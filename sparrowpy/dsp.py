@@ -2,6 +2,7 @@
 """Module for filter generation and signal processing in sparrowpy."""
 import numpy as np
 import pyfar as pf
+import warnings
 
 def reflection_density_room(
         room_volume, n_samples, speed_of_sound=None,
@@ -349,7 +350,7 @@ def band_filter_signal(signal:pf.Signal,
     with Butterworth filtering. By default, the filter order is set
     as 4.
     The user may input an arbitrary array of frequencies in
-    which to filter the signal. The closest octave/3rd octave bands
+    which to filter the signal. The closest fractional octave bands
     to the input frequencies will be returned in the same order.
 
     Returns the band-filtered signal in individual signal channels.
@@ -457,9 +458,11 @@ def _closest_frac_octave_data(frequencies:np.ndarray,
         idcs[i] = np.where((freq_cutoffs[0]<f)*(freq_cutoffs[1]>f))[0][0]
 
     if np.unique(idcs).shape[0]<idcs.shape[0]:
-            raise ValueError(
+            warnings.warn(
                 "Multiple input frequencies in the same freq. band.\n" +
-                "Remove one of the entries or reduce the bandwidths.",
+                "You may want to revise your input frequencies or " +
+                "increase the filter bandwidths.",
+                stacklevel=1,
             )
 
     bandwidths = freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
