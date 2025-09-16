@@ -362,10 +362,11 @@ def band_filter_signal(signal:pf.Signal,
     frequencies: np.ndarray
         Frequencies in which to filter the signal. In Hz.
     num_fractions: int
-        Number of octave fractions of the input freq bands
-        (either 1 or 3)
+        The number of bands an octave is divided into. E.g., ``1`` refers to
+        octave bands and ``3`` to third octave bands.
+        All positive integers are allowed.
     order: int
-        Butterworth filter order for the signal filtering.
+        Butterworth filter order for the signal filtering. By default 4.
 
     Returns
     -------
