@@ -440,6 +440,14 @@ def _closest_frac_octave_data(frequencies:np.ndarray,
         raise ValueError(
             "Input frequencies must be greater than zero.",
         )
+    if ((frequency_range[0]<=0) or (frequency_range[1]<=0)):
+        raise ValueError(
+           "Frequency range limits must be greater than zero.",
+        )
+    if (frequency_range[0] >= frequency_range[1]):
+        raise ValueError(
+           "Lower bound of frequency range must be the first entry.",
+        )
     if ((np.min(frequencies)<frequency_range[0])
         or (np.max(frequencies)>frequency_range[1])):
         raise ValueError(
