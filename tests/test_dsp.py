@@ -150,7 +150,7 @@ def test_etc_weighting_broadspectrum(sr,etc_step):
     etc = pf.TimeData(np.random.rand(times.shape[0]), times)
 
     sig = sp.dsp.weight_filters_by_etc(etc=etc,
-                                       noise_filters=noise,
+                                       signal=noise,
                                        )
 
     etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
@@ -194,7 +194,7 @@ def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
     noise.time=np.broadcast_to(noise.time,bandwidths.shape+(noise.time.shape[-1],))
 
     sig = sp.dsp.weight_filters_by_etc(etc=etc,
-                                       noise_filters=noise,
+                                       signal=noise,
                                        bandwidth=bandwidths,
                                        )
 
@@ -210,19 +210,19 @@ def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
 
 def test_etc_weighting_inputs():
     """Test that inputs respect formatting."""
-    noise_filters = pf.signals.noise(n_samples=100)
-    noise_filters.time = np.repeat(noise_filters.time,2,axis=0)
+    signal = pf.signals.noise(n_samples=100)
+    signal.time = np.repeat(signal.time,2,axis=0)
     etc = pf.TimeData(np.array([[1,1],[1,1]]),times=np.array([0,0.001]))
 
     with pytest.raises(
             ValueError,
             match="Bandwidth must be positive."):
-        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,bandwidth=-1)
+        sp.dsp.weight_filters_by_etc(etc=etc,signal=signal,bandwidth=-1)
 
     with pytest.raises(
             ValueError,
             match="All bandwidth values must be positive."):
-        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,
+        sp.dsp.weight_filters_by_etc(etc=etc,signal=signal,
                                      bandwidth=[50,-30])
 
     etc = pf.TimeData(np.array([[1,1,1],[1,1,1]]),
@@ -231,5 +231,17 @@ def test_etc_weighting_inputs():
     with pytest.raises(
             ValueError,
             match="ETC entries must be equally spaced in time."):
-        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,
+        sp.dsp.weight_filters_by_etc(etc=etc,signal=signal,
+                                     bandwidth=[50,50])
+
+    with pytest.raises(
+            ValueError,
+            match="ETC must be a pyfar.TimeData object."):
+        sp.dsp.weight_filters_by_etc(etc=signal,signal=signal,
+                                     bandwidth=[50,50])
+
+    with pytest.raises(
+            ValueError,
+            match="Input signal must be a pyfar.Signal object."):
+        sp.dsp.weight_filters_by_etc(etc=etc,signal=etc,
                                      bandwidth=[50,50])

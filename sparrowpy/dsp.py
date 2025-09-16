@@ -291,11 +291,11 @@ def weight_filters_by_etc(
                     f"{etc.cshape[-bandwidth.ndim:]}",
                 )
 
-    if not isinstance(etc) == pf.TimeData:
+    if type(etc) is not pf.TimeData:
         raise ValueError("ETC must be a pyfar.TimeData object.")
 
-    if not isinstance(signal) == pf.Signal:
-        raise ValueError("input signal must be a pyfar.Signal object.")
+    if type(signal) is not pf.Signal:
+        raise ValueError("Input signal must be a pyfar.Signal object.")
 
     if not (np.abs(etc.times[1:]-etc.times[:-1] -
                    etc.times[1]-etc.times[0]) < 1e-12 ).all():
