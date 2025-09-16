@@ -411,10 +411,10 @@ def energy_time_curve_from_impulse_response(
             bandwidth = np.asarray(bandwidth)
             if np.any(bandwidth <= 0):
                 raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape != signal.cshape[:1]:
+            if bandwidth.shape != signal.cshape[(-bandwidth.ndim):]:
                 raise ValueError(
                     f"bandwidth shape {bandwidth.shape} does not "
-                    f"match signal bands {signal.cshape[:1]}",
+                    f"match signal bands {signal.cshape[-bandwidth.ndim:]}",
                 )
 
     if bandwidth is None:
