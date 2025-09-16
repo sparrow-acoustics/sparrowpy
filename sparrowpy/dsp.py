@@ -251,14 +251,13 @@ def weight_filters_by_etc(
         ``(..., n_freq_bands)``.
     bandwidth: np.ndarray
         Bandwidth array corresponding to the noise filter channels in Hz.
-        *Note:* length must match the number of right-most channels
-        of the etc and noise_filters objects.
+        If None, signal will be processed as full spectrum
+        (bandwidth = sampling_rate/2).
 
     Returns
     -------
-    bandwise_ir : :py:class:`pyfar.Signal'
-        Impulse response of the space simulated by the ETC.
-        the IR channels match the ETC channels.
+    weighted_signal : :py:class:`pyfar.Signal'
+        signal weighted by the etc. The cshape matches the cshape of the etc.
 
     References
     ----------
@@ -292,6 +291,12 @@ def weight_filters_by_etc(
                     f"{etc.cshape[-bandwidth.ndim:]}",
                 )
 
+    if not isinstance(etc) == pf.TimeData:
+        raise ValueError("ETC must be a pyfar.TimeData object.")
+
+    if not isinstance(signal) == pf.Signal:
+        raise ValueError("input signal must be a pyfar.Signal object.")
+
     if not (np.abs(etc.times[1:]-etc.times[:-1] -
                    etc.times[1]-etc.times[0]) < 1e-12 ).all():
         raise ValueError("ETC entries must be equally spaced in time.")
@@ -299,9 +304,9 @@ def weight_filters_by_etc(
     rs_factor = signal.sampling_rate*(etc.times[1]-etc.times[0])
 
     weighted_noise = np.zeros(etc.cshape +
-                              (signal.time.shape[-1],))
+                              (signal.n_samples,))
 
-    for sample_i in range(etc.time.shape[-1]):
+    for sample_i in range(etc.n_samples):
         lower = int(sample_i * rs_factor)
         upper = int((sample_i+1) * rs_factor)
 
