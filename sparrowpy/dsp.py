@@ -450,9 +450,11 @@ def _closest_frac_octave_data(frequencies:np.ndarray,
         )
     if ((np.min(frequencies)<frequency_range[0])
         or (np.max(frequencies)>frequency_range[1])):
+        ind=((frequencies<frequency_range[0]) +
+             (frequencies>frequency_range[1]))
         raise ValueError(
-           "Input frequencies outside of input"
-            f" {frequency_range} frequency range.",
+            f"Input frequencies {frequencies[ind]} outside of input"+
+            f" frequency range {frequency_range}.",
         )
     if num_fractions<=0:
         raise ValueError(
