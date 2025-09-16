@@ -377,7 +377,7 @@ def band_filter_signal(signal:pf.Signal,
     """
     if (frequencies<=0).any():
         raise ValueError(
-            "Input frequencies must be positive.",
+            "Input frequencies must be greater than zero.",
         )
     if num_fractions<=0:
         raise ValueError(
@@ -402,7 +402,7 @@ def band_filter_signal(signal:pf.Signal,
 
 
 def _closest_frac_octave_data(frequencies:np.ndarray,
-                              num_fractions=1,
+                              num_fractions:int,
                               frequency_range=(20,20000)):
     """
     Determine frac. octave filter data of custom input frequencies.
@@ -437,7 +437,7 @@ def _closest_frac_octave_data(frequencies:np.ndarray,
     frequencies = np.asarray(frequencies)
     if (frequencies<=0).any():
         raise ValueError(
-            "Input frequencies must be positive.",
+            "Input frequencies must be greater than zero.",
         )
     if ((np.min(frequencies)<frequency_range[0])
         or (np.max(frequencies)>frequency_range[1])):
@@ -445,6 +445,9 @@ def _closest_frac_octave_data(frequencies:np.ndarray,
            "Input frequencies outside of input"
             f" {frequency_range} frequency range.",
         )
+    if num_fractions<=0:
+        raise ValueError(
+            "Number of octave fractions must be greater than zero.")
 
     _,_,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
         num_fractions=num_fractions,
