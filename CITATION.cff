@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: If you use this software, please cite it using these metadata.
 # FIXME title as repository name might not be the best name, please make human readable
 title: 'sparrowpy: Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds'
-doi: 10.5281/zenodo.17130452
+doi: 10.5281/zenodo.17130451
 # FIXME splitting of full names is error prone, please check if given/family name are correct
 authors:
 - given-names: Anne
