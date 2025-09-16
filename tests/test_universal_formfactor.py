@@ -36,14 +36,12 @@ def test_parallel_facing_patches(width, height, distance):
     univ = form_factor.patch2patch_ff_universal(
         patches_points=np.array([patch_1.pts,
                                  patch_2.pts]),
-                          patches_normals=np.array(
-                              [patch_1.normal, patch_2.normal]),
-                          patches_areas=np.array([patch_1.area, patch_2.area]),
-                          visible_patches=np.array([[0,1]]))
+        patches_areas=np.array([patch_1.area, patch_2.area]),
+        visible_patches=np.array([[0,1]]))
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
-    assert  rel < 1.5
+    assert  rel < .2
 
 
 @pytest.mark.parametrize("width", [1.0, 2.0, 3.0])
@@ -78,14 +76,12 @@ def test_perpendicular_coincidentline_patches(width, height, length):
     univ = form_factor.patch2patch_ff_universal(
         patches_points=np.array([patch_1.pts,
                                  patch_2.pts]),
-                          patches_normals=np.array(
-                              [patch_1.normal, patch_2.normal]),
-                          patches_areas=np.array([patch_1.area, patch_2.area]),
-                          visible_patches=np.array([[0,1]]))
+        patches_areas=np.array([patch_1.area, patch_2.area]),
+        visible_patches=np.array([[0,1]]))
 
     rel = 100 * abs(univ[0,1] - exact) / exact
 
-    assert rel < 2
+    assert rel < .75
 
 
 @pytest.mark.parametrize("width1", [1.0, 2.0, 3.0])
@@ -125,13 +121,11 @@ def test_perpendicular_coincidentpoint_patches(
     univ = form_factor.patch2patch_ff_universal(
         patches_points=np.array([patch_1.pts,
                                  patch_2.pts]),
-                          patches_normals=np.array(
-                              [patch_1.normal, patch_2.normal]),
-                          patches_areas=np.array([patch_1.area, patch_2.area]),
-                          visible_patches=np.array([[0,1]]))
+        patches_areas=np.array([patch_1.area, patch_2.area]),
+        visible_patches=np.array([[0,1]]))
 
     rel = 100 * abs(univ[0,1] - exact) / exact
-
+    print(rel)
     assert rel < 5
 
 @pytest.mark.parametrize("X", [2.0, 3.0])
@@ -175,8 +169,6 @@ def test_different_areas(
 
     ff = form_factor.patch2patch_ff_universal(
         patches_points=np.array([patch1,patch2,patch2,patch1]),
-        patches_normals=np.array(
-            [[0.,0.,1.],[0.,0.,-1.],[0.,0.,-1.],[0.,0.,1.]]),
         patches_areas=np.array([width,1.,1.,width]),
         visible_patches=np.array([[0,1],[2,3]]))
 
@@ -256,7 +248,6 @@ def test_point_surface_interactions(side, source, receiver, patchsize):
     patch = source_cast(src=source, rpatch=patch, absor=absor_factor)
 
     receiver_cast(receiver, patch, sr, c)
-
 
 def source_cast(src, rpatch, absor):
     """Cast and test source-to-patch factor calculation."""
