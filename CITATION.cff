@@ -9,13 +9,11 @@ doi: 10.5281/zenodo.17130452
 authors:
 - given-names: Anne
   family-names: Heimes
-  affiliation: Institute for Hearing Technology and Acoustics, RWTH Aachen 
-    University
+  affiliation: Institute for Hearing Technology and Acoustics, RWTH Aachen University
   orcid: https://orcid.org/0000-0002-4360-0271
 - given-names: João
   family-names: Fatela
-  affiliation: Department of Architecture and Industrial Design, University of 
-    Campania 'Luigi Vanvitelli'
+  affiliation: Department of Architecture and Industrial Design, University of Campania 'Luigi Vanvitelli'
   orcid: https://orcid.org/0009-0009-4474-171X
 version: 1.0.1
 date-released: 2025-09-16
