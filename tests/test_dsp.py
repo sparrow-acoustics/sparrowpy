@@ -134,3 +134,102 @@ def test_dirac_sequence_inputs():
             match="The reflection density must be less than sampling_rate/2."):
         sp.dsp.dirac_sequence(
             pf.TimeData([44100], [0]), 500)
+
+
+@pytest.mark.parametrize("sr", [
+    44100, 48000,
+    ])
+@pytest.mark.parametrize("etc_step",[
+    1/441, 1/500,
+])
+def test_etc_weighting_broadspectrum(sr,etc_step):
+    """Test that broadband noise is correctly weighted by the etc."""
+    noise = pf.signals.noise(sampling_rate=sr,n_samples=.1*sr)
+    times = np.arange(0,.1,etc_step)
+
+    etc = pf.TimeData(np.random.rand(times.shape[0]), times)
+
+    sig = sp.dsp.weight_filters_by_etc(etc=etc,
+                                       noise_filters=noise,
+                                       )
+
+    etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
+        signal=sig,
+        delta_time=etc_step,
+    )
+    npt.assert_allclose(etc.time,etc_from_sig.time)
+
+@pytest.mark.parametrize("n_receivers", [
+    0,1,2,
+    ])
+@pytest.mark.parametrize("n_directions",[
+    0,1,2,
+])
+@pytest.mark.parametrize("n_freqs",[
+    1,2,3,
+])
+@pytest.mark.parametrize("bw_depth",[
+    1,2,3,
+])
+def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
+    """Test that channel handling of etc weighting is done correctly."""
+    sr = 100
+    delta=1/sr*10
+    times = np.arange(0,1,delta)
+    data = np.random.rand(n_freqs,times.shape[0])
+
+    if n_directions>0:
+        data = data[np.newaxis,:]
+        data = np.repeat(data,n_directions,axis=0)
+
+    if n_receivers>0:
+        data = data[np.newaxis,:]
+        data = np.repeat(data,n_receivers,axis=0)
+
+    etc = pf.TimeData(data, times)
+
+    bandwidths = np.random.rand(*etc.cshape[-bw_depth:])**2 * sr/4
+
+    noise = pf.signals.noise(n_samples=sr, sampling_rate=sr)
+    noise.time=np.broadcast_to(noise.time,bandwidths.shape+(noise.time.shape[-1],))
+
+    sig = sp.dsp.weight_filters_by_etc(etc=etc,
+                                       noise_filters=noise,
+                                       bandwidth=bandwidths,
+                                       )
+
+    assert(sig.cshape==etc.cshape)
+
+    etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
+        signal=sig,
+        delta_time=delta,
+        bandwidth=bandwidths,
+    )
+
+    npt.assert_allclose(etc.time,etc_from_sig.time)
+
+def test_etc_weighting_inputs():
+    """Test that inputs respect formatting."""
+    noise_filters = pf.signals.noise(n_samples=100)
+    noise_filters.time = np.repeat(noise_filters.time,2,axis=0)
+    etc = pf.TimeData(np.array([[1,1],[1,1]]),times=np.array([0,0.001]))
+
+    with pytest.raises(
+            ValueError,
+            match="Bandwidth must be positive."):
+        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,bandwidth=-1)
+
+    with pytest.raises(
+            ValueError,
+            match="All bandwidth values must be positive."):
+        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,
+                                     bandwidth=[50,-30])
+
+    etc = pf.TimeData(np.array([[1,1,1],[1,1,1]]),
+                      times=np.array([0,0.001,0.2]))
+
+    with pytest.raises(
+            ValueError,
+            match="ETC entries must be equally spaced in time."):
+        sp.dsp.weight_filters_by_etc(etc=etc,noise_filters=noise_filters,
+                                     bandwidth=[50,50])
