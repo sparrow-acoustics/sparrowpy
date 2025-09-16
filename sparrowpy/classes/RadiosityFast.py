@@ -3,6 +3,9 @@ import numpy as np
 import deepdiff
 import pyfar as pf
 import sparrowpy.form_factor.universal as form_factor
+import sparrowpy.geometry as geom
+from scipy.integrate import dblquad
+from numpy.polynomial.legendre import leggauss
 from sparrowpy import ( geometry, sound_object )
 try:
     import numba
@@ -520,6 +523,158 @@ class DirectionalRadiosityFast():
 
         self._energy_init_source = energy_0_dir
         self._distance_patches_to_source = distance_0
+
+
+    def init_source_energy_withBRDFIntegration(
+            self, source):
+        """Initialize the source energy.
+
+        Parameters
+        ----------
+        source : pf.Coordinates, sparrowpy.sound_object.SoundSource
+            definition of the source position for Coordinates object and
+            orientation and directivity for SoundSource object. If no
+            directivity is given, the directivity is set to 1 for all
+            frequencies.
+
+        """
+        if isinstance(source, pf.Coordinates):
+            if source.cshape != (1, ):
+                raise ValueError('just one source position is allowed.')
+            source_position = source.cartesian[0]
+        elif isinstance(source, sound_object.SoundSource):
+            source_position = source.position
+        self._source = source
+
+
+        patch_to_wall_ids = self._patch_to_wall_ids
+        if self._brdf_incoming_directions is None:
+            frequencies = np.array([0]) if self._frequencies is None else \
+                self._frequencies
+            self.set_wall_brdf(
+                np.arange(self.n_walls),
+                pf.FrequencyData(np.ones_like(frequencies), frequencies),
+                pf.Coordinates(0, 0, 1, weights=1),
+                pf.Coordinates(0, 0, 1, weights=1))
+            self._frequencies = frequencies
+        if self._air_attenuation is None:
+            frequencies = np.array([0]) if self._frequencies is None else \
+                self._frequencies
+            self.set_air_attenuation(
+                pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+            self._frequencies = frequencies
+        n_bins = self.n_bins
+        vi = np.array(
+            [s.cartesian for s in self._brdf_incoming_directions])
+        vo = np.array(
+            [s.cartesian for s in self._brdf_outgoing_directions])
+        brdf = np.array(self._brdf)
+        brdf_index = self._brdf_index
+        patches_center = self.patches_center
+        source_visibility = geometry._check_point2patch_visibility(
+                                        eval_point=source_position,
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+        self._source_visibility = source_visibility
+        
+        
+        #####################REPLACED WITH INTEGRATION#####################
+        ##maybe need to be fixed, looks ugly
+        n_patches = patches_center.shape[0]
+        n_directions = vo.shape[1]
+        distance_out = np.zeros((n_patches, ))
+        
+        energy_0_dir = np.zeros((n_patches, n_directions, n_bins)) 
+        point = source_position
+        mode = 'source'
+        N = 4
+        
+        for patch_loop in range(n_patches):
+            wall_id_i = int(patch_to_wall_ids[patch_loop])
+            fr = brdf[brdf_index[wall_id_i],:] ## for BRDF = 1/pi -> every direction has coefficients 1/pi
+            patch_points = self.patches_points
+            if mode == 'receiver':
+                source_area = geom._polygon_area(patch_points)
+            elif mode == 'source':
+                source_area = 4
+
+            p0 = patch_points[patch_loop][0]
+            edge_u = patch_points[patch_loop][1] - p0   # vector for u-direction
+            edge_v = patch_points[patch_loop][3] - p0   # vector for v-direction
+
+            # Constant area element (Jacobian)
+            dS = np.linalg.norm(np.cross(edge_u, edge_v))
+            patch_normal = self.patches_normal[patch_loop]
+            #patch_normal = np.array([0,0,1])#np.cross(edge_u, edge_v)
+
+
+            for m in range(n_directions):
+                def integrand(u, v):
+                # Affine mapping from (u,v) to 3D
+                    patch_quadrature = p0 + u*edge_u + v*edge_v
+                    
+                    point2quadrature  = point - patch_quadrature
+                    point2quadrature_dist = np.linalg.norm(point2quadrature)
+                    if point2quadrature_dist < 1e-10:
+                        return 0.0
+                    
+                    point2quadrature_dir = point2quadrature / point2quadrature_dist
+                    cos_theta = np.dot(patch_normal, point2quadrature_dir)
+
+                    scattering = fr #for sh = 2 -> 6x6 coefficients 
+                    idx_in = self._brdf_incoming_directions[0].find_nearest(pf.Coordinates.from_cartesian(point2quadrature_dir[0],point2quadrature_dir[1],point2quadrature_dir[2]))[0][0]
+                    scattering_factor = scattering[idx_in, m]
+                    #print(f'idx_in = {idx_in}, idx_in_orig = {idx_in_original}')
+                    
+                    # constant dS, so no per-sample Jacobian
+                    total = scattering_factor * cos_theta *dS / point2quadrature_dist**2
+                    return total
+
+                u_nodes, u_weights = leggauss(N)
+                v_nodes, v_weights = leggauss(N)
+                result = np.zeros(n_bins)
+                for i in range(N):
+                    u = 0.5*(u_nodes[i] + 1)
+                    wu = 0.5*u_weights[i]
+                    for j in range(N):
+                        v  = 0.5*(v_nodes[j] + 1)
+                        wv = 0.5*v_weights[j]
+                        result += integrand(u, v) * wu * wv
+
+                result *= 1 / source_area
+                
+                energy_0_dir[patch_loop, m, :] = result
+
+            distance_out[patch_loop] = np.linalg.norm(patches_center[patch_loop] - source_position)
+        
+
+        ####################################################################
+
+        # add directivity if given
+        if isinstance(source, sound_object.SoundSource):
+            n_patches = patches_center.shape[0]
+            n_directions = vo.shape[1]
+
+            if source.directivity is not None:
+                directivity = np.zeros((n_patches, n_directions, n_bins))
+                for i_frequency in range(n_bins):
+                    directivity_local = np.real(source.get_directivity(
+                        patches_center, self._frequencies[i_frequency]))
+                    if n_directions == 1:
+                        directivity[:, :, i_frequency] = directivity_local[
+                            :, np.newaxis]
+                    else:
+                        directivity[:, :, i_frequency] = np.repeat(
+                            directivity_local[..., np.newaxis],
+                            n_directions,
+                            axis=-1)
+                energy_0_dir *= directivity
+            else:
+                energy_0_dir *= 1
+
+        self._energy_init_source = energy_0_dir * 1/np.pi #normalisation????
+        self._distance_patches_to_source = distance_out
 
     def calculate_energy_exchange(
             self, speed_of_sound,

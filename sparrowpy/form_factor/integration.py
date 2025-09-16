@@ -653,7 +653,7 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
 
     return pts,conn.astype(np.int8)
 
-def point_patch_factor_dblquad(point: np.ndarray, patch_points: np.ndarray, mode='source'):
+def point_patch_factor_dblquad(point: np.ndarray, patch_points: np.ndarray, patch_normal: np.ndarray, mode='source'):
     #working scipy integrate function, but evidently 100x slower than current implementation
 
     """Calculate the geometric factor between a point and a patch.
@@ -685,18 +685,6 @@ def point_patch_factor_dblquad(point: np.ndarray, patch_points: np.ndarray, mode
         source_area = geom._polygon_area(patch_points)
     elif mode == 'source':
         source_area = 4
-
-    # Compute patch normal
-    edge1 = patch_points[1] - patch_points[0]
-    edge2 = patch_points[3] - patch_points[0]
-    patch_normal = np.cross(edge1, edge2)
-    patch_normal = patch_normal / np.linalg.norm(patch_normal)
-
-    # Ensure normal points toward receiver
-    patch_center = np.mean(patch_points, axis=0)
-    to_point = point - patch_center
-    if np.dot(patch_normal, to_point) < 0:
-        patch_normal = -patch_normal
 
     def integrand(u, v):
             # Bilinear interpolation to get point on patch
@@ -737,9 +725,9 @@ def point_patch_factor_dblquad(point: np.ndarray, patch_points: np.ndarray, mode
 
     result *= 1/source_area
 
-    return result, error
+    return result
 
-def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarray, mode='source'):
+def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarray, patch_normal: np.ndarray, mode='source'):
     
     """Calculate the geometric factor between a point and a patch.
 
@@ -763,13 +751,12 @@ def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarra
     """
 
     ## N = number of Gauss-Legendre samples per dimension
-    N = 4
+    N = 5
     fr = 1/np.pi
     if mode == 'receiver':
         source_area = geom._polygon_area(patch_points)
     elif mode == 'source':
         source_area = 4
-    
     
     p0 = patch_points[0]
     edge_u = patch_points[1] - p0   # vector for u-direction
@@ -777,8 +764,6 @@ def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarra
 
     # Constant area element (Jacobian)
     dS = np.linalg.norm(np.cross(edge_u, edge_v))
-    patch_normal = np.cross(edge_u, edge_v)
-    patch_normal /= np.linalg.norm(patch_normal)
     def integrand(u, v):
     # Affine mapping from (u,v) to 3D
         patch_point = p0 + u*edge_u + v*edge_v
@@ -790,8 +775,8 @@ def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarra
         
         r_dir = r_vec / r_dist
         cos_theta = np.dot(patch_normal, r_dir)
-        if cos_theta <= 0:  # back-facing excluded
-            return 0.0
+        #if cos_theta <= 0:  # back-facing excluded
+        #    return 0.0
         
         # constant dS, so no per-sample Jacobian
         return fr * cos_theta * dS / r_dist**2
@@ -810,7 +795,7 @@ def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarra
     result *= 1 / source_area
     return result
 
-def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, mode='source'):
+def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, patch_normal: np.ndarray, mode='source'):
     """
     Monte Carlo estimate of irradiance factor from a planar rectangular patch to a point,
     assuming a Lambertian BRDF.
@@ -824,7 +809,7 @@ def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, mo
     E_estimate : estimated E = 1/4*∫ fr * cosθ * (dA / r^2)
     """
     # Setup patch geometry
-    N = 1000
+    N = 10000
     fr = 1/np.pi
 
     if mode == 'receiver':
@@ -835,16 +820,15 @@ def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, mo
     p0      = patch_points[0]
     edge_u  = patch_points[1] - p0
     edge_v  = patch_points[3] - p0
-    # Compute patch normal and area
+    ## Compute patch normal and area
     patch_normal = np.cross(edge_u, edge_v)
     patch_area   = np.linalg.norm(patch_normal)
     patch_normal /= patch_area
-
     # Ensure normal faces the point
     patch_center = p0 + 0.5 * (edge_u + edge_v)
     if np.dot(patch_normal, point - patch_center) < 0:
         patch_normal = -patch_normal
-
+    dA = np.linalg.norm(patch_normal)
     total = 0.0
     for _ in range(N):
         # Uniform sample (u,v) ∈ [0,1]^2
@@ -865,12 +849,105 @@ def point_patch_factor_mc_planar(point: np.ndarray, patch_points: np.ndarray, mo
             continue
 
         # Contribution = fr * cosθ * (dA / r^2)
-        total += fr * cos_theta * patch_area / r2
+        total += fr * cos_theta  / r2
 
     # Average over samples
-    total = total / (source_area * N)
+    total = total * patch_area / (source_area * N)
     
     return total
+
+#def point_patch_factor_leggaus_planar_directional(point: np.ndarray, patch_points: np.ndarray, patch_normal: np.ndarray, brdf_data, brdf_index, mode='source'):
+#    
+#    """Calculate the geometric factor between a point and a patch.
+#
+#    using Gauss-Legendre quadrature to integrate over the patch surface. Need to set the parameter N (order of quadrature)
+#
+#    Parameters
+#    ----------
+#    point: np.ndarray
+#        source or receiver point
+#
+#    patch_points: np.ndarray
+#        vertex coordinates of the patch
+#
+#    mode: string
+#        determines if point is acting as a source ('source')
+#        or as a receiver ('receiver')
+#
+#    Returns
+#    -------
+#    geometric factor, error estimate of integral
+#    """
+#
+#    ## N = number of Gauss-Legendre samples per dimension
+#    N = 6
+#    fr = brdf_data ## for BRDF = 1/pi -> every direction has coefficients 1/pi
+#    
+#    if mode == 'receiver':
+#        source_area = geom._polygon_area(patch_points)
+#    elif mode == 'source':
+#        source_area = 4
+#    
+#    p0 = patch_points[0]
+#    edge_u = patch_points[1] - p0   # vector for u-direction
+#    edge_v = patch_points[3] - p0   # vector for v-direction
+#    patches_center = np.mean(patch_points, axis=0)
+#    # Constant area element (Jacobian)
+#    dS = np.linalg.norm(np.cross(edge_u, edge_v))
+#    n_bins = 1
+#
+#
+#    ###need 
+#    vi = np.array(
+#        [s.cartesian for s in brdf_incoming])
+#    vo = np.array(
+#        [s.cartesian for s in brdf_outgoing])
+#
+#    n_patches = patches_center.shape[0]
+#    n_directions = vo.shape[1]
+#    
+#    energy_0_directivity = np.zeros((n_patches, n_directions, n_bins)) #n_bins = 1
+#    def integrand(u, v):
+#    # Affine mapping from (u,v) to 3D
+#        patch_point = p0 + u*edge_u + v*edge_v
+#        
+#        r_vec  = point - patch_point
+#        r_dist = np.linalg.norm(r_vec)
+#        if r_dist < 1e-10:
+#            return 0.0
+#        
+#        r_dir = r_vec / r_dist
+#        cos_theta = np.dot(patch_normal, r_dir)
+#
+#        scattering = fr #for sh = 2 -> 6x6 coefficients 
+#        scattering_index = brdf_index
+#
+#        point2quadrature = patch_point-patches_center[i]
+#        point2quadrature /= np.linalg.norm(point2quadrature)
+#        source_idx = np.argmin(np.sum(
+#            (sources[0, :, :]-point2quadrature)**2, axis=-1))
+#        scattering_factor = scattering[scattering_index[0], source_idx]
+#
+#        #energy_0_directivity[i, :, :] = energy_0[i] \
+#        #    * np.real(scattering_factor)
+#
+#        # constant dS, so no per-sample Jacobian
+#        return fr * cos_theta * dS / r_dist**2
+#
+#    u_nodes, u_weights = leggauss(N)
+#    v_nodes, v_weights = leggauss(N)
+#    result = 0.0
+#    for i in range(N):
+#        u = 0.5*(u_nodes[i] + 1)
+#        wu = 0.5*u_weights[i]
+#        for j in range(N):
+#            v  = 0.5*(v_nodes[j] + 1)
+#            wv = 0.5*v_weights[j]
+#            result += integrand(u, v) * wu * wv
+#
+#    result *= 1 / source_area
+#    energy_0_directivity[i, :, :] *= result
+#    return result
 
 if numba is not None:
     pt_solution = numba.njit(parallel=True)(pt_solution)

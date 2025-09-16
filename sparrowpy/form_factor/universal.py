@@ -140,11 +140,89 @@ def _source2patch_energy_universal(
                     -air_attenuation*distance_out[j])*integration.pt_solution(
                         point=source_pos, patch_points=receiver_pts,
                         mode="source")
+            #if air_attenuation is not None:
+            #    energy[j,:] = np.exp(
+            #    -air_attenuation*distance_out[j])*integration.point_patch_factor_leggaus_planar(
+            #        point=source_pos, patch_points=receiver_pts, patch_normal=[0,0,1],
+            #        mode="source")
             else:
                 energy[j,:] = integration.pt_solution(
                     point=source_pos, patch_points=receiver_pts, mode="source")
 
     return (energy, distance_out)
+
+
+def _source2patch_energy_universal_BRDF(
+        source_position: np.ndarray, patches_center: np.ndarray,
+        patches_points: np.ndarray, source_visibility: np.ndarray,
+        air_attenuation:np.ndarray, n_bins:float,
+        patch_to_wall_ids:np.ndarray,
+        sources: np.ndarray, receivers: np.ndarray,
+        scattering: np.ndarray, scattering_index: np.ndarray):
+    """Calculate the initial energy from the source.
+
+    Parameters
+    ----------
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_points : np.ndarray
+        vertices of all patches of shape (n_patches, n_points, 3)
+    source_visibility : np.ndarray
+        visibility condition between source and patches (n_patches)
+    air_attenuation : np.ndarray
+        air attenuation factor in Np/m (n_bins,)
+    n_bins : float
+        number of frequency bins.
+
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
+
+    """
+    n_patches = patches_center.shape[0]
+    energy = np.zeros((n_patches, n_bins))
+    distance_out = np.zeros((n_patches, ))
+    for j in prange(n_patches):
+        if source_visibility[j]:
+            source_pos = source_position.copy()
+            receiver_pos = patches_center[j, :].copy()
+            receiver_pts = patches_points[j, :, :].copy()
+
+            distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
+
+            if air_attenuation is not None:
+                energy[j,:] = np.exp(
+                -air_attenuation*distance_out[j])*integration.point_patch_factor_leggaus_planar(
+                    point=source_pos, patch_points=receiver_pts, patch_normal=[0,0,1],
+                    mode="source")
+            else:
+                energy[j,:] = integration.point_patch_factor_leggaus_planar(
+                    point=source_pos, patch_points=receiver_pts, patch_normal=[0,0,1],
+                    mode="source")
+                
+
+    n_directions = receivers.shape[1]
+    energy_0_directivity = np.zeros((n_patches, n_directions, n_bins))
+    for i in prange(n_patches):
+        wall_id_i = int(patch_to_wall_ids[i])
+        
+        
+        difference_source = source_position-patches_center[i]
+        difference_source /= np.linalg.norm(difference_source)
+        source_idx = np.argmin(np.sum(
+            (sources[wall_id_i, :, :]-difference_source)**2, axis=-1))
+        scattering_factor = scattering[scattering_index[wall_id_i], source_idx]
+        
+        
+        energy_0_directivity[i, :, :] = energy[i] \
+            * np.real(scattering_factor)
+
+    return (energy_0_directivity, distance_out)
 
 def _patch2receiver_energy_universal(
         receiver_pos, patches_points, receiver_visibility):

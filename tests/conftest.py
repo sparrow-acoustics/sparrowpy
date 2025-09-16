@@ -110,7 +110,7 @@ def patch_energy_diffuse():
     return patch_energy
 
 @pytest.fixture
-def patch_energy_normal_direction_10_degree():
+def patch_energy_normal_direction_0_degree():
     sampling = pf.samplings.sph_equal_angle(10)
     sampling.weights = pf.samplings.calculate_sph_voronoi_weights(sampling)
     sampling = sampling[sampling.z>0]
@@ -120,10 +120,17 @@ def patch_energy_normal_direction_10_degree():
         sampling, pf.FrequencyData([0], [100]))
     idx = sampling.find_nearest(
         pf.Coordinates.from_spherical_colatitude(0, 0, 1))[0][0]
+    idx = sampling.find_nearest
     brdf_data = brdf_data[idx]
 
     def patch_energy(x, y, z):
         point = pf.Coordinates(x,y,z)
         index = sampling.find_nearest(point)[0]
         return brdf_data.freq[index]
+    
     return patch_energy
+
+@pytest.fixture
+def input_value():
+    return 8
+
