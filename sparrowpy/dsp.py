@@ -353,6 +353,10 @@ def band_filter_signal(signal:pf.Signal,
     which to filter the signal. The closest fractional octave bands
     to the input frequencies will be returned in the same order.
 
+    .. note::
+        This function uses the pyfar methods :py:func:`pyfar.dsp.filter.fractional_octave_bands`
+        and :py:func:`pyfar.dsp.filter.fractional_octave_frequencies`.
+
 
     Parameters
     ----------
