@@ -1,8 +1,8 @@
-import pytest
 import numpy as np
 import numpy.testing as npt
-import sparrowpy as sp
+import pytest
 import pyfar as pf
+import sparrowpy as sp
 
 @pytest.mark.parametrize("freq",[
     np.array([1000]),
