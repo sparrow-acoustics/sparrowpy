@@ -270,26 +270,25 @@ def weight_filters_by_etc(
     if bandwidth is None:
         bandwidth = signal.sampling_rate / 2
 
-    if bandwidth is not None:
-        if isinstance(bandwidth, (float, int)):
-            if bandwidth <= 0:
-                raise ValueError("Bandwidth must be positive.")
-        else:
-            bandwidth = np.asarray(bandwidth)
-            if np.any(bandwidth <= 0):
-                raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape != signal.cshape[(-bandwidth.ndim):]:
-                raise ValueError(
-                    f"bandwidth shape {bandwidth.shape} does not "
-                    "match signal bands "
-                    f"{signal.cshape[-bandwidth.ndim:]}",
-                )
-            if bandwidth.shape != etc.cshape[(-bandwidth.ndim):]:
-                raise ValueError(
-                    f"bandwidth shape {bandwidth.shape} does not "
-                    "match etc shape "
-                    f"{etc.cshape[-bandwidth.ndim:]}",
-                )
+    if isinstance(bandwidth, (float, int)):
+        if bandwidth <= 0:
+            raise ValueError("Bandwidth must be positive.")
+    else:
+        bandwidth = np.asarray(bandwidth)
+        if np.any(bandwidth <= 0):
+            raise ValueError("All bandwidth values must be positive.")
+        if bandwidth.shape != signal.cshape[(-bandwidth.ndim):]:
+            raise ValueError(
+                f"bandwidth shape {bandwidth.shape} does not "
+                "match signal bands "
+                f"{signal.cshape[-bandwidth.ndim:]}",
+            )
+        if bandwidth.shape != etc.cshape[(-bandwidth.ndim):]:
+            raise ValueError(
+                f"bandwidth shape {bandwidth.shape} does not "
+                "match etc shape "
+                f"{etc.cshape[-bandwidth.ndim:]}",
+            )
 
     if type(etc) is not pf.TimeData:
         raise ValueError("ETC must be a pyfar.TimeData object.")
