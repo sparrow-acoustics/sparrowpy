@@ -302,7 +302,7 @@ def weight_filters_by_etc(
 
     rs_factor = signal.sampling_rate*(etc.times[1]-etc.times[0])
 
-    weighted_signal = np.zeros(etc.cshape +
+    weighted_signal_arr = np.zeros(etc.cshape +
                               (signal.n_samples,))
 
     for sample_i in range(etc.n_samples):
@@ -319,13 +319,13 @@ def weight_filters_by_etc(
         etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
                                               (signal.sampling_rate/2))
 
-        weighted_signal[...,lower:upper]=(
+        weighted_signal_arr[...,lower:upper]=(
             etc_weight[...,None]*signal_sec
         )
 
-    bandwise_ir = pf.Signal(weighted_signal, signal.sampling_rate)
+    weighted_signal = pf.Signal(weighted_signal_arr, signal.sampling_rate)
 
-    return bandwise_ir
+    return weighted_signal
 
 def energy_time_curve_from_impulse_response(
         signal, delta_time=0.01, bandwidth=None):
