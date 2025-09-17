@@ -252,7 +252,7 @@ def weight_filters_by_etc(
     bandwidth: np.ndarray
         Bandwidth array corresponding to the noise filter channels in Hz.
         If None, signal will be processed as full spectrum
-        (bandwidth = sampling_rate/2).
+        ``sampling_rate/2``.
 
     Returns
     -------
