@@ -302,15 +302,15 @@ def weight_filters_by_etc(
 
     rs_factor = signal.sampling_rate*(etc.times[1]-etc.times[0])
 
-    weighted_noise = np.zeros(etc.cshape +
+    weighted_signal = np.zeros(etc.cshape +
                               (signal.n_samples,))
 
     for sample_i in range(etc.n_samples):
         lower = int(sample_i * rs_factor)
         upper = int((sample_i+1) * rs_factor)
 
-        noise_sec = signal.time[...,lower:upper]
-        div = np.sum(noise_sec**2,axis=-1)
+        signal_sec = signal.time[...,lower:upper]
+        div = np.sum(signal_sec**2,axis=-1)
 
         scale = np.divide(etc.time[...,sample_i],div,
                               out=np.zeros_like(etc.time[...,sample_i]),
@@ -319,11 +319,11 @@ def weight_filters_by_etc(
         etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
                                               (signal.sampling_rate/2))
 
-        weighted_noise[...,lower:upper]=(
-            etc_weight[...,None]*noise_sec
+        weighted_signal[...,lower:upper]=(
+            etc_weight[...,None]*signal_sec
         )
 
-    bandwise_ir = pf.Signal(weighted_noise, signal.sampling_rate)
+    bandwise_ir = pf.Signal(weighted_signal, signal.sampling_rate)
 
     return bandwise_ir
 
