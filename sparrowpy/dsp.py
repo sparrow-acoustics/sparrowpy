@@ -432,7 +432,7 @@ def _closest_frac_octave_data(frequencies:np.ndarray,
 
     Returns
     -------
-    band_widths: np.ndarray
+    bandwidths: np.ndarray
         Bandwidths of the output frequency bands in Hz.
     idcs: np.ndarray
         list of indices of the fractional octave bands to which the input
