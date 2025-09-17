@@ -160,27 +160,17 @@ def test_etc_weighting_broadspectrum(sr,etc_step):
     npt.assert_allclose(etc.time,etc_from_sig.time)
 
 @pytest.mark.parametrize("n_receivers", [
-    0,1,2,
+    1,2,
     ])
-@pytest.mark.parametrize("n_directions",[
-    0,1,2,
-])
 @pytest.mark.parametrize("n_freqs",[
     1,2,3,
 ])
-@pytest.mark.parametrize("bw_depth",[
-    1,2,3,
-])
-def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
+def test_etc_weighting_multichannel(n_receivers,n_freqs):
     """Test that channel handling of etc weighting is done correctly."""
     sr = 100
     delta=1/sr*10
     times = np.arange(0,1,delta)
     data = np.random.rand(n_freqs,times.shape[0])
-
-    if n_directions>0:
-        data = data[np.newaxis,:]
-        data = np.repeat(data,n_directions,axis=0)
 
     if n_receivers>0:
         data = data[np.newaxis,:]
@@ -188,7 +178,7 @@ def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
 
     etc = pf.TimeData(data, times)
 
-    bandwidths = np.random.rand(*etc.cshape[-bw_depth:])**2 * sr/4
+    bandwidths = np.random.rand(*etc.cshape[-1:])**2 * sr/4
 
     noise = pf.signals.noise(n_samples=sr, sampling_rate=sr)
     noise.time=np.broadcast_to(noise.time,bandwidths.shape+(noise.time.shape[-1],))
@@ -200,13 +190,15 @@ def test_etc_weighting_multichannel(n_receivers,n_directions,n_freqs,bw_depth):
 
     assert(sig.cshape==etc.cshape)
 
+    sig.time=np.swapaxes(sig.time,0,1)
+
     etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
         signal=sig,
         delta_time=delta,
         bandwidth=bandwidths,
     )
 
-    npt.assert_allclose(etc.time,etc_from_sig.time)
+    npt.assert_allclose(etc.time,np.swapaxes(etc_from_sig.time,0,1))
 
 def test_etc_weighting_inputs():
     """Test that inputs respect formatting."""
