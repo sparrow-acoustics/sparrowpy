@@ -236,9 +236,21 @@ def weight_filters_by_etc(
     r"""
     Generate the frequency-wise impulse response for a given ETC.
 
-    The frequency-band-wise noise filters are weighed by the respective
-    ETC over time after Chapter 5.3.4 of [#]_.
-    This creates
+    The frequency-band-wise filters are weighed by the respective
+    ETC over time after Chapter 5.3.4 of [#]_. The weighting is performed
+    after the following equation.
+
+    .. math::
+    h_i = \nu_i \cdot \sqrt{\frac{E_n(k)}{\sum^{g(k)}_{g(k-1)+1} \nu_i^2}} \cdot \sqrt{\frac{BW}{f_s/2}}
+
+    where :math:`h_i` and :math:`\nu_i` represent respectively the
+    weighted output signal and the input signal's at a given time sample
+    :math:`i`.
+    :math:`g(k)=floor(k \cdot f_s \cdot \Delta t)` represents the range of each
+    energy window with given length :math:`\Delta t` of the ETC entry
+    :math:`E(k)` with index :math:`k`. :math:`BW` is the bandwidth
+    of the energy time curve, which is set to half the sampling rate
+    by default.
 
     Parameters
     ----------
