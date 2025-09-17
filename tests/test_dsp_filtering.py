@@ -12,13 +12,19 @@ import pyfar as pf
 @pytest.mark.parametrize("frac",[
     1,3,
 ])
-def test_band_filtering(freq,frac):
+@pytest.mark.parametrize("n_sigs",[
+    1,2,
+])
+def test_band_filtering(freq,frac,n_sigs):
     """Test freq band data estimation."""
 
     np.random.shuffle(freq)
-    scale = np.random.rand(freq.shape[0])
-    signal_split_freqs = pf.signals.sine(frequency=freq, n_samples=441)
-    signal_split_freqs.time = (scale*signal_split_freqs.time.T).T
+    ff = np.array([freq]*n_sigs).T
+    scale = np.random.rand(ff.shape[0],ff.shape[1])
+    signal_split_freqs = pf.signals.sine(frequency=ff, n_samples=441)
+    signal_split_freqs.time = (scale[...,None]*signal_split_freqs.time)
+
+
 
     signal_combined = pf.Signal(data=np.sum(signal_split_freqs.time, axis=0),
                                 sampling_rate=signal_split_freqs.sampling_rate)
@@ -28,7 +34,7 @@ def test_band_filtering(freq,frac):
                                          num_fractions=frac,
                                          )
 
-    assert band_sig.cshape==signal_split_freqs.cshape
+    assert band_sig.cshape==(signal_split_freqs.cshape)
 
     npt.assert_allclose(np.argmax(np.abs(band_sig.freq),axis=-1),
                         np.argmax(np.abs(signal_split_freqs.freq),axis=-1))

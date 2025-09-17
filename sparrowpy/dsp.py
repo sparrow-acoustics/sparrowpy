@@ -354,7 +354,8 @@ def band_filter_signal(signal:pf.Signal,
     to the input frequencies will be returned in the same order.
 
     .. note::
-        This function uses the pyfar methods :py:func:`pyfar.dsp.filter.fractional_octave_bands`
+        This function uses the pyfar methods
+        :py:func:`pyfar.dsp.filter.fractional_octave_bands`
         and :py:func:`pyfar.dsp.filter.fractional_octave_frequencies`.
 
 
@@ -374,7 +375,7 @@ def band_filter_signal(signal:pf.Signal,
     Returns
     -------
     band_filtered_noise: :py:class:`pyfar.Signal`
-        Band-filtered signal of cshape (signal.cshape + (len(freqs))
+        Band-filtered signal of cshape ((len(freqs) + signal.cshape)
     bandwidth: np.ndarray
         array of bandwidth values in Hz of the fractional octave bands
         corresponding to the input frequencies.
@@ -387,7 +388,8 @@ def band_filter_signal(signal:pf.Signal,
         raise ValueError(
             "Number of octave fractions must be greater than zero.")
 
-    frequency_range = (.67*np.min(frequencies),1.5*np.max(frequencies))
+    frequency_range = (np.min(frequencies)/2,
+                       np.max(frequencies)*2)
 
     bandwidth,idcs = _closest_frac_octave_data(frequencies=frequencies,
                                          num_fractions=num_fractions,
@@ -400,7 +402,7 @@ def band_filter_signal(signal:pf.Signal,
         frequency_range=frequency_range,
     )
 
-    band_filtered_noise.time = np.squeeze(band_filtered_noise.time[idcs])
+    band_filtered_noise.time = band_filtered_noise.time[idcs]
 
     return band_filtered_noise, bandwidth
 
