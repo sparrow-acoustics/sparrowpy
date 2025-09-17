@@ -241,7 +241,8 @@ def weight_filters_by_etc(
     after the following equation.
 
     .. math::
-    h_i = \nu_i \cdot \sqrt{\frac{E_n(k)}{\sum^{g(k)}_{g(k-1)+1} \nu_i^2}} \cdot \sqrt{\frac{BW}{f_s/2}}
+        h_i = \nu_i \cdot \sqrt{\frac{E_n(k)}{\sum^{g(k)}_{g(k-1)+1} \nu_i^2}}
+    ... \cdot \sqrt{\frac{BW}{f_s/2}}
 
     where :math:`h_i` and :math:`\nu_i` represent respectively the
     weighted output signal and the input signal's at a given time sample
@@ -277,6 +278,49 @@ def weight_filters_by_etc(
            interactive virtual environments,” PhD Thesis, Logos-Verlag,
            Berlin, 2011. [Online].
            Available: https://publications.rwth-aachen.de/record/50580
+
+    Examples
+    --------
+    Weight white noise by a single broadband exponential decay etc.
+
+    .. plot::
+
+        >>> import pyfar as pf
+        >>> import sparrowpy as sp
+        >>> import numpy as np
+        >>> n_samples = 44100
+        >>> white_noise = pf.dsp.normalize(pf.signals.noise(n_samples,rms=1))
+        >>> delta_t = 1/1000
+        >>> times = np.arange(0,white_noise.times[-1],delta_t)
+        >>> decay = np.exp(-4*times)
+        >>> etc = pf.TimeData(data=decay,times=times)
+        >>> weighted_noise = sp.dsp.weight_filters_by_etc(etc=etc,
+        ...                                               signal=white_noise)
+        >>> ax=pf.plot.time(white_noise,label="input signal")
+        >>> ax=pf.plot.time(weighted_noise,label="weighted signal",ax=ax)
+        >>> ax.set_title("Signal weighting by exponential decaying ETC")
+
+
+    Weight white noise by a frequency-dependent etcs favouring low frequencies.
+
+    .. plot::
+
+        >>> import pyfar as pf
+        >>> import sparrowpy as sp
+        >>> import numpy as np
+        >>> n_samples = 44100
+        >>> white_noise = pf.dsp.normalize(pf.signals.noise(n_samples,rms=1))
+        >>> delta_t = 1/1000
+        >>> times = np.arange(0,white_noise.times[-1],delta_t)
+        >>> decay = np.exp(-4*times)
+        >>> etc = pf.TimeData(data=decay,times=times)
+        >>> weighted_noise = sp.dsp.weight_filters_by_etc(
+        ...     etc=etc,
+        ...     signal=white_noise,
+        ... )
+        >>> ax=pf.plot.time(white_noise,label="input signal")
+        >>> ax=pf.plot.time(weighted_noise,label="weighted signal",ax=ax)
+        >>> ax.set_title("Signal weighting by exponential decaying ETC")
 
     """
     if bandwidth is None:
