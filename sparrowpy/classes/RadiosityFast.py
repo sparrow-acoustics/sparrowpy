@@ -721,11 +721,11 @@ class DirectionalRadiosityFast():
             `collect_energy_receiver_patchwise`.
         """
         # detector unit vectors
-        det_dirs = detector_sphere.cartesian                        # (D,3)
+        det_dirs = detector_sphere.cartesian()                        # (D,3)
         det_dirs /= np.linalg.norm(det_dirs, axis=1, keepdims=True)
 
         # geometry
-        rec_xyz = receivers.cartesian                               # (R,3)
+        rec_xyz = receivers.cartesian()                               # (R,3)
         patch_centers = self.patches_center                           # (P,3)
 
         # (R,P,B,S) patchwise energies and time axis from your existing API
@@ -746,7 +746,7 @@ class DirectionalRadiosityFast():
             ds_all, n_delay_all = self.calculate_direct_sound(receivers)
 
             if isinstance(self._source, pf.Coordinates):
-                src = self._source.cartesian[0]
+                src = self._source.cartesian()[0]
             else:
                 src = np.asarray(self._source.position, float).reshape(3)
 
