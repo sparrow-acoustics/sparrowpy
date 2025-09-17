@@ -353,7 +353,6 @@ def band_filter_signal(signal:pf.Signal,
     which to filter the signal. The closest fractional octave bands
     to the input frequencies will be returned in the same order.
 
-    Returns the band-filtered signal in individual signal channels.
 
     Parameters
     ----------
