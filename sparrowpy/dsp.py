@@ -279,6 +279,14 @@ def weight_filters_by_etc(
            Berlin, 2011. [Online].
            Available: https://publications.rwth-aachen.de/record/50580
 
+    .. note::
+        The weighted signal output results from a broadcast between the
+        input signal, the input ETC, and the bandwidth.
+        Thus, it's important to ensure that the right-most channel dimensions
+        of etc and signal are compatible with eachother and the bandwidths.
+        That is, ensuring etc.cshape=(...,bandwidth.shape) and
+        signal.cshape=(...,bandwidth.shape)
+
     Examples
     --------
     Weight white noise by a single broadband exponential decay etc.
