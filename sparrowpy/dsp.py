@@ -287,6 +287,15 @@ def weight_filters_by_etc(
         That is, ensuring etc.cshape=(...,bandwidth.shape) and
         signal.cshape=(...,bandwidth.shape)
 
+    .. note::
+        The input of this function follows the sparrowpy convention for etcs,
+        where the dimension which represents the different frequency bands is
+        the right-most dimension of etc.cshape=(..., n_frequency_bands).
+        The input signal must also reflect this convention.
+        This is the opposite from the pyfar convention for fractional octave
+        band filtered signals, where
+        filtered_signal.cshape=(n_frequency_bands,...).
+
     Examples
     --------
     Weight white noise by a single broadband exponential decay etc.
