@@ -1,9 +1,8 @@
+import pytest
 import numpy as np
 import numpy.testing as npt
-import pytest
-import pyfar as pf
 import sparrowpy as sp
-
+import pyfar as pf
 
 @pytest.mark.parametrize("room_volume", [200, 500])
 @pytest.mark.parametrize("speed_of_sound", [320, 343])
