@@ -357,6 +357,12 @@ def band_filter_signal(signal:pf.Signal,
         This function uses the pyfar methods
         :py:func:`pyfar.dsp.filter.fractional_octave_bands`
         and :py:func:`pyfar.dsp.filter.fractional_octave_frequencies`.
+    .. note::
+        The output of this function follows the sparrowpy convention for ETC
+        cshape, where the dimension which represents the different frequency
+        bands is the right-most dimension: etc.cshape=(..., n_frequency_bands).
+        This is the opposite from the pyfar convention for fractional octave
+        band filtered signals, filtered_signal.cshape=(n_frequency_bands,...).
 
 
     Parameters
