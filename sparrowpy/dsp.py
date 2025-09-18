@@ -402,7 +402,9 @@ def band_filter_signal(signal:pf.Signal,
         frequency_range=frequency_range,
     )
 
-    band_filtered_signal.time = np.swapaxes(band_filtered_signal.time[idcs],0,1)
+    band_filtered_signal.time = np.swapaxes(
+        band_filtered_signal.time[idcs],0,1,
+        )
 
     return band_filtered_signal, bandwidth
 
