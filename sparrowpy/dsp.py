@@ -301,7 +301,8 @@ def weight_filters_by_etc(
         >>> ax.set_title("Signal weighting by exponential decaying ETC")
 
 
-    Weight white noise by a frequency-dependent etcs favouring low frequencies.
+    Weight multiple white noise channels by a collection of varied exponential
+    decay ETCs.
 
     .. plot::
 
@@ -309,18 +310,30 @@ def weight_filters_by_etc(
         >>> import sparrowpy as sp
         >>> import numpy as np
         >>> n_samples = 44100
-        >>> white_noise = pf.dsp.normalize(pf.signals.noise(n_samples,rms=1))
+        >>> n_channels = 5
+        >>> white_noise = pf.signals.noise(
+        ...                     n_samples,
+        ...                     rms=np.ones((n_channels,)),
+        ...                     )
         >>> delta_t = 1/1000
         >>> times = np.arange(0,white_noise.times[-1],delta_t)
-        >>> decay = np.exp(-4*times)
+        >>> decay = np.empty((n_channels,times.shape[0]))
+        >>> for i in range(n_channels):
+        ...     decay[i,:] = np.exp(-3*i*times)
         >>> etc = pf.TimeData(data=decay,times=times)
-        >>> weighted_noise = sp.dsp.weight_filters_by_etc(
+        >>> weighted_noise_bandwise = sp.dsp.weight_filters_by_etc(
         ...     etc=etc,
         ...     signal=white_noise,
+        ...     bandwidth=200*np.ones((n_channels,)),
         ... )
-        >>> ax=pf.plot.time(white_noise,label="input signal")
-        >>> ax=pf.plot.time(weighted_noise,label="weighted signal",ax=ax)
-        >>> ax.set_title("Signal weighting by exponential decaying ETC")
+        >>> ax=pf.plot.time(
+        ...     weighted_noise_bandwise,
+        ...     label=[f"exp(-{i*3}t) decay" for i in range(n_channels)],
+        ...     )
+        >>> ax.legend()
+        >>> ax.set_title(
+        ...     "Multiple white noise channels weighted by independent ETCs"
+        ...     )
 
     """
     if bandwidth is None:
