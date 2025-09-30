@@ -582,17 +582,20 @@ class DirectionalRadiosityFast():
         #####################REPLACED WITH INTEGRATION#####################
         ##maybe need to be fixed, looks ugly
         n_patches = patches_center.shape[0]
-        n_directions = vo.shape[1]
+        n_directions_in = vi.shape[1]
+        n_directions_out = vo.shape[1]
         distance_out = np.zeros((n_patches, ))
         
-        energy_0_dir = np.zeros((n_patches, n_directions, n_bins)) 
+        energy_0_dir = np.zeros((n_patches, n_directions_out, n_directions_in, n_bins)) 
         point = source_position
         mode = 'source'
-        N = 4
-        
-        for patch_loop in range(n_patches):
+        N = 8
+        u_nodes, u_weights = leggauss(N)
+        v_nodes, v_weights = leggauss(N)
+        src_indices_container = np.zeros((n_patches, n_directions_out*N*N), dtype=int)
+        for patch_loop in prange(n_patches):
             wall_id_i = int(patch_to_wall_ids[patch_loop])
-            fr = brdf[brdf_index[wall_id_i],:] ## for BRDF = 1/pi -> every direction has coefficients 1/pi
+            scattering = brdf[brdf_index[wall_id_i],:] ## for BRDF = 1/pi -> every direction has coefficients 1/pi
             patch_points = self.patches_points
             if mode == 'receiver':
                 source_area = geom._polygon_area(patch_points)
@@ -602,53 +605,37 @@ class DirectionalRadiosityFast():
             p0 = patch_points[patch_loop][0]
             edge_u = patch_points[patch_loop][1] - p0   # vector for u-direction
             edge_v = patch_points[patch_loop][3] - p0   # vector for v-direction
-
-            # Constant area element (Jacobian)
             dS = np.linalg.norm(np.cross(edge_u, edge_v))
             patch_normal = self.patches_normal[patch_loop]
-            #patch_normal = np.array([0,0,1])#np.cross(edge_u, edge_v)
-
-
-            for m in range(n_directions):
-                def integrand(u, v):
-                # Affine mapping from (u,v) to 3D
-                    patch_quadrature = p0 + u*edge_u + v*edge_v
-                    
-                    point2quadrature  = point - patch_quadrature
-                    point2quadrature_dist = np.linalg.norm(point2quadrature)
-                    if point2quadrature_dist < 1e-10:
-                        return 0.0
-                    
-                    point2quadrature_dir = point2quadrature / point2quadrature_dist
-                    cos_theta = np.dot(patch_normal, point2quadrature_dir)
-
-                    scattering = fr #for sh = 2 -> 6x6 coefficients 
-                    idx_in = self._brdf_incoming_directions[0].find_nearest(pf.Coordinates.from_cartesian(point2quadrature_dir[0],point2quadrature_dir[1],point2quadrature_dir[2]))[0][0]
-                    scattering_factor = scattering[idx_in, m]
-                    #print(f'idx_in = {idx_in}, idx_in_orig = {idx_in_original}')
-                    
-                    # constant dS, so no per-sample Jacobian
-                    total = scattering_factor * cos_theta *dS / point2quadrature_dist**2
-                    return total
-
-                u_nodes, u_weights = leggauss(N)
-                v_nodes, v_weights = leggauss(N)
-                result = np.zeros(n_bins)
+            
+            for m in prange(n_directions_out):
+                contrib = np.zeros((n_directions_in,n_bins)) 
                 for i in range(N):
-                    u = 0.5*(u_nodes[i] + 1)
+                    u = 0.5*(u_nodes[i] + 1.0)
                     wu = 0.5*u_weights[i]
                     for j in range(N):
-                        v  = 0.5*(v_nodes[j] + 1)
+                        v  = 0.5*(v_nodes[j] + 1.0)
                         wv = 0.5*v_weights[j]
-                        result += integrand(u, v) * wu * wv
+                        patch_quadrature = p0 + u*edge_u + v*edge_v
+                        point2quadrature  = point - patch_quadrature
+                        point2quadrature_dist = np.linalg.norm(point2quadrature)
+                        point2quadrature_dir = point2quadrature / point2quadrature_dist
 
-                result *= 1 / source_area
-                
-                energy_0_dir[patch_loop, m, :] = result
+                        cos_theta = np.dot(patch_normal, point2quadrature_dir) 
+                        idx_in = self._brdf_incoming_directions[0].find_nearest(pf.Coordinates.from_cartesian(point2quadrature_dir[0],point2quadrature_dir[1],point2quadrature_dir[2]))[0][0]
+                        src_indices_container[patch_loop,m*N*N+i*N+j] = idx_in
+                        
+                        geom_term = cos_theta / point2quadrature_dist**2
+                        scattering_factor = scattering[idx_in, m] 
+                        contrib[idx_in] += scattering_factor * geom_term * dS* wu * wv 
 
-            distance_out[patch_loop] = np.linalg.norm(patches_center[patch_loop] - source_position)
+                energy_0_dir[patch_loop,m, :] = contrib * self._brdf_outgoing_directions[0].weights[m] /source_area 
+            distance_out[patch_loop] = np.linalg.norm(patches_center[patch_loop] - source_position)    
         
-
+        collapsed = energy_0_dir.sum(axis=2)  #yield to similar BRDF rho = 1
+        #src_indices_container = src_indices_container
+        self._src_indices_container = src_indices_container
+        #collapsed = energy_0_dir.sum(axis=2)  #strange result
         ####################################################################
 
         # add directivity if given
