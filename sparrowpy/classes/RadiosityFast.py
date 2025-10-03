@@ -545,7 +545,7 @@ class DirectionalRadiosityFast():
         elif isinstance(source, sound_object.SoundSource):
             source_position = source.position
         self._source = source
-
+        integration_method = self._integration_method
 
         patch_to_wall_ids = self._patch_to_wall_ids
         if self._brdf_incoming_directions is None:
@@ -568,7 +568,7 @@ class DirectionalRadiosityFast():
             [s.cartesian for s in self._brdf_incoming_directions])
         vo = np.array(
             [s.cartesian for s in self._brdf_outgoing_directions])
-        brdf = np.array(self._brdf)
+        brdf = np.array(self._brdf)/np.pi
         brdf_index = self._brdf_index
         patches_center = self.patches_center
         source_visibility = geometry._check_point2patch_visibility(
@@ -578,65 +578,12 @@ class DirectionalRadiosityFast():
                                         surf_normal=self.walls_normal)
         self._source_visibility = source_visibility
         
-        
-        #####################REPLACED WITH INTEGRATION#####################
-        ##maybe need to be fixed, looks ugly
-        n_patches = patches_center.shape[0]
-        n_directions_in = vi.shape[1]
-        n_directions_out = vo.shape[1]
-        distance_out = np.zeros((n_patches, ))
-        
-        energy_0_dir = np.zeros((n_patches, n_directions_out, n_directions_in, n_bins)) 
-        point = source_position
-        mode = 'source'
-        N = 8
-        u_nodes, u_weights = leggauss(N)
-        v_nodes, v_weights = leggauss(N)
-        src_indices_container = np.zeros((n_patches, n_directions_out*N*N), dtype=int)
-        for patch_loop in prange(n_patches):
-            wall_id_i = int(patch_to_wall_ids[patch_loop])
-            scattering = brdf[brdf_index[wall_id_i],:] ## for BRDF = 1/pi -> every direction has coefficients 1/pi
-            patch_points = self.patches_points
-            if mode == 'receiver':
-                source_area = geom._polygon_area(patch_points)
-            elif mode == 'source':
-                source_area = 4
+        energy_0_dir, distance_out = form_factor._source2patch_energy_universal_BRDF_ultimate(
+            source_position, self.patches_normal, patches_center, self.patches_points,
+            source_visibility,self._air_attenuation, n_bins, patch_to_wall_ids, self._brdf_incoming_directions, self._brdf_outgoing_directions,
+             vi, vo, brdf, brdf_index, integration_method = integration_method
+            )
 
-            p0 = patch_points[patch_loop][0]
-            edge_u = patch_points[patch_loop][1] - p0   # vector for u-direction
-            edge_v = patch_points[patch_loop][3] - p0   # vector for v-direction
-            dS = np.linalg.norm(np.cross(edge_u, edge_v))
-            patch_normal = self.patches_normal[patch_loop]
-            
-            for m in prange(n_directions_out):
-                contrib = np.zeros((n_directions_in,n_bins)) 
-                for i in range(N):
-                    u = 0.5*(u_nodes[i] + 1.0)
-                    wu = 0.5*u_weights[i]
-                    for j in range(N):
-                        v  = 0.5*(v_nodes[j] + 1.0)
-                        wv = 0.5*v_weights[j]
-                        patch_quadrature = p0 + u*edge_u + v*edge_v
-                        point2quadrature  = point - patch_quadrature
-                        point2quadrature_dist = np.linalg.norm(point2quadrature)
-                        point2quadrature_dir = point2quadrature / point2quadrature_dist
-
-                        cos_theta = np.dot(patch_normal, point2quadrature_dir) 
-                        idx_in = self._brdf_incoming_directions[0].find_nearest(pf.Coordinates.from_cartesian(point2quadrature_dir[0],point2quadrature_dir[1],point2quadrature_dir[2]))[0][0]
-                        src_indices_container[patch_loop,m*N*N+i*N+j] = idx_in
-                        
-                        geom_term = cos_theta / point2quadrature_dist**2
-                        scattering_factor = scattering[idx_in, m] 
-                        contrib[idx_in] += scattering_factor * geom_term * dS* wu * wv 
-
-                energy_0_dir[patch_loop,m, :] = contrib * self._brdf_outgoing_directions[0].weights[m] /source_area 
-            distance_out[patch_loop] = np.linalg.norm(patches_center[patch_loop] - source_position)    
-        
-        collapsed = energy_0_dir.sum(axis=2)  #yield to similar BRDF rho = 1
-        #src_indices_container = src_indices_container
-        self._src_indices_container = src_indices_container
-        #collapsed = energy_0_dir.sum(axis=2)  #strange result
-        ####################################################################
 
         # add directivity if given
         if isinstance(source, sound_object.SoundSource):
@@ -660,7 +607,7 @@ class DirectionalRadiosityFast():
             else:
                 energy_0_dir *= 1
 
-        self._energy_init_source = energy_0_dir * 1/np.pi #normalisation????
+        self._energy_init_source = energy_0_dir #* 1/np.pi #normalisation????
         self._distance_patches_to_source = distance_out
 
     def calculate_energy_exchange(
@@ -825,7 +772,7 @@ class DirectionalRadiosityFast():
         times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
 
-    def _collect_energy_patches(
+    def _collect_energy_patches_originalBACKUP( #_collect_energy_patches
             self, receiver_pos,
             propagation_fx=False):
         """Collect patch histograms as detected by receiver."""
@@ -878,6 +825,77 @@ class DirectionalRadiosityFast():
                 E_matrix[k,:]= (
                     self._energy_exchange_etc[k,int(receiver_idx[k]),:]
                                                     * patch_receiver_energy[k])
+
+            if propagation_fx:
+                # accumulate the patch energies towards the receiver
+                # with atmospheric effects (delay, atmospheric attenuation)
+                histogram_out[i] = _collect_receiver_energy(
+                        E_matrix,
+                        np.linalg.norm(patches_receiver_distance, axis=1),
+                                    self.speed_of_sound,
+                                    self._etc_time_resolution,
+                                    air_attenuation=air_attenuation)
+            else:
+                histogram_out[i] = E_matrix
+
+        return histogram_out
+    def _collect_energy_patches(
+            self, receiver_pos,
+            propagation_fx=False):
+        """Collect patch histograms as detected by receiver."""
+        air_attenuation = self._air_attenuation
+        patches_points = self._patches_points
+        n_patches = self.n_patches
+        n_bins = self.n_bins
+        patches_normal = self.patches_normal
+        receiver_pos = np.atleast_2d(receiver_pos)
+        brdf = np.array(self._brdf)/np.pi
+        brdf_index = self._brdf_index
+        n_receivers = receiver_pos.shape[0]
+        integration_method = self._integration_method
+
+        patches_center = self.patches_center
+        patches_receiver_distance = np.empty(
+            [n_receivers, self.n_patches,patches_center.shape[-1]])
+
+        E_matrix = np.empty(
+            (n_patches, n_bins, self._energy_exchange_etc.shape[-1]))
+        histogram_out = np.empty((
+            n_receivers, n_patches, n_bins,
+            self._energy_exchange_etc.shape[-1]))
+
+        receiver_visibility=np.empty((n_receivers,n_patches),dtype=bool)
+
+        for i in range(n_receivers):
+            patches_receiver_distance = patches_center - receiver_pos[i]
+
+            receiver_visibility[i] = geometry._check_point2patch_visibility(
+                                        eval_point=receiver_pos[i],
+                                        patches_center=patches_center,
+                                        surf_points=self.walls_points,
+                                        surf_normal=self.walls_normal)
+            ############REPLACED PART##########################
+            # geometrical weighting
+            patch_receiver_energy, outgoing_indices=form_factor._patch2receiver_energy_universal_BRDF_ultimate(
+                    receiver_pos[i], patches_normal, patches_center, patches_points, receiver_visibility[i], n_bins, self._patch_to_wall_ids, self._brdf_incoming_directions, self._brdf_outgoing_directions, brdf, brdf_index, integration_method=integration_method)
+            
+            unique_outgoing_indices = np.unique(outgoing_indices)
+            unique_outgoing_indices = unique_outgoing_indices[unique_outgoing_indices>=0]
+
+            for k in range(n_patches): 
+
+                # if no outgoing directions contribute, set zero energy
+                if unique_outgoing_indices.size == 0:
+                    E_matrix[k, :, :] = 0.0
+                    continue
+
+                Energy_patch = self._energy_exchange_etc[k, unique_outgoing_indices, :, :]
+                # patch_receiver_energy expected shape (n_patches, n_directions, n_bins)
+                Energy_receiver = patch_receiver_energy[k, unique_outgoing_indices, :]
+                n_unique = unique_outgoing_indices.shape[0]
+
+                for b in range(n_bins):
+                    E_matrix[k, b, :] = np.dot(Energy_receiver[:, b], Energy_patch[:, b, :]) / n_unique
 
             if propagation_fx:
                 # accumulate the patch energies towards the receiver

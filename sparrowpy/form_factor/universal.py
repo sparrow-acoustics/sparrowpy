@@ -224,6 +224,139 @@ def _source2patch_energy_universal_BRDF(
 
     return (energy_0_directivity, distance_out)
 
+
+def _source2patch_energy_universal_BRDF_ultimate(source_position: np.ndarray, patches_normal: np.ndarray,
+        patches_center: np.ndarray,
+        patches_points: np.ndarray, source_visibility: np.ndarray,
+        air_attenuation:np.ndarray, n_bins:float,
+        patch_to_wall_ids:np.ndarray, brdf_incoming_directions:np.ndarray, 
+        brdf_outgoing_directions:np.ndarray,
+        sources: np.ndarray, receivers: np.ndarray,
+        scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str = "montecarlo"):
+    """Calculate the initial energy from the source.
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    Parameters
+    ----------
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_points : np.ndarray
+        vertices of all patches of shape (n_patches, n_points, 3)
+    source_visibility : np.ndarray
+        visibility condition between source and patches (n_patches)
+    air_attenuation : np.ndarray
+        air attenuation factor in Np/m (n_bins,)
+    n_bins : float
+        number of frequency bins.
+
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    distance : np.ndarray
+        corresponding distance of all patches of shape (n_patches)
+
+    """
+    n_patches = patches_center.shape[0]
+    n_direction_out = brdf_outgoing_directions[0].cartesian.shape[0]
+    energy = np.zeros((n_patches, n_direction_out, n_bins))
+    distance_out = np.zeros((n_patches, ))
+
+    for j in prange(n_patches):
+        if source_visibility[j]:
+            source_pos = source_position.copy()
+            receiver_pos = patches_center[j, :].copy()
+            receiver_pts = patches_points[j, :, :].copy()
+            patch_normal = patches_normal[j,:].copy()
+            distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
+            wall_id = patch_to_wall_ids[j]
+            if integration_method == "leggauss":
+                energy_0_directivity,c = integration.point_patch_factor_leggaus_planar_directional(
+                                source_pos,
+                                receiver_pos,
+                               receiver_pts,
+                               patch_normal,
+                               wall_id,
+                               brdf_incoming_directions,
+                               brdf_outgoing_directions,
+                               scattering,
+                               scattering_index,
+                               n_bins,
+                               mode="source")
+            elif integration_method == "montecarlo":
+                energy_0_directivity,c = integration.point_patch_factor_montecarlo_directional(
+                                source_pos,
+                                receiver_pos,
+                               receiver_pts,
+                               patch_normal,
+                               wall_id,
+                               brdf_incoming_directions,
+                               brdf_outgoing_directions,
+                               scattering,
+                               scattering_index,
+                               n_bins,
+                               mode="source")
+
+            if air_attenuation is not None:
+                energy[j,:,:] = np.exp(
+                -air_attenuation*distance_out[j])*energy_0_directivity
+            else:
+                energy[j,:,:] = energy_0_directivity
+            
+            
+    return (energy, distance_out)
+
+def _patch2receiver_energy_universal_BRDF_ultimate(receiver_pos: np.ndarray, patches_normal: np.ndarray,
+patches_center: np.ndarray,
+        patches_points: np.ndarray, receiver_visibility: np.ndarray, n_bins:float,
+        patch_to_wall_ids:np.ndarray, brdf_incoming_directions:np.ndarray, 
+        brdf_outgoing_directions:np.ndarray,
+        scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str = "montecarlo"):
+
+    receiver_factor = np.zeros((patches_points.shape[0]))
+    n_patches = patches_center.shape[0]
+    n_direction_out = brdf_outgoing_directions[0].cartesian.shape[0]
+    energy = np.zeros((n_patches, n_direction_out, n_bins))
+
+    for i in prange(patches_points.shape[0]):
+        if receiver_visibility[i]:
+            receiver_pos = receiver_pos.copy()
+            patch_center = patches_center[i, :].copy()
+            patch_pts = patches_points[i, :, :].copy()
+            patch_normal = patches_normal[i,:].copy()
+            wall_id = patch_to_wall_ids[i]
+            if integration_method == "leggauss":
+                receiver_factor, indices = integration.point_patch_factor_leggaus_planar_directional(
+                            receiver_pos,
+                            patch_center,
+                            patch_pts,
+                            patch_normal,
+                            wall_id,
+                            brdf_incoming_directions,
+                            brdf_outgoing_directions,
+                            scattering,
+                            scattering_index,
+                            n_bins,
+                            mode="receiver")
+            elif integration_method == "montecarlo":
+                receiver_factor, indices = integration.point_patch_factor_montecarlo_directional(
+                            receiver_pos,
+                            patch_center,
+                            patch_pts,
+                            patch_normal,
+                            wall_id,
+                            brdf_incoming_directions,
+                            brdf_outgoing_directions,
+                            scattering,
+                            scattering_index,
+                            n_bins,
+                            mode="receiver")
+            
+            energy[i,:,:] = receiver_factor
+    return energy, indices
+
+
 def _patch2receiver_energy_universal(
         receiver_pos, patches_points, receiver_visibility):
 
@@ -232,6 +365,7 @@ def _patch2receiver_energy_universal(
 
     for i in prange(patches_points.shape[0]):
         if receiver_visibility[i]:
+            
             receiver_factor[i] = integration.pt_solution(point=receiver_pos,
                             patch_points=patches_points[i,:], mode="receiver")
 

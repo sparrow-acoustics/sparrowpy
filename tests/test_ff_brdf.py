@@ -51,7 +51,7 @@ def test_compare_integrations_with_brdf():
     expected = sp.form_factor.integration.pt_solution(
         point, patch_points)
 
-    sampling = pf.samplings.sph_equal_angle(45)
+    sampling = pf.samplings.sph_equal_angle(10)
     sampling.weights = pf.samplings.calculate_sph_voronoi_weights(sampling)
     sampling = sampling[sampling.z>0]
     sampling.weights *= 4*np.pi
@@ -125,3 +125,13 @@ def test_compare_integrations_with_brdf():
 #
 #    check_data = brdf_data
 
+def test_energy_conservation():
+    sampling = sp.brdf.sph_gaussian_hemisphere(sh_order=20)
+    scattering_coef = 0.0
+    brdf_data = sp.brdf.create_from_scattering(sampling, sampling, pf.FrequencyData([scattering_coef], [100]))
+    sum = 0
+    for i in range(sampling.cartesian.shape[0]):
+        cos_theta = np.dot([0,0,1],sampling.cartesian[i])
+        sum += brdf_data.freq[i,0] * cos_theta * sampling.weights[i]
+    Energy_conservation = sum
+    print(f'Energy Conserv = {Energy_conservation}, should be ~= {1}')

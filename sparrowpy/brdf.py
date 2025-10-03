@@ -4,6 +4,148 @@ import sofar as sf
 import pyfar as pf
 import sparrowpy
 
+def sph_gaussian_hemisphere(n_points=None, sh_order=None, radius=1.):
+    """
+    Generate sampling of the hemisphere based on Gaussian quadrature.
+
+    This sampling covers only the upper hemisphere theta in [0, pi/2].
+
+    Parameters
+    ----------
+    n_points : int or tuple of two ints
+        Number of sampling points in azimuth and elevation. Either `n_points`
+        or `sh_order` must be provided.
+    sh_order : int
+        Maximum applicable spherical harmonic order. If given,
+        `n_points` is set to (2 * (sh_order + 1), ceil((sh_order + 1) / 2)).
+    radius : number, optional
+        Radius of the sampling sphere.
+
+    Returns
+    -------
+    sampling : pyfar.Coordinates
+        Sampling coordinates in hemispherical form with the weights.
+
+    """
+    checks = False  # quick checks
+    if (n_points is None) and (sh_order is None):
+        raise ValueError("Either n_points or sh_order must be specified.")
+
+    if sh_order is not None:
+        n_phi = 2 * (int(sh_order) + 1)
+        n_theta = int(np.ceil((sh_order + 1) / 2))  # hemisphere polar points
+        n_points = [n_phi, n_theta]
+
+    n_points = np.asarray(n_points)
+    if n_points.size == 2:
+        n_phi = n_points[0]
+        n_theta = n_points[1]
+    else:
+        n_phi = n_points
+        n_theta = n_points
+
+    # Compute max applicable spherical harmonic order for hemisphere
+    if sh_order is None:
+        n_max = int(np.min([n_phi / 2 - 1, 2 * (n_theta) - 1]))  
+    else:
+        n_max = int(sh_order)
+
+    # Gaussian nodes and weights in [-1, 1]
+    legendre_nodes, weights = np.polynomial.legendre.leggauss(int(n_theta))
+
+    # Map nodes from [-1, 1] to [0, pi/2] for hemisphere
+    theta_angles = (legendre_nodes + 1) * (np.pi / 4)  # equivalent to [0, pi/2]
+
+    # Uniform azimuthal angles 0 to 2pi
+    phi_angles = np.linspace(0, 2 * np.pi, n_phi, endpoint=False)
+
+    # Create grid
+    theta_grid, phi_grid = np.meshgrid(theta_angles, phi_angles, indexing='ij')
+
+    # Radius array
+    rad = radius * np.ones(theta_grid.size)
+
+    # Adjust weights for hemisphere integral
+    # Legendre weights are for integral over x in [-1,1].
+    # theta = (x+1)*pi/4  -> dtheta = (pi/4) dx
+    # spherical area element = sin(theta) dtheta dphi
+    dtheta_over_dx = np.pi / 4.0
+    dphi = 2.0 * np.pi / float(n_phi)
+    # per-theta weights include (pi/4) * sin(theta)
+    weights_theta = weights * dtheta_over_dx * np.sin(theta_angles)
+    # full per-sample solid-angle weights
+    weights_2d = np.outer(weights_theta, np.ones(n_phi)) * dphi
+
+    # Flatten arrays for Coordinates
+    phi_flat = phi_grid.flatten()
+    theta_flat = theta_grid.flatten()
+    weights_flat = weights_2d.flatten()
+
+    # Build pyfar Coordinates object (spherical coordinates, top_colat)
+    sampling = pf.Coordinates(
+        phi_flat, theta_flat, rad, 'sph', 'top_colat',
+        comment='Gaussian hemisphere sampling grid',
+        weights=weights_flat, sh_order=n_max)
+
+    ####Quick checks
+    if checks:
+        dirs = np.asarray(sampling.cartesian)
+        cos_i = np.clip(dirs.dot([0,0,1]), 0.0, None)
+        print('sum(weights)  (should ~= 2*pi) =', sampling.weights.sum())
+        print('sum(weights * cos) (should ~= pi) =', np.sum(sampling.weights * cos_i))
+    #########
+
+    return sampling
+
+def sph_equal_angle(delta_angles, radius=1.):
+    """
+    Generate sampling of the UPPER hemisphere with equally spaced angles,
+    **excluding** the equator (no z=0 points).
+
+    This mirrors pyfar.samplings.sph_equal_angle but restricts to θ in [0,90)
+    and does not include the equator ring.
+    """
+    # get the angles
+    delta_angles = np.asarray(delta_angles)
+    if delta_angles.size == 2:
+        delta_phi, delta_theta = delta_angles
+    else:
+        delta_phi = delta_theta = delta_angles
+
+    # check divisibility
+    eps = np.finfo(float).eps
+    if not (abs(360 % delta_phi) < 2*eps):
+        raise ValueError("delta_phi must evenly divide 360")
+    if not (abs(180 % delta_theta) < 2*eps):
+        raise ValueError("delta_theta must evenly divide 180")
+
+    # azimuth samples
+    phi_angles = np.arange(0, 360, delta_phi)
+
+    # interior colatitudes (0 < θ < 90)
+    theta_interior = np.arange(delta_theta, 90, delta_theta)
+
+    # stack interior rings
+    if theta_interior.size:
+        phi = np.tile(phi_angles, theta_interior.size)
+        theta = np.repeat(theta_interior, phi_angles.size)
+    else:
+        phi = np.empty(0)
+        theta = np.empty(0)
+
+    # add only the north pole (θ=0)
+    phi = np.concatenate(([0], phi))
+    theta = np.concatenate(([0], theta))
+
+    # build Coordinates (no equator ring)
+    sampling = pf.Coordinates.from_spherical_colatitude(
+        phi/180*np.pi,
+        theta/180*np.pi,
+        radius,
+        comment='equal-angle hemisphere (no equator)'
+    )
+
+    return sampling
 
 def create_from_scattering(
         source_directions,
