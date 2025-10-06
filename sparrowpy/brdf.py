@@ -97,54 +97,88 @@ def sph_gaussian_hemisphere(n_points=None, sh_order=None, radius=1.):
 
     return sampling
 
-def sph_equal_angle(delta_angles, radius=1.):
+def sample_hemisphere_equal_solid_angle(
+    n_mu: int,
+    n_phi: int,
+    normal=(0.0, 0.0, 1.0),
+    jitter: bool = False,
+    seed=None,
+    dtype=np.float64,
+):
+    def _onb_frisvad(n):
+        """
+        Orthonormal basis (t, b, n) from unit normal n (Frisvad 2012).
+        """
+        nx, ny, nz = n
+        if nz < -0.9999999:
+            return np.array([0.0, -1.0, 0.0]), np.array([-1.0, 0.0, 0.0])
+        a = 1.0 / (1.0 + nz)
+        b = -nx * ny * a
+        t = np.array([1.0 - nx * nx * a, b, -nx])
+        bvec = np.array([b, 1.0 - ny * ny * a, -ny])
+        return t, bvec
     """
-    Generate sampling of the UPPER hemisphere with equally spaced angles,
-    **excluding** the equator (no z=0 points).
+    Equal-solid-angle partition of the upper hemisphere using a uniform grid in
+    mu=cos(theta) and phi in [0,2*pi), with sample points at cell centers
+    (no samples on equator or pole), returned as Cartesian unit vectors with weights.
 
-    This mirrors pyfar.samplings.sph_equal_angle but restricts to θ in [0,90)
-    and does not include the equator ring.
+    Returns:
+        vecs:   (n_mu*n_phi, 3) unit vectors
+        weights:(n_mu*n_phi,) constant weights summing to 2*pi
     """
-    # get the angles
-    delta_angles = np.asarray(delta_angles)
-    if delta_angles.size == 2:
-        delta_phi, delta_theta = delta_angles
+    rng = np.random.default_rng(seed)
+    n = np.asarray(normal, dtype=dtype)
+    n = n / np.linalg.norm(n)
+
+    # Grid edges in mu=cos(theta) and phi
+    dmu = 1.0 / n_mu
+    dphi = (2.0 * np.pi) / n_phi
+    mu_edges = np.linspace(0.0, 1.0, n_mu + 1, dtype=dtype)
+    phi_edges = np.linspace(0.0, 2.0 * np.pi, n_phi + 1, endpoint=True, dtype=dtype)
+
+    # Centers (no boundary points): mu in (0,1), phi in (0,2*pi)
+    mu_c = 0.5 * (mu_edges[:-1] + mu_edges[1:])
+    phi_c = phi_edges[:-1] + 0.5 * dphi
+
+    if jitter:
+        # Jitter independently per cell while staying inside each cell
+        j_mu = rng.random((n_mu, n_phi), dtype=dtype) * dmu - 0.5 * dmu
+        j_phi = rng.random((n_mu, n_phi), dtype=dtype) * dphi - 0.5 * dphi
+        MU, PHI = np.meshgrid(mu_c, phi_c, indexing="ij")
+        MU = np.clip(MU + j_mu, mu_edges[:-1][:, None] + 1e-15, mu_edges[1:][:, None] - 1e-15)
+        PHI = PHI + j_phi
     else:
-        delta_phi = delta_theta = delta_angles
+        MU, PHI = np.meshgrid(mu_c, phi_c, indexing="ij")
 
-    # check divisibility
-    eps = np.finfo(float).eps
-    if not (abs(360 % delta_phi) < 2*eps):
-        raise ValueError("delta_phi must evenly divide 360")
-    if not (abs(180 % delta_theta) < 2*eps):
-        raise ValueError("delta_theta must evenly divide 180")
+    mu = MU.ravel()
+    phi = PHI.ravel()
 
-    # azimuth samples
-    phi_angles = np.arange(0, 360, delta_phi)
+    # Convert to Cartesian in local frame (z-up)
+    cos_theta = mu
+    sin_theta = np.sqrt(np.clip(1.0 - mu * mu, 0.0, 1.0))
+    x = sin_theta * np.cos(phi)
+    y = sin_theta * np.sin(phi)
+    z = cos_theta
+    V_local = np.stack([x, y, z], axis=1).astype(dtype, copy=False)
 
-    # interior colatitudes (0 < θ < 90)
-    theta_interior = np.arange(delta_theta, 90, delta_theta)
-
-    # stack interior rings
-    if theta_interior.size:
-        phi = np.tile(phi_angles, theta_interior.size)
-        theta = np.repeat(theta_interior, phi_angles.size)
+    # Rotate to arbitrary hemisphere normal via orthonormal basis
+    if not (abs(n[2] - 1.0) < 1e-12 and abs(n[0]) < 1e-12 and abs(n[1]) < 1e-12):
+        t, b = _onb_frisvad(n)
+        T = np.stack([t, b, n], axis=1).astype(dtype, copy=False)
+        V = V_local @ T.T
     else:
-        phi = np.empty(0)
-        theta = np.empty(0)
+        V = V_local
 
-    # add only the north pole (θ=0)
-    phi = np.concatenate(([0], phi))
-    theta = np.concatenate(([0], theta))
+    # Constant equal-solid-angle weights summing to 2*pi
+    w = dmu * dphi
+    weights = np.full(V.shape[0], w, dtype=dtype)
 
-    # build Coordinates (no equator ring)
-    sampling = pf.Coordinates.from_spherical_colatitude(
-        phi/180*np.pi,
-        theta/180*np.pi,
-        radius,
-        comment='equal-angle hemisphere (no equator)'
+
+    sampling = pf.Coordinates.from_cartesian(
+        V[:, 0], V[:, 1], V[:, 2],
+        weights=weights,
+        comment="HEALPix hemisphere (no equator, no pole)",
     )
-
     return sampling
 
 def create_from_scattering(

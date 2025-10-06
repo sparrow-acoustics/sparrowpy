@@ -51,6 +51,9 @@ class DirectionalRadiosityFast():
     _energy_init_source: np.ndarray
     _energy_exchange_etc: np.ndarray
 
+    #integration method
+    _integration_method: str
+    _integration_sampling: int
 
     def __init__(
             self,
@@ -209,6 +212,12 @@ class DirectionalRadiosityFast():
         self._energy_init_source = energy_init_source
         self._energy_exchange_etc = energy_exchange_etc
 
+        #integration method
+        self._integration_method = "leggauss" #options: "leggauss", "montecarlo"
+        if self._integration_method == "leggauss":
+                self._integration_sampling = 4 #Set default to 4  
+        elif self._integration_method == "montecarlo":
+                self._integration_sampling = 500 #Set default to 500
         self.check()
 
     def check(self):
@@ -525,7 +534,7 @@ class DirectionalRadiosityFast():
         self._distance_patches_to_source = distance_0
 
 
-    def init_source_energy_withBRDFIntegration(
+    def init_source_energy_brdf_integration(
             self, source):
         """Initialize the source energy.
 
@@ -581,7 +590,7 @@ class DirectionalRadiosityFast():
         energy_0_dir, distance_out = form_factor._source2patch_energy_universal_BRDF_ultimate(
             source_position, self.patches_normal, patches_center, self.patches_points,
             source_visibility,self._air_attenuation, n_bins, patch_to_wall_ids, self._brdf_incoming_directions, self._brdf_outgoing_directions,
-             vi, vo, brdf, brdf_index, integration_method = integration_method
+             vi, vo, brdf, brdf_index, integration_method = self._integration_method, integration_sampling = self._integration_sampling
             )
 
 
@@ -689,6 +698,40 @@ class DirectionalRadiosityFast():
             etc.time[i_receivers, :, n_sample_delay] += direct_sound
 
         return etc
+    
+    def collect_energy_receiver_mono_brdf_integration(self, receivers, direct_sound=False):
+        """Collect the energy at the receivers.
+
+        Parameters
+        ----------
+        receivers : pf.Coordinates
+            receiver Coordinates in of cshape (n_receivers).
+        direct_sound : bool, optional
+            If True, the direct sound is collected as well, by default False.
+            The direct sound includes spreading loss, air attenuation and
+            source directivity.
+
+        Returns
+        -------
+        etc : pf.TimeData
+            energy collected at the receiver in cshape
+            (n_receivers, n_bins)
+        """
+        if not isinstance(direct_sound, bool):
+            raise ValueError(
+                "direct_sound must be of type boolean")
+        etc = self.collect_energy_receiver_patchwise_brdf_integration(receivers)
+        etc.time = np.sum(etc.time, axis=1)
+
+        if direct_sound:
+            direct_sound, n_sample_delay = self.calculate_direct_sound(
+                receivers)
+
+            # add the direct sound to the etc
+            i_receivers = np.arange(len(n_sample_delay))
+            etc.time[i_receivers, :, n_sample_delay] += direct_sound
+
+        return etc
 
 
     def calculate_direct_sound(self, receivers):
@@ -771,8 +814,34 @@ class DirectionalRadiosityFast():
             receivers.cartesian, propagation_fx=True)
         times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
+    
+    def collect_energy_receiver_patchwise_brdf_integration(self, receivers):
+        """Collect the energy for each patch at the receivers without summing
+        up the patches.
 
-    def _collect_energy_patches_originalBACKUP( #_collect_energy_patches
+        Parameters
+        ----------
+        receivers : pf.Coordinates
+            receiver Coordinates in of cshape (n_receivers).
+
+        Returns
+        -------
+        etc : pf.TimeData
+            energy collected at the receiver in cshape
+            (n_receivers, n_patches, n_bins)
+        """
+        if not isinstance(receivers, pf.Coordinates):
+            raise ValueError(
+                "Receiver positions must be of type pf.Coordinates")
+        if receivers.cdim != 1:
+            raise ValueError(
+                "Receiver positions must be of shape (n_receivers, 3)")
+        etc_data = self._collect_energy_patches_brdf_integration(
+            receivers.cartesian, propagation_fx=True)
+        times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
+        return pf.TimeData(etc_data, times)
+
+    def _collect_energy_patches( #_collect_energy_patches
             self, receiver_pos,
             propagation_fx=False):
         """Collect patch histograms as detected by receiver."""
@@ -839,7 +908,7 @@ class DirectionalRadiosityFast():
                 histogram_out[i] = E_matrix
 
         return histogram_out
-    def _collect_energy_patches(
+    def _collect_energy_patches_brdf_integration(
             self, receiver_pos,
             propagation_fx=False):
         """Collect patch histograms as detected by receiver."""
@@ -876,13 +945,13 @@ class DirectionalRadiosityFast():
                                         surf_normal=self.walls_normal)
             ############REPLACED PART##########################
             # geometrical weighting
-            patch_receiver_energy, outgoing_indices=form_factor._patch2receiver_energy_universal_BRDF_ultimate(
-                    receiver_pos[i], patches_normal, patches_center, patches_points, receiver_visibility[i], n_bins, self._patch_to_wall_ids, self._brdf_incoming_directions, self._brdf_outgoing_directions, brdf, brdf_index, integration_method=integration_method)
-            
-            unique_outgoing_indices = np.unique(outgoing_indices)
-            unique_outgoing_indices = unique_outgoing_indices[unique_outgoing_indices>=0]
 
             for k in range(n_patches): 
+                patch_receiver_energy, outgoing_indices=form_factor._patch2receiver_energy_universal_BRDF_ultimate(
+                        receiver_pos[i], patches_normal, patches_center, patches_points, receiver_visibility[i], n_bins, self._patch_to_wall_ids, self._brdf_incoming_directions, self._brdf_outgoing_directions, brdf, brdf_index, integration_method = self._integration_method, integration_sampling = self._integration_sampling)
+                
+                unique_outgoing_indices = np.unique(outgoing_indices)
+                unique_outgoing_indices = unique_outgoing_indices[unique_outgoing_indices>=0]
 
                 # if no outgoing directions contribute, set zero energy
                 if unique_outgoing_indices.size == 0:

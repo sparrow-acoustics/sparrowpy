@@ -803,6 +803,7 @@ def point_patch_factor_leggaus_planar_directional(
                                scattering: np.ndarray,
                                scattering_index: np.ndarray,
                                n_bins: int,
+                               N_sample: int,
                                mode: str = 'source'):
     """
     Wrapper to compute per-patch directional energy contributions and source indices.
@@ -850,7 +851,7 @@ def point_patch_factor_leggaus_planar_directional(
     
 
     # Quadrature setup
-    N = 5
+    N = N_sample
     u_nodes, u_weights = leggauss(N)
     v_nodes, v_weights = leggauss(N)
     src_indices_container = np.full(n_directions_out * N * N, -1, dtype=np.int32)
@@ -889,14 +890,13 @@ def point_patch_factor_leggaus_planar_directional(
 
                 cos_theta = np.dot(patch_normal, dir_vec)
                 # find direction index source = incoming, receiver = outgoing
-                idx_in = brdf_direction \
-                                .find_nearest(pf.Coordinates.from_cartesian(
+                idx = brdf_direction.find_nearest(pf.Coordinates.from_cartesian(
                                     dir_vec[0], dir_vec[1], dir_vec[2]))[0][0]
 
-                src_indices_container[m*N*N+i*N] = idx_in
+                src_indices_container[m*N*N+i*N] = idx
                 geom_term = cos_theta / (dist**2)
-                scattering_factor = scattering[idx_in, m]
-                contrib[idx_in] += scattering_factor * geom_term * dS * wu * wv
+                scattering_factor = scattering[idx, m]
+                contrib[idx] += scattering_factor * geom_term * dS * wu * wv
 
         energy_0_dir[m, :, :] = contrib / source_area
     collapsed_energy_0_dir = energy_0_dir.sum(axis=1)
@@ -975,8 +975,8 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
                                              scattering: np.ndarray,
                                              scattering_index: np.ndarray,
                                              n_bins: int,
-                                             mode: str = 'source',
-                                             N_sample: int = 500):
+                                             N_sample: int,
+                                             mode: str = 'source'):
     """
     Monte Carlo estimate of directional energy contributions from a planar patch to a point.
 
@@ -1066,9 +1066,6 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
                 pf.Coordinates.from_cartesian(direction[0], direction[1], direction[2])
             )[0][0]
             
-            #if m == 0:  # Only store indices once
-            #    src_indices_container[sample_idx] = idx_in
-            
             # Geometric term and BRDF contribution
             geom_factor = cos_theta / (distance**2)
             brdf_value = wall_brdf[idx_in, m]
@@ -1083,99 +1080,6 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
     energy_directional = energy_full.sum(axis=1)
     
     return energy_directional, src_indices_container
-
-#def point_patch_factor_leggaus_planar_directional(point: np.ndarray, patch_points: np.ndarray, patch_normal: np.ndarray, brdf_data, brdf_index, mode='source'):
-#    
-#    """Calculate the geometric factor between a point and a patch.
-#
-#    using Gauss-Legendre quadrature to integrate over the patch surface. Need to set the parameter N (order of quadrature)
-#
-#    Parameters
-#    ----------
-#    point: np.ndarray
-#        source or receiver point
-#
-#    patch_points: np.ndarray
-#        vertex coordinates of the patch
-#
-#    mode: string
-#        determines if point is acting as a source ('source')
-#        or as a receiver ('receiver')
-#
-#    Returns
-#    -------
-#    geometric factor, error estimate of integral
-#    """
-#
-#    ## N = number of Gauss-Legendre samples per dimension
-#    N = 6
-#    fr = brdf_data ## for BRDF = 1/pi -> every direction has coefficients 1/pi
-#    
-#    if mode == 'receiver':
-#        source_area = geom._polygon_area(patch_points)
-#    elif mode == 'source':
-#        source_area = 4
-#    
-#    p0 = patch_points[0]
-#    edge_u = patch_points[1] - p0   # vector for u-direction
-#    edge_v = patch_points[3] - p0   # vector for v-direction
-#    patches_center = np.mean(patch_points, axis=0)
-#    # Constant area element (Jacobian)
-#    dS = np.linalg.norm(np.cross(edge_u, edge_v))
-#    n_bins = 1
-#
-#
-#    ###need 
-#    vi = np.array(
-#        [s.cartesian for s in brdf_incoming])
-#    vo = np.array(
-#        [s.cartesian for s in brdf_outgoing])
-#
-#    n_patches = patches_center.shape[0]
-#    n_directions = vo.shape[1]
-#    
-#    energy_0_directivity = np.zeros((n_patches, n_directions, n_bins)) #n_bins = 1
-#    def integrand(u, v):
-#    # Affine mapping from (u,v) to 3D
-#        patch_point = p0 + u*edge_u + v*edge_v
-#        
-#        r_vec  = point - patch_point
-#        r_dist = np.linalg.norm(r_vec)
-#        if r_dist < 1e-10:
-#            return 0.0
-#        
-#        r_dir = r_vec / r_dist
-#        cos_theta = np.dot(patch_normal, r_dir)
-#
-#        scattering = fr #for sh = 2 -> 6x6 coefficients 
-#        scattering_index = brdf_index
-#
-#        point2quadrature = patch_point-patches_center[i]
-#        point2quadrature /= np.linalg.norm(point2quadrature)
-#        source_idx = np.argmin(np.sum(
-#            (sources[0, :, :]-point2quadrature)**2, axis=-1))
-#        scattering_factor = scattering[scattering_index[0], source_idx]
-#
-#        #energy_0_directivity[i, :, :] = energy_0[i] \
-#        #    * np.real(scattering_factor)
-#
-#        # constant dS, so no per-sample Jacobian
-#        return fr * cos_theta * dS / r_dist**2
-#
-#    u_nodes, u_weights = leggauss(N)
-#    v_nodes, v_weights = leggauss(N)
-#    result = 0.0
-#    for i in range(N):
-#        u = 0.5*(u_nodes[i] + 1)
-#        wu = 0.5*u_weights[i]
-#        for j in range(N):
-#            v  = 0.5*(v_nodes[j] + 1)
-#            wv = 0.5*v_weights[j]
-#            result += integrand(u, v) * wu * wv
-#
-#    result *= 1 / source_area
-#    energy_0_directivity[i, :, :] *= result
-#    return result
 
 if numba is not None:
     pt_solution = numba.njit(parallel=True)(pt_solution)

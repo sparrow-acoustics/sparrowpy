@@ -232,7 +232,7 @@ def _source2patch_energy_universal_BRDF_ultimate(source_position: np.ndarray, pa
         patch_to_wall_ids:np.ndarray, brdf_incoming_directions:np.ndarray, 
         brdf_outgoing_directions:np.ndarray,
         sources: np.ndarray, receivers: np.ndarray,
-        scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str = "montecarlo"):
+        scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str, integration_sampling: int):
     """Calculate the initial energy from the source.
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     Parameters
@@ -283,6 +283,7 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
                                scattering,
                                scattering_index,
                                n_bins,
+                               integration_sampling,
                                mode="source")
             elif integration_method == "montecarlo":
                 energy_0_directivity,c = integration.point_patch_factor_montecarlo_directional(
@@ -296,7 +297,8 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
                                scattering,
                                scattering_index,
                                n_bins,
-                               mode="source")
+                               integration_sampling,
+                               mode="source",)
 
             if air_attenuation is not None:
                 energy[j,:,:] = np.exp(
@@ -312,7 +314,7 @@ patches_center: np.ndarray,
         patches_points: np.ndarray, receiver_visibility: np.ndarray, n_bins:float,
         patch_to_wall_ids:np.ndarray, brdf_incoming_directions:np.ndarray, 
         brdf_outgoing_directions:np.ndarray,
-        scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str = "montecarlo"):
+        scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str, integration_sampling: int):
 
     receiver_factor = np.zeros((patches_points.shape[0]))
     n_patches = patches_center.shape[0]
@@ -338,6 +340,7 @@ patches_center: np.ndarray,
                             scattering,
                             scattering_index,
                             n_bins,
+                            integration_sampling,
                             mode="receiver")
             elif integration_method == "montecarlo":
                 receiver_factor, indices = integration.point_patch_factor_montecarlo_directional(
@@ -351,6 +354,7 @@ patches_center: np.ndarray,
                             scattering,
                             scattering_index,
                             n_bins,
+                            integration_sampling,
                             mode="receiver")
             
             energy[i,:,:] = receiver_factor
