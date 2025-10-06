@@ -810,22 +810,24 @@ def point_patch_factor_leggaus_planar_directional(
 
     Parameters
     ----------
-    patches_center: (P,3) float
+    point: (3,) float
+        Coordinates of the source or receiver point.
+    patches_center: (n_patches,3) float
         Centers of each patch (P patches).
-    patches_points: (P,4,3) float
+    patches_points: (n_patches,4,3) float
         Four vertices for each patch.
-    patches_normal: (P,3) float
+    patches_normal: (n_patches,3) float
         Unit normals of each patch.
-    patch_to_wall_ids: (P,) int
-        Mapping from patch index to wall ID.
-    scattering: (W, D_in, D_out) float
+    wall_id: (n_patches,) int
+        Wall ID for each patch.
+    brdf_incoming_directions: (n_direction_in,) pyfar.Coordinates
+        Incoming directions sampling of the BRDF.
+    brdf_outgoing_directions: (n_direction_out,) pyfar.Coordinates
+        Outgoing directions sampling of the BRDF.
+    scattering: (n_walls, n_direction, n_direction) float
         Precomputed BRDF lookup
     scattering_index: (W,) int
         Maps wall ID → index into BRDF array.
-    vi: (_, D_in) float
-        Incoming direction vectors (unused except dimension).
-    vo: (_, D_out) float
-        Outgoing direction vectors (for weights).
     source_position: (3,) float
         Coordinates of the source point.
     n_bins: int
@@ -835,11 +837,9 @@ def point_patch_factor_leggaus_planar_directional(
 
     Returns
     -------
-    energy_0_dir: (P, D_out, D_in, n_bins) float
+    energy_0_dir: (n_patches, n_direction_out, n_direction_in, n_bins) float
         Directional energy contributions per patch.
-    distance_out: (P,) float
-        Distance from patch center to source.
-    src_indices_container: (P, D_out*N*N) int
+    src_indices_container: (n_patches, n_direction_out*N*N) int
         Incoming-direction indices used per quadrature sample.
     """
 

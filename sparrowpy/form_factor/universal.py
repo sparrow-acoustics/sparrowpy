@@ -234,7 +234,6 @@ def _source2patch_energy_universal_BRDF_ultimate(source_position: np.ndarray, pa
         sources: np.ndarray, receivers: np.ndarray,
         scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str, integration_sampling: int):
     """Calculate the initial energy from the source.
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     Parameters
     ----------
     source_position : np.ndarray
@@ -249,7 +248,22 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         air attenuation factor in Np/m (n_bins,)
     n_bins : float
         number of frequency bins.
-
+    patch_to_wall_ids : np.ndarray
+        wall ids of all patches of shape (n_patches,)
+    brdf_incoming_directions : self class brdf_incoming_directions : np.ndarray
+        incoming directions of the BRDF (pf.Coordinates)
+        incoming directions of the BRDF (n_patches, pf.Coordinates) #??? is this the correct one for multiple walls?
+    brdf_outgoing_directions :  self class brdf_incoming_directions : np.ndarray
+        outgoing directions of the BRDF (pf.Coordinates)
+        outgoing directions of the BRDF (n_patches, pf.Coordinates) #??? is this the correct one for multiple walls?
+    scattering : np.ndarray
+        scattering values of the BRDF (n_walls, n_directions_in, n_directions_out)
+    scattering_index : np.ndarray
+        index to map wall ids to scattering values (n_walls,)
+    integration_method : str
+        integration method, either "leggauss" or "montecarlo"
+    integration_sampling : int
+        number of sampling points for the integration, by default 4 for leggauss and 500 for montecarlo (in RadiosityFast.py class)
     Returns
     -------
     energy : np.ndarray
@@ -315,6 +329,47 @@ patches_center: np.ndarray,
         patch_to_wall_ids:np.ndarray, brdf_incoming_directions:np.ndarray, 
         brdf_outgoing_directions:np.ndarray,
         scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str, integration_sampling: int):
+
+   """Calculate the initial energy from the source.
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    Parameters
+    ----------
+    source_position : np.ndarray
+        source position of shape (3,)
+    patches_center : np.ndarray
+        center of all patches of shape (n_patches, 3)
+    patches_points : np.ndarray
+        vertices of all patches of shape (n_patches, n_points, 3)
+    source_visibility : np.ndarray
+        visibility condition between source and patches (n_patches)
+    air_attenuation : np.ndarray
+        air attenuation factor in Np/m (n_bins,)
+    n_bins : float
+        number of frequency bins.
+    patch_to_wall_ids : np.ndarray
+        wall ids of all patches of shape (n_patches,)
+    brdf_incoming_directions : self class brdf_incoming_directions : np.ndarray
+        incoming directions of the BRDF (pf.Coordinates)
+        incoming directions of the BRDF (n_patches, pf.Coordinates) #??? is this the correct one for multiple walls?
+    brdf_outgoing_directions :  self class brdf_incoming_directions : np.ndarray
+        outgoing directions of the BRDF (pf.Coordinates)
+        outgoing directions of the BRDF (n_patches, pf.Coordinates) #??? is this the correct one for multiple walls?
+    scattering : np.ndarray
+        scattering values of the BRDF (n_walls, n_directions_in, n_directions_out)
+    scattering_index : np.ndarray
+        index to map wall ids to scattering values (n_walls,) for receiving -> set to 1 for all direction
+    integration_method : str
+        integration method, either "leggauss" or "montecarlo"
+    integration_sampling : int
+        number of sampling points for the integration, by default 4 for leggauss and 500 for montecarlo (in RadiosityFast.py class)
+    Returns
+    -------
+    energy : np.ndarray
+        energy of all patches of shape (n_patches)
+    indices : np.ndarray
+        corresponding indices of all patches of shape (n_patches), used later for finding out the average contribution coming from possible solid angles.
+
+    """
 
     receiver_factor = np.zeros((patches_points.shape[0]))
     n_patches = patches_center.shape[0]

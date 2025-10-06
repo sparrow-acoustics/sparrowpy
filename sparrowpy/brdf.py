@@ -177,7 +177,7 @@ def sample_hemisphere_equal_solid_angle(
     sampling = pf.Coordinates.from_cartesian(
         V[:, 0], V[:, 1], V[:, 2],
         weights=weights,
-        comment="HEALPix hemisphere (no equator, no pole)",
+        comment="equal solid angle hemisphere (no equator, no pole)",
     )
     return sampling
 
