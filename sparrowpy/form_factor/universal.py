@@ -330,8 +330,8 @@ patches_center: np.ndarray,
         brdf_outgoing_directions:np.ndarray,
         scattering: np.ndarray, scattering_index: np.ndarray, integration_method: str, integration_sampling: int):
 
-   """Calculate the initial energy from the source.
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    """Calculate the initial energy from the source.
+    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     Parameters
     ----------
     source_position : np.ndarray
@@ -368,7 +368,6 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         energy of all patches of shape (n_patches)
     indices : np.ndarray
         corresponding indices of all patches of shape (n_patches), used later for finding out the average contribution coming from possible solid angles.
-
     """
 
     receiver_factor = np.zeros((patches_points.shape[0]))
