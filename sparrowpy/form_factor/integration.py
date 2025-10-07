@@ -794,9 +794,9 @@ def point_patch_factor_leggaus_planar(point: np.ndarray, patch_points: np.ndarra
     return result
 
 def point_patch_factor_leggaus_planar_directional(
-                               point: np.ndarray,patches_center: np.ndarray,
-                               patches_points: np.ndarray,
-                               patches_normal: np.ndarray,
+                               point: np.ndarray,patch_center: np.ndarray,
+                               patch_points: np.ndarray,
+                               patch_normal: np.ndarray,
                                wall_id: np.ndarray,
                                brdf_incoming_directions: np.ndarray,
                                brdf_outgoing_directions: np.ndarray,
@@ -859,21 +859,20 @@ def point_patch_factor_leggaus_planar_directional(
     
     scattering = scattering[scattering_index[wall_id], :, :]  # select wall-specific BRDF
 
-    pts = patches_points  # (4,3)
+    pts = patch_points  # (4,3)
     p0 = pts[0]
     edge_u = pts[1] - p0
     edge_v = pts[3] - p0
     dS = np.linalg.norm(np.cross(edge_u, edge_v))
 
     if mode == 'receiver':
-        source_area = geom._polygon_area(patches_points)
+        source_area = geom._polygon_area(patch_points)
         scattering = np.ones_like(scattering) / np.pi # set to 1/pi for all directions for purely geometric factor
         brdf_direction = brdf_outgoing_directions[0]
     elif mode == 'source':
         source_area = 4
         brdf_direction = brdf_incoming_directions[0]
 
-    patch_normal = patches_normal
     for m in prange(n_directions_out):
         contrib = np.zeros((n_directions_in, n_bins), dtype=np.float64)
 
@@ -969,7 +968,7 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
                                               patch_center: np.ndarray,
                                              patch_points: np.ndarray,
                                              patch_normal: np.ndarray,
-                                             patch_to_wall_ids: np.ndarray,
+                                             wall_id: np.ndarray,
                                              brdf_incoming_directions: np.ndarray,
                                              brdf_outgoing_directions: np.ndarray,
                                              scattering: np.ndarray,
@@ -1019,26 +1018,28 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
     vo = np.array([s.cartesian for s in brdf_outgoing_directions])
     n_directions_in = vi.shape[1]
     n_directions_out = vo.shape[1]
-    brdf_incoming = brdf_incoming_directions[0]
     
     # Initialize output arrays
     energy_full = np.zeros((n_directions_out, n_directions_in, n_bins), dtype=np.float64)
     src_indices_container = np.full(n_directions_out*N_sample,-1, dtype=np.int32)
     # Select wall-specific BRDF
-    wall_id = int(patch_to_wall_ids)
-    wall_brdf = scattering[scattering_index[wall_id], :, :]
+    scattering = scattering[scattering_index[wall_id], :, :]
     
     # Patch geometry
-    p0 = patch_points[0]
-    edge_u = patch_points[1] - p0
-    edge_v = patch_points[3] - p0
-    patch_area = np.linalg.norm(np.cross(edge_u, edge_v))
+    pts = patch_points  # (4,3)
+    p0 = pts[0]
+    edge_u = pts[1] - p0
+    edge_v = pts[3] - p0
+    dS = np.linalg.norm(np.cross(edge_u, edge_v))
     
     # Source area for normalization
     if mode == 'receiver':
         source_area = geom._polygon_area(patch_points)
-    else:
-        source_area = 4.0
+        scattering = np.ones_like(scattering) / np.pi # set to 1/pi for all directions for purely geometric factor
+        brdf_direction = brdf_outgoing_directions[0]
+    elif mode == 'source':
+        source_area = 4
+        brdf_direction = brdf_incoming_directions[0]
     
     # Monte Carlo integration over outgoing directions
     for m in range(n_directions_out):
@@ -1060,17 +1061,17 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
             if cos_theta <= 0:
                 continue
             
-            # Find nearest incoming direction index
-            idx_in = brdf_incoming.find_nearest(
+            # Find nearest direction
+            idx = brdf_direction.find_nearest(
                 pf.Coordinates.from_cartesian(direction[0], direction[1], direction[2])
             )[0][0]
-            src_indices_container[m * N_sample + s] = idx_in
+            src_indices_container[m * N_sample + s] = idx
             # Geometric term and BRDF contribution
             geom_factor = cos_theta / (distance**2)
-            brdf_value = wall_brdf[idx_in, m]
+            scattering_factor = scattering[idx, m]
             
             # Accumulate: BRDF × geometry × patch_area
-            contrib[idx_in] += brdf_value * geom_factor * patch_area
+            contrib[idx] += scattering_factor * geom_factor * dS
         
         # Average over samples and normalize by source area
         energy_full[m, :, :] = contrib / (source_area * N_sample)
