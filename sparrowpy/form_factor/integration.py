@@ -893,13 +893,13 @@ def point_patch_factor_leggaus_planar_directional(
                 idx = brdf_direction.find_nearest(pf.Coordinates.from_cartesian(
                                     dir_vec[0], dir_vec[1], dir_vec[2]))[0][0]
 
-                src_indices_container[m*N*N+i*N] = idx
+                src_indices_container[m*N*N+i*N+j] = idx
                 geom_term = cos_theta / (dist**2)
                 scattering_factor = scattering[idx, m]
                 contrib[idx] += scattering_factor * geom_term * dS * wu * wv
 
         energy_0_dir[m, :, :] = contrib / source_area
-    collapsed_energy_0_dir = energy_0_dir.sum(axis=1)
+    collapsed_energy_0_dir = energy_0_dir.sum(axis=1) #sum total incoming directions
 
     return collapsed_energy_0_dir, src_indices_container
 
@@ -1023,8 +1023,7 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
     
     # Initialize output arrays
     energy_full = np.zeros((n_directions_out, n_directions_in, n_bins), dtype=np.float64)
-    src_indices_container = np.zeros(N_sample, dtype=np.int32)
-    
+    src_indices_container = np.full(n_directions_out*N_sample,-1, dtype=np.int32)
     # Select wall-specific BRDF
     wall_id = int(patch_to_wall_ids)
     wall_brdf = scattering[scattering_index[wall_id], :, :]
@@ -1045,7 +1044,7 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
     for m in range(n_directions_out):
         contrib = np.zeros((n_directions_in, n_bins), dtype=np.float64)
         
-        for _ in range(N_sample):
+        for s in range(N_sample):
             # Random point on patch
             u = np.random.rand()
             v = np.random.rand()
@@ -1065,7 +1064,7 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
             idx_in = brdf_incoming.find_nearest(
                 pf.Coordinates.from_cartesian(direction[0], direction[1], direction[2])
             )[0][0]
-            
+            src_indices_container[m * N_sample + s] = idx_in
             # Geometric term and BRDF contribution
             geom_factor = cos_theta / (distance**2)
             brdf_value = wall_brdf[idx_in, m]

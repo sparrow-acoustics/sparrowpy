@@ -140,11 +140,7 @@ def _source2patch_energy_universal(
                     -air_attenuation*distance_out[j])*integration.pt_solution(
                         point=source_pos, patch_points=receiver_pts,
                         mode="source")
-            #if air_attenuation is not None:
-            #    energy[j,:] = np.exp(
-            #    -air_attenuation*distance_out[j])*integration.point_patch_factor_leggaus_planar(
-            #        point=source_pos, patch_points=receiver_pts, patch_normal=[0,0,1],
-            #        mode="source")
+
             else:
                 energy[j,:] = integration.pt_solution(
                     point=source_pos, patch_points=receiver_pts, mode="source")
