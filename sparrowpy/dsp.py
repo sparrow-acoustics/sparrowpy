@@ -347,8 +347,7 @@ def band_filter_signal(signal:pf.Signal,
     r"""Band filter input signal and return corresponding bandwidths.
 
     This method filters an input signal into fractional octave bands
-    with Butterworth filtering. By default, the filter order is set
-    as 4.
+    with Butterworth filtering.
     The user may input an arbitrary array of frequencies in
     which to filter the signal. The closest fractional octave bands
     to the input frequencies will be returned in the same order.
