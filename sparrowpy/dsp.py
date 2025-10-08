@@ -258,7 +258,7 @@ def weight_signal_by_etc(
         The ETC entries must be equally spaced in time.
     signal: :py:class:`pyfar.Signal'
         signal to be weighted by the etc of cshape
-        ``(..., n_freq_bands)``.
+        ``(..., n_freq_bands)`` and broadcastable to energy_time_curve.
     bandwidth: np.ndarray
         Bandwidth for the frequency band in Hz of shape
         ``(n_freq_bands)``. By default, signal will be processed
