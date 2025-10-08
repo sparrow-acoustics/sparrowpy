@@ -20,7 +20,8 @@ def reflection_density_room(
     speed of sound in the room. The reflection density :math:`\mu`
     is calculated based on the following equation:
 
-    .. math:: \mu = \min{\left(\frac{4 \pi c^3 \cdot t^2}{V}, \mu_{max}\right)}
+    .. math::
+        \mu = \min{\left(\frac{4 \pi c^3 \cdot t^2}{V} , \mu_{max}\right)}
 
     with :math:`t` being the time vector in seconds based on ``sampling_rate``
     and ``n_samples`` and :math:`\mu_{max}` being the
