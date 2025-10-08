@@ -348,9 +348,6 @@ def band_filter_signal(signal:pf.Signal,
 
     This method filters an input signal into fractional octave bands
     with Butterworth filtering.
-    The user may input an arbitrary array of frequencies in
-    which to filter the signal. The closest fractional octave bands
-    to the input frequencies will be returned in the same order.
 
     .. note::
         This function uses the pyfar methods
@@ -362,26 +359,33 @@ def band_filter_signal(signal:pf.Signal,
     ----------
     signal: :py:class:`pyfar.Signal`
         Input broad-spectrum signal.
-    frequencies: np.ndarray
-        Frequencies in which to filter the signal. In Hz.
+    frequencies: :py:class:`np.ndarray`
+        Frequencies in which to filter the signal of shape (n_frequencies).
+        In Hz. The user may input an arbitrary array of frequencies in
+        which to filter the signal. The closest fractional octave bands
+        to the input frequencies will be returned in the same order.
     num_fractions: int
         The number of bands an octave is divided into. E.g., ``1`` refers to
         octave bands and ``3`` to third octave bands.
         All positive integers are allowed.
-    order: int
+    order: int, optional
         Butterworth filter order for the signal filtering. By default 4.
 
     Returns
     -------
     band_filtered_signal: :py:class:`pyfar.Signal`
         Band-filtered signal of cshape ``(signal.cshape + (len(freqs))``
-    bandwidth: np.ndarray
+    bandwidth: :py:class:`np.ndarray`
         Array of bandwidth values in Hz of the fractional octave bands
-        corresponding to the input frequencies.
+        corresponding to the input frequencies of shape (n_frequencies).
     """
     if (frequencies<=0).any():
         raise ValueError(
             "Input frequencies must be greater than zero.",
+        )
+    if len(frequencies.shape)!=1:
+        raise ValueError(
+            "Input frequencies must be a one-dimensional array.",
         )
     if num_fractions<=0:
         raise ValueError(
