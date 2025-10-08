@@ -99,11 +99,12 @@ def test_closest_fractional_octave_data_bandwidth():
         frequency_range=frequency_range,
         return_cutoff=True,
         )
-    index_expected = np.arange(fband_centers.shape[0])
+    index_expected = np.flip(np.arange(fband_centers.shape[0]))
     bw, index = sp.dsp._closest_fractional_octave_data(
         frequencies=fband_centers[index_expected], num_fractions=num_fractions)
-    npt.assert_allclose(bw, cutoffs[1]-cutoffs[0])
-    npt.assert_allclose(fband_centers[index_expected], fband_centers[index], )
+    npt.assert_allclose(bw,
+                        cutoffs[1][index_expected]-cutoffs[0][index_expected])
+    npt.assert_allclose(fband_centers[index_expected], fband_centers[index])
 
 
 @pytest.mark.parametrize("freq",[
