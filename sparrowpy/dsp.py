@@ -365,24 +365,27 @@ def weight_signal_by_etc(
         raise ValueError("Input signal must be a pyfar.Signal object.")
 
     if not (np.abs(energy_time_curve.times[1:]-energy_time_curve.times[:-1] -
-                   energy_time_curve.times[1]-energy_time_curve.times[0]) < 1e-12 ).all():
+        energy_time_curve.times[1]-energy_time_curve.times[0]) < 1e-12 ).all():
         raise ValueError("ETC entries must be equally spaced in time.")
 
-    rs_factor = signal.sampling_rate*(energy_time_curve.times[1]-energy_time_curve.times[0])
+    rs_factor = signal.sampling_rate*(energy_time_curve.times[1] -
+                                      energy_time_curve.times[0])
 
     weighted_signal_arr = np.zeros(energy_time_curve.cshape +
                               (signal.n_samples,))
 
     for sample_i in range(energy_time_curve.n_samples):
         lower = int(sample_i * rs_factor)
-        upper = int((sample_i+1) * rs_factor)
+        upper = min(int((sample_i+1) * rs_factor),signal.n_samples)
 
         signal_sec = signal.time[...,lower:upper]
         div = np.sum(signal_sec**2,axis=-1)
 
-        scale = np.divide(energy_time_curve.time[...,sample_i],div,
-                              out=np.zeros_like(energy_time_curve.time[...,sample_i]),
-                              where=div!=0)
+        scale = np.divide(energy_time_curve.time[...,sample_i]*
+                                                (upper-lower)/rs_factor,
+                          div,
+                          out=np.zeros_like(energy_time_curve.time[...,sample_i]),
+                          where=div!=0)
 
         etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
                                               (signal.sampling_rate/2))
