@@ -44,8 +44,6 @@ def test_band_filtering(freq,frac,n_sigs):
     signal_split_freqs = pf.signals.sine(frequency=ff, n_samples=441)
     signal_split_freqs.time = (scale[...,None]*signal_split_freqs.time)
 
-
-
     signal_combined = pf.Signal(data=np.sum(signal_split_freqs.time, axis=1),
                                 sampling_rate=signal_split_freqs.sampling_rate)
 
