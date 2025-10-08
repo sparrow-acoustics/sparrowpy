@@ -291,16 +291,45 @@ def weight_signal_by_etc(
         >>> times = np.arange(0,white_noise.times[-1],delta_t)
         >>> decay = np.exp(-4*times)
         >>> etc = pf.TimeData(data=decay,times=times)
-        >>> weighted_noise = sp.dsp.weight_signal_by_etc(etc=etc,
+        >>> weighted_noise = sp.dsp.weight_signal_by_etc(energy_time_curve=etc,
         ...                                               signal=white_noise)
         >>> ax=pf.plot.time(white_noise,label="input signal",dB=True)
         >>> ax=pf.plot.time(weighted_noise,label="weighted signal",
         ...                 ax=ax,dB=True)
         >>> ax.set_title("Signal weighting by exponential decaying ETC")
+        >>> ax.legend()
 
 
-    Weight multiple white noise channels by a collection of varied exponential
-    decay ETCs.
+    Weight white noise channels with varying bandwidths by a constant ETC.
+
+    .. plot::
+
+        >>> import pyfar as pf
+        >>> import sparrowpy as sp
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> n_samples = 44100
+        >>> bandwidth = np.array([2000,1000,500])
+        >>> white_noise = pf.dsp.normalize(pf.signals.noise(n_samples,rms=1))
+        >>> white_noise.time = np.repeat(white_noise.time,bandwidth.shape[0],
+        ...                              axis=0)
+        >>> delta_t = 1/1000
+        >>> times = np.arange(0,white_noise.times[-1],delta_t)
+        >>> etc =pf.TimeData(data=np.ones((bandwidth.shape[0],times.shape[0])),
+        ...                  times=times)
+        >>> weighted_noise_bandwise = sp.dsp.weight_signal_by_etc(
+        ...     energy_time_curve=etc,
+        ...     signal=white_noise,
+        ...     bandwidth=bandwidth,
+        ... )
+        >>> ax=pf.plot.time(weighted_noise_bandwise,
+        ...              label=[f"{bandwidth[i]}Hz bandwidth" \
+        ...                             for i in range(bandwidth.shape[0])])
+        >>> ax.legend()
+        >>> ax.set_title("Bandwidth-scaled white noise")
+
+    Weight multiple white noise channels of equal bandwidth by a collection of
+     varied exponential decay ETCs.
 
     .. plot::
 
@@ -320,7 +349,7 @@ def weight_signal_by_etc(
         ...     decay[i,:] = np.exp(-3*i*times)
         >>> etc = pf.TimeData(data=decay,times=times)
         >>> weighted_noise_bandwise = sp.dsp.weight_signal_by_etc(
-        ...     etc=etc,
+        ...     energy_time_curve=etc,
         ...     signal=white_noise,
         ...     bandwidth=200*np.ones((n_channels,)),
         ... )
@@ -333,7 +362,7 @@ def weight_signal_by_etc(
         ...     "Multiple white noise channels weighted by independent ETCs"
         ...     )
 
-    """  # noqa: E501
+    """
     if bandwidth is None:
         bandwidth = signal.sampling_rate / 2
 
