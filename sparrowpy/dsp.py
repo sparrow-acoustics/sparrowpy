@@ -252,11 +252,11 @@ def weight_signal_by_etc(
 
     Parameters
     ----------
-    energy_time_curve: :py:class:`pyfar.TimeData'
+    energy_time_curve: :py:class:`pyfar.TimeData`
         Energy time curve of a sound propagation simulation of cshape
         ``(..., n_freq_bands)`` and broadcastable to ``signal``.
         The ETC entries must be equally spaced in time.
-    signal: :py:class:`pyfar.Signal'
+    signal: :py:class:`pyfar.Signal`
         signal to be weighted by the etc of cshape
         ``(..., n_freq_bands)`` and broadcastable to energy_time_curve.
     bandwidth: np.ndarray
@@ -266,7 +266,7 @@ def weight_signal_by_etc(
 
     Returns
     -------
-    weighted_signal : :py:class:`pyfar.Signal'
+    weighted_signal : :py:class:`pyfar.Signal`
         signal weighted by the etc. The cshape matches the cshape of the etc.
 
     References
