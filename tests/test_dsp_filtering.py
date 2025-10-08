@@ -48,9 +48,8 @@ def test_band_filtering(freq,frac,n_sigs):
                                 sampling_rate=signal_split_freqs.sampling_rate)
 
     band_sig,_ = sp.dsp.band_filter_signal(signal=signal_combined,
-                                         frequencies=freq,
-                                         num_fractions=frac,
-                                         )
+                                           frequencies=freq,
+                                           num_fractions=frac)
 
     assert band_sig.cshape==(signal_split_freqs.cshape)
 
@@ -92,7 +91,7 @@ def test_band_filtering_inputs():
                             num_fractions=-5)
 
 
-def test_closest_frac_octave_data_bandwidth():
+def test_closest_fractional_octave_data_bandwidth():
     num_fractions = 3
     frequency_range = (25, 12e3)
     _, fband_centers, cutoffs = pf.dsp.filter.fractional_octave_frequencies(
@@ -100,9 +99,11 @@ def test_closest_frac_octave_data_bandwidth():
         frequency_range=frequency_range,
         return_cutoff=True,
         )
-    bw, _ = sp.dsp._closest_frac_octave_data(
-        frequencies=fband_centers, num_fractions=num_fractions)
+    index_expected = np.arange(fband_centers.shape[0])
+    bw, index = sp.dsp._closest_fractional_octave_data(
+        frequencies=fband_centers[index_expected], num_fractions=num_fractions)
     npt.assert_allclose(bw, cutoffs[1]-cutoffs[0])
+    npt.assert_allclose(fband_centers[index_expected], fband_centers[index], )
 
 
 @pytest.mark.parametrize("freq",[
@@ -114,7 +115,7 @@ def test_closest_frac_octave_data_bandwidth():
 def test_closest_freq_band_idcs(freq):
     """Test freq band data estimation."""
 
-    _, idcs = sp.dsp._closest_frac_octave_data(frequencies=freq[1],
+    _, idcs = sp.dsp._closest_fractional_octave_data(frequencies=freq[1],
                                               num_fractions=freq[0])
 
     fband_centers,cutoffs = pf.dsp.filter.fractional_octave_frequencies(
@@ -133,27 +134,27 @@ def test_closest_freq_band_inputs():
     with pytest.raises(
             ValueError,
             match="Input frequencies must be greater than zero."):
-        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+        sp.dsp._closest_fractional_octave_data(frequencies=frequencies,
                                         num_fractions=1)
 
     frequencies = np.array([10,20000,-3])
     with pytest.raises(
             ValueError,
             match="Input frequencies must be greater than zero."):
-        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+        sp.dsp._closest_fractional_octave_data(frequencies=frequencies,
                                         num_fractions=1)
 
     frequencies=np.array([100,200,300])
     with pytest.raises(
             ValueError,
             match="Number of octave fractions must be greater than zero."):
-        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+        sp.dsp._closest_fractional_octave_data(frequencies=frequencies,
                                         num_fractions=0)
 
     with pytest.raises(
             ValueError,
             match="Number of octave fractions must be greater than zero."):
-        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+        sp.dsp._closest_fractional_octave_data(frequencies=frequencies,
                                         num_fractions=-5)
 
     frequencies=np.array([1000,1001])
@@ -162,5 +163,5 @@ def test_closest_freq_band_inputs():
                 "You may want to revise your input frequencies or " +
                 "increase the filter bandwidths.",
                 ):
-        sp.dsp._closest_frac_octave_data(frequencies=frequencies,
+        sp.dsp._closest_fractional_octave_data(frequencies=frequencies,
                                         num_fractions=1)
