@@ -147,13 +147,13 @@ def test_etc_weighting_broadspectrum(sr,etc_step):
     input_sig = pf.Signal(np.ones(((int(.1*sr)))),sampling_rate=sr)
     times = np.arange(0,.1,etc_step)
 
-    etc = pf.TimeData(np.ones_like(times), times)
+    etc = pf.TimeData(3*np.ones_like(times), times)
 
     output_sig = sp.dsp.weight_signal_by_etc(energy_time_curve=etc,
                                        signal=input_sig,
                                        )
 
-    npt.assert_allclose(output_sig.time,np.sqrt(1/(etc_step*sr))*np.ones_like(output_sig.time))
+    npt.assert_allclose(output_sig.time,np.sqrt(3/(etc_step*sr))*np.ones_like(output_sig.time))
 
 @pytest.mark.parametrize("n_receivers", [
     1,2,
