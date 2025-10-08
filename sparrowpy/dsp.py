@@ -246,9 +246,9 @@ def weight_signal_by_etc(
     where :math:`h_i` and :math:`\nu_i` represent respectively the
     weighted output signal and the input signal at a given time sample
     :math:`i`. :math:`g(k)=\lfloor k \cdot f_s \cdot \Delta t \rfloor`
-     represents the range of each
-    energy window with given length :math:`\Delta t` of the ETC entry
-    :math:`E(k)` with index :math:`k`. :math:`BW` is the bandwidth
+    represents the range of eachenergy window with given length
+    :math:`\Delta t` of the ETC entry :math:`E(k)` with index :math:`k`.
+    :math:`BW` is the bandwidth
     of the energy time curve.
 
     Parameters
@@ -325,11 +325,12 @@ def weight_signal_by_etc(
         ... )
         >>> ax=pf.plot.time(weighted_noise_bandwise,
         ...              label=[f"{bandwidth[i]}Hz bandwidth" \
-        ...                             for i in range(bandwidth.shape[0])])
+        ...                             for i in range(bandwidth.shape[0])],
+        ...              dB=True)
         >>> ax.legend()
         >>> ax.set_title("Bandwidth-scaled white noise")
 
-    Weight noise channels of equal bandwidth by varied exponential decay ETCs.
+    Weight white noise of equal bandwidth by varied exponential decay ETCs.
 
     .. plot::
 
