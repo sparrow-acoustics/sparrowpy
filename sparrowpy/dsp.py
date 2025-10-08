@@ -394,7 +394,7 @@ def band_filter_signal(signal:pf.Signal,
     frequency_range = (np.min(frequencies)/2,
                        np.max(frequencies)*2)
 
-    bandwidth,idcs = _closest_frac_octave_data(frequencies=frequencies,
+    bandwidth,idcs = _closest_fractional_octave_data(frequencies=frequencies,
                                          num_fractions=num_fractions,
                                          frequency_range=frequency_range)
 
@@ -412,11 +412,11 @@ def band_filter_signal(signal:pf.Signal,
     return band_filtered_signal, bandwidth
 
 
-def _closest_frac_octave_data(frequencies:np.ndarray,
+def _closest_fractional_octave_data(frequencies:np.ndarray,
                               num_fractions:int,
                               frequency_range=(20,20000)):
     """
-    Determine frac. octave filter data of custom input frequencies.
+    Determine fractional octave filter data of custom input frequencies.
 
     Given an array of arbitrary frequencies, finds closest fractional
     octave filters and returns corresponding bandwidth and a list of indices.
