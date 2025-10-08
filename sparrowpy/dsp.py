@@ -241,12 +241,11 @@ def weight_signal_by_etc(
 
     .. math::
         h_i = \nu_i \cdot \sqrt{\frac{E_n(k)}{\sum^{g(k)}_{g(k-1)+1} \nu_i^2}}
-    ... \cdot \sqrt{\frac{BW}{f_s/2}}
+        \cdot \sqrt{\frac{BW}{f_s/2}}
 
     where :math:`h_i` and :math:`\nu_i` represent respectively the
     weighted output signal and the input signal at a given time sample
-    :math:`i`.
-    :math:`g(k)=floor(k \cdot f_s \cdot \Delta t)` represents the range of each
+    :math:`i`. :math:`g(k)=\lfloor k \cdot f_s \cdot \Delta t \rfloor` represents the range of each
     energy window with given length :math:`\Delta t` of the ETC entry
     :math:`E(k)` with index :math:`k`. :math:`BW` is the bandwidth
     of the energy time curve.
@@ -292,7 +291,7 @@ def weight_signal_by_etc(
         >>> times = np.arange(0,white_noise.times[-1],delta_t)
         >>> decay = np.exp(-4*times)
         >>> etc = pf.TimeData(data=decay,times=times)
-        >>> weighted_noise = sp.dsp.weight_filters_by_etc(etc=etc,
+        >>> weighted_noise = sp.dsp.weight_signal_by_etc(etc=etc,
         ...                                               signal=white_noise)
         >>> ax=pf.plot.time(white_noise,label="input signal",dB=True)
         >>> ax=pf.plot.time(weighted_noise,label="weighted signal",
@@ -320,7 +319,7 @@ def weight_signal_by_etc(
         >>> for i in range(n_channels):
         ...     decay[i,:] = np.exp(-3*i*times)
         >>> etc = pf.TimeData(data=decay,times=times)
-        >>> weighted_noise_bandwise = sp.dsp.weight_filters_by_etc(
+        >>> weighted_noise_bandwise = sp.dsp.weight_signal_by_etc(
         ...     etc=etc,
         ...     signal=white_noise,
         ...     bandwidth=200*np.ones((n_channels,)),
@@ -334,7 +333,7 @@ def weight_signal_by_etc(
         ...     "Multiple white noise channels weighted by independent ETCs"
         ...     )
 
-    """
+    """  # noqa: E501
     if bandwidth is None:
         bandwidth = signal.sampling_rate / 2
 
