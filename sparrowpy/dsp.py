@@ -79,8 +79,8 @@ def reflection_density_room(
         ...         label=f"V={v} m$^3$ -> $t_0={t_0*1e3:.1f}$ ms")
         >>> ax.legend()
         >>> ax.set_title("Reflection density")
-
     """
+
     if speed_of_sound is None:
         speed_of_sound = 343.2
 
@@ -228,44 +228,42 @@ def dirac_sequence(
 
     return dirac_sequence
 
-def weight_filters_by_etc(
-    etc: pf.TimeData,
+def weight_signal_by_etc(
+    energy_time_curve: pf.TimeData,
     signal: pf.Signal,
     bandwidth=None,
 ) -> pf.Signal:
     r"""
-    Generate the frequency-wise impulse response for a given ETC.
+    Weight a signal with a given energy time curve.
 
-    The frequency-band-wise filters are weighed by the respective
-    ETC over time after Chapter 5.3.4 of [#]_. The weighting is performed
-    after the following equation.
+    The signals are weighed by the respective energy time curve
+    over time after Chapter 5.3.4 of [#]_:
 
     .. math::
         h_i = \nu_i \cdot \sqrt{\frac{E_n(k)}{\sum^{g(k)}_{g(k-1)+1} \nu_i^2}}
     ... \cdot \sqrt{\frac{BW}{f_s/2}}
 
     where :math:`h_i` and :math:`\nu_i` represent respectively the
-    weighted output signal and the input signal's at a given time sample
+    weighted output signal and the input signal at a given time sample
     :math:`i`.
     :math:`g(k)=floor(k \cdot f_s \cdot \Delta t)` represents the range of each
     energy window with given length :math:`\Delta t` of the ETC entry
     :math:`E(k)` with index :math:`k`. :math:`BW` is the bandwidth
-    of the energy time curve, which is set to half the sampling rate
-    by default.
+    of the energy time curve.
 
     Parameters
     ----------
-    etc: :py:class:`pyfar.TimeData'
-        ETC of a sound propagation simulation of cshape
-        ``(..., n_freq_bands)``.
-        *Note:* The ETC entries must be equally spaced in time.
+    energy_time_curve: :py:class:`pyfar.TimeData'
+        Energy time curve of a sound propagation simulation of cshape
+        ``(..., n_freq_bands)`` and broadcastable to ``signal``.
+        The ETC entries must be equally spaced in time.
     signal: :py:class:`pyfar.Signal'
         signal to be weighted by the etc of cshape
         ``(..., n_freq_bands)``.
     bandwidth: np.ndarray
-        Bandwidth array corresponding to the noise filter channels in Hz.
-        If None, signal will be processed as full spectrum
-        ``sampling_rate/2``.
+        Bandwidth for the frequency band in Hz of shape
+        ``(n_freq_bands)``. By default, signal will be processed
+        as full spectrum ``sampling_rate/2``.
 
     Returns
     -------
@@ -278,23 +276,6 @@ def weight_filters_by_etc(
            interactive virtual environments,” PhD Thesis, Logos-Verlag,
            Berlin, 2011. [Online].
            Available: https://publications.rwth-aachen.de/record/50580
-
-    .. note::
-        The weighted signal output results from a broadcast between the
-        input signal, the input ETC, and the bandwidth.
-        Thus, it's important to ensure that the right-most channel dimensions
-        of etc and signal are compatible with eachother and the bandwidths.
-        That is, ensuring etc.cshape=(...,bandwidth.shape) and
-        signal.cshape=(...,bandwidth.shape)
-
-    .. note::
-        The input of this function follows the sparrowpy convention for etcs,
-        where the dimension which represents the different frequency bands is
-        the right-most dimension of etc.cshape=(..., n_frequency_bands).
-        The input signal must also reflect this convention.
-        This is the opposite from the pyfar convention for fractional octave
-        band filtered signals, where
-        filtered_signal.cshape=(n_frequency_bands,...).
 
     Examples
     --------
@@ -313,8 +294,9 @@ def weight_filters_by_etc(
         >>> etc = pf.TimeData(data=decay,times=times)
         >>> weighted_noise = sp.dsp.weight_filters_by_etc(etc=etc,
         ...                                               signal=white_noise)
-        >>> ax=pf.plot.time(white_noise,label="input signal")
-        >>> ax=pf.plot.time(weighted_noise,label="weighted signal",ax=ax)
+        >>> ax=pf.plot.time(white_noise,label="input signal",dB=True)
+        >>> ax=pf.plot.time(weighted_noise,label="weighted signal",
+        ...                 ax=ax,dB=True)
         >>> ax.set_title("Signal weighting by exponential decaying ETC")
 
 
@@ -369,37 +351,37 @@ def weight_filters_by_etc(
                 "match signal bands "
                 f"{signal.cshape[-bandwidth.ndim:]}",
             )
-        if bandwidth.shape != etc.cshape[(-bandwidth.ndim):]:
+        if bandwidth.shape != energy_time_curve.cshape[(-bandwidth.ndim):]:
             raise ValueError(
                 f"bandwidth shape {bandwidth.shape} does not "
                 "match etc shape "
-                f"{etc.cshape[-bandwidth.ndim:]}",
+                f"{energy_time_curve.cshape[-bandwidth.ndim:]}",
             )
 
-    if type(etc) is not pf.TimeData:
+    if type(energy_time_curve) is not pf.TimeData:
         raise ValueError("ETC must be a pyfar.TimeData object.")
 
     if type(signal) is not pf.Signal:
         raise ValueError("Input signal must be a pyfar.Signal object.")
 
-    if not (np.abs(etc.times[1:]-etc.times[:-1] -
-                   etc.times[1]-etc.times[0]) < 1e-12 ).all():
+    if not (np.abs(energy_time_curve.times[1:]-energy_time_curve.times[:-1] -
+                   energy_time_curve.times[1]-energy_time_curve.times[0]) < 1e-12 ).all():
         raise ValueError("ETC entries must be equally spaced in time.")
 
-    rs_factor = signal.sampling_rate*(etc.times[1]-etc.times[0])
+    rs_factor = signal.sampling_rate*(energy_time_curve.times[1]-energy_time_curve.times[0])
 
-    weighted_signal_arr = np.zeros(etc.cshape +
+    weighted_signal_arr = np.zeros(energy_time_curve.cshape +
                               (signal.n_samples,))
 
-    for sample_i in range(etc.n_samples):
+    for sample_i in range(energy_time_curve.n_samples):
         lower = int(sample_i * rs_factor)
         upper = int((sample_i+1) * rs_factor)
 
         signal_sec = signal.time[...,lower:upper]
         div = np.sum(signal_sec**2,axis=-1)
 
-        scale = np.divide(etc.time[...,sample_i],div,
-                              out=np.zeros_like(etc.time[...,sample_i]),
+        scale = np.divide(energy_time_curve.time[...,sample_i],div,
+                              out=np.zeros_like(energy_time_curve.time[...,sample_i]),
                               where=div!=0)
 
         etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
