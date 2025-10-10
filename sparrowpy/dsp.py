@@ -344,7 +344,8 @@ def band_filter_signal(signal:pf.Signal,
                        frequencies:np.ndarray,
                        num_fractions:int,
                        order=4):
-    r"""Band filter input signal and return corresponding bandwidths.
+    r"""Fractional octave band filter input signal and
+    return the respective frequency bandwidths.
 
     This method filters an input signal into fractional octave bands
     with Butterworth filtering.
@@ -377,7 +378,7 @@ def band_filter_signal(signal:pf.Signal,
         Band-filtered signal of cshape ``(signal.cshape + (len(freqs))``
     bandwidth: :py:class:`np.ndarray`
         Array of bandwidth values in Hz of the fractional octave bands
-        corresponding to the input frequencies of shape (n_frequencies).
+        corresponding to the input frequencies of shape ``(n_frequencies)``.
     """
     if (frequencies<=0).any():
         raise ValueError(
