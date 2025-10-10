@@ -246,7 +246,7 @@ def weight_signal_by_etc(
     where :math:`h_i` and :math:`\nu_i` represent respectively the
     weighted output signal and the input signal at a given time sample
     :math:`i`. :math:`g(k)=\lfloor k \cdot f_s \cdot \Delta t \rfloor`
-    represents the range of eachenergy window with given length
+    represents the range of each energy window with given length
     :math:`\Delta t` of the ETC entry :math:`E(k)` with index :math:`k`.
     :math:`BW` is the bandwidth
     of the energy time curve.
@@ -268,7 +268,8 @@ def weight_signal_by_etc(
     Returns
     -------
     weighted_signal : :py:class:`pyfar.Signal`
-        signal weighted by the etc. The cshape matches the cshape of the etc.
+        signal weighted by the energy_time_curve.
+        The cshape matches the cshape of the etc.
 
     References
     ----------
