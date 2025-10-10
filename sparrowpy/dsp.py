@@ -360,8 +360,8 @@ def band_filter_signal(signal:pf.Signal,
     signal: :py:class:`pyfar.Signal`
         Input broad-spectrum signal.
     frequencies: :py:class:`np.ndarray`
-        Frequencies in which to filter the signal of shape (n_frequencies).
-        In Hz. The user may input an arbitrary array of frequencies in
+        Frequencies in which to filter the signal of shape (n_frequencies)
+        in Hz. The user may input an arbitrary array of frequencies in
         which to filter the signal. The closest fractional octave bands
         to the input frequencies will be returned in the same order.
     num_fractions: int
@@ -432,7 +432,7 @@ def _closest_fractional_octave_data(frequencies:np.ndarray,
         octave bands and ``3`` to third octave bands.
         All positive integers are allowed.
     frequency_range: tuple (2,)
-        lower and upper bounds of the input frequency range.
+        Lower and upper bounds of the input frequency range.
         Note: for certain input frequencies, this range must
         include a tolerance for the lower and upper bounds. Otherwise,
         the output frequency band data may be incorrect.
