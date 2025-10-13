@@ -18,6 +18,7 @@ from .classes.RadiosityKang import (
 from . import testing
 from . import form_factor
 from . import brdf
+from . import dsp
 from . import utils
 
 
@@ -32,5 +33,6 @@ __all__ = [
     'form_factor',
     'testing',
     'brdf',
+    'dsp',
     'utils',
 ]
