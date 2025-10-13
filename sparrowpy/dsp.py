@@ -2,6 +2,7 @@
 """Module for filter generation and signal processing in sparrowpy."""
 import numpy as np
 import pyfar as pf
+import warnings
 
 def reflection_density_room(
         room_volume, n_samples, speed_of_sound=None,
@@ -20,8 +21,7 @@ def reflection_density_room(
     speed of sound in the room. The reflection density :math:`\mu`
     is calculated based on the following equation:
 
-    .. math::
-        \mu = \min{\left(\frac{4 \pi c^3 \cdot t^2}{V} , \mu_{max}\right)}
+    .. math:: \mu = \min{\left(\frac{4 \pi c^3 \cdot t^2}{V}, \mu_{max}\right)}
 
     with :math:`t` being the time vector in seconds based on ``sampling_rate``
     and ``n_samples`` and :math:`\mu_{max}` being the
@@ -79,8 +79,8 @@ def reflection_density_room(
         ...         label=f"V={v} m$^3$ -> $t_0={t_0*1e3:.1f}$ ms")
         >>> ax.legend()
         >>> ax.set_title("Reflection density")
-    """
 
+    """
     if speed_of_sound is None:
         speed_of_sound = 343.2
 
@@ -538,3 +538,157 @@ def energy_time_curve_from_impulse_response(
             signal.time[..., lower:upper]**2, axis=-1) * bw_factor
 
     return etc
+
+def band_filter_signal(signal:pf.Signal,
+                       frequencies:np.ndarray,
+                       num_fractions:int,
+                       order=4):
+    r"""Fractional octave band filter input signal and
+    return the respective frequency bandwidths.
+
+    This method filters an input signal into fractional octave bands
+    with Butterworth filtering.
+
+    .. note::
+        This function uses the pyfar methods
+        :py:func:`pyfar.dsp.filter.fractional_octave_bands`
+        and :py:func:`pyfar.dsp.filter.fractional_octave_frequencies`.
+
+
+    Parameters
+    ----------
+    signal: :py:class:`pyfar.Signal`
+        Input broad-spectrum signal.
+    frequencies: :py:class:`np.ndarray`
+        Frequencies in which to filter the signal of shape (n_frequencies)
+        in Hz. The user may input an arbitrary array of frequencies in
+        which to filter the signal. The closest fractional octave bands
+        to the input frequencies will be returned in the same order.
+    num_fractions: int
+        The number of bands an octave is divided into. E.g., ``1`` refers to
+        octave bands and ``3`` to third octave bands.
+        All positive integers are allowed.
+    order: int, optional
+        Butterworth filter order for the signal filtering. By default 4.
+
+    Returns
+    -------
+    band_filtered_signal: :py:class:`pyfar.Signal`
+        Band-filtered signal of cshape ``(signal.cshape + (len(freqs))``
+    bandwidth: :py:class:`np.ndarray`
+        Array of bandwidth values in Hz of the fractional octave bands
+        corresponding to the input frequencies of shape ``(n_frequencies)``.
+    """
+    if (frequencies<=0).any():
+        raise ValueError(
+            "Input frequencies must be greater than zero.",
+        )
+    if len(frequencies.shape)!=1:
+        raise ValueError(
+            "Input frequencies must be a one-dimensional array.",
+        )
+    if num_fractions<=0:
+        raise ValueError(
+            "Number of octave fractions must be greater than zero.")
+
+    frequency_range = (np.min(frequencies)/2,
+                       np.max(frequencies)*2)
+
+    bandwidth,idcs = _closest_fractional_octave_data(frequencies=frequencies,
+                                         num_fractions=num_fractions,
+                                         frequency_range=frequency_range)
+
+    band_filtered_signal = pf.dsp.filter.fractional_octave_bands(
+        signal=signal,
+        num_fractions=num_fractions,
+        order=order,
+        frequency_range=frequency_range,
+    )
+
+    band_filtered_signal.time = np.swapaxes(
+        band_filtered_signal.time[idcs],0,1,
+        )
+
+    return band_filtered_signal, bandwidth
+
+
+def _closest_fractional_octave_data(frequencies:np.ndarray,
+                              num_fractions:int,
+                              frequency_range=(20,20000)):
+    """
+    Determine fractional octave filter data of custom input frequencies.
+
+    Given an array of arbitrary frequencies, finds closest fractional
+    octave filters and returns corresponding bandwidth and a list of indices.
+    The indices map the input frequencies to the corresponding fractional
+    octave filters from the full listening spectrum.
+
+    Parameters
+    ----------
+    frequencies: np.ndarray
+        Input frequency values in Hz.
+    num_fractions: int
+        The number of bands an octave is divided into. E.g., ``1`` refers to
+        octave bands and ``3`` to third octave bands.
+        All positive integers are allowed.
+    frequency_range: tuple (2,)
+        Lower and upper bounds of the input frequency range.
+        Note: for certain input frequencies, this range must
+        include a tolerance for the lower and upper bounds. Otherwise,
+        the output frequency band data may be incorrect.
+
+    Returns
+    -------
+    bandwidths: np.ndarray
+        Bandwidths of the output frequency bands in Hz.
+    idcs: np.ndarray
+        list of indices of the fractional octave bands to which the input
+        frequencies belong.
+    """
+    frequencies = np.asarray(frequencies)
+    if (frequencies<=0).any():
+        raise ValueError(
+            "Input frequencies must be greater than zero.",
+        )
+    if ((frequency_range[0]<=0) or (frequency_range[1]<=0)):
+        raise ValueError(
+           "Frequency range limits must be greater than zero.",
+        )
+    if (frequency_range[0] >= frequency_range[1]):
+        raise ValueError(
+           "Lower bound of frequency range must be the first entry.",
+        )
+    if ((np.min(frequencies)<frequency_range[0])
+        or (np.max(frequencies)>frequency_range[1])):
+        ind=((frequencies<frequency_range[0]) +
+             (frequencies>frequency_range[1]))
+        raise ValueError(
+            f"Input frequencies {frequencies[ind]} outside of input"+
+            f" frequency range {frequency_range}.",
+        )
+    if num_fractions<=0:
+        raise ValueError(
+            "Number of octave fractions must be greater than zero.")
+
+    _,_,freq_cutoffs = pf.dsp.filter.fractional_octave_frequencies(
+        num_fractions=num_fractions,
+        return_cutoff=True,
+        frequency_range=frequency_range,
+        )
+
+    idcs = np.empty_like(frequencies,dtype=int)
+
+    for i,f in enumerate(frequencies):
+        idcs[i] = np.where((freq_cutoffs[0]<f)*(freq_cutoffs[1]>f))[0][0]
+
+    if np.unique(idcs).shape[0]<idcs.shape[0]:
+            warnings.warn(
+                "Multiple input frequencies in the same freq. band.\n" +
+                "You may want to revise your input frequencies or " +
+                "increase the filter bandwidths.",
+                stacklevel=1,
+            )
+
+    bandwidths = freq_cutoffs[1][idcs]-freq_cutoffs[0][idcs]
+
+    return bandwidths,idcs
