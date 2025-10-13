@@ -83,6 +83,9 @@ def test_etc_from_ir_filtered_noise():
     bandwidth = cutoff[1] - cutoff[0]
     filtered_noise = pf.dsp.filter.fractional_octave_bands(
         white_noise, num_fractions=1, frequency_range=(1e3, 22e3))
+    filtered_noise.time = np.swapaxes(filtered_noise.time,
+                                      0,
+                                      filtered_noise.cdim-1)
     etc = dsp.energy_time_curve_from_impulse_response(
         filtered_noise, delta_time=0.01, bandwidth=bandwidth)
     assert isinstance(etc, pf.TimeData)
