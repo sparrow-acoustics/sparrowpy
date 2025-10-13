@@ -446,7 +446,7 @@ def energy_time_curve_from_impulse_response(
     ----------
     signal : pyfar.Signal
         The impulse responses from which the energy time curve is
-        calculated. The cshape should be ``(n_bands, ...)``.
+        calculated. The cshape should be ``(..., n_bands)``.
     delta_time : float, optional
         The time resolution of the energy time curve,
         by default ``0.01`` seconds.
