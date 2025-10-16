@@ -188,15 +188,13 @@ def test_etc_weighting_compare_input_and_output_etcs(n_receivers,n_freqs):
 
     assert(sig.cshape==etc.cshape)
 
-    sig.time=np.swapaxes(sig.time,0,1)
-
     etc_from_sig = sp.dsp.energy_time_curve_from_impulse_response(
         signal=sig,
         delta_time=delta,
         bandwidth=bandwidths,
     )
 
-    npt.assert_allclose(etc.time,np.swapaxes(etc_from_sig.time,0,1))
+    npt.assert_allclose(etc.time,etc_from_sig.time)
 
 def test_etc_weighting_inputs():
     """Test that inputs respect formatting."""
