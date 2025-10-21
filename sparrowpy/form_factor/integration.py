@@ -1081,6 +1081,109 @@ def point_patch_factor_montecarlo_directional(point: np.ndarray,
     
     return energy_directional, src_indices_container
 
+
+def point_patch_dblquad_directional(point: np.ndarray,
+                                              patch_center: np.ndarray,
+                                             patch_points: np.ndarray,
+                                             patch_normal: np.ndarray,
+                                             wall_id: np.ndarray,
+                                             brdf_incoming_directions: np.ndarray,
+                                             brdf_outgoing_directions: np.ndarray,
+                                             scattering: np.ndarray,
+                                             scattering_index: np.ndarray,
+                                             n_bins: int,
+                                             N_sample: int,
+                                             mode: str = 'source'):
+    N_sample = None  # not used in dblquad
+    epsrel = 1e-1
+    epsabs = 1e-1
+    vi = np.array([s.cartesian for s in brdf_incoming_directions])
+    vo = np.array([s.cartesian for s in brdf_outgoing_directions])
+    n_directions_in = vi.shape[1]
+    n_directions_out = vo.shape[1]
+    
+
+    energy_full = np.zeros((n_directions_out, n_directions_in, n_bins), dtype=np.float64)
+    #src_indices_container = np.full(n_directions_out*N_sample,-1, dtype=np.int32)
+    scattering = scattering[scattering_index[wall_id], :, :]
+    
+    # Patch geometry
+    pts = patch_points  # (4,3)
+    p0 = pts[0]
+    edge_u = pts[1] - p0
+    edge_v = pts[3] - p0
+    dS = np.linalg.norm(np.cross(edge_u, edge_v))
+
+    # Source area for normalization
+    if mode == 'receiver':
+        source_area = geom._polygon_area(patch_points)
+        scattering = np.ones_like(scattering) / np.pi # set to 1/pi for all directions for purely geometric factor
+        brdf_direction = brdf_outgoing_directions[0]
+    elif mode == 'source':
+        source_area = 4
+        brdf_direction = brdf_incoming_directions[0]
+    seen_idx = [set() for _ in range(n_directions_out)]  # one set per m
+
+    def integrand(v, u, m, target_idx, point, p0, edge_u, edge_v, patch_normal, 
+                  scattering, brdf_direction, dS):
+        # Bilinear interpolation to get point on patch
+        qpt = p0 + u*edge_u + v*edge_v
+        
+        # Vector from patch to point
+        vec = point - qpt
+        dist = np.linalg.norm(vec)
+        
+        if dist < 1e-10:  # avoid division by zero
+            return 0.0
+        
+        dir_vec = vec / dist
+
+        idx = brdf_direction.find_nearest(pf.Coordinates.from_cartesian(dir_vec[0], dir_vec[1], dir_vec[2]))[0][0]
+        # Jacobian for area element
+        if mode == 'receiver':
+            seen_idx[m].add(idx)  # side effect: accumulate unique indices for this m
+
+        if idx != target_idx:
+            return 0.0
+        cos_theta_i = np.dot(patch_normal, dir_vec)
+        geom_factor = cos_theta_i /dist**2
+        scattering_factor = scattering[idx, m]
+        
+
+        return  scattering_factor * geom_factor * dS
+
+    for m in range(n_directions_out):
+            contrib = np.zeros((n_directions_in, n_bins), dtype=np.float64)
+            
+            for target_idx in range(n_directions_in):
+                # Integrate over unit square [0,1] x [0,1]
+                integral_value, error = dblquad(
+                    integrand,
+                    0.0, 1.0,                      # u limits
+                    lambda u: 0.0, lambda u: 1.0,  # v limits  
+                    args=(m, target_idx, point, p0, edge_u, edge_v, patch_normal, 
+                        scattering, brdf_direction, dS),
+                    epsabs=epsabs, epsrel=epsrel
+                )
+                
+                # Store result (broadcast across frequency bins)
+                contrib[target_idx, :] = integral_value
+            
+            # Normalize by source area
+            energy_full[m, :, :] = contrib / source_area
+        
+        # Collapse over incoming directions
+    energy_directional = energy_full.sum(axis=1)
+        
+        #No src_indices_container in dblquad version, so need to use append (which slows things down, possibly)
+    if mode ==  'receiver':
+        unique_idx_m = np.array(sorted(seen_idx[m]), dtype=np.int32)
+    else:   
+        unique_idx_m = np.array([], dtype=np.int32)
+
+    return energy_directional, unique_idx_m
+
+
 if numba is not None:
     pt_solution = numba.njit(parallel=True)(pt_solution)
     nusselt_integration = numba.njit(parallel=False)(nusselt_integration)

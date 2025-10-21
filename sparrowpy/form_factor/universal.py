@@ -295,8 +295,22 @@ def _source2patch_energy_universal_BRDF_ultimate(source_position: np.ndarray, pa
                                n_bins,
                                integration_sampling,
                                mode="source")
-            elif integration_method == "montecarlo":
+            if integration_method == "montecarlo":
                 energy_0_directivity,c = integration.point_patch_factor_montecarlo_directional(
+                                source_pos,
+                                receiver_pos,
+                               receiver_pts,
+                               patch_normal,
+                               wall_id,
+                               brdf_incoming_directions,
+                               brdf_outgoing_directions,
+                               scattering,
+                               scattering_index,
+                               n_bins,
+                               integration_sampling,
+                               mode="source",)
+            elif integration_method == "dblquad":
+                energy_0_directivity,c = integration.point_patch_dblquad_directional(
                                 source_pos,
                                 receiver_pos,
                                receiver_pts,
@@ -392,8 +406,23 @@ patches_center: np.ndarray,
                             n_bins,
                             integration_sampling,
                             mode="receiver")
-            elif integration_method == "montecarlo":
+            if integration_method == "montecarlo":
                 receiver_factor, indices = integration.point_patch_factor_montecarlo_directional(
+                            receiver_pos,
+                            patch_center,
+                            patch_pts,
+                            patch_normal,
+                            wall_id,
+                            brdf_incoming_directions,
+                            brdf_outgoing_directions,
+                            scattering,
+                            scattering_index,
+                            n_bins,
+                            integration_sampling,
+                            mode="receiver")
+            
+            elif integration_method == "dblquad":
+                receiver_factor, indices = integration.point_patch_dblquad_directional(
                             receiver_pos,
                             patch_center,
                             patch_pts,

@@ -577,7 +577,7 @@ class DirectionalRadiosityFast():
             [s.cartesian for s in self._brdf_incoming_directions])
         vo = np.array(
             [s.cartesian for s in self._brdf_outgoing_directions])
-        brdf = np.array(self._brdf)/np.pi
+        brdf = np.array(self._brdf)/np.pi #remove the normalisation factor here that was applied earlier
         brdf_index = self._brdf_index
         patches_center = self.patches_center
         source_visibility = geometry._check_point2patch_visibility(
