@@ -121,3 +121,8 @@ examples/radiosity_fast.far
 
 # ignore temporary blender files
 *.blend1
+supp_materials.zip
+examples/*
+!examples/*.ipynb
+!examples/resources/
+
