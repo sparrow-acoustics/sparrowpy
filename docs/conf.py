@@ -109,9 +109,9 @@ intersphinx_mapping = {
 html_theme = 'pydata_sphinx_theme'
 html_static_path = ['_static']
 html_css_files = ['css/custom.css']
-html_logo = '_static/logo.png'
+html_logo = '_static/logo_nover.svg'
 html_title = "sparrowpy"
-html_favicon = '_static/logo.png'
+html_favicon = '_static/logo_nover.svg'
 
 # -- HTML theme options
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html
