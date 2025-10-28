@@ -4,8 +4,8 @@ import pyfar as pf
 import numpy as np
 import os
 import json
-import spharpy as sph
 from tqdm import tqdm
+import sys
 
 
 def run(mono=True,
@@ -15,11 +15,11 @@ def run(mono=True,
                               "synthesis","lib") ):
 
     # %%  simulation settings
-    print("\033[93m preparing simulation...\033[00m", end=" ")
+    print("\n\033[93m preparing simulation...\033[00m", end=" ")
     etc_time_resolution = 20e-3
     speed_of_sound = 343
-    max_refl = 10
-    brdf_order = 6
+    max_refl = 2
+    brdf_order = 10
     freqbands = pf.dsp.filter.fractional_octave_frequencies(num_fractions=1) # octave bands
     frequencies = freqbands[0]
 
@@ -95,10 +95,10 @@ def run(mono=True,
         trajectory_data["v_attenuation"],
         frequencies))
 
-    print("\033[92m Done!\033[00m", end=" ")
+    print("\033[92m Done!\033[00m")
 
     # %% bake geometry or load baked geometry
-    print("\033[93m baking geometry...\033[00m", end=" ")
+    print("\n\033[93m baking geometry...\033[00m", end=" ")
     baked_filename=os.path.join(base_dir,"baked_"+geom_id+".far")
     if not os.path.exists(baked_filename):
         radi.bake_geometry()
@@ -106,10 +106,10 @@ def run(mono=True,
     else:
         radi = sp.DirectionalRadiosityFast.from_read(baked_filename)
 
-    print("\033[92m Done!\033[00m", end=" ")
+    print("\033[92m Done!\033[00m")
 
     # %% energy exchange
-    print("\033[93m exchanging energy...\033[00m", end=" ")
+    print("\033[93m exchanging energy...\033[00m", end="\n")
     if mono:
         radi.init_source_energy(source)
 
@@ -152,7 +152,23 @@ def run(mono=True,
                         etc=etc,
                         compress=True)
 
-    print("\033[92m Done!\033[00m", end=" ")
+    print("\033[92m Done!\033[00m")
 
 if __name__ == "__main__":
-    run(mono=False)
+
+    args = sys.argv[1:]
+
+    test = True
+    mono = True
+    base_dir=os.path.join(os.getcwd(),"..","..",
+                          "phd","listening experiment",
+                          "synthesis","lib")
+
+    if len(args)>0:
+        test = bool(int(args[0]))
+        if len(args)>1:
+            mono = bool(int(args[1]))
+            if len(args)>2:
+                base_dir=args[2]
+
+    run(mono=mono, test=test, base_dir=base_dir)
