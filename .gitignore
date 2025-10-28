@@ -123,6 +123,6 @@ examples/radiosity_fast.far
 *.blend1
 supp_materials.zip
 examples/*
-!examples/*.ipynb
+!examples/*.py
 !examples/resources/
 
