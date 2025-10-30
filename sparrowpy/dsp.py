@@ -415,7 +415,7 @@ def weight_signal_by_etc(
                                                 (upper-lower)/rs_factor,
                           div,
                           out=np.zeros_like(energy_time_curve.time[...,sample_i]),
-                          where=div!=0)
+                          where=div>1e-300)
 
         etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
                                               (signal.sampling_rate/2))
