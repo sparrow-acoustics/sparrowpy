@@ -146,13 +146,26 @@ def run(mono=True,
 
             etc = radi.collect_energy_receiver_patchwise(receivers=receiver)
 
+            patch_filter = filter_patches(etc)
+
             etcname=geom_id+"_patchwise_pos"+str(srcID)+".far"
 
             pf.io.write(os.path.join(base_dir,"etcs",etcname),
-                        etc=etc,
+                        etc=etc[0,patch_filter],
+                        patch_filter=patch_filter,
                         compress=True)
 
     print("\033[92m Done!\033[00m")
+
+def filter_patches(etc):
+
+    patch_filter = []
+
+    for patchID in range(etc.cshape[1]):
+        if not (etc[0,patchID].time==0).all():
+            patch_filter.append(patchID)
+
+    return np.array(patch_filter)
 
 if __name__ == "__main__":
 
