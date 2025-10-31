@@ -39,21 +39,34 @@ def run(test=True,
     refl_density = pf.TimeData(data = sampling_rate/2*np.ones_like(etc.times),
                                times=etc.times)
 
-    noise = sp.dsp.dirac_sequence(n_samples=int(duration*sampling_rate),
-                                  reflection_density=refl_density,
-                                  sampling_rate=sampling_rate)
+    noisefilename = os.path.join(base_dir,"filters","noise.far")
 
-    noise_filtered,bw = sp.dsp.band_filter_signal(signal=noise,
-                                               frequencies=np.array(pf.dsp.filter.fractional_octave_frequencies()[0]),
-                                               num_fractions=1)
+    if not os.path.exists(noisefilename):
 
-    out_filter = pf.Signal(data=np.zeros_like(noise.time),
-                           sampling_rate=noise.sampling_rate)
+        noise = sp.dsp.dirac_sequence(n_samples=int(duration*sampling_rate),
+                                    reflection_density=refl_density,
+                                    sampling_rate=sampling_rate)
+
+        noise_filtered,bw = sp.dsp.band_filter_signal(signal=noise,
+                                                frequencies=np.array(pf.dsp.filter.fractional_octave_frequencies()[0]),
+                                                num_fractions=1)
+
+        pf.io.write(filename=noisefilename,
+                    noise_filtered=noise_filtered,
+                    bw=bw)
+    else:
+
+        noisefile = pf.io.read(noisefilename)
+        noise_filtered = noisefile["noise_filtered"]
+        bw = noisefile["bw"]
+
+    out_filter = pf.Signal(data=np.zeros_like(noise_filtered[0].time),
+                           sampling_rate=noise_filtered.sampling_rate)
     print("\033[92m Done!\033[00m")
 
 
     print("\n\033[93m loading and filtering hrirs...\033[00m", end=" ")
-    hrir,hrir_coords,_=pf.io.read_sofa("C:\\Users\\jotag\\Documents\\phd\\listening experiment\\synthesis\\lib\\FABIAN_HRIR_measured_HATO_0.sofa")
+    hrir,hrir_coords,_=pf.io.read_sofa(os.path.join(base_dir,"FABIAN_HRIR_measured_HATO_0.sofa"))
     hrir_ids = hrirs_per_patch(coords=hrir_coords,
                                patch_positions=radi.patches_center[patch_filter,:])
 
@@ -62,7 +75,7 @@ def run(test=True,
 
     print("\n\033[93m convolving position-wise filters with hrirs...\033[00m",
           end="\n")
-    for i, etc_path in tqdm(enumerate(etcfiles)):
+    for i, etc_path in enumerate(tqdm(etcfiles)):
 
         etc = pf.io.read(etc_path)["etc"]
 
@@ -74,8 +87,10 @@ def run(test=True,
 
         out_filter = pf.dsp.convolve(signal1=filter_patchwise, signal2=hrir)
 
+        out_filter.time = np.sum(out_filter.time, axis=0)
+
         pf.io.write(os.path.join(base_dir,"filters",geom_id+"_filter_"+str(i)+".far"),
-                    bin_filter=out_filter)
+                    bin_filter=out_filter,compress=False)
     print("\033[92m Done!\033[00m")
 
 
