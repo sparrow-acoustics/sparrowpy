@@ -26,7 +26,7 @@ Use pip to install sparrowpy
 
 (Requires Python >= 3.10)
 
-if numba is installed the code will be precompiled and will run faster. We strongly recommend to use numba to accelerate the simulations significantly
+if numba is installed the code will be jit-compiled and will run faster. We strongly recommend to use numba to accelerate the simulations significantly
 
     pip install sparrowpy numba
 
