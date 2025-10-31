@@ -524,7 +524,7 @@ class DirectionalRadiosityFast():
 
 
     def init_source_energy(
-            self, source):
+            self, source, source_power=1.):
         """Initialize the source energy.
 
         Parameters
@@ -534,6 +534,7 @@ class DirectionalRadiosityFast():
             orientation and directivity for SoundSource object. If no
             directivity is given, the directivity is set to 1 for all
             frequencies.
+        source_power: float, helps reduce noise caused by low energy etcs
 
         """
         if isinstance(source, pf.Coordinates):
@@ -582,7 +583,7 @@ class DirectionalRadiosityFast():
 
         # of shape (n_patches, n_directions, n_bins)
         energy_0_dir = _add_directional(
-            energy_0, source_position,
+            energy_0*source_power, source_position,
             patches_center, n_bins, patch_to_wall_ids,
             vi, vo, brdf, brdf_index)
 
@@ -615,12 +616,14 @@ class DirectionalRadiosityFast():
             self, speed_of_sound,
             etc_time_resolution,
             etc_duration,
+            etc_clip=0.,
             max_reflection_order=-1,
             recalculate=False):
         """Calculate the energy exchange between patches.
         # todo? make first order to first reflection.
         """
-        n_samples = int(etc_duration/etc_time_resolution)
+        n_samples = int((etc_duration-etc_clip)/etc_time_resolution)
+        n_clip = int(etc_clip/etc_time_resolution)
 
         patches_center = self.patches_center
         distance_0 = self._distance_patches_to_source
@@ -642,6 +645,7 @@ class DirectionalRadiosityFast():
                     _energy_exchange_init_energy(
                         n_samples, energy_0_dir, distance_0,
                         speed_of_sound, etc_time_resolution,
+                        n_clip,
                         )
             else:
 
@@ -650,6 +654,7 @@ class DirectionalRadiosityFast():
                     self._form_factors_tilde,
                     self._patch_2_brdf_outgoing_index,
                     speed_of_sound, etc_time_resolution,
+                    n_clip,
                     max_reflection_order,
                     self._visible_patches)
 
@@ -747,7 +752,7 @@ class DirectionalRadiosityFast():
         return direct_sound, n_sample_delay
 
 
-    def collect_energy_receiver_patchwise(self, receivers):
+    def collect_energy_receiver_patchwise(self, receivers, etc_clip=0.):
         """Collect the energy for each patch at the receivers without summing
         up the patches.
 
@@ -770,7 +775,7 @@ class DirectionalRadiosityFast():
                 "Receiver positions must be of shape (n_receivers, 3)")
         etc_data = self._collect_energy_patches(
             receivers.cartesian, propagation_fx=True)
-        times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
+        times=np.arange(etc_data.shape[-1])*self._etc_time_resolution+etc_clip
         return pf.TimeData(etc_data, times)
 
 
@@ -1205,7 +1210,8 @@ def _add_directional(
 
 def _energy_exchange_init_energy(
         n_samples, energy_0_directivity, distance_0,
-        speed_of_sound, histogram_time_resolution):
+        speed_of_sound, histogram_time_resolution,
+        n_clip):
     """Calculate energy exchange between patches.
 
     Parameters
@@ -1233,16 +1239,19 @@ def _energy_exchange_init_energy(
     n_bins = energy_0_directivity.shape[2]
     E_matrix_total = np.zeros((n_patches, n_directions, n_bins, n_samples))
     for i in prange(n_patches):
-        n_delay_samples = int(
-            distance_0[i]/speed_of_sound/histogram_time_resolution)
-        E_matrix_total[i, :, :, n_delay_samples] += energy_0_directivity[i]
+        if distance_0[i]!=0:
+            n_delay_samples = int(
+                distance_0[i]/speed_of_sound/histogram_time_resolution)-n_clip
+            E_matrix_total[i, :, :, n_delay_samples] += energy_0_directivity[i]
     return E_matrix_total
 
 
 def _energy_exchange(
         n_samples, energy_0_directivity, distance_0, distance_ij,
         form_factors_tilde, patch_2_out_directions,
-        speed_of_sound, histogram_time_resolution, max_order, visible_patches):
+        speed_of_sound, histogram_time_resolution, n_clip,
+        max_order, visible_patches,
+        ):
     """Calculate energy exchange between patches.
 
     Parameters
@@ -1282,7 +1291,7 @@ def _energy_exchange(
     form_factors_tilde = form_factors_tilde[..., np.newaxis]
     E_matrix_total  = _energy_exchange_init_energy(
         n_samples, energy_0_directivity, distance_0, speed_of_sound,
-        histogram_time_resolution)
+        histogram_time_resolution,n_clip)
     E_matrix = np.zeros((2, n_patches, n_directions, n_bins, n_samples))
     E_matrix[0] += E_matrix_total
     if max_order == 0:
@@ -1302,7 +1311,7 @@ def _energy_exchange(
                 dir_id = patch_2_out_directions[i,j]
 
                 n_delay_samples = int(
-                    distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
+                    distance_ij[i, j]/speed_of_sound/histogram_time_resolution)-n_clip
                 if n_delay_samples > 0:
                     E_matrix[current_index, j, :, :, n_delay_samples:] += \
                         form_factors_tilde[i, j] * E_matrix[
