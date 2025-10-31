@@ -4,8 +4,9 @@ import pyfar as pf
 import numpy as np
 import os
 import json
-from tqdm import tqdm
 import sys
+import threading
+import time
 
 
 def run(mono=True,
@@ -18,7 +19,7 @@ def run(mono=True,
     print("\n\033[93m preparing simulation...\033[00m", end=" ")
     etc_time_resolution = 2e-2
     speed_of_sound = 343
-    max_refl = 10
+    max_refl = 2
     brdf_order = 10
     freqbands = pf.dsp.filter.fractional_octave_frequencies(num_fractions=1) # octave bands
     frequencies = freqbands[0]
@@ -133,30 +134,32 @@ def run(mono=True,
                         etc=etc,
                         compress=True)
     else:
-        for srcID in tqdm(range(source.cshape[0])):
 
-            radi.init_source_energy(source[srcID], source_power=1e10)
+        t0 = time.time()
+        threads = []
+        for srcID in range(source.cshape[0]):
+            t = threading.Thread(target=exchange,
+                             args=(srcID, source, receiver, radi,
+                                   speed_of_sound, etc_time_resolution,
+                                   max_duration, delays, max_refl, geom_id))
+            threads.append(t)
 
-            radi.calculate_energy_exchange(
-                    speed_of_sound=speed_of_sound,
-                    etc_time_resolution=etc_time_resolution,
-                    etc_duration=max_duration,
-                    etc_clip=delays[srcID],
-                    max_reflection_order=max_refl,
-                    recalculate=True)
+        for t in threads:
+            t.start()
 
-            etc = radi.collect_energy_receiver_patchwise(receivers=receiver,
-                                                         etc_clip=delays[srcID])
+        for t in threads:
+            t.join()
 
-            patch_filter = filter_patches(etc)
+        tthreads = time.time()-t0
 
-            if not len(patch_filter)==0:
-                etcname=geom_id+"_patchwise_pos"+str(srcID)+".far"
+        t0 = time.time()
+        for srcID in range(source.cshape[0]):
+            exchange(srcID, source, receiver, radi,
+                     speed_of_sound, etc_time_resolution,
+                     max_duration, delays, max_refl, geom_id)
+        tsimple = time.time()-t0
 
-                pf.io.write(os.path.join(base_dir,"etcs",etcname),
-                            etc=etc[0,patch_filter],
-                            patch_filter=patch_filter,
-                            compress=True)
+    print(f'simple: {tsimple}s;   multithread: {tthreads}s.')
 
     print("\033[92m Done!\033[00m")
 
@@ -169,6 +172,34 @@ def filter_patches(etc):
             patch_filter.append(patchID)
 
     return np.array(patch_filter)
+
+def exchange(srcID, source, receiver, radi, speed_of_sound,
+             etc_time_resolution, max_duration,
+             delays,
+             max_refl, geom_id):
+
+    radi.init_source_energy(source[srcID], source_power=1e10)
+
+    radi.calculate_energy_exchange(
+            speed_of_sound=speed_of_sound,
+            etc_time_resolution=etc_time_resolution,
+            etc_duration=max_duration,
+            etc_clip=delays[srcID],
+            max_reflection_order=max_refl,
+            recalculate=True)
+
+    etc = radi.collect_energy_receiver_patchwise(receivers=receiver,
+                                                    etc_clip=delays[srcID])
+
+    patch_filter = filter_patches(etc)
+
+    if not len(patch_filter)==0:
+        etcname=geom_id+"_patchwise_pos"+str(srcID)+".far"
+
+        pf.io.write(os.path.join(base_dir,"etcs",etcname),
+                    etc=etc[0,patch_filter],
+                    patch_filter=patch_filter,
+                    compress=True)
 
 if __name__ == "__main__":
 
