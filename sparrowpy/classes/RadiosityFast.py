@@ -154,9 +154,9 @@ class DirectionalRadiosityFast():
         if visibility_matrix is not None:
             visibility_matrix = np.array(visibility_matrix)
         if form_factors is not None:
-            form_factors = np.array(form_factors)
+            form_factors = np.array(form_factors).astype(np.float32)
         if form_factors_tilde is not None:
-            form_factors_tilde = np.array(form_factors_tilde)
+            form_factors_tilde = np.array(form_factors_tilde).astype(np.float32)
         if patch_2_brdf_outgoing_index is not None:
             patch_2_brdf_outgoing_index = np.array(patch_2_brdf_outgoing_index,
                                                    dtype=np.int64)
@@ -414,11 +414,11 @@ class DirectionalRadiosityFast():
 
         ## save wall information
         walls_normal = walls["normal"]
-        walls_up_vector = np.empty_like(walls["up"])
+        walls_up_vector = np.empty_like(walls["up"],dtype=np.float32)
 
         walls_points=np.empty((len(walls["conn"]),
                                len(walls["conn"][0]),
-                               walls["verts"].shape[-1]))
+                               walls["verts"].shape[-1]),dtype=np.float32)
 
         walls_material = walls["material"]
 
@@ -437,7 +437,7 @@ class DirectionalRadiosityFast():
 
             patches_points = np.empty((n_patches,
                                 len(patches["conn"][0]),
-                                patches["verts"].shape[-1]))
+                                patches["verts"].shape[-1]),dtype=np.float32)
 
             for patchID in range(n_patches):
                 patches_points[patchID] = patches["verts"][
@@ -509,7 +509,7 @@ class DirectionalRadiosityFast():
             scattering = None
             self._patch_2_brdf_outgoing_index = np.zeros(
                                         (self.n_patches,self.n_patches),
-                                        dtype=np.int64)
+                                        dtype=np.int32)
 
         n_bins = 1 if self._frequencies is None else self.n_bins
 
@@ -542,7 +542,7 @@ class DirectionalRadiosityFast():
                 raise ValueError('just one source position is allowed.')
             source_position = source.cartesian[0]
         elif isinstance(source, sound_object.SoundSource):
-            source_position = source.position
+            source_position = source.position.astype(np.float32)
         self._source = source
 
 
@@ -560,7 +560,7 @@ class DirectionalRadiosityFast():
             frequencies = np.array([0]) if self._frequencies is None else \
                 self._frequencies
             self.set_air_attenuation(
-                pf.FrequencyData(np.zeros_like(frequencies), frequencies))
+                pf.FrequencyData(np.zeros_like(frequencies,dtype=np.float32), frequencies))
             self._frequencies = frequencies
         n_bins = self.n_bins
         vi = np.array(
@@ -593,7 +593,7 @@ class DirectionalRadiosityFast():
             n_directions = vo.shape[1]
 
             if source.directivity is not None:
-                directivity = np.zeros((n_patches, n_directions, n_bins))
+                directivity = np.zeros((n_patches, n_directions, n_bins),dtype=np.float32)
                 for i_frequency in range(n_bins):
                     directivity_local = np.real(source.get_directivity(
                         patches_center, self._frequencies[i_frequency]))
@@ -628,7 +628,7 @@ class DirectionalRadiosityFast():
         patches_center = self.patches_center
         distance_0 = self._distance_patches_to_source
         n_patches = self.n_patches
-        distance_i_j = np.empty((n_patches, n_patches))
+        distance_i_j = np.empty((n_patches, n_patches),dtype=np.float32)
 
         for i in range(n_patches):
             for j in range(n_patches):
@@ -871,13 +871,13 @@ class DirectionalRadiosityFast():
 
         patches_center = self.patches_center
         patches_receiver_distance = np.empty(
-            [n_receivers, self.n_patches,patches_center.shape[-1]])
+            [n_receivers, self.n_patches,patches_center.shape[-1]],dtype=np.float32)
 
         E_matrix = np.empty(
-            (n_patches, n_bins, self._energy_exchange_etc.shape[-1]))
+            (n_patches, n_bins, self._energy_exchange_etc.shape[-1]),dtype=np.float32)
         histogram_out = np.empty((
             n_receivers, n_patches, n_bins,
-            self._energy_exchange_etc.shape[-1]))
+            self._energy_exchange_etc.shape[-1]),dtype=np.float32)
 
         receiver_visibility=np.empty((n_receivers,n_patches),dtype=bool)
 
@@ -1195,7 +1195,7 @@ def _add_directional(
     """
     n_patches = patches_center.shape[0]
     n_directions = receivers.shape[1]
-    energy_0_directivity = np.zeros((n_patches, n_directions, n_bins))
+    energy_0_directivity = np.zeros((n_patches, n_directions, n_bins),dtype=np.float32)
     for i in prange(n_patches):
         wall_id_i = int(patch_to_wall_ids[i])
         scattering_factor = get_scattering_data_source(
@@ -1237,7 +1237,7 @@ def _energy_exchange_init_energy(
     n_patches = energy_0_directivity.shape[0]
     n_directions = energy_0_directivity.shape[1]
     n_bins = energy_0_directivity.shape[2]
-    E_matrix_total = np.zeros((n_patches, n_directions, n_bins, n_samples))
+    E_matrix_total = np.zeros((n_patches, n_directions, n_bins, n_samples),dtype=np.float32)
     for i in prange(n_patches):
         if distance_0[i]!=0:
             n_delay_samples = int(
@@ -1292,7 +1292,7 @@ def _energy_exchange(
     E_matrix_total  = _energy_exchange_init_energy(
         n_samples, energy_0_directivity, distance_0, speed_of_sound,
         histogram_time_resolution,n_clip)
-    E_matrix = np.zeros((2, n_patches, n_directions, n_bins, n_samples))
+    E_matrix = np.zeros((2, n_patches, n_directions, n_bins, n_samples),dtype=np.float32)
     E_matrix[0] += E_matrix_total
     if max_order == 0:
         return E_matrix_total
@@ -1348,7 +1348,7 @@ def _collect_receiver_energy(
         impulse response of shape (n_samples, n_bins)
 
     """
-    E_mat_out = np.zeros_like(E_matrix_total)
+    E_mat_out = np.zeros_like(E_matrix_total,dtype=np.float32)
     n_patches = E_matrix_total.shape[0]
     n_bins = E_matrix_total.shape[1]
 
@@ -1369,7 +1369,7 @@ def _form_factors_with_directivity(
         scattering, scattering_index, sources, receivers):
     """Calculate the form factors with directivity."""
     n_patches = patches_center.shape[0]
-    form_factors_tilde = np.zeros((n_patches, n_patches, n_patches, n_bins))
+    form_factors_tilde = np.zeros((n_patches, n_patches, n_patches, n_bins),dtype=np.float32)
     # loop over previous patches, current and next patch
 
     for ii in prange(n_patches**3):
@@ -1418,7 +1418,7 @@ def _form_factors_with_directivity_dim(
     """Calculate the form factors with directivity."""
     n_patches = patches_center.shape[0]
     n_directions = receivers.shape[1] if receivers is not None else 1
-    form_factors_tilde = np.zeros((n_patches, n_patches, n_directions, n_bins))
+    form_factors_tilde = np.zeros((n_patches, n_patches, n_directions, n_bins),dtype=np.float32)
     # loop over previous patches, current and next patch
 
     for ii in prange(n_patches**2):

@@ -27,7 +27,7 @@ def load_stokes_entries(
         f function value matrix (n_boundary_points_i , n_boundary_points_j)
 
     """
-    form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)))
+    form_mat = np.zeros((len(i_bpoints) , len(j_bpoints)),dtype=np.float32)
 
     for i in prange(i_bpoints.shape[0]):
         for j in prange(j_bpoints.shape[0]):
@@ -74,16 +74,16 @@ def stokes_integration(
     j_bpoints, j_conn = _sample_boundary_regular(patch_j,
                                                          npoints=5)
 
-    subsecj = np.zeros((j_conn.shape[1]))
-    subseci = np.zeros((i_conn.shape[1]))
-    form_mat = np.zeros((i_bpoints.shape[0],j_bpoints.shape[0]))
+    subsecj = np.zeros((j_conn.shape[1]),dtype=np.float32)
+    subseci = np.zeros((i_conn.shape[1]),dtype=np.float32)
+    form_mat = np.zeros((i_bpoints.shape[0],j_bpoints.shape[0]),dtype=np.float32)
 
     # first compute and store form function sample values
     form_mat = load_stokes_entries(i_bpoints, j_bpoints)
 
     # double polynomial integration (per dimension (x,y,z))
     outer_integral = 0
-    inner_integral = np.zeros((len(i_bpoints),len(j_bpoints[0])))
+    inner_integral = np.zeros((len(i_bpoints),len(j_bpoints[0])),dtype=np.float32)
 
     for dim in range(len(j_bpoints[0])): # for each dimension
         # integrate form function over each point on patch i boundary
@@ -154,9 +154,9 @@ def nusselt_analog(surf_origin, surf_normal,
 
     curved_area = 0
 
-    sphPts = np.empty_like( boundary_points )
-    projPts = np.empty_like( boundary_points )
-    plnPts = np.empty( shape=(len(boundary_points),2) )
+    sphPts = np.empty_like( boundary_points,dtype=np.float32 )
+    projPts = np.empty_like( boundary_points,dtype=np.float32 )
+    plnPts = np.empty( shape=(len(boundary_points),2),dtype=np.float32 )
 
     for ii in prange(len(boundary_points)):
         # patch j points projected on the hemisphere
@@ -175,10 +175,10 @@ def nusselt_analog(surf_origin, surf_normal,
 
     big_poly = geom._polygon_area(projPts[0::2])
 
-    segmt=np.empty_like(connectivity[0])
+    segmt=np.empty_like(connectivity[0],dtype=np.float32)
 
-    leftseg=np.empty((3,2))
-    rightseg=np.empty((3,2))
+    leftseg=np.empty((3,2),dtype=np.float32)
+    rightseg=np.empty((3,2),dtype=np.float32)
 
     for jj in prange(connectivity.shape[0]):
 
@@ -324,7 +324,7 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
 
     interior_angle_sum = 0
 
-    patch_onsphere = np.zeros_like(patch_points)
+    patch_onsphere = np.zeros_like(patch_points,dtype=np.float32)
 
     for i in range(npoints):
         patch_onsphere[i]= ( (patch_points[i]-point) /
@@ -368,10 +368,10 @@ def _poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
         polynomial coefficients
 
     """
-    xmat = np.empty((len(x),len(x)))
+    xmat = np.empty((len(x),len(x)),dtype=np.float32)
 
     if np.abs(x[-1]-x[0])<1e-6:
-        b = np.zeros(len(x))
+        b = np.zeros(len(x),dtype=np.float32)
     else:
         for i,xi in enumerate(x):
             for o in range(len(x)):
@@ -440,8 +440,8 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
 
     rotation_matrix = np.array([[f[0],f[1]],[-f[1],f[0]]])/np.linalg.norm(f)
 
-    x = np.zeros(order+1)
-    y = np.zeros(order+1)
+    x = np.zeros(order+1,dtype=np.float32)
+    y = np.zeros(order+1,dtype=np.float32)
 
     for k in range(1,order+1):
 
@@ -508,7 +508,7 @@ def _surf_sample_random(el: np.ndarray, npoints=100):
 
     """
 
-    ptlist=np.zeros((npoints,3))
+    ptlist=np.zeros((npoints,3),dtype=np.float32)
 
     u = el[1]-el[0]
     v = el[-1]-el[0]
@@ -596,7 +596,7 @@ def _surf_sample_regulargrid(el: np.ndarray, npoints=10):
                 ptlist.append(s*u + t*v + el[0])
 
 
-    out = np.empty((len(ptlist), len(ptlist[0])))
+    out = np.empty((len(ptlist), len(ptlist[0])),dtype=np.float32)
 
     for i in prange(len(ptlist)):
         for j in prange(len(ptlist[0])):
@@ -633,7 +633,7 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
     """
     n_div = npoints - 1
 
-    pts  = np.empty((len(el)*(npoints-1),len(el[0])))
+    pts  = np.empty((len(el)*(npoints-1),len(el[0])),dtype=np.float32)
     conn = np.empty((len(el),npoints), dtype=np.int8)
 
     for i in range(len(el)):

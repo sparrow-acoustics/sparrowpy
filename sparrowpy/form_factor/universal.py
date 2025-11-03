@@ -40,7 +40,7 @@ def patch2patch_ff_universal(patches_points: np.ndarray,
 
     """
     n_patches = patches_areas.shape[0]
-    form_factors = np.zeros((n_patches, n_patches))
+    form_factors = np.zeros((n_patches, n_patches),dtype=np.float32)
 
     for visID in prange(visible_patches.shape[0]):
         i = int(visible_patches[visID, 0])
@@ -125,8 +125,8 @@ def _source2patch_energy_universal(
 
     """
     n_patches = patches_center.shape[0]
-    energy = np.zeros((n_patches, n_bins))
-    distance_out = np.zeros((n_patches, ))
+    energy = np.zeros((n_patches, n_bins),dtype=np.float32)
+    distance_out = np.zeros((n_patches, ),dtype=np.float32)
     for j in prange(n_patches):
         if source_visibility[j]:
             source_pos = source_position.copy()
@@ -149,7 +149,7 @@ def _source2patch_energy_universal(
 def _patch2receiver_energy_universal(
         receiver_pos, patches_points, receiver_visibility):
 
-    receiver_factor = np.zeros((patches_points.shape[0]))
+    receiver_factor = np.zeros((patches_points.shape[0]),dtype=np.float32)
 
 
     for i in prange(patches_points.shape[0]):

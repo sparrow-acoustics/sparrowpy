@@ -97,21 +97,21 @@ class Polygon():
         area = 0
 
         if len(self.pts) == 3:
-            area_pts = np.array([self.pts])
+            area_pts = np.array([self.pts],dtype=np.float32)
 
         elif len(self.pts) == 4:
             area_pts = np.array([
-                self.pts[0:3],[self.pts[2],self.pts[3],self.pts[0]] ])
+                self.pts[0:3],[self.pts[2],self.pts[3],self.pts[0]] ],dtype=np.float32)
 
         else:
             # slow, can be optimized
-            area_pts = np.empty((self.pts.shape[0],3,3))
+            area_pts = np.empty((self.pts.shape[0],3,3),dtype=np.float32)
 
             for i in range(area_pts.shape[0]):
                 area_pts[i] = np.array([
                     self.pts[i%self.pts.shape[0]],
                     self.pts[(i+1)%self.pts.shape[0]],
-                    self.center])
+                    self.center],dtype=np.float32)
 
         for tri in area_pts:
             area  +=  .5*np.linalg.norm(np.cross(tri[1]-tri[0], tri[2]-tri[0]))
@@ -488,14 +488,14 @@ def _matrix_vector_product(matrix: np.ndarray,vector:np.ndarray)->np.ndarray:
         matrix*vector inner product
 
     """
-    out = np.empty(matrix.shape[0])
+    out = np.empty(matrix.shape[0],dtype=np.float32)
 
     for i in prange(matrix.shape[0]):
         out[i] = np.dot(matrix[i],vector)
 
     return out
 
-def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
+def _rotation_matrix(n_in: np.ndarray, n_out=np.array([],dtype=np.float32)):
     """Compute a rotation matrix from a given input and output directions.
 
     Parameters
@@ -513,7 +513,7 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
 
     """
     if n_out.shape[0] == 0:
-        n_out = np.zeros_like(n_in)
+        n_out = np.zeros_like(n_in,dtype=np.float32)
         n_out[-1] = 1.
     else:
         n_out = n_out
@@ -521,7 +521,8 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
     # if input vector is the same as output return identity matrix
     if np.allclose(n_in,n_out,atol=1e-6):
 
-        matrix = np.eye( len(n_in) , dtype=np.float64)
+        matrix = np.eye( len(n_in) , dtype=np.float32)
+        matrix=matrix.astype(np.float32)
 
     else:
 
@@ -538,14 +539,14 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([])):
             s = np.linalg.norm(v)
             kmat = np.array([[0, -v[2], v[1]],
                              [v[2], 0, -v[0]],
-                             [-v[1], v[0], 0]])
+                             [-v[1], v[0], 0]],dtype=np.float32)
 
-            matrix =  ( np.eye( len(n_in) ) +
+            matrix =  (np.eye( len(n_in),dtype=np.float32) +
                        kmat +
-                       kmat.dot(kmat) * ((1 - c) / (s ** 2)) )
+                       kmat.dot(kmat) * ((1 - c) / (s ** 2))).astype(np.float32)
 
         else: # in case the in and out vectors have symmetrical directions
-            matrix = np.array([[-1.,0.,0.],[0.,1.,0.],[0.,0.,-1.]])
+            matrix = np.array([[-1.,0.,0.],[0.,1.,0.],[0.,0.,-1.]],dtype=np.float32)
 
     return matrix
 

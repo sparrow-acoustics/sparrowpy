@@ -125,11 +125,11 @@ def read_geometry_file(blend_file: Path,
 
     if ((not patches_from_model) and
         check_geometry(wall_data, element="walls", strict=True)):
-        wall_data["conn"] = np.array(wall_data["conn"])
+        wall_data["conn"] = np.array(wall_data["conn"],dtype=np.int32)
     elif (patches_from_model and
           check_geometry(patch_data, element="patches") and
           check_geometry(wall_data, element="walls")):
-        patch_data["conn"]=np.array(patch_data["conn"])
+        patch_data["conn"]=np.array(patch_data["conn"],dtype=np.int32)
         geom_data["patch"]=patch_data
 
     geom_data["wall"]= wall_data
@@ -178,11 +178,11 @@ def generate_connectivity_wall(mesh: bmesh):
         raise ImportError(
             "Blender is not installed. Please install "
             "Blender to use this function.")
-    out_mesh = {"verts": np.array([v.co for v in mesh.verts]),
+    out_mesh = {"verts": np.array([v.co for v in mesh.verts],dtype=np.float32),
                 "conn":[],
-                "normal":np.array([]),
-                "up":np.array([]),
-                "material": np.array([])}
+                "normal":np.array([],dtype=np.float32),
+                "up":np.array([],dtype=np.float32),
+                "material": np.array([],dtype=np.float32)}
 
     normals=[]
     upvecs=[]
@@ -205,15 +205,15 @@ def generate_connectivity_wall(mesh: bmesh):
             out_mesh["conn"].append(line)
 
         #normals.append(np.array(f.normal))
-        facenormal = geom._calculate_normals(np.array([out_mesh["verts"][line]]))
+        facenormal = geom._calculate_normals(np.array([out_mesh["verts"][line]],dtype=np.float32))
         normals.append(facenormal[0])
 
         ## PLACEHOLDER VALUES
-        upvecs.append(np.array(f.verts[1].co-f.verts[0].co))
+        upvecs.append(np.array(f.verts[1].co-f.verts[0].co,dtype=np.float32))
         upvecs[-1]=upvecs[-1]/np.linalg.norm(upvecs[-1])
 
-    out_mesh["normal"]=np.array(normals)
-    out_mesh["up"]=np.array(upvecs)
+    out_mesh["normal"]=np.array(normals,dtype=np.float32)
+    out_mesh["up"]=np.array(upvecs,dtype=np.float32)
 
     return out_mesh
 
@@ -246,9 +246,9 @@ def generate_connectivity_patch(fine_mesh: bmesh, rough_mesh:bmesh):
 
     """
 
-    out_mesh = {"verts":np.array([]), "conn":[], "map":np.array([])}
+    out_mesh = {"verts":np.array([],dtype=np.float32), "conn":[], "map":np.array([],dtype=np.int32)}
 
-    out_mesh["verts"] = np.array([v.co for v in fine_mesh.verts])
+    out_mesh["verts"] = np.array([v.co for v in fine_mesh.verts],dtype=np.float32)
     out_mesh["map"] = np.empty((len(fine_mesh.faces)),dtype=int)
 
     for i,pface in enumerate(fine_mesh.faces):
