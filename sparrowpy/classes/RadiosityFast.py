@@ -1299,7 +1299,7 @@ def _energy_exchange(
     for k in range(max_order):
         current_index = (1+k) % 2
         E_matrix[current_index, :, :, :] = 0
-        for ii in range(visible_patches.shape[0]):
+        for ii in prange(visible_patches.shape[0]):
             for jj in range(2):
                 if jj == 0:
                     i = visible_patches[ii, 0]
