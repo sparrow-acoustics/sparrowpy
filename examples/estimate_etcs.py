@@ -7,6 +7,7 @@ import json
 import sys
 import threading
 import time
+import copy
 
 
 def run(mono=True,
@@ -136,10 +137,20 @@ def run(mono=True,
     else:
 
         t0 = time.time()
+        for srcID in range(source.cshape[0]):
+            exchange(srcID, source, receiver, radi,
+                     speed_of_sound, etc_time_resolution,
+                     max_duration, delays, max_refl, geom_id)
+        tsimple = time.time()-t0
+
+        print(f'simple: {tsimple}s;')
+
+        t0 = time.time()
         threads = []
         for srcID in range(source.cshape[0]):
             t = threading.Thread(target=exchange,
-                             args=(srcID, source, receiver, radi,
+                             args=(srcID, source, receiver,
+                                   copy.deepcopy(radi),
                                    speed_of_sound, etc_time_resolution,
                                    max_duration, delays, max_refl, geom_id))
             threads.append(t)
@@ -151,15 +162,7 @@ def run(mono=True,
             t.join()
 
         tthreads = time.time()-t0
-
-        t0 = time.time()
-        for srcID in range(source.cshape[0]):
-            exchange(srcID, source, receiver, radi,
-                     speed_of_sound, etc_time_resolution,
-                     max_duration, delays, max_refl, geom_id)
-        tsimple = time.time()-t0
-
-    print(f'simple: {tsimple}s;   multithread: {tthreads}s.')
+        print(f'multithread: {tthreads}s.')
 
     print("\033[92m Done!\033[00m")
 
