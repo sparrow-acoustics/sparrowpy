@@ -5,10 +5,8 @@ import numpy as np
 import os
 import json
 import sys
-import threading
 import time
-import copy
-
+import tqdm
 
 def run(mono=True,
         test=True,
@@ -18,10 +16,10 @@ def run(mono=True,
 
     # %%  simulation settings
     print("\n\033[93m preparing simulation...\033[00m", end=" ")
-    etc_time_resolution = 2e-2
+    etc_time_resolution = 1/50
     speed_of_sound = 343
     max_refl = 2
-    brdf_order = 10
+    brdf_order = 6
     freqbands = pf.dsp.filter.fractional_octave_frequencies(num_fractions=1) # octave bands
     frequencies = freqbands[0]
 
@@ -137,32 +135,13 @@ def run(mono=True,
     else:
 
         t0 = time.time()
-        for srcID in range(source.cshape[0]):
-            exchange(srcID, source, receiver, radi,
+        for srcid in tqdm.tqdm(range(source.cshape[0])):
+            exchange(srcid, source, receiver, radi,
                      speed_of_sound, etc_time_resolution,
                      max_duration, delays, max_refl, geom_id)
         tsimple = time.time()-t0
 
         print(f'simple: {tsimple}s;')
-
-        t0 = time.time()
-        threads = []
-        for srcID in range(source.cshape[0]):
-            t = threading.Thread(target=exchange,
-                             args=(srcID, source, receiver,
-                                   copy.deepcopy(radi),
-                                   speed_of_sound, etc_time_resolution,
-                                   max_duration, delays, max_refl, geom_id))
-            threads.append(t)
-
-        for t in threads:
-            t.start()
-
-        for t in threads:
-            t.join()
-
-        tthreads = time.time()-t0
-        print(f'multithread: {tthreads}s.')
 
     print("\033[92m Done!\033[00m")
 
@@ -198,7 +177,6 @@ def exchange(srcID, source, receiver, radi, speed_of_sound,
 
     if not len(patch_filter)==0:
         etcname=geom_id+"_patchwise_pos"+str(srcID)+".far"
-
         pf.io.write(os.path.join(base_dir,"etcs",etcname),
                     etc=etc[0,patch_filter],
                     patch_filter=patch_filter,
