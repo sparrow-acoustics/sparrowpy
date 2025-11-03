@@ -177,11 +177,11 @@ class DirectionalRadiosityFast():
         if energy_exchange_etc is not None:
             energy_exchange_etc = np.array(energy_exchange_etc)
 
-        self._walls_points = walls_points
-        self._walls_normal = walls_normal
-        self._walls_up_vector = walls_up_vector
+        self._walls_points = walls_points.astype(np.float32)
+        self._walls_normal = walls_normal.astype(np.float32)
+        self._walls_up_vector = walls_up_vector.astype(np.float32)
         self._walls_material = walls_material
-        self._patches_points = patches_points
+        self._patches_points = patches_points.astype(np.float32)
         self._n_patches = n_patches
         self._patch_to_wall_ids = patch_to_wall_ids
 
@@ -540,7 +540,7 @@ class DirectionalRadiosityFast():
         if isinstance(source, pf.Coordinates):
             if source.cshape != (1, ):
                 raise ValueError('just one source position is allowed.')
-            source_position = source.cartesian[0]
+            source_position = source.cartesian[0].astype(np.float32)
         elif isinstance(source, sound_object.SoundSource):
             source_position = source.position.astype(np.float32)
         self._source = source
@@ -865,7 +865,7 @@ class DirectionalRadiosityFast():
         n_patches = self.n_patches
         n_bins = self.n_bins
 
-        receiver_pos = np.atleast_2d(receiver_pos)
+        receiver_pos = np.atleast_2d(receiver_pos).astype(np.float32)
 
         n_receivers = receiver_pos.shape[0]
 

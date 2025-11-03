@@ -410,7 +410,7 @@ def _create_patches(polygon_points:np.ndarray, max_size):
     return patches_points
 
 def _calculate_center(points):
-    return np.sum(points, axis=-2) / points.shape[-2]
+    return (np.sum(points, axis=-2) / points.shape[-2]).astype(np.float32)
 
 def _calculate_size(points):
     vec1 = points[..., 0, :]-points[..., 1, :]
@@ -440,7 +440,7 @@ def _polygon_area(pts: np.ndarray) -> float:
     return area
 
 def _calculate_area(points):
-    area = np.zeros(points.shape[0])
+    area = np.zeros(points.shape[0],dtype=np.float32)
 
     for i in prange(points.shape[0]):
         area[i] = _polygon_area(points[i])
@@ -463,7 +463,7 @@ def _calculate_normals(points: np.ndarray):
         collection of normal vectors to planes defined by point collection.
     """
 
-    normals = np.empty((points.shape[0],3))
+    normals = np.empty((points.shape[0],3),dtype=np.float32)
 
     for i in prange(points.shape[0]):
         normals[i]=np.cross(points[i][1]-points[i][0],points[i][2]-points[i][0])

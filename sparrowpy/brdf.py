@@ -94,12 +94,12 @@ def create_from_scattering(
             'receiver_directions must be a pf.Coordinates object')
     if absorption_coefficient is None:
         absorption_coefficient = pf.FrequencyData(
-            np.zeros_like(scattering_coefficient.frequencies),
+            np.zeros_like(scattering_coefficient.frequencies,dtype=np.float32),
             scattering_coefficient.frequencies)
 
     brdf = np.zeros((
         source_directions.csize, receiver_directions.csize,
-        scattering_coefficient.n_bins))
+        scattering_coefficient.n_bins),dtype=np.float32)
 
     receiver_weights = receiver_directions.weights
     receiver_weights *= 2 * np.pi / np.sum(receiver_weights)
@@ -202,7 +202,7 @@ def create_from_directional_scattering(
             f' cshape ({source_directions.csize, receiver_directions.csize})')
     if absorption_coefficient is None:
         absorption_coefficient = pf.FrequencyData(
-            np.zeros_like(directional_scattering.frequencies),
+            np.zeros_like(directional_scattering.frequencies,dtype=np.float32),
             directional_scattering.frequencies)
     cos_receiver = np.cos(receiver_directions.colatitude)[
         np.newaxis, :, np.newaxis]
@@ -291,7 +291,7 @@ def _create_sofa(
     else:
         sofa.Data_IR = data.time
         sofa.Data_SamplingRate = data.sampling_rate
-        sofa.Data_Delay = np.zeros((1, receivers.csize))
+        sofa.Data_Delay = np.zeros((1, receivers.csize),dtype=np.float32)
 
     sofa.add_variable('ReceiverWeights', receivers.weights, 'double', 'R')
     sofa.add_variable('SourceWeights', sources.weights, 'double', 'E')
