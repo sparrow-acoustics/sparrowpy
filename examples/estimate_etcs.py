@@ -5,10 +5,9 @@ import numpy as np
 import os
 import json
 import sys
-import time
 import tqdm
 
-def run(mono=True,
+def run(diffuse=True,
         test=True,
         base_dir=os.path.join(os.getcwd(),"..","..",
                               "phd","listening experiment",
@@ -16,10 +15,13 @@ def run(mono=True,
 
     # %%  simulation settings
     print("\n\033[93m preparing simulation...\033[00m", end=" ")
-    etc_time_resolution = 1/50
+    etc_time_resolution = 1/200
     speed_of_sound = 343
-    max_refl = 2
-    brdf_order = 6
+    max_refl = 30
+    if diffuse:
+        brdf_order = 2
+    else:
+        brdf_order = 10
     freqbands = pf.dsp.filter.fractional_octave_frequencies(num_fractions=1) # octave bands
     frequencies = freqbands[0]
 
@@ -36,16 +38,10 @@ def run(mono=True,
 
     max_duration = np.max(delays) + 3
 
-    if mono:
-        source = pf.Coordinates(0,0,0)
-        receiver = pf.Coordinates(source_positions[0],
-                                   source_positions[1],
-                                   source_positions[2])
-    else:
-        receiver = pf.Coordinates(0,0,0)
-        source = pf.Coordinates(source_positions[0],
-                                   source_positions[1],
-                                   source_positions[2])
+    receiver = pf.Coordinates(0,0,0)
+    source = pf.Coordinates(source_positions[0],
+                                source_positions[1],
+                                source_positions[2])
 
     # %% load geometry
     if test:
@@ -60,8 +56,13 @@ def run(mono=True,
                     )
 
     # %% load materials and assign BRDFs, air attenuation
+    if diffuse:
+        mat_filename = "test_materials.json"
+    else:
+        mat_filename = "acoustic_materials_RISC.json"
+
     with open(os.path.join(base_dir,
-                         "acoustic_materials_RISC.json"))as mat_file:
+                           mat_filename))as mat_file:
         material_data = json.load(mat_file)
 
     samples = pf.samplings.sph_gaussian(brdf_order)
@@ -110,39 +111,10 @@ def run(mono=True,
 
     # %% energy exchange
     print("\033[93m exchanging energy...\033[00m", end="\n")
-    if mono:
-        radi.init_source_energy(source)
-
-        radi.calculate_energy_exchange(
-                speed_of_sound=speed_of_sound,
-                etc_time_resolution=etc_time_resolution,
-                etc_duration=max_duration,
-                max_reflection_order=max_refl,
-                recalculate=True)
-
-        for direct_sound in [True,False]:
-            etc = radi.collect_energy_receiver_mono(
-                receivers=receiver,direct_sound=direct_sound)
-
-            if direct_sound:
-                mononame = geom_id+"_mono_WITH_direct.far"
-            else:
-                mononame = geom_id+"_mono_NO_direct.far"
-
-            pf.io.write(os.path.join(base_dir,"etcs",mononame),
-                        etc=etc,
-                        compress=True)
-    else:
-
-        t0 = time.time()
-        for srcid in tqdm.tqdm(range(source.cshape[0])):
-            exchange(srcid, source, receiver, radi,
-                     speed_of_sound, etc_time_resolution,
-                     max_duration, delays, max_refl, geom_id)
-        tsimple = time.time()-t0
-
-        print(f'simple: {tsimple}s;')
-
+    for srcid in tqdm.tqdm(range(source.cshape[0])):
+        exchange(srcid, source, receiver, radi,
+                    speed_of_sound, etc_time_resolution,
+                    max_duration, delays, max_refl, geom_id)
     print("\033[92m Done!\033[00m")
 
 def filter_patches(etc):
@@ -186,8 +158,8 @@ if __name__ == "__main__":
 
     args = sys.argv[1:]
 
-    test = True
-    mono = False
+    test = False
+    diffuse = False
     base_dir=os.path.join(os.getcwd(),"..","..",
                           "phd","listening experiment",
                           "synthesis","lib")
@@ -195,8 +167,8 @@ if __name__ == "__main__":
     if len(args)>0:
         test = bool(int(args[0]))
         if len(args)>1:
-            mono = bool(int(args[1]))
+            diffuse = bool(int(args[1]))
             if len(args)>2:
                 base_dir=args[2]
 
-    run(mono=mono, test=test, base_dir=base_dir)
+    run(diffuse=diffuse, test=test, base_dir=base_dir)
