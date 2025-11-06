@@ -127,6 +127,6 @@ if __name__ == "__main__":
     if len(args)>0:
         test = bool(int(args[0]))
         if len(args)>1:
-            base_dir=args[2]
+            base_dir=args[1]
 
     run(test=test, base_dir=base_dir)
