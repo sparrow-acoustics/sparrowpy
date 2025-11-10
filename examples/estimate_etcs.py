@@ -19,7 +19,7 @@ def run(diffuse=True,
     speed_of_sound = 343
     max_refl = 30
     if diffuse:
-        brdf_order = 2
+        brdf_order = 1
     else:
         brdf_order = 10
     freqbands = pf.dsp.filter.fractional_octave_frequencies(num_fractions=1) # octave bands
@@ -66,6 +66,8 @@ def run(diffuse=True,
         material_data = json.load(mat_file)
 
     samples = pf.samplings.sph_gaussian(brdf_order)
+    if brdf_order == 1:
+        samples.rotate('y',[-90])
     brdf_sources=samples[np.where((samples.elevation*180/np.pi>=0))].copy()
     brdf_receivers=samples[np.where((samples.elevation*180/np.pi>=0))].copy()
 
@@ -76,13 +78,18 @@ def run(diffuse=True,
             raise ValueError("material frequencies do" +
                              "not match input frequency bands")
 
+        s=material_data[material_name]["scattering"]
+        a=material_data[material_name]["absorption"]
+
+        if brdf_order == 1:
+            a = 1-s*(1-a)
+            s = 1.
+
         brdf = sp.brdf.create_from_scattering(
             brdf_sources,
             brdf_receivers,
-            pf.FrequencyData(material_data[material_name]["scattering"],
-                            material_data[material_name]["frequency"]),
-            pf.FrequencyData(material_data[material_name]["absorption"],
-                            material_data[material_name]["frequency"]))
+            pf.FrequencyData(s, material_data[material_name]["frequency"]),
+            pf.FrequencyData(a, material_data[material_name]["frequency"]))
 
         # set directional scattering data
         radi.set_wall_brdf(
