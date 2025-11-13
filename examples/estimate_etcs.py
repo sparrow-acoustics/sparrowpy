@@ -139,7 +139,7 @@ def exchange(srcID, source, receiver, radi, speed_of_sound,
              delays,
              max_refl, geom_id):
 
-    radi.init_source_energy(source[srcID], source_power=1e10)
+    radi.init_source_energy(source[srcID], source_power=2*1e3)
 
     radi.calculate_energy_exchange(
             speed_of_sound=speed_of_sound,
