@@ -36,8 +36,6 @@ def run(diffuse=True,
 
     source_positions = source_positions.T
 
-    max_duration = np.max(delays) + 3
-
     receiver = pf.Coordinates(0,0,0)
     source = pf.Coordinates(source_positions[0],
                                 source_positions[1],
@@ -121,7 +119,7 @@ def run(diffuse=True,
     for srcid in tqdm.tqdm(range(source.cshape[0])):
         exchange(srcid, source, receiver, radi,
                     speed_of_sound, etc_time_resolution,
-                    max_duration, delays, max_refl, geom_id)
+                    delays, max_refl, geom_id)
     print("\033[92m Done!\033[00m")
 
 def filter_patches(etc):
@@ -135,17 +133,16 @@ def filter_patches(etc):
     return np.array(patch_filter)
 
 def exchange(srcID, source, receiver, radi, speed_of_sound,
-             etc_time_resolution, max_duration,
-             delays,
+             etc_time_resolution, delays,
              max_refl, geom_id):
 
-    radi.init_source_energy(source[srcID], source_power=2*1e3)
+    radi.init_source_energy(source[srcID], source_power=2*1e5)
 
     radi.calculate_energy_exchange(
             speed_of_sound=speed_of_sound,
             etc_time_resolution=etc_time_resolution,
-            etc_duration=max_duration,
-            etc_clip=delays[srcID],
+            etc_duration=delays[srcID]+3,
+            etc_clip=delays[srcID]-1,
             max_reflection_order=max_refl,
             recalculate=True)
 
