@@ -66,6 +66,7 @@ def run(test=True,
 
     print("\n\033[93m loadinghrirs...\033[00m", end=" ")
     hrir,hrir_coords,_=pf.io.read_sofa(os.path.join(base_dir,"FABIAN_HRIR_measured_HATO_0.sofa"))
+    hrir=pf.dsp.resample(hrir,sampling_rate=sampling_rate)
     print("\033[92m Done!\033[00m")
 
     print("\n\033[93m convolving position-wise filters with hrirs...\033[00m",
