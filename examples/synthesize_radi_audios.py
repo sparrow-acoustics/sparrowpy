@@ -14,7 +14,7 @@ def run(test=True,
                               "phd","listening experiment",
                               "synthesis","lib") ):
     # %% settings
-    sampling_rate = 44100 # Hz
+    sampling_rate = 48000 # Hz
 
     # %% load data
     print("\n\033[93m loading filters...\033[00m", end=" ")
@@ -45,12 +45,12 @@ def run(test=True,
 
         out_signal += pf.dsp.convolve(signal1=source_signal,
                                       signal2=bin_filter,
-                                      mode='cut')
+                                      mode='full')
 
         pf.io.write_audio(signal=out_signal,
                           filename=os.path.join(base_dir,
                                                 "audio",
-                                                "guitar_"+str(i)+"_.wav"))
+                                                "guitar_"+str(i)+"_.wav"),subtype='DOUBLE')
 
 ################################################
 ################################################
@@ -70,6 +70,6 @@ if __name__ == "__main__":
     if len(args)>0:
         test = bool(int(args[0]))
         if len(args)>1:
-            base_dir=args[2]
+            base_dir=args[1]
 
     run(test=test, base_dir=base_dir)
