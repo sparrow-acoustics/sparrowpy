@@ -78,12 +78,12 @@ def run(diffuse=True,
             raise ValueError("material frequencies do" +
                              "not match input frequency bands")
 
-        s=material_data[material_name]["scattering"]
-        a=material_data[material_name]["absorption"]
+        s=np.array(material_data[material_name]["scattering"])
+        a=np.array(material_data[material_name]["absorption"])
 
         if brdf_order == 1:
             a = 1-s*(1-a)
-            s = 1.
+            s = np.ones_like(a)
 
         brdf = sp.brdf.create_from_scattering(
             brdf_sources,
