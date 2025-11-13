@@ -552,7 +552,7 @@ def _rotation_matrix(n_in: np.ndarray, n_out=np.array([],dtype=np.float32)):
 
 def _project_to_plane(origin: np.ndarray, point: np.ndarray,
                      plane_pt: np.ndarray, plane_normal: np.ndarray,
-                     epsilon=1e-6, check_normal=True):
+                     epsilon=1e-10, check_normal=True):
     """Project point onto plane following direction defined by origin.
 
     Also applicable to lower or higher-dimensional spaces, not just 3D.
@@ -605,7 +605,7 @@ def _project_to_plane(origin: np.ndarray, point: np.ndarray,
 
 def _point_in_polygon(point3d: np.ndarray,
                      polygon3d: np.ndarray, plane_normal: np.ndarray,
-                     eta=1e-6) -> bool:
+                     eta=1e-10) -> bool:
     """Check if point is inside given polygon.
 
     Parameters
@@ -837,7 +837,7 @@ def _basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
                      surf_points: np.ndarray,
                      surf_normal: np.ndarray,
-                     eta=1e-6)->bool:
+                     eta=1e-10)->bool:
     """Return visibility of a point based on view point position.
 
     Parameters
@@ -865,34 +865,48 @@ def _basic_visibility(vis_point: np.ndarray,
 
     """
     is_visible = True
-
+    # if source is in surface
     vis_in_surf = _point_in_polygon(point3d=vis_point,
                                     polygon3d=surf_points,
                                     plane_normal=surf_normal)
+    #if target is in surface
     eval_in_surf = _point_in_polygon(point3d=eval_point,
                                     polygon3d=surf_points,
                                     plane_normal=surf_normal)
 
+    view = eval_point-vis_point
+    view /= np.linalg.norm(view)
+
+    # if neither source nor target are in surface
     if not vis_in_surf and not eval_in_surf:
 
+        # project target to surface
         pt = _project_to_plane(origin=vis_point, point=eval_point,
                             plane_pt=surf_points[0],
                             plane_normal=surf_normal,
                             check_normal=False)
 
+        # if a projection is possible (view ray hits plane)
         if pt is not None:
+            # check if intersection point is inside patch/wall
             if _point_in_polygon(point3d=pt,
                                  polygon3d=surf_points,
                                  plane_normal=surf_normal):
+                # if intersection point is between source and target
                 if (np.dot(pt-vis_point,pt-eval_point)<0):
+                    # invisible
                     is_visible = False
 
+    # if source is coincident with surface and target is "behind" plane
     elif (vis_in_surf and not eval_in_surf and
-          np.dot(surf_normal, eval_point-vis_point)<0):
+          np.dot(surf_normal, view)<eta):
+        # invisible
         is_visible=False
 
+    # if target is coincident with surface and source is "behind" plane
     elif (not vis_in_surf and eval_in_surf and
-          np.dot(surf_normal, vis_point-eval_point)<0):
+          np.dot(surf_normal, -view)<eta):
+            # invisible
             is_visible=False
 
     elif (np.abs(np.dot(vis_point-surf_points[0],surf_normal))<eta and

@@ -480,6 +480,9 @@ class DirectionalRadiosityFast():
             self.patches_points, self.patches_normal,
             self.patches_area, self._visible_patches)
 
+        # dirty fix
+        self._form_factors[self._form_factors<0]=0
+
         # Calculate the form factors with directivity.
         if self._brdf_incoming_directions is not None:
             sources_array = np.array(
@@ -921,6 +924,8 @@ class DirectionalRadiosityFast():
                                     air_attenuation=air_attenuation)
             else:
                 histogram_out[i] = E_matrix
+
+        histogram_out[histogram_out<0]=0
 
         return histogram_out
 

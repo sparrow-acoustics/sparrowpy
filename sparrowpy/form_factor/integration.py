@@ -339,7 +339,7 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode='source'):
 
         interior_angle_sum += np.arccos(np.dot(v0,v1))
 
-    factor = interior_angle_sum - (len(patch_points)-2)*np.pi
+    factor = np.abs(interior_angle_sum - (len(patch_points)-2)*np.pi)
 
     return factor / (np.pi*source_area)
 

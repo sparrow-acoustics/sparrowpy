@@ -3,6 +3,7 @@
 import numpy as np
 import pyfar as pf
 import warnings
+np.seterr(divide='ignore', invalid='ignore')
 
 def reflection_density_room(
         room_volume, n_samples, speed_of_sound=None,
@@ -410,14 +411,10 @@ def weight_signal_by_etc(
 
         signal_sec = signal.time[...,lower:upper]
         div = np.sum(signal_sec**2,axis=-1)
+        div[div<1e-200]=np.inf
 
-        scale = np.divide(energy_time_curve.time[...,sample_i]*
-                                                (upper-lower)/rs_factor,
-                          div,
-                          out=np.zeros_like(energy_time_curve.time[...,sample_i]),
-                          where=div>1e-200)
-
-        scale[np.abs(scale) == np.inf]=0
+        scale = (energy_time_curve.time[...,sample_i]*
+                 (upper-lower)/rs_factor)/div
 
         etc_weight = np.sqrt(scale) * np.sqrt(bandwidth /
                                               (signal.sampling_rate/2))
