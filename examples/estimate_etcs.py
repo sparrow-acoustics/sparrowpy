@@ -142,7 +142,7 @@ def exchange(srcID, source, receiver, radi, speed_of_sound,
             speed_of_sound=speed_of_sound,
             etc_time_resolution=etc_time_resolution,
             etc_duration=delays[srcID]+3,
-            etc_clip=delays[srcID]-1,
+            etc_clip=delays[srcID],
             max_reflection_order=max_refl,
             recalculate=True)
 

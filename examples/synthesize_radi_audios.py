@@ -1,5 +1,4 @@
 """Handler for sta patrizia radiosity simulations."""
-import sparrowpy as sp
 import pyfar as pf
 import numpy as np
 import os
@@ -12,7 +11,8 @@ def run(test=True,
         source_signal=pf.signals.files.guitar(),
         base_dir=os.path.join(os.getcwd(),"..","..",
                               "phd","listening experiment",
-                              "synthesis","lib") ):
+                              "synthesis","lib"),
+        filter_id=None):
     # %% settings
     sampling_rate = 48000 # Hz
 
@@ -31,9 +31,15 @@ def run(test=True,
     if source_signal.cshape != (2,):
         source_signal.time = np.repeat(source_signal.time,2,axis=0)
 
-    filterfiles = glob(os.path.join(base_dir,
-                                 "filters",
-                                 "*"+geom_id+"_filter_"+"*.far"))
+    if filter_id is not None:
+        filterfiles = glob(os.path.join(base_dir,
+                                    "filters",
+                                    "*"+geom_id+"_filter_"+f"{filter_id:.0}"+"*.far"))
+    else:
+
+        filterfiles = glob(os.path.join(base_dir,
+                                    "filters",
+                                    "*"+geom_id+"_filter_"+"*.far"))
 
     for i,file in enumerate(tqdm(filterfiles)):
 
@@ -45,12 +51,13 @@ def run(test=True,
 
         out_signal += pf.dsp.convolve(signal1=source_signal,
                                       signal2=bin_filter,
-                                      mode='full')
+                                      mode='cut')
 
         pf.io.write_audio(signal=out_signal,
                           filename=os.path.join(base_dir,
                                                 "audio",
-                                                "guitar_"+str(i)+"_.wav"),subtype='DOUBLE')
+                                                source_signal.comment+
+                                                "_"+str(i)+"_.wav"),subtype='DOUBLE')
 
 ################################################
 ################################################
@@ -64,7 +71,7 @@ if __name__ == "__main__":
 
     test = True
     base_dir=os.path.join(os.getcwd(),"..","..",
-                          "phd","listening experiment",
+                          "phd","listening_experiment",
                           "synthesis","lib")
 
     if len(args)>0:
