@@ -64,7 +64,7 @@ def run(test=True,
     print("\033[92m Done!\033[00m")
 
 
-    print("\n\033[93m loadinghrirs...\033[00m", end=" ")
+    print("\n\033[93m loading HRIRs...\033[00m", end=" ")
     hrir,hrir_coords,_=pf.io.read_sofa(os.path.join(base_dir,"FABIAN_HRIR_measured_HATO_0.sofa"))
     hrir=pf.dsp.resample(hrir,sampling_rate=sampling_rate)
     print("\033[92m Done!\033[00m")
@@ -81,23 +81,28 @@ def run(test=True,
                                    patch_positions=radi.patches_center[patch_filter])
 
         hrir_selection = hrir[hrir_ids,:]
+        try:
+            filter_patchwise = sp.dsp.weight_signal_by_etc(energy_time_curve=etc,
+                                                    signal=noise_filtered,
+                                                    bandwidth=bw)
+            filter_patchwise.time = np.repeat(
+                np.sum(filter_patchwise.time, axis=1)[:,np.newaxis,:],2,axis=1)
 
-        filter_patchwise = sp.dsp.weight_signal_by_etc(energy_time_curve=etc,
-                                                   signal=noise_filtered,
-                                                   bandwidth=bw)
-        filter_patchwise.time = np.repeat(
-            np.sum(filter_patchwise.time, axis=1)[:,np.newaxis,:],2,axis=1)
+            out_filter = pf.dsp.convolve(signal1=filter_patchwise,
+                                        signal2=hrir_selection)
 
-        out_filter = pf.dsp.convolve(signal1=filter_patchwise,
-                                     signal2=hrir_selection)
+            out_filter.time = np.sum(out_filter.time, axis=0)
 
-        out_filter.time = np.sum(out_filter.time, axis=0)
+            pf.io.write(os.path.join(base_dir,"filters",geom_id+"_filter_"+str(i)+".far"),
+                        bin_filter=out_filter,compress=False)
 
-        pf.io.write(os.path.join(base_dir,"filters",geom_id+"_filter_"+str(i)+".far"),
-                    bin_filter=out_filter,compress=False)
+            del out_filter
+            del filter_patchwise
 
-        del out_filter
-        del filter_patchwise
+        except:
+            print(f"Filter #{i} has invalid values. Skipping.")
+            pass
+
         del etc
     print("\033[92m Done!\033[00m")
 
