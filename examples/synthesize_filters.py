@@ -110,7 +110,7 @@ def run(test=True,
 ################################################
 ################################################
 
-def hrirs_per_patch(coords,patch_positions, source_view_azimuth=-40.):
+def hrirs_per_patch(coords,patch_positions, source_view_azimuth=40.):
 
     patch_positions /= np.linalg.norm(patch_positions, axis=1)[:,None]
     patch_positions *= coords[0].radius
