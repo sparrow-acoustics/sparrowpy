@@ -127,3 +127,5 @@ raven_sim/
 figs/*
 examples/*
 supp_materials/resources/user
+supp_materials/figures/
+/supp_materials/prove_RT_claims.ipynb
