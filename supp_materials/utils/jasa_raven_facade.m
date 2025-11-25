@@ -83,7 +83,7 @@ rpf.setSimulationTypeRT(1);
 rpf.setSimulationTypeIS(1);
 rpf.setNumParticles(5000000);
 rpf.setFilterLength(400);
-rpf.setTimeSlotLength(1); % ms
+rpf.setTimeSlotLength(2); % ms
 rpf.setISOrder_PS(0);
 rpf.disableAirAbsorption
 
