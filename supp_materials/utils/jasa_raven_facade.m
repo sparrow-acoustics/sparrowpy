@@ -33,8 +33,8 @@ faces={...
 
 
 %% Create project and set input data (based on shoebox model)
-rpf = itaRavenProject('C:\ITASoftware\Raven\RavenInput\Classroom\Classroom.rpf');   % modify path if not installed in default directory
-rpf.copyProjectToNewRPFFile(['C:\ITASoftware\Raven\RavenInput\' projectName '.rpf' ]);
+rpf = itaRavenProject('D:\Joao_Fatela\dev\RAVEN_tut\ITASoftware\Raven\RavenInput\Classroom\Classroom.rpf');   % modify path if not installed in default directory
+rpf.copyProjectToNewRPFFile(['D:\Joao_Fatela\dev\RAVEN_tut\ITASoftware\Raven\RavenInput\' projectName '.rpf' ]);
 rpf.setProjectName(projectName);
 
 % set façade properties

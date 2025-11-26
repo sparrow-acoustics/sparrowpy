@@ -18,8 +18,8 @@ myHeight=6;
 projectName = [ 'street_canyon' num2str(myLength) 'x' num2str(myWidth) 'x' num2str(myHeight) ];
 
 %% create project and set input data (based on shoebox model)
-rpf = itaRavenProject('C:\ITASoftware\Raven\RavenInput\Classroom\Classroom.rpf');   % modify path if not installed in default directory
-rpf.copyProjectToNewRPFFile(['C:\ITASoftware\Raven\RavenInput\' projectName '.rpf' ]);
+rpf = itaRavenProject('D:\Joao_Fatela\dev\RAVEN_tut\ITASoftware\Raven\RavenInput\Classroom\Classroom.rpf');   % modify path if not installed in default directory
+rpf.copyProjectToNewRPFFile(['D:\Joao_Fatela\dev\RAVEN_tut\ITASoftware\Raven\RavenInput\' projectName '.rpf' ]);
 rpf.setProjectName(projectName);
 rpf.setModelToShoebox(myLength,myWidth,myHeight);
 
@@ -77,7 +77,7 @@ rpf.setSimulationTypeRT(1);
 rpf.setSimulationTypeIS(1);
 rpf.setNumParticles(5000000);
 rpf.setFilterLength(900);
-rpf.setTimeSlotLength(2); % ms
+rpf.setTimeSlotLength(1); % ms
 
 rpf.setISOrder_PS(0); % direct sound
 rpf.disableAirAbsorption
