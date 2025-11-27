@@ -12,14 +12,14 @@
 
 %% project settings
 
-myLength=90;
-myWidth=12;
+myLength=60;
+myWidth=8;
 myHeight=6;
 projectName = [ 'street_canyon' num2str(myLength) 'x' num2str(myWidth) 'x' num2str(myHeight) ];
 
 %% create project and set input data (based on shoebox model)
-rpf = itaRavenProject('D:\Joao_Fatela\dev\RAVEN_tut\ITASoftware\Raven\RavenInput\Classroom\Classroom.rpf');   % modify path if not installed in default directory
-rpf.copyProjectToNewRPFFile(['D:\Joao_Fatela\dev\RAVEN_tut\ITASoftware\Raven\RavenInput\' projectName '.rpf' ]);
+rpf = itaRavenProject('C:\ITASoftware\Raven\RavenInput\Classroom\Classroom.rpf');   % modify path if not installed in default directory
+rpf.copyProjectToNewRPFFile(['C:\ITASoftware\Raven\RavenInput\' projectName '.rpf' ]);
 rpf.setProjectName(projectName);
 rpf.setModelToShoebox(myLength,myWidth,myHeight);
 
@@ -55,13 +55,13 @@ rpf.setMaterial(rpf.getRoomMaterialNames{5},myAbsorpWall,myScatterWall);
 rpf.setMaterial(rpf.getRoomMaterialNames{6},myAbsorp1,myScatter1);
 
 % set source position
-rpf.setSourcePositions([20, 1, -6]);
+rpf.setSourcePositions([20, 1, -4]);
 rpf.setSourceViewVectors([ 1     0     0]);
 rpf.setSourceUpVectors([ 0     1    0]);
 rpf.setSourceDirectivity('Omnidirectional');
 
 % set receiver position
-rpf.setReceiverPositions([21, 2, -6]);
+rpf.setReceiverPositions([21, 2, -4]);
 rpf.setReceiverUpVectors([0 1 0]);
 rpf.setReceiverViewVectors([1 0 0]);
 
