@@ -21,7 +21,7 @@ def run(diffuse=True,
     if diffuse:
         brdf_order = 1
     else:
-        brdf_order = 10
+        brdf_order = 1
     freqbands = pf.dsp.filter.fractional_octave_frequencies(num_fractions=1) # octave bands
     frequencies = freqbands[0]
 
@@ -136,7 +136,7 @@ def exchange(srcID, source, receiver, radi, speed_of_sound,
              etc_time_resolution, delays,
              max_refl, geom_id):
 
-    radi.init_source_energy(source[srcID], source_power=2*1e5)
+    radi.init_source_energy(source[srcID], source_power=2*1e3)
 
     radi.calculate_energy_exchange(
             speed_of_sound=speed_of_sound,
