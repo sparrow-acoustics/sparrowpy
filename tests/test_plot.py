@@ -56,3 +56,99 @@ def _close_all_figures():
     yield
     plt.close('all')
 
+
+def test_polygons_3d_default():
+    single_patch = np.array([[[0, 0, 0],
+                              [1, 0, 0],
+                              [1, 1, 0],
+                              [0, 1, 0]]])
+    energy = np.array([1])
+
+    # do plotting
+    filename = 'polygons_3d_default'
+    create_figure()
+    sp.plot.polygons_3d(single_patch, energy)
+    save_and_compare(
+        create_baseline, baseline_path, output_path, filename,
+        file_type, compare_output)
+
+
+@pytest.mark.parametrize("colorbar", [True, False])
+def test_polygons_3d_colorbar(colorbar):
+    single_patch = np.array([[[0, 0, 0],
+                              [1, 0, 0],
+                              [1, 1, 0],
+                              [0, 1, 0]]])
+    energy = np.array([1])
+
+    # do plotting
+    filename = f'polygons_3d_colorbar_{colorbar}'
+    create_figure()
+    sp.plot.polygons_3d(single_patch, energy, colorbar=colorbar)
+    save_and_compare(
+        create_baseline, baseline_path, output_path, filename,
+        file_type, compare_output)
+
+
+def test_polygons_3d_shoebox_room(sample_walls):
+    edge_points = np.array([wall.pts for wall in sample_walls])
+    energy = np.arange(len(sample_walls)) + 1
+
+    # do plotting
+    filename = 'polygons_3d_shoebox_room'
+    create_figure()
+    sp.plot.polygons_3d(edge_points, energy)
+    save_and_compare(
+        create_baseline, baseline_path, output_path, filename,
+        file_type, compare_output)
+
+def test_polygons_3d_energy_not_1d():
+    edge_points = np.array([[[0, 0, 0],
+                                [1, 0, 0],
+                                [1, 1, 0],
+                                [0, 1, 0]]])
+    energy = np.array([[1]])  # 2D array -> invalid
+    with pytest.raises(ValueError, match="energy must be a 1D array."):
+        sp.plot.polygons_3d(edge_points, energy)
+
+
+def test_polygons_3d_edge_points_not_3d():
+    edge_points = np.array([
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0]])  # 2D array -> invalid
+    energy = np.array([1])
+    match="edge_points must be of shape "
+    with pytest.raises(ValueError, match=match):
+        sp.plot.polygons_3d(edge_points, energy)
+
+
+def test_polygons_3d_mismatch_count():
+    edge_points = np.array([
+        [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+        [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
+    ])  # two polygons
+    energy = np.array([1])  # only one energy value
+    match = (
+        "The number of polygons in edge_points must match the number of "
+        "energy values.")
+    with pytest.raises(ValueError, match=match):
+        sp.plot.polygons_3d(edge_points, energy)
+
+
+def test_polygons_3d_edge_points_not_convertible():
+    energy = np.array([1])
+    match = "edge_points must be convertible to a numpy array."
+    with pytest.raises(ValueError, match=match):
+        sp.plot.polygons_3d('not convertible', energy)
+
+
+def test_polygons_3d_energy_not_convertible():
+    edge_points = np.array([[
+            [0, 0, 0],
+          [1, 0, 0],
+          [1, 1, 0],
+          [0, 1, 0]]])
+    match = "energy must be convertible to a numpy array."
+    with pytest.raises(ValueError, match=match):
+        sp.plot.polygons_3d(edge_points, 'not convertible')
