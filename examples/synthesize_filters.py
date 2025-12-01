@@ -71,7 +71,11 @@ def run(test=True,
 
     print("\n\033[93m convolving position-wise filters with hrirs...\033[00m",
           end="\n")
-    for i, etc_path in enumerate(tqdm(etcfiles)):
+    for i in tqdm(range(len(etcfiles))):
+
+        etc_path = glob(os.path.join(base_dir,
+                                 "etcs",
+                                 "*"+geom_id+"_patchwise_pos"+str(i)+".far"))[0]
 
         etc_data = pf.io.read(etc_path)
         etc = etc_data["etc"]
@@ -134,7 +138,7 @@ if __name__ == "__main__":
 
     test = False
     base_dir=os.path.join(os.getcwd(),"..","..",
-                          "phd","listening experiment",
+                          "phd","listening_experiment",
                           "synthesis","lib")
 
     if len(args)>0:
