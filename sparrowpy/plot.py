@@ -8,7 +8,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 def polygons_3d(edge_points, energy, colorbar=True):
     """Show the energy of the polygons in 3D.
 
-    The polygons can represent patches or walls and are defined be the
+    The polygons can represent patches or walls and are defined by the
     edge points.
 
     Parameters
@@ -58,9 +58,6 @@ def polygons_3d(edge_points, energy, colorbar=True):
 
     cmap = cm.viridis
     energy_normalized = energy / np.max(energy)
-
-    if len(edge_points.shape) == 2:
-        edge_points = np.array([edge_points])
 
     for i in range(edge_points.shape[0]):
         ax.add_collection3d(Poly3DCollection(
