@@ -142,7 +142,7 @@ def exchange(srcID, source, receiver, radi, speed_of_sound,
             speed_of_sound=speed_of_sound,
             etc_time_resolution=etc_time_resolution,
             etc_duration=delays[srcID]+3,
-            etc_clip=delays[srcID],
+            etc_clip=delays[srcID]-.5,
             max_reflection_order=max_refl,
             recalculate=True)
 
@@ -162,10 +162,10 @@ if __name__ == "__main__":
 
     args = sys.argv[1:]
 
-    test = False
+    test = True
     diffuse = False
     base_dir=os.path.join(os.getcwd(),"..","..",
-                          "phd","listening experiment",
+                          "phd","listening_experiment",
                           "synthesis","lib")
 
     if len(args)>0:
