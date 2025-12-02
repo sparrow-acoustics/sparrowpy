@@ -56,22 +56,24 @@ def polygons_3d(edge_points, energy, colorbar=True):
 
     ax = plt.axes(projection='3d')
     cmap = cm.viridis
-    norm = mpl.colors.Normalize(np.min(energy), np.max(energy))
+    v_min, v_max = np.min(energy), np.max(energy)
+    if v_min == v_max:
+        v_min *= 0.9
+        v_max *= 1.1
+    norm = mpl.colors.Normalize(v_min, v_max)
+    mappable =  mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
+    mappable.set_array(energy)
 
-    polys = []
     for i in range(edge_points.shape[0]):
         poly = Poly3DCollection(
             edge_points[i][np.newaxis, ...],
-            cmap=cmap,
-            norm=norm,
+            color=mappable.to_rgba(energy[i]),
             )
-        poly.set_array(np.atleast_1d(energy[i]))
         ax.add_collection3d(poly)
-        polys.append(poly)
 
     if colorbar:
         plt.colorbar(
-            mpl.cm.ScalarMappable(cmap=cmap, norm=norm),
+            mappable=mappable,
             ax=ax,
             )
 
