@@ -17,7 +17,7 @@ Important:
   of the plot function (plot behavior) that changed.
 """
 # global parameters -----------------------------------------------------------
-create_baseline = True
+create_baseline = False
 
 # file type used for saving the plots
 file_type = "png"
