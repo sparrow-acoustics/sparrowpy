@@ -17,7 +17,7 @@ Important:
   of the plot function (plot behavior) that changed.
 """
 # global parameters -----------------------------------------------------------
-create_baseline = False
+create_baseline = True
 
 # file type used for saving the plots
 file_type = "png"
@@ -58,10 +58,11 @@ def _close_all_figures():
 
 
 def test_polygons_3d_default():
-    single_patch = np.array([[[0, 0, 0],
-                              [1, 0, 0],
-                              [1, 1, 0],
-                              [0, 1, 0]]])
+    single_patch = np.array([[
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0],
+        [0, 1, 0]]])
     energy = np.array([1])
 
     # do plotting
@@ -75,10 +76,11 @@ def test_polygons_3d_default():
 
 @pytest.mark.parametrize("colorbar", [True, False])
 def test_polygons_3d_colorbar(colorbar):
-    single_patch = np.array([[[0, 0, 0],
-                              [1, 0, 0],
-                              [1, 1, 0],
-                              [0, 1, 0]]])
+    single_patch = np.array([[
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0],
+        [0, 1, 0]]])
     energy = np.array([1])
 
     # do plotting
@@ -103,10 +105,11 @@ def test_polygons_3d_shoebox_room(sample_walls):
         file_type, compare_output)
 
 def test_polygons_3d_energy_not_1d():
-    edge_points = np.array([[[0, 0, 0],
-                                [1, 0, 0],
-                                [1, 1, 0],
-                                [0, 1, 0]]])
+    edge_points = np.array([[
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0],
+        [0, 1, 0]]])
     energy = np.array([[1]])  # 2D array -> invalid
     with pytest.raises(ValueError, match="energy must be a 1D array."):
         sp.plot.polygons_3d(edge_points, energy)
@@ -145,10 +148,10 @@ def test_polygons_3d_edge_points_not_convertible():
 
 def test_polygons_3d_energy_not_convertible():
     edge_points = np.array([[
-            [0, 0, 0],
-          [1, 0, 0],
-          [1, 1, 0],
-          [0, 1, 0]]])
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0],
+        [0, 1, 0]]])
     match = "energy must be convertible to a numpy array."
     with pytest.raises(ValueError, match=match):
         sp.plot.polygons_3d(edge_points, 'not convertible')
