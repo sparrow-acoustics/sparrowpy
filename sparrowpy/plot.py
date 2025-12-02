@@ -55,24 +55,19 @@ def polygons_3d(edge_points, energy, colorbar=True):
             "(cartesian coordinates).")
 
     ax = plt.axes(projection='3d')
-
     cmap = cm.viridis
-    energy_normalized = energy / np.max(energy)
+    norm = mpl.colors.Normalize(np.min(energy), np.max(energy))
 
     for i in range(edge_points.shape[0]):
-        ax.add_collection3d(Poly3DCollection(
+        poly = Poly3DCollection(
             edge_points[i][np.newaxis, ...],
-            color=cmap(energy_normalized[i]),
-            ))
+            cmap=cmap,
+            norm=norm,
+            )
+        poly.set_array(np.atleast_1d(energy[i]))
+        ax.add_collection3d(poly)
 
-    # Only add the colorbar once
     if colorbar:
-        plt.colorbar(
-            mpl.cm.ScalarMappable(
-                norm=mpl.colors.Normalize(0, np.max(energy)), cmap=cmap),
-            ax=ax,
-            orientation='vertical',
-        )
+        plt.colorbar(mappable=poly, cmap=cmap, norm=norm, ax=ax)
 
     return ax
-
