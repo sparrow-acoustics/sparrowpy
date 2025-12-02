@@ -58,6 +58,7 @@ def polygons_3d(edge_points, energy, colorbar=True):
     cmap = cm.viridis
     norm = mpl.colors.Normalize(np.min(energy), np.max(energy))
 
+    polys = []
     for i in range(edge_points.shape[0]):
         poly = Poly3DCollection(
             edge_points[i][np.newaxis, ...],
@@ -66,8 +67,12 @@ def polygons_3d(edge_points, energy, colorbar=True):
             )
         poly.set_array(np.atleast_1d(energy[i]))
         ax.add_collection3d(poly)
+        polys.append(poly)
 
     if colorbar:
-        plt.colorbar(mappable=poly, cmap=cmap, norm=norm, ax=ax)
+        plt.colorbar(
+            mpl.cm.ScalarMappable(cmap=cmap, norm=norm),
+            ax=ax,
+            )
 
     return ax
