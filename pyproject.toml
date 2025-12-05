@@ -55,6 +55,7 @@ tests = [
     "ipykernel",
     "sparrowpy[fast]",
     "nbmake",
+    "spharpy",
 ]
 docs = [
     "sphinx",
