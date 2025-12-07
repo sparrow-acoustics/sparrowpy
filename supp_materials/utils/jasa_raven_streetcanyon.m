@@ -13,7 +13,7 @@
 %% project settings
 
 myLength=60;
-myWidth=8;
+myWidth=9;
 myHeight=6;
 projectName = [ 'street_canyon' num2str(myLength) 'x' num2str(myWidth) 'x' num2str(myHeight) ];
 
@@ -75,7 +75,7 @@ rpf.setGenerateRIR(1);
 rpf.setGenerateBRIR(1);
 rpf.setSimulationTypeRT(1);
 rpf.setSimulationTypeIS(1);
-rpf.setNumParticles(5000000);
+rpf.setNumParticles(10000000);
 rpf.setFilterLength(900);
 rpf.setTimeSlotLength(1); % ms
 
