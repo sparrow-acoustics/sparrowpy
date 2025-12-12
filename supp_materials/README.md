@@ -86,6 +86,7 @@ Note that some errors may occur, if the simulation output dependencies are not r
   - [``brdf_handling.py``](utils/brdf_handling.py) -- This file contains internal methods which handle the BSC spatial definition for the BRDF generation. Some formulas from the paper's Appendix are also implemented here.
   - [``run_simu.py``](utils/run_simu.py) -- This file contains specific methods used for complete sparrowpy simulations. The different methods include specific implementations for computational performance measurement, and simulation with specific BRDF assignment from file.
   - [``fig_formatting.py``](utils/fig_formatting.py) -- Methods for formatting and export of figures in the same style as the paper.
+  - [``regression.py``](utils/regression.py) -- Helper functions for measurement model fitting. 
   - [``jasa_raven_facade.m``](jasa_raven_facade.m) -- MATLAB script for the ray-tracing (RAVEN) simulation of the façade application example (Section VI.A of the paper)
   - [``jasa_raven_streetcanyon.m``](jasa_raven_facade.m) -- MATLAB script for the ray-tracing (RAVEN) simulation of the street canyon application example (Section VI.B of the paper)
 
