@@ -1,7 +1,5 @@
 import numpy as np
 
-e = np.log(1)
-
 def exponential_regression(x,y):
     est = np.polyfit(x,np.log(y),1)
 
