@@ -6,6 +6,7 @@ import os
 from tqdm import tqdm
 import sys
 from glob import glob
+import re
 
 
 def run(test=True,
@@ -29,9 +30,6 @@ def run(test=True,
                                  "etcs",
                                  "*"+geom_id+"_patchwise_pos"+"*.far"))
     duration = 6
-    print("\033[92m Done!\033[00m")
-
-
     print("\n\033[93m generating and filtering noise signal...\033[00m", end=" ")
     # refl_density = pf.TimeData(data = sampling_rate/2*np.ones_like(etc.times),
     #                            times=etc.times)
@@ -71,11 +69,7 @@ def run(test=True,
 
     print("\n\033[93m convolving position-wise filters with hrirs...\033[00m",
           end="\n")
-    for i in tqdm(range(len(etcfiles))):
-
-        etc_path = glob(os.path.join(base_dir,
-                                 "etcs",
-                                 "*"+geom_id+"_patchwise_pos"+str(i)+".far"))[0]
+    for i,etc_path in enumerate(tqdm(etcfiles)):
 
         etc_data = pf.io.read(etc_path)
         etc = etc_data["etc"]
@@ -85,6 +79,9 @@ def run(test=True,
                                    patch_positions=radi.patches_center[patch_filter])
 
         hrir_selection = hrir[hrir_ids,:]
+
+        id = re.search("(?<=_pos).*?(?=.far)",etc_path).group()
+
         try:
             filter_patchwise = sp.dsp.weight_signal_by_etc(energy_time_curve=etc,
                                                     signal=noise_filtered,
@@ -97,14 +94,14 @@ def run(test=True,
 
             out_filter.time = np.sum(out_filter.time, axis=0)
 
-            pf.io.write(os.path.join(base_dir,"filters",geom_id+"_filter_"+str(i)+".far"),
+            pf.io.write(os.path.join(base_dir,"filters",geom_id+"_filter_"+id+".far"),
                         bin_filter=out_filter,compress=False)
 
             del out_filter
             del filter_patchwise
 
         except:
-            print(f"Filter #{i} has invalid values. Skipping.")
+            print(f"Filter #{id} has invalid values. Skipping.")
             pass
 
         del etc

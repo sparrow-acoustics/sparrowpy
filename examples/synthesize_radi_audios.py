@@ -5,13 +5,13 @@ import os
 from tqdm import tqdm
 import sys
 from glob import glob
+import re
 
 
-def run(test=True,
+
+def run(test=False,
         source_signal=pf.signals.files.guitar(),
-        base_dir=os.path.join(os.getcwd(),"..","..",
-                              "phd","listening experiment",
-                              "synthesis","lib"),
+        base_dir=os.path.join(os.getcwd(),"lib"),
         filter_id=None):
     # %% settings
     sampling_rate = 48000 # Hz
@@ -41,23 +41,28 @@ def run(test=True,
                                     "filters",
                                     "*"+geom_id+"_filter_"+"*.far"))
 
-    for i,file in enumerate(tqdm(filterfiles)):
+    for ffile in tqdm(filterfiles):
 
-        bin_filter = pf.io.read(filename=file)["bin_filter"]
+        id = re.search("(?<=filter_).*?(?=.far)",ffile).group()
 
-        out_signal=pf.Signal(data=np.zeros((2,np.max([source_signal.n_samples,
-                                                      bin_filter.n_samples]))),
-                           sampling_rate=sampling_rate)
+        if os.path.isfile(ffile):
 
-        out_signal += pf.dsp.convolve(signal1=source_signal,
-                                      signal2=bin_filter,
-                                      mode='cut')
+            bin_filter = pf.io.read(filename=ffile)["bin_filter"]
+
+        out_signal = pf.dsp.convolve(signal1=source_signal,
+                                     signal2=bin_filter,mode='full')
+
+        out_signal.time = out_signal.time[...,int(.5*out_signal.sampling_rate):]
 
         pf.io.write_audio(signal=out_signal,
                           filename=os.path.join(base_dir,
                                                 "audio",
                                                 source_signal.comment+
-                                                "_"+str(i)+"_.wav"),subtype='DOUBLE')
+                                                f"_{id}.wav"),subtype='DOUBLE')
+
+        print(ffile)
+        print(id)
+        print()
 
 ################################################
 ################################################
