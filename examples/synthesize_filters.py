@@ -14,7 +14,7 @@ def run(test=True,
                               "phd","listening experiment",
                               "synthesis","lib") ):
     # %% settings
-    sampling_rate = 441000 # Hz
+    sampling_rate = 48000 # Hz
 
     # %% load data
     print("\n\033[93m loading radi data...\033[00m", end=" ")
