@@ -14,7 +14,7 @@ def run(test=True,
                               "phd","listening experiment",
                               "synthesis","lib") ):
     # %% settings
-    sampling_rate = 48000 # Hz
+    sampling_rate = 441000 # Hz
 
     # %% load data
     print("\n\033[93m loading radi data...\033[00m", end=" ")
@@ -69,7 +69,7 @@ def run(test=True,
 
     print("\n\033[93m convolving position-wise filters with hrirs...\033[00m",
           end="\n")
-    for i,etc_path in enumerate(tqdm(etcfiles)):
+    for etc_path in tqdm(etcfiles):
 
         etc_data = pf.io.read(etc_path)
         etc = etc_data["etc"]
@@ -80,7 +80,7 @@ def run(test=True,
 
         hrir_selection = hrir[hrir_ids,:]
 
-        id = re.search("(?<=_pos).*?(?=.far)",etc_path).group()
+        fid = re.search("(?<=_pos).*?(?=.far)",etc_path).group()
 
         try:
             filter_patchwise = sp.dsp.weight_signal_by_etc(energy_time_curve=etc,
@@ -94,14 +94,14 @@ def run(test=True,
 
             out_filter.time = np.sum(out_filter.time, axis=0)
 
-            pf.io.write(os.path.join(base_dir,"filters",geom_id+"_filter_"+id+".far"),
+            pf.io.write(os.path.join(base_dir,"filters",geom_id+"_filter_"+fid+".far"),
                         bin_filter=out_filter,compress=False)
 
             del out_filter
             del filter_patchwise
 
         except:
-            print(f"Filter #{id} has invalid values. Skipping.")
+            print(f"Filter #{fid} has invalid values. Skipping.")
             pass
 
         del etc
@@ -111,7 +111,7 @@ def run(test=True,
 ################################################
 ################################################
 
-def hrirs_per_patch(coords,patch_positions, source_view_azimuth=40.):
+def hrirs_per_patch(coords, patch_positions, source_view_azimuth=40.):
 
     patch_positions /= np.linalg.norm(patch_positions, axis=1)[:,None]
     patch_positions *= coords[0].radius
