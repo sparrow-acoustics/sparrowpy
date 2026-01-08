@@ -158,6 +158,9 @@ def exchange(srcID, source, receiver, radi, speed_of_sound,
                     patch_filter=patch_filter,
                     compress=True)
 
+    del patch_filter
+    del etc
+
 if __name__ == "__main__":
 
     args = sys.argv[1:]
