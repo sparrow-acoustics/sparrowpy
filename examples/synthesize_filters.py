@@ -29,7 +29,7 @@ def run(test=True,
     etcfiles = glob(os.path.join(base_dir,
                                  "etcs",
                                  "*"+geom_id+"_patchwise_pos"+"*.far"))
-    duration = 6
+    duration = 60
     print("\n\033[93m generating and filtering noise signal...\033[00m", end=" ")
     # refl_density = pf.TimeData(data = sampling_rate/2*np.ones_like(etc.times),
     #                            times=etc.times)
@@ -116,15 +116,17 @@ def hrirs_per_patch(coords, patch_positions, source_view_azimuth=40.):
     patch_positions /= np.linalg.norm(patch_positions, axis=1)[:,None]
     patch_positions *= coords[0].radius
 
+    pp = pf.Coordinates(patch_positions[:,0],
+                        patch_positions[:,1],
+                        patch_positions[:,2])
+
     idcs = np.empty((patch_positions.shape[0]),dtype=int)
 
     coords.rotate('z', [source_view_azimuth])
 
-    for i,pos in enumerate(patch_positions):
-        sqdiff = np.sum((coords.cartesian-pos)**2, axis=1)
-        idcs[i] = np.argmin(sqdiff)
+    idcs = coords.find_nearest(pp)[0][0]
 
-    return np.array(idcs)
+    return idcs
 
 
 ######################################
@@ -133,7 +135,7 @@ if __name__ == "__main__":
 
     args = sys.argv[1:]
 
-    test = False
+    test = True
     base_dir=os.path.join(os.getcwd(),"..","..",
                           "phd","listening_experiment",
                           "synthesis","lib")
