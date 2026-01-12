@@ -29,7 +29,7 @@ def run(test=True,
     etcfiles = glob(os.path.join(base_dir,
                                  "etcs",
                                  "*"+geom_id+"_patchwise_pos"+"*.far"))
-    duration = 60
+    duration = 6
     print("\n\033[93m generating and filtering noise signal...\033[00m", end=" ")
     # refl_density = pf.TimeData(data = sampling_rate/2*np.ones_like(etc.times),
     #                            times=etc.times)
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
     args = sys.argv[1:]
 
-    test = True
+    test = False
     base_dir=os.path.join(os.getcwd(),"..","..",
                           "phd","listening_experiment",
                           "synthesis","lib")
