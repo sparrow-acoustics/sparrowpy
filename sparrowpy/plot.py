@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import cm, colors
+from matplotlib import cm, colormaps, colors
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
@@ -75,7 +75,7 @@ def polygons_3d(edge_points, energy, ax=None, v_min=None, v_max=None,
     if "3d" not in ax.name:
         raise ValueError("The projection of the axis needs to be '3d'.")
 
-    cmap = cm.get_cmap("viridis")
+    cmap = colormaps.get_cmap("viridis")
     if v_min is None:
         v_min = np.min(energy)
     if v_max is None:
@@ -109,6 +109,7 @@ def animate_polygons_3d(
     v_max=None,
     colorbar=True,
     animation_fps=50,
+    show_current_sample_text=True,
     **kwargs,
 ):
     """Animate the energy of polygons over time in 3D.
@@ -136,6 +137,9 @@ def animate_polygons_3d(
         Whether to show a colorbar or not. Default is ``True``.
     animation_fps : int, optional
         Number of frames per second for the plot animation. Default is ``50``.
+    show_current_sample_text : bool, optional
+        Whether to show the current sample index as text in the plot title.
+        Default is ``True``.
     **kwargs : optional
         Additional keyword arguments passed to Poly3DCollection.
 
@@ -183,7 +187,7 @@ def animate_polygons_3d(
     if "3d" not in ax.name:
         raise ValueError("The projection of the axis needs to be '3d'")
 
-    cmap = cm.get_cmap("viridis")
+    cmap = colormaps.get_cmap("viridis")
     if v_min is None:
         v_min = np.min(energy_over_time)
     if v_max is None:
@@ -212,6 +216,8 @@ def animate_polygons_3d(
 
     def _update(frame):
         energies_in_frame = energy_over_time[:, frame]
+        if show_current_sample_text:
+            ax.set_title(f"Sample = {frame}")
         colors = mappable.to_rgba(energies_in_frame)
         for poly, c in zip(polys, colors, strict=False):
             poly.set_facecolor(c)
