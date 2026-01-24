@@ -155,3 +155,26 @@ def test_polygons_3d_energy_not_convertible():
     match = "energy must be convertible to a numpy array."
     with pytest.raises(ValueError, match=match):
         sp.plot.polygons_3d(edge_points, 'not convertible')
+
+
+def test_polygons_vmin_vmax_parameter():
+    edge_points = np.array(
+        [
+            [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+            [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]],
+        ],
+    )
+    energy = np.array([1,1])
+
+    # do plotting
+    filename = "polygons_3d_vmin_vmax_parameter"
+    create_figure()
+    sp.plot.polygons_3d(edge_points, energy, v_min=0, v_max=1.5)
+    save_and_compare(
+        create_baseline,
+        baseline_path,
+        output_path,
+        filename,
+        file_type,
+        compare_output,
+    )
