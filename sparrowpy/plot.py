@@ -8,7 +8,7 @@ import matplotlib as mpl
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
-def polygons_3d(edge_points, energy, colorbar=True):
+def polygons_3d(edge_points, energy, colorbar=True, **kwargs):
     """Show the energy of the polygons in 3D.
 
     The polygons can represent patches or walls and are defined by the
@@ -23,6 +23,8 @@ def polygons_3d(edge_points, energy, colorbar=True):
         Energy for each polygon of shape (#polygons,).
     colorbar : bool, optional
         Whether to show a colorbar or not. Default is ``True``.
+    **kwargs : optional
+        Additional keyword arguments passed to Poly3DCollection.
 
     Returns
     -------
@@ -71,6 +73,7 @@ def polygons_3d(edge_points, energy, colorbar=True):
         poly = Poly3DCollection(
             edge_points[i][np.newaxis, ...],
             color=mappable.to_rgba(energy[i]),
+            **kwargs,
             )
         ax.add_collection3d(poly)
 
