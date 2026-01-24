@@ -8,7 +8,7 @@ import matplotlib as mpl
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
-def polygons_3d(edge_points, energy, colorbar=True):
+def polygons_3d(edge_points, energy, colorbar=True, ax=None):
     """Show the energy of the polygons in 3D.
 
     The polygons can represent patches or walls and are defined by the
@@ -23,6 +23,9 @@ def polygons_3d(edge_points, energy, colorbar=True):
         Energy for each polygon of shape (#polygons,).
     colorbar : bool, optional
         Whether to show a colorbar or not. Default is ``True``.
+    ax : matplotlib.axis, optional
+        The matplotlib axis object used for plotting. By default ``None``,
+        which will create a new axis object.
 
     Returns
     -------
@@ -57,7 +60,13 @@ def polygons_3d(edge_points, energy, colorbar=True):
             "The last dimension of edge_points must be 3 "
             "(cartesian coordinates).")
 
-    ax = plt.axes(projection='3d')
+    # create axis if not provided
+    if ax is None:
+        ax = plt.axes(projection="3d")
+
+    if "3d" not in ax.name:
+        raise ValueError("The projection of the axis needs to be '3d'.")
+
     cmap = cm.viridis
     v_min, v_max = np.min(energy), np.max(energy)
     if v_min == v_max:
