@@ -155,3 +155,33 @@ def test_polygons_3d_energy_not_convertible():
     match = "energy must be convertible to a numpy array."
     with pytest.raises(ValueError, match=match):
         sp.plot.polygons_3d(edge_points, 'not convertible')
+
+
+def test_polygons_ax_invalid():
+    edge_points = np.array([[
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0],
+        [0, 1, 0]]])
+    energy = np.array([1])
+    ax = plt.axes()  # 2D axis -> invalid
+    match = "The projection of the axis needs to be '3d'."
+    with pytest.raises(ValueError, match=match):
+        sp.plot.polygons_3d(edge_points, energy, ax=ax)
+
+
+def test_polygons_ax_parameter():
+    edge_points = np.array([[[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]])
+    energy = np.array([1])
+
+    # do plotting
+    filename = "polygons_3d_axes_parameter"
+    fig = create_figure()
+    ax1 = fig.add_subplot(211, projection="3d")
+    ax1.scatter(2, 2, 2, c='r', label='Test Point')
+    ax1.legend()
+    ax2 = fig.add_subplot(212, projection="3d")
+    sp.plot.polygons_3d(edge_points, energy, ax=ax2)
+    save_and_compare(
+        create_baseline, baseline_path, output_path, filename,
+        file_type, compare_output)
