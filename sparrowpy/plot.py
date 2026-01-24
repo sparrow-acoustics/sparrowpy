@@ -8,7 +8,7 @@ import matplotlib as mpl
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
-def polygons_3d(edge_points, energy, colorbar=True):
+def polygons_3d(edge_points, energy, v_min=None, v_max=None, colorbar=True):
     """Show the energy of the polygons in 3D.
 
     The polygons can represent patches or walls and are defined by the
@@ -21,6 +21,12 @@ def polygons_3d(edge_points, energy, colorbar=True):
         of shape (#polygons, #points, 3).
     energy : np.ndarray
         Energy for each polygon of shape (#polygons,).
+    v_min : float, optional
+        Minimum value for color scaling. If ``None``, the minimum of the energy
+        array is used. Default is ``None``.
+    v_max : float, optional
+        Maximum value for color scaling. If ``None``, the maximum of the energy
+        array is used. Default is ``None``.
     colorbar : bool, optional
         Whether to show a colorbar or not. Default is ``True``.
 
@@ -59,7 +65,10 @@ def polygons_3d(edge_points, energy, colorbar=True):
 
     ax = plt.axes(projection='3d')
     cmap = cm.viridis
-    v_min, v_max = np.min(energy), np.max(energy)
+    if v_min is None:
+        v_min = np.min(energy)
+    if v_max is None:
+        v_max = np.max(energy)
     if v_min == v_max:
         v_min *= 0.9
         v_max *= 1.1
