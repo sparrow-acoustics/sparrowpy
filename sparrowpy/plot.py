@@ -2,26 +2,33 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pyfar as pf
+import spharpy
 from matplotlib import cm, colormaps, colors
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from scipy.spatial.transform import Rotation
+
+from sparrowpy import geometry
 
 
-def polygons_3d(edge_points, energy, ax=None, v_min=None, v_max=None,
-    colorbar=True, **kwargs):
+def polygons_3d(edge_points, energy, v_min=None, v_max=None,
+    colorbar=True, brdf_points=None, brdf_data=None, scale_brdf=0.5, ax=None, **kwargs):
     """Show the energy of the polygons in 3D.
 
     The polygons can represent patches or walls and are defined by the
     edge points.
+    For the BRDF visualization, the sampling points AND the BRDF data
+    for each polygon have to be provided.
 
     Parameters
     ----------
     edge_points : np.ndarray, list
         The points in cartesian coordinates of the polygons
-        of shape (#polygons, #points, 3).
+        of shape (#polygons, #points, 3 or 4).
     energy : np.ndarray
         Energy for each polygon of shape (#polygons,).
-    ax : matplotlib.axis, None, optional
+    ax : matplotlib.axis, optional
         The matplotlib axis object used for plotting. By default ``None``,
         which will create a new axis object.
     v_min : float, optional
@@ -32,6 +39,17 @@ def polygons_3d(edge_points, energy, ax=None, v_min=None, v_max=None,
         array is used. Default is ``None``.
     colorbar : bool, optional
         Whether to show a colorbar or not. Default is ``True``.
+    brdf_points : :py:class:`~pyfar.classes.coordinates.Coordinates`, optional
+        The sampling (receiver) points of the brdf_data (#brdf_outgoing_angles)
+        Assumes the same point distribution for every given brdf.
+        If ``None``, no BRDF is visualized. Default is ``None``.
+    brdf_data : :py:class:`~pyfar.classes.audio.FrequencyData`, optional
+        Plot BRDF for each polygon of shape (#polygons, #brdf_outgoing_angles).
+        This implementation requires a specific frequency band and incoming
+        angle before calling the function!
+        If ``None``, no BRDF is visualized. Default is ``None``.
+    scale_brdf : float, optional
+        Scaling factor for the BRDF balloon plot size. Default is ``0.5``.
     **kwargs : optional
         Additional keyword arguments passed to Poly3DCollection.
 
@@ -58,7 +76,7 @@ def polygons_3d(edge_points, energy, ax=None, v_min=None, v_max=None,
         raise ValueError("energy must be a 1D array.")
     if np.array(edge_points).ndim != 3:
         raise ValueError(
-            "edge_points must be of shape (#polygons, #points, 3).")
+            "edge_points must be of shape (#polygons, #points, 3 or 4).")
     if edge_points.shape[0] != energy.shape[0]:
         raise ValueError(
             "The number of polygons in edge_points must match the number of "
@@ -97,6 +115,99 @@ def polygons_3d(edge_points, energy, ax=None, v_min=None, v_max=None,
 
     if colorbar:
         plt.colorbar(mappable=mappable, ax=ax)
+
+    if brdf_data is None:
+        if brdf_points is None:
+            return ax
+        raise ValueError(
+            "brdf_data must be provided if brdf_points are provided.",
+        )
+
+    # brdf_data is given
+    # test brdf properties
+    if isinstance(brdf_data, pf.FrequencyData):
+        if brdf_data.frequencies.shape[0] != 1:
+            raise ValueError(
+                "brdf_data must have only one frequency - otherwise "
+                "unclear what data should be plotted.",
+            )
+        if np.iscomplex(brdf_data.freq).any():
+            raise ValueError(
+                "brdf_data must be real-valued for plotting.",
+            )
+        brdf_array = np.real(brdf_data.freq) # remove possible +0j
+    else:
+        raise ValueError("brdf_data must be of type pyfar.FrequencyData.")
+    if brdf_array.ndim >= 3:
+        if brdf_array.ndim == 3 and brdf_array.shape[-1] == 1:
+            brdf_array = brdf_array[..., 0]
+        else:
+            raise ValueError(
+                "brdf_data must be reducible to shape "
+                "(#polygons, #brdf_outgoing_angles).",
+            )
+    if brdf_array.shape[0] != energy.shape[0]:
+        raise ValueError(
+            "The number of polygons in brdf must match the number of "
+            "polygons with energy values.",
+        )
+    if brdf_points is None:
+        raise ValueError(
+            "brdf_points must be provided if brdf_data is provided.",
+        )
+    if brdf_points.cartesian.shape[0] != brdf_array.shape[1]:
+        raise ValueError(
+            "brdf_points and brdf_data do not contain the same number of "
+            "points as brdf_outgoing_angles.",
+        )
+
+    # plot brdf
+    # FIXME SUS why not directly use Polygon for edge_points?
+    normal_vectors = geometry._calculate_normals(edge_points)
+    max_size = np.max(geometry._calculate_area(edge_points))
+    for idx, points in enumerate(edge_points): # for each polygon
+        middle_point = np.sum(points, axis=0) / points.shape[0]
+        # calculate rotation
+        normal = normal_vectors[idx] / np.linalg.norm(normal_vectors[idx])
+        axis = np.cross(normal, [0, 0, 1])
+        if np.linalg.norm(axis) < 1e-8:
+            if np.dot(normal, [0, 0, 1]) > 0.0:
+                # parallel
+                rz, ry, rx = 0, 0, 0
+            else:
+                # anti-parallel (180° rot around x axis)
+                axis = np.array([1.0, 0.0, 0.0])
+                rz, ry, rx = Rotation.from_rotvec(axis * np.pi).as_euler('zyx')
+        else:
+            axis = axis / np.linalg.norm(axis)
+            angle = np.arccos(np.clip(np.dot(normal, [0, 0, 1]), -1, 1))
+            rz, ry, rx = Rotation.from_rotvec(axis * angle).as_euler('zyx')
+
+        cx, sx = np.cos(rx), np.sin(rx)
+        cy, sy = np.cos(ry), np.sin(ry)
+        cz, sz = np.cos(rz), np.sin(rz)
+        Rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
+        Ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
+        Rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
+        RotM = Rz @ Ry @ Rx
+        plot = spharpy.plot.balloon(
+            brdf_points,
+            brdf_array[idx,...],
+            colorbar=False,
+            ax=ax,
+        )
+        # _vec of shape (4, #vec) with _vec[-1,...] being only ones
+        if plot._vec.shape[0] != 4 and plot._vec[-1,...].any() != 1:
+            raise ValueError(
+                "Unexpected shape of plot _vec attribute.",
+            )
+        vec = np.asarray(plot._vec)
+        xyz = vec[:3, :] * np.sqrt(max_size) / 2 * scale_brdf
+        rotated = RotM @ xyz + middle_point[:, None]
+        vec[:3, :] = rotated
+        vec[3, :] = 1.0  # homogeneous coordinate
+        plot._vec = vec
+        plot.figure.canvas.draw()
 
     return ax
 
