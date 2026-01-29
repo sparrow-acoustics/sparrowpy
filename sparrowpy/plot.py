@@ -5,11 +5,11 @@ import matplotlib.tri as mtri
 import numpy as np
 import pyfar as pf
 import scipy.spatial as sspat
-import spharpy
 from matplotlib import cm, colormaps, colors
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial.transform import Rotation
+from spharpy import samplings
 
 from sparrowpy import geometry
 
@@ -206,7 +206,7 @@ def polygons_3d(
         Ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
         Rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
         RotM = Rz @ Ry @ Rx
-        plot = spharpy.plot.balloon(
+        plot = balloon(
             brdf_points,
             brdf_array[idx, ...],
             colorbar=False,
@@ -273,21 +273,19 @@ def balloon(
     # equal to coordinates = convert_coordinates(coordinates):
     if type(coordinates) is pf.Coordinates:
         if coordinates.sh_order is None:
-            coordinates = spharpy.samplings.Coordinates.from_pyfar(coordinates)
+            coordinates = samplings.Coordinates.from_pyfar(coordinates)
         else:
-            coordinates = spharpy.samplings.SamplingSphere.from_pyfar(
-                coordinates,
-            )
+            coordinates = samplings.SamplingSphere.from_pyfar(coordinates)
 
     # equal to tri, xyz = _triangulation_sphere(sampling = coordinates, data)
-    x, y, z = spharpy.samplings.sph2cart(
+    x, y, z = samplings.sph2cart(
         np.abs(data),
         coordinates.elevation,
         coordinates.azimuth,
     )
     hull = sspat.ConvexHull(
         np.asarray(
-            spharpy.samplings.sph2cart(
+            samplings.sph2cart(
                 np.ones(coordinates.n_points),
                 coordinates.elevation,
                 coordinates.azimuth,
