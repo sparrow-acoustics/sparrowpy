@@ -140,15 +140,19 @@ def balloon(
         which will create a new axis object.
     **kwargs : optional
         Additional keyword arguments passed to Poly3DCollection.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes to plot on.
     """
-    # equal to coordinates = convert_coordinates(coordinates)
+    # check and convert coordinates
     if type(coordinates) is pf.Coordinates:
         if coordinates.sh_order is None:
             coordinates = samplings.Coordinates.from_pyfar(coordinates)
         else:
             coordinates = samplings.SamplingSphere.from_pyfar(coordinates)
 
-    # similar to tri, xyz = _triangulation_sphere(sampling = coordinates, data)
     x, y, z = samplings.sph2cart(
         np.abs(data),
         coordinates.elevation,
@@ -187,9 +191,11 @@ def balloon(
         # no rotation given
         RotM = np.eye(3)
 
+    # apply scaling
     if scale is not None:
         xyz *= scale
 
+    # apply rotation and translation
     xyz = RotM @ xyz + translate[..., None]
 
     x, y, z = xyz
@@ -202,6 +208,7 @@ def balloon(
     if "3d" not in ax.name:
         raise ValueError("The projection of the axis needs to be '3d'.")
 
+    # create cmap if not provided
     if cmap is None:
         cmap = plt.get_cmap("viridis")
 
@@ -218,4 +225,4 @@ def balloon(
     if colorbar:
         plt.gcf().colorbar(plot, ax=ax, label="Amplitude")
 
-    return plot
+    return ax
