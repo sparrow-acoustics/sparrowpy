@@ -177,53 +177,34 @@ def polygons_3d(
             "points as brdf_outgoing_angles.",
         )
 
+    # change polygons from Poly3DCollection to be see through for better
+    # visibility of brdf plots when using Matplotlib for 3D rendering
+    try:
+        for coll in ax.collections:
+            if isinstance(coll, Poly3DCollection):
+                coll.set_alpha(0.7)
+    except Exception:
+        pass
+
     # plot brdf
-    # FIXME SUS why not directly use Polygon for edge_points?
     normal_vectors = geometry._calculate_normals(edge_points)
-    max_size = np.max(geometry._calculate_area(edge_points))
     for idx, points in enumerate(edge_points):  # for each polygon
         middle_point = np.sum(points, axis=0) / points.shape[0]
-        # calculate rotation
-        normal = normal_vectors[idx] / np.linalg.norm(normal_vectors[idx])
-        axis = np.cross(normal, [0, 0, 1])
-        if np.linalg.norm(axis) < 1e-8:
-            if np.dot(normal, [0, 0, 1]) > 0.0:
-                # parallel
-                rz, ry, rx = 0, 0, 0
-            else:
-                # anti-parallel (180° rot around x axis)
-                axis = np.array([1.0, 0.0, 0.0])
-                rz, ry, rx = Rotation.from_rotvec(axis * np.pi).as_euler("zyx")
-        else:
-            axis = axis / np.linalg.norm(axis)
-            angle = np.arccos(np.clip(np.dot(normal, [0, 0, 1]), -1, 1))
-            rz, ry, rx = Rotation.from_rotvec(axis * angle).as_euler("zyx")
 
-        cx, sx = np.cos(rx), np.sin(rx)
-        cy, sy = np.cos(ry), np.sin(ry)
-        cz, sz = np.cos(rz), np.sin(rz)
-        Rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
-        Ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
-        Rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
-        RotM = Rz @ Ry @ Rx
-        plot = balloon(
+        scale_plot = (
+            scale_brdf
+            * np.sqrt(geometry._calculate_area(points[np.newaxis, ...]))
+            / 2
+        )
+        balloon(
             brdf_points,
             brdf_array[idx, ...],
+            translate=middle_point,
+            rotate_normal=normal_vectors[idx],
+            scale=scale_plot,
             colorbar=False,
             ax=ax,
         )
-        # _vec of shape (4, #vec) with _vec[-1,...] being only ones
-        if plot._vec.shape[0] != 4 and plot._vec[-1, ...].any() != 1:
-            raise ValueError(
-                "Unexpected shape of plot _vec attribute.",
-            )
-        vec = np.asarray(plot._vec)
-        xyz = vec[:3, :] * np.sqrt(max_size) / 2 * scale_brdf
-        rotated = RotM @ xyz + middle_point[:, None]
-        vec[:3, :] = rotated
-        vec[3, :] = 1.0  # homogeneous coordinate
-        plot._vec = vec
-        plot.figure.canvas.draw()
 
     return ax
 
@@ -231,24 +212,26 @@ def polygons_3d(
 def balloon(
     coordinates,
     data,
+    translate=None,
+    rotate_normal=None,
+    scale=None,
     cmap=None,
-    phase=False,
     colorbar=False,
     ax=None,
     **kwargs,
 ):
-    """Adaptation to the spharpy balloon plot function to include rotation,
-    translation and scaling.
+    """Adaptation to the spharpy balloon plot function to include translation,
+    rotation and scaling.
     Plot data on a sphere defined by the coordinate angles theta and phi.
     The magnitude information is mapped onto the radius of the sphere.
-    The colormap represents either the phase or the magnitude of the
-    data array.
-
+    The colormap represents the magnitude of the data array.
 
     Note
     ----
-    When plotting the phase encoded in the colormap, the function will switch
-    to the HSV colormap and ignore the user input for the cmap input variable.
+    Be aware that other objects (e.g. polygons_3d with Poly3DCollection) might
+    cover (parts of) the balloon plot depending on the viewing angle and
+    the alpha value of the other objects because of matplotlib's inaccurate
+    collection depth buffer.
 
     Parameters
     ----------
@@ -257,11 +240,20 @@ def balloon(
     data : ndarray, double
         Data for each angle, must have size corresponding to the number of
         points given in coordinates.
+    translate : np.ndarray, optional
+        Translation vector of shape (3,) to move the balloon plot to a
+        specific position in 3D space e.g. the middle of a polygon.
+        Default is ``None`` (point of origin).
+    rotate_normal : np.ndarray, optional
+        Vector of shape (3,) to rotate the balloon to this orientation e.g.
+        the normal vector of a polygon. Default is ``None``, which creates a
+        balloon plot on the xy-plane equal to rotate_normal of [0,0,1].
+    scale : float, optional
+        Manual scaling factor for the balloon size. It is advised to use a
+        scaling based on the polygon area (with geometry._calculate_area()).
+        Default is ``None``.
     cmap : matplotlib colormap, optional
         Colormap for the plot, see matplotlib.cm
-    phase : boolean, optional
-        Encode the phase of the data in the colormap. This option will be
-        activated by default of the data is complex valued.
     colorbar : bool, optional
         Whether to show a colorbar or not. Default is ``False``.
     ax : matplotlib.axis, optional
@@ -277,12 +269,13 @@ def balloon(
         else:
             coordinates = samplings.SamplingSphere.from_pyfar(coordinates)
 
-    # equal to tri, xyz = _triangulation_sphere(sampling = coordinates, data)
+    # similar to tri, xyz = _triangulation_sphere(sampling = coordinates, data)
     x, y, z = samplings.sph2cart(
         np.abs(data),
         coordinates.elevation,
         coordinates.azimuth,
     )
+    xyz = np.vstack((x, y, z))
     hull = sspat.ConvexHull(
         np.asarray(
             samplings.sph2cart(
@@ -292,6 +285,42 @@ def balloon(
             ),
         ).T,
     )
+
+    # calculate rotation (could be reduced by Rotation._.as_matrix)
+    if translate is None:
+        translate = np.array([0.0, 0.0, 0.0])
+    if rotate_normal is not None:
+        rotate_normal = rotate_normal / np.linalg.norm(rotate_normal)
+        axis = np.cross(rotate_normal, [0, 0, 1])
+        if np.linalg.norm(axis) < 1e-8:
+            if np.dot(rotate_normal, [0, 0, 1]) > 0.0:
+                # parallel
+                rz, ry, rx = 0, 0, 0
+            else:
+                # anti-parallel (180° rot around x axis)
+                axis = np.array([1.0, 0.0, 0.0])
+                rz, ry, rx = Rotation.from_rotvec(axis * np.pi).as_euler("zyx")
+        else:
+            axis = axis / np.linalg.norm(axis)
+            angle = np.arccos(np.clip(np.dot(rotate_normal, [0, 0, 1]), -1, 1))
+            rz, ry, rx = Rotation.from_rotvec(axis * angle).as_euler("zyx")
+
+        cx, sx = np.cos(rx), np.sin(rx)
+        cy, sy = np.cos(ry), np.sin(ry)
+        cz, sz = np.cos(rz), np.sin(rz)
+        Rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
+        Ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
+        Rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
+        RotM = Rz @ Ry @ Rx
+    else:
+        # no rotation
+        RotM = np.eye(3)
+    if scale is not None:
+        xyz *= scale
+
+    xyz = RotM @ xyz + translate[..., None]
+
+    x, y, z = xyz
     tri = mtri.Triangulation(x, y, triangles=hull.simplices)
 
     # create axis if not provided
@@ -314,17 +343,8 @@ def balloon(
         **kwargs,
     )
 
-    # plot.set_array(np.mean(data[tri.triangles], axis=1))
-
-    # ax.set_box_aspect([np.ptp(xyz[0]), np.ptp(xyz[1]), np.ptp(xyz[2])])
-
     if colorbar:
         plt.gcf().colorbar(plot, ax=ax, label="Amplitude")
-
-    # ax.set_xlabel("x[m]")
-    # ax.set_ylabel("y[m]")
-    # ax.set_zlabel("z[m]")
-
     return plot
 
 
