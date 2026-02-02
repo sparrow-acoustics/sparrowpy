@@ -222,7 +222,7 @@ def balloon(
 ):
     """Adaptation to the spharpy balloon plot function to include translation,
     rotation and scaling.
-    Plot data on a sphere defined by the coordinate angles theta and phi.
+    Plot data (e.g. BRDFs) on a sphere defined by the coordinates.
     The magnitude information is mapped onto the radius of the sphere.
     The colormap represents the magnitude of the data array.
 
