@@ -286,35 +286,28 @@ def balloon(
         ).T,
     )
 
-    # calculate rotation (could be reduced by Rotation._.as_matrix)
+    # calculate rotation (approach equal to a transformation matrix)
     if translate is None:
         translate = np.array([0.0, 0.0, 0.0])
     if rotate_normal is not None:
         rotate_normal = rotate_normal / np.linalg.norm(rotate_normal)
         axis = np.cross(rotate_normal, [0, 0, 1])
+        dot_of_normal_and_world = np.dot(rotate_normal, [0, 0, 1])
         if np.linalg.norm(axis) < 1e-8:
-            if np.dot(rotate_normal, [0, 0, 1]) > 0.0:
-                # parallel
-                rz, ry, rx = 0, 0, 0
+            # parallel or anti-parallel (that needs 180° rot around x axis)
+            if dot_of_normal_and_world > 0:
+                RotM = np.eye(3)
             else:
-                # anti-parallel (180° rot around x axis)
-                axis = np.array([1.0, 0.0, 0.0])
-                rz, ry, rx = Rotation.from_rotvec(axis * np.pi).as_euler("zyx")
+                rotvec = np.array([1.0, 0.0, 0.0]) * np.pi
+                RotM = Rotation.from_rotvec(rotvec).as_matrix()
         else:
             axis = axis / np.linalg.norm(axis)
-            angle = np.arccos(np.clip(np.dot(rotate_normal, [0, 0, 1]), -1, 1))
-            rz, ry, rx = Rotation.from_rotvec(axis * angle).as_euler("zyx")
-
-        cx, sx = np.cos(rx), np.sin(rx)
-        cy, sy = np.cos(ry), np.sin(ry)
-        cz, sz = np.cos(rz), np.sin(rz)
-        Rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
-        Ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
-        Rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
-        RotM = Rz @ Ry @ Rx
+            angle = np.arccos(np.clip(dot_of_normal_and_world, -1, 1))
+            RotM = Rotation.from_rotvec(axis * angle).as_matrix()
     else:
-        # no rotation
+        # no rotation given
         RotM = np.eye(3)
+
     if scale is not None:
         xyz *= scale
 
@@ -345,6 +338,7 @@ def balloon(
 
     if colorbar:
         plt.gcf().colorbar(plot, ax=ax, label="Amplitude")
+
     return plot
 
 
