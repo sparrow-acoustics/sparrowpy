@@ -453,7 +453,7 @@ def energy_time_curve_from_impulse_response(
     bandwidth : float, array_like, optional
         Bandwidth for each signal channel, by default None, which means its
         assumed for the full bandwidth :math:`BW = f_s/2`.
-        The shape should be ``(n_bands)``.
+        The shape should be ``(n_bands,)``.
 
     Returns
     -------
@@ -511,10 +511,10 @@ def energy_time_curve_from_impulse_response(
             bandwidth = np.asarray(bandwidth)
             if np.any(bandwidth <= 0):
                 raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape != signal.cshape[-bandwidth.ndim:]:
+            if bandwidth.shape != signal.cshape[:1]:
                 raise ValueError(
                     f"bandwidth shape {bandwidth.shape} does not "
-                    f"match signal bands {signal.cshape[-bandwidth.ndim:]}",
+                    f"match signal bands {signal.cshape[:1]}",
                 )
 
     if bandwidth is None:
