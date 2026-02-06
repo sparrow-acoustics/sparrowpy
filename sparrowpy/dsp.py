@@ -489,6 +489,8 @@ def energy_time_curve_from_impulse_response(
         >>> bw = cutoff_freq[1] - cutoff_freq[0]
         >>> filtered_white_noise = pf.dsp.filter.fractional_octave_bands(
         ...     white_noise, 1, frequency_range=(1e3, 20e3),)
+        >>> filtered_white_noise.time = np.rollaxis(filtered_white_noise.time,
+        ...     0,-1)
         >>> etc = sp.dsp.energy_time_curve_from_impulse_response(
         ...     filtered_white_noise, 0.01, bw)
         >>> ax = pf.plot.time(etc, dB=True, log_prefix=10)
