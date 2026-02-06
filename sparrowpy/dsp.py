@@ -379,13 +379,13 @@ def weight_signal_by_etc(
             raise ValueError(
                 f"bandwidth shape {bandwidth.shape} does not "
                 "match signal bands "
-                f"{signal.cshape[-bandwidth.ndim:]}",
+                f"{signal.cshape[-1:]}",
             )
-        if bandwidth.shape != energy_time_curve.cshape[(-bandwidth.ndim):]:
+        if bandwidth.shape != energy_time_curve.cshape[-1:]:
             raise ValueError(
                 f"bandwidth shape {bandwidth.shape} does not "
                 "match etc shape "
-                f"{energy_time_curve.cshape[-bandwidth.ndim:]}",
+                f"{energy_time_curve.cshape[-1:]}",
             )
 
     if type(energy_time_curve) is not pf.TimeData:
@@ -511,10 +511,10 @@ def energy_time_curve_from_impulse_response(
             bandwidth = np.asarray(bandwidth)
             if np.any(bandwidth <= 0):
                 raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape != signal.cshape[:1]:
+            if bandwidth.shape != signal.cshape[-1:]:
                 raise ValueError(
                     f"bandwidth shape {bandwidth.shape} does not "
-                    f"match signal bands {signal.cshape[:1]}",
+                    f"match signal bands {signal.cshape[-1:]}",
                 )
 
     if bandwidth is None:
