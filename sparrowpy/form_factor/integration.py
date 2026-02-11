@@ -7,7 +7,6 @@ except ImportError:
     prange = range
 import numpy as np
 import sparrowpy.geometry as geom
-import scipy.interpolate as intp
 
 
 def load_stokes_entries(
@@ -74,7 +73,7 @@ def stokes_integration(
 
     """
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
-                                                         npoints=7)
+                                                         npoints=5)
     j_bpoints, j_conn = _sample_boundary_regular(patch_j,
                                                          npoints=3)
 
@@ -115,15 +114,7 @@ def stokes_integration(
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
 
-                si=1
-
-                if xi[-1]-xi[0]<0:
-                    si = -1
-                    xi.sort()
-
-                interpolator = intp.CubicSpline(x=xi,y=subseci)
-
-                outer_integral+= si*interpolator.integrate(xi[0],xi[-1])
+                outer_integral+= _newton_cotes_4th(x=xi,y=subseci)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
