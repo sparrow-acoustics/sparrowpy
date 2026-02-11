@@ -11,6 +11,7 @@ class integration_test:
         self._select_geometry(gtype,w,h,l)
         self.int_method = intg.stokes_integration
         self.result=None
+        self.error=None
 
     def _select_geometry(self,gtype="a",w=1,h=1,l=2):
         """Select geometry (parallel or coincident line patches)."""
@@ -72,24 +73,27 @@ class integration_test:
                                self.patch_2.pts,
                                self.patch_1.area)
 
-    def calc_error(self, relative=True):
+    def calc_error(self):
+        """Calculate integration error."""
         if self.result is None:
             self.integrate()
 
-        if relative:
-            e=self.result/self.solution
-        else:
-            e=self.solution-self.result
-
-        return e
+        self.error=self.result/self.solution
+        self.error_absolute=self.solution-self.result
 
     def geometry(self):
         """Return geometry data."""
         return(self.patch_1,self.patch_2)
 
+    def print_results(self):
+        """Print errors."""
+        if self.error is None:
+            self.calc_error()
+
+        print(f'\nrelative ff error:       {self.error-1:.4%}')
+        print(f'gain per 100 bounces:      {10*np.log10(self.error**100):.1f}'+
+               'dB\n')
+
 if __name__=="__main__":
     test=integration_test()
-    print(f'relative error: {test.calc_error()-1:.6%}')
-    print(f'1 bounce   -> {10*np.log10(test.calc_error()):.1f} dB')
-    print(f'50 bounces -> {10*np.log10(test.calc_error()**50):.1f} dB')
-    print(f'100 bounces -> {10*np.log10(test.calc_error()**100):.1f} dB')
+    test.print_results()
