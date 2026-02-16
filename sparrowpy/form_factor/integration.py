@@ -232,8 +232,8 @@ def _g_integral(abc:np.ndarray, x:np.ndarray):
 #/////////////////////////////////////////////////////////////////////////////////////#
 #######################################################################################
 
-def _load_stokes_integrand(
-    i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
+def _load_stokes_integrand(i_bpoints: np.ndarray,
+                           j_bpoints: np.ndarray) -> np.ndarray:
     """Load all the stokes form function values between two patches.
 
     Parameters
@@ -259,9 +259,9 @@ def _load_stokes_integrand(
 
     return form_mat
 
-def _load_analytical_integrand(
-    i_bpoints: np.ndarray, j_bpoints: np.ndarray) -> np.ndarray:
-    """Load all the stokes form function values between two patches.
+def _load_analytical_integrand(i_bpoints: np.ndarray,
+                               j_bpoints: np.ndarray) -> np.ndarray:
+    """Load all the analytical form function values between two patches.
 
     Parameters
     ----------
@@ -285,6 +285,39 @@ def _load_analytical_integrand(
             rs = (np.linalg.norm(i_bpoints[i]-j_bpoints[j]))**2
             if rs > eps:
                 form_mat[i][j] = rs
+
+    return form_mat
+
+def _load_Lambert_integrand(i_points: np.ndarray,
+                            i_normal: np.ndarray,
+                            j_points: np.ndarray,
+                            j_normal: np.ndarray) -> np.ndarray:
+    """Load all the Lambert cosine law values between two patches.
+
+    Parameters
+    ----------
+    i_points: np.ndarray
+        list of points in patch i surface (n_points_i , 3)
+
+    j_points: np.ndarray
+        list of points in patch j surface (n_points_j , 3)
+
+    Returns
+    -------
+    form_mat: np.ndarray
+        f function value matrix (n_boundary_points_i , n_boundary_points_j)
+
+    """
+    form_mat=np.zeros()
+    for i,ip in enumerate(i_points):
+        for j,jp in enumerate(j_points):
+            r = ip-jp
+            if np.linalg.norm(r)==0:
+                ll=1e-14
+            else:
+                ll=np.linalg.norm(r)
+
+            form_mat[i,j] = np.abs(np.dot(r,i_normal)*np.dot(r,j_normal))/ll**4
 
     return form_mat
 
@@ -339,31 +372,21 @@ def contour_ff(
 
     # double polynomial integration (per dimension (x,y,z))
     outer_integral = 0
-    inner_integral = np.zeros((len(i_bpoints),len(j_bpoints[0])))
+    inner_integral = np.zeros((1,i_bpoints.shape[0]))
 
-    for dim in range(len(j_bpoints[0])): # for each dimension
-        # integrate form function over each point on patch i boundary
+    for dim in range(len(j_bpoints[0])): # for each dimension x,y,x
 
+        # integrate over target patch
         inner_integral=contour_integration(patch_coords=j_bpoints[:,dim],
                                            patch_conn=j_conn,
                                            integrand=integrand,
                                            int_function=internal_int_function)
 
+        # second integral over source patch
         outer_integral+=contour_integration(patch_coords=i_bpoints[:,dim],
                                            patch_conn=i_conn,
                                            integrand=inner_integral,
                                            int_function=_lagrange_integral)
-
-        # # integrate previously computed integral over patch i
-        # for segi in i_conn:   # for each segment segi in patch i boundary
-
-        #     xi = i_bpoints[segi][:,dim]
-
-        #     if np.abs(xi[-1]-xi[0])>1e-3:
-        #         for k in range(len(segi)):
-        #             subseci[k] = inner_integral[segi[k]]
-
-        #         outer_integral+= _lagrange_integral(x=xi,y=subseci)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
