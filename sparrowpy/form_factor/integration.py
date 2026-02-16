@@ -445,7 +445,66 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
 
     return area
 
-def _newton_cotes_4th(x: np.ndarray,y):
+def _lagrange_integral(x:np.ndarray,y:np.ndarray):
+    """Integrate samples by Lagrange polynomial estimation.
+
+    Input function is approximated by a Lagrange polynomial
+    and integrated. The order of the polynomial approximation
+    is defined by the number of samples (order=n_samples-1)
+    Approximations up to polynomial order 6 employ closed
+    Newton-Cotes formulas. If the samples are not equally spaced,
+    the generalized approach is used.
+
+    Parameters
+    ----------
+    x: np.ndarray (n_samples,); sample x-coordinates.
+
+    y: np.ndarray (n_samples,); sample y-coordinates.
+
+    Returns
+    -------
+    out: integral of the approximated function.
+    """
+    if x.shape[0]!=y.shape[0]:
+        ValueError("x and y arrays must have the same length!")
+    if x.shape[1:]!=(1,):
+        ValueError(f"x array shape {x.shape} must be one-dimensional")
+    if y.shape[1:]!=(1,):
+        ValueError(f"y array shape {y.shape} must be one-dimensional")
+    if x.shape[0]==1:
+        ValueError("Impossible to evaluate integral with a single sample.")
+
+    o = x.shape[0]-1
+    steps = x[1:]-x[:-1]
+
+    if o<7 and (steps==steps[0]).all():
+        match o:
+            case 1:
+                # Trapezoidal rule
+                NC_coefs=.5*np.array([1.,1.])
+            case 2:
+                # Simpson's rule
+                NC_coefs=1/3*np.array([1.,4.,1.])
+            case 3:
+                # Simpson's 3/8 rule
+                NC_coefs=3/8*np.array([1.,3.,3.,1.])
+            case 4:
+                # Boole's rule
+                NC_coefs=2/25*np.array([7.,32.,12.,32.,7.])
+            case 5:
+                NC_coefs=5/288*np.array([19.,75.,50.,50.,75.,19.])
+            case 6:
+                NC_coefs=1/140*np.array([41.,216.,27.,272.,27.,216.,41])
+
+        out=steps[0]*NC_coefs
+    else:
+        # generalized implementation
+        poly_coefs = _poly_estimation_Lagrange(x,y)
+        out = _poly_integration(poly_coefs,x)
+
+    return out
+
+def _newton_cotes_4th(x: np.ndarray,y: np.ndarray):
     """Integrate 1D function after Boole's rule.
 
     Returns the approximate integral of a given function f(x)
