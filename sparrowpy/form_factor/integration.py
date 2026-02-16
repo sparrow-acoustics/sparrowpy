@@ -388,7 +388,7 @@ def contour_ff(
                                            integrand=inner_integral,
                                            int_function=_lagrange_integral)
 
-    return np.abs(outer_integral/(2*np.pi*patch_i_area))
+    return np.abs(outer_integral[0,0]/(2*np.pi*patch_i_area))
 
 def contour_integration(patch_coords: np.ndarray, patch_conn: list,
                         integrand: np.ndarray,
@@ -432,6 +432,71 @@ def contour_integration(patch_coords: np.ndarray, patch_conn: list,
 
                 # add separate integral approx contributions
                 out[:,i]+=int_function(x,subsecj)
+
+    return out
+
+def surface_ff(patch_i: np.ndarray, patch_j: np.ndarray,
+               patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
+               nsamples=12, random=False) -> float:
+    """Estimate form factors based on double surface integration.
+
+    Integrates the differential form factor (Nusselt analogue output)
+    over the surface of the source patch
+
+    Parameters
+    ----------
+    patch_i: np.ndarray
+        vertex coordinates of the source patch
+
+    patch_j: np.ndarray
+        vertex coordinates of the receiver patch
+
+    patch_i_normal: np.ndarray
+        source patch normal (3,)
+
+    patch_j_normal: np.ndarray
+        receiver patch normal (3,)
+
+    patch_i_area: float
+        source patch area
+
+    patch_j_area: float
+        receiver patch area
+
+    nsamples: int
+        number of receiver surface samples for integration
+
+    random: bool
+        determines the distribution of the samples on patch_i surface
+        if True, the samples are randomly distributed in a uniform way
+        if False, a regular sampling of the surface is performed
+
+    Returns
+    -------
+    out: float
+        form factor between patches i and j
+
+    """
+    if random:
+        p0_array = _surf_sample_random(patch_i,nsamples)
+    else:
+        p0_array, stepx, stepy = _surf_sample_regulargrid(patch_i,nsamples, gridoutput=True)
+
+    nuss1=np.empty(nsamples)
+    nuss2=np.empty(nsamples)
+
+    for i in prange(p0_array.shape[0]):
+        for j in prange(p0_array.shape[0]):
+            nuss1[j] = nusselt_analog( surf_origin=p0_array[i,j],
+                                surf_normal=patch_i_normal,
+                                patch_points=patch_j,
+                                patch_normal=patch_j_normal )
+        nuss2[i]=_lagrange_integral(np.arange(0,nsamples*stepy,stepy),nuss1)
+
+
+    out=_lagrange_integral(np.arange(0,nsamples*stepx,stepx),nuss2)
+
+    out *= 1 / ( np.pi )
 
     return out
 
@@ -629,20 +694,12 @@ def _surf_sample_random(el: np.ndarray, npoints=100):
         s = np.random.uniform()
         t = np.random.uniform()
 
-        inside = s+t <= 1
-
-        # if sample falls outside of triangular patch,
-        # it is "reflected" back inside
-        if len(el)==3 and not inside:
-            s = 1-s
-            t = 1-t
-
         ptlist[i] = s*u + t*v + el[0]
 
     return ptlist
 
 
-def _surf_sample_regulargrid(el: np.ndarray, npoints=10):
+def _surf_sample_regulargrid(el: np.ndarray, npoints=10, gridoutput=True):
     """Sample points on the surface of a patch using a regular distribution.
 
     over the directions defined by the patches' sides
@@ -668,53 +725,20 @@ def _surf_sample_regulargrid(el: np.ndarray, npoints=10):
     u = el[1]-el[0]
     v = el[-1]-el[0]
 
-    if len(el)==3:
-        a = 2
-    else:
-        a = 1
+    tt = np.linspace(0,1,npoints)
 
-    npointsx = int( round(np.linalg.norm(u) / np.linalg.norm(v) *
-                                                np.sqrt(a*npoints)) )
-    npointsz = int( round(np.linalg.norm(v) / np.linalg.norm(u) *
-                                                np.sqrt(a*npoints)) )
-
-    if npointsz==0:
-        npointsz = 1
-    if npointsx==0:
-        npointsx = 1
-
-    ptlist=[]
-
-    tt = np.linspace(0,1-1/npointsx,npointsx)
-    sstep =  1/(npointsx*2)
-    tt += sstep
-
-    tz = np.linspace(0,1-1/npointsz,npointsz)
-    sstepz =  1/(npointsz*2)
-    tz += sstepz
-
-    thres = np.sqrt(sstepz**2+sstep**2)/2
-
-    jj = 0
-
-    for i,s in enumerate(tt):
-        if len(el)==3:
-            jj = i
-
-        for t in tz[0:len(tz)-round(npointsz/npointsx*jj)]:
-
-            inside = s+t <= 1-thres
-            if not(len(el)==3 and not inside):
-                ptlist.append(s*u + t*v + el[0])
+    tz = np.linspace(0,1,npoints)
 
 
-    out = np.empty((len(ptlist), len(ptlist[0])))
+    ptgrid=np.array([[s*u + t*v + el[0] for t in tt] for s in tz])
 
-    for i in prange(len(ptlist)):
-        for j in prange(len(ptlist[0])):
-            out[i][j] = ptlist[i][j]
+    if not gridoutput:
+        ptgrid = np.reshape((npoints**2,3))
 
-    return out
+    stepx = np.abs(tt[1]-tt[0])
+    stepy = np.abs(tz[1]-tz[0])
+
+    return ptgrid, stepx, stepy
 
 ################# boundary
 def _sample_boundary_regular(el: np.ndarray, npoints=3):
