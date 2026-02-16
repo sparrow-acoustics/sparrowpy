@@ -73,7 +73,7 @@ def stokes_integration(
 
     """
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
-                                                         npoints=5)
+                                                         npoints=7)
     j_bpoints, j_conn = _sample_boundary_regular(patch_j,
                                                          npoints=3)
 
@@ -114,7 +114,7 @@ def stokes_integration(
                 for k in range(len(segi)):
                     subseci[k] = inner_integral[segi[k]][dim]
 
-                outer_integral+= _newton_cotes_4th(x=xi,y=subseci)
+                outer_integral+= _lagrange_integral(x=xi,y=subseci)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
@@ -439,9 +439,7 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
         x[k] = cc[0]
         y[k] = cc[1]
 
-
-    coefs = _poly_estimation_Lagrange(x,y)
-    area = _poly_integration(coefs,x) # area between curve and ps[-1] - ps[0]
+    area = _lagrange_integral(x,y)
 
     return area
 
@@ -457,9 +455,10 @@ def _lagrange_integral(x:np.ndarray,y:np.ndarray):
 
     Parameters
     ----------
-    x: np.ndarray (n_samples,); sample x-coordinates.
-
-    y: np.ndarray (n_samples,); sample y-coordinates.
+    x: np.ndarray (n_samples,)
+        sample x-coordinates.
+    y: np.ndarray (n_samples,)
+        sample y-coordinates.
 
     Returns
     -------
@@ -490,13 +489,13 @@ def _lagrange_integral(x:np.ndarray,y:np.ndarray):
                 NC_coefs=3/8*np.array([1.,3.,3.,1.])
             case 4:
                 # Boole's rule
-                NC_coefs=2/25*np.array([7.,32.,12.,32.,7.])
+                NC_coefs=2/45*np.array([7.,32.,12.,32.,7.])
             case 5:
                 NC_coefs=5/288*np.array([19.,75.,50.,50.,75.,19.])
             case 6:
                 NC_coefs=1/140*np.array([41.,216.,27.,272.,27.,216.,41])
 
-        out=steps[0]*NC_coefs
+        out=steps[0]*np.dot(y,NC_coefs)
     else:
         # generalized implementation
         poly_coefs = _poly_estimation_Lagrange(x,y)
@@ -735,3 +734,4 @@ if numba is not None:
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
     _area_under_curve = numba.njit()(_area_under_curve)
     _newton_cotes_4th = numba.njit()(_newton_cotes_4th)
+    _lagrange_integral=numba.njit()(_lagrange_integral)
