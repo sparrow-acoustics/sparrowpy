@@ -332,7 +332,6 @@ def contour_ff(
                                                             npoints=order+1)
         internal_int_function = _lagrange_integral
 
-    subseci = np.zeros((i_conn.shape[1]))
     integrand = np.zeros((i_bpoints.shape[0],j_bpoints.shape[0]))
 
     # first compute and store form function sample values
@@ -350,17 +349,21 @@ def contour_ff(
                                            integrand=integrand,
                                            int_function=internal_int_function)
 
+        outer_integral+=contour_integration(patch_coords=i_bpoints[:,dim],
+                                           patch_conn=i_conn,
+                                           integrand=inner_integral,
+                                           int_function=_lagrange_integral)
 
-        # integrate previously computed integral over patch i
-        for segi in i_conn:   # for each segment segi in patch i boundary
+        # # integrate previously computed integral over patch i
+        # for segi in i_conn:   # for each segment segi in patch i boundary
 
-            xi = i_bpoints[segi][:,dim]
+        #     xi = i_bpoints[segi][:,dim]
 
-            if np.abs(xi[-1]-xi[0])>1e-3:
-                for k in range(len(segi)):
-                    subseci[k] = inner_integral[segi[k]]
+        #     if np.abs(xi[-1]-xi[0])>1e-3:
+        #         for k in range(len(segi)):
+        #             subseci[k] = inner_integral[segi[k]]
 
-                outer_integral+= _lagrange_integral(x=xi,y=subseci)
+        #         outer_integral+= _lagrange_integral(x=xi,y=subseci)
 
     return np.abs(outer_integral/(2*np.pi*patch_i_area))
 
@@ -394,7 +397,7 @@ def contour_integration(patch_coords: np.ndarray, patch_conn: list,
 
     # double polynomial integration (per dimension (x,y,z))
 
-    out = np.zeros((integrand.shape[:1]))
+    out = np.zeros(((1,)+integrand.shape[:1]))
 
     for i in range(integrand.shape[0]):   # for each eval point
         for seg in patch_conn:     # for each segment seg in patch  boundary
@@ -404,8 +407,8 @@ def contour_integration(patch_coords: np.ndarray, patch_conn: list,
                 for k in range(len(seg)):
                     subsecj[k] = integrand[i][seg[k]]
 
-                # analytical integration of the approx polynomials
-                out[i]+=int_function(x,subsecj)
+                # add separate integral approx contributions
+                out[:,i]+=int_function(x,subsecj)
 
     return out
 
