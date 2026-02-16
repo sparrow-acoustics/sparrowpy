@@ -125,7 +125,6 @@ def test_perpendicular_coincidentpoint_patches(
         visible_patches=np.array([[0,1]]))
 
     rel = 100 * abs(univ[0,1] - exact) / exact
-    print(rel)
     assert rel < 5
 
 @pytest.mark.parametrize("X", [2.0, 3.0])
