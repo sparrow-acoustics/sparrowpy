@@ -255,7 +255,7 @@ def _load_stokes_integrand(
 
     for i in prange(i_bpoints.shape[0]):
         for j in prange(j_bpoints.shape[0]):
-            form_mat = np.log(np.linalg.norm(i_bpoints[i]-j_bpoints[j]))
+            form_mat[i][j] = np.log(np.linalg.norm(i_bpoints[i]-j_bpoints[j]))
 
     return form_mat
 
@@ -290,7 +290,8 @@ def _load_analytical_integrand(
 
 def contour_ff(
     patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float,
-    integrand_fcn=_load_analytical_integrand) -> float:
+    integrand_fcn=_load_analytical_integrand,
+    order=6) -> float:
     """Calculate an estimation of the form factor between two patches.
 
     Computationally integrates a modified form function over
@@ -321,11 +322,16 @@ def contour_ff(
 
     """
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
-                                                         npoints=7)
-    j_bpoints, j_conn = _sample_boundary_regular(patch_j,
-                                                         npoints=3)
+                                                         npoints=order+1)
+    if integrand_fcn==_load_analytical_integrand:
+        j_bpoints, j_conn = _sample_boundary_regular(patch_j,
+                                                            npoints=3)
+        internal_int_function = _first_integration_analytical
+    else:
+        j_bpoints, j_conn = _sample_boundary_regular(patch_j,
+                                                            npoints=order+1)
+        internal_int_function = _lagrange_integral
 
-    subsecj = np.zeros((j_conn.shape[1]))
     subseci = np.zeros((i_conn.shape[1]))
     integrand = np.zeros((i_bpoints.shape[0],j_bpoints.shape[0]))
 
@@ -341,7 +347,8 @@ def contour_ff(
 
         inner_integral=contour_integration(patch_coords=j_bpoints[:,dim],
                                            patch_conn=j_conn,
-                                           integrand=integrand)
+                                           integrand=integrand,
+                                           int_function=internal_int_function)
 
 
         # integrate previously computed integral over patch i
@@ -360,7 +367,7 @@ def contour_ff(
 def contour_integration(patch_coords: np.ndarray, patch_conn: list,
                         integrand: np.ndarray,
                         int_function=_first_integration_analytical) -> float:
-    """Integrate a given integrand after a given function over a patch contour.
+    """Integrate a sampled integrand over a patch contour.
 
     Parameters
     ----------
@@ -374,7 +381,7 @@ def contour_integration(patch_coords: np.ndarray, patch_conn: list,
         matrix of integrand samples (..., n_samples)
 
     int_function: function handle
-        integration function handle
+        integration approximation function handle
 
     Returns
     -------
