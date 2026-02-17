@@ -438,7 +438,7 @@ def contour_integration(patch_coords: np.ndarray, patch_conn: list,
 def surface_ff_Nusselt(patch_i: np.ndarray, patch_j: np.ndarray,
                patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
                patch_i_area: float,
-               nsamples=80, random=True) -> float:
+               nsamples=12, random=False, poly=True) -> float:
     """Estimate form factors based on double surface integration.
 
     Integrates the differential form factor (Nusselt analogue output)
@@ -485,10 +485,11 @@ def surface_ff_Nusselt(patch_i: np.ndarray, patch_j: np.ndarray,
         stepy=None
     else:
         p0_array, stepx, stepy = _surf_sample_regulargrid(patch_i,nsamples,
-                                                          gridoutput=True)
+                                                          gridoutput=poly)
+    if poly:
         patch_i_area=None
 
-    int_int=np.empty((p0_array.shape[0],p0_array.shape[1]))
+    int_int=np.empty(p0_array.shape[:-1])
 
     for i in prange(p0_array.shape[0]):
         for j in range(p0_array.shape[1]):
@@ -727,7 +728,7 @@ def _surf_sample_random(el: np.ndarray, npoints=100):
 
     """
 
-    ptlist=np.zeros((npoints,3))
+    ptlist=np.zeros((npoints**2,3))
 
     u = el[1]-el[0]
     v = el[-1]-el[0]
@@ -775,7 +776,7 @@ def _surf_sample_regulargrid(el: np.ndarray, npoints=10, gridoutput=True):
     ptgrid=np.array([[s*u + t*v + el[0] for t in tt] for s in tz])
 
     if not gridoutput:
-        ptgrid = np.reshape((npoints**2,3))
+        ptgrid = np.reshape(ptgrid,(1,npoints**2,3))
 
     stepx = np.abs(tt[1]-tt[0])
     stepy = np.abs(tz[1]-tz[0])
