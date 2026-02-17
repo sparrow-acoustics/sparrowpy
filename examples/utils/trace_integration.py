@@ -7,9 +7,9 @@ import numpy as np
 class integration_test:
     """Class for convenient testing of integration methods."""
 
-    def __init__(self, gtype="a", ww=1, hh=1, ll=1):
+    def __init__(self, gtype="a", ww=1, hh=2, ll=1):
         self._select_geometry(gtype,ww,hh,ll)
-        self.int_method = intg.surface_ff
+        self.int_method = intg.surface_ff_naive
         self.result=None
         self.error=None
 
@@ -72,7 +72,9 @@ class integration_test:
         self.result = self.int_method(self.patch_1.pts,
                                self.patch_2.pts,
                                self.patch_1.normal,
-                               self.patch_2.normal)
+                               self.patch_2.normal,
+                               self.patch_1.area,
+                               self.patch_2.area)
 
     def calc_error(self):
         """Calculate integration error."""
@@ -94,6 +96,17 @@ class integration_test:
         print(f'\nrelative ff error:       {self.error-1:.4%}')
         print(f'gain per 100 bounces:      {10*np.log10(self.error**100):.1f}'+
                'dB\n')
+
+    def _update_kwargs(self):
+        self.kwargs_list=[]
+        for method in self.int_method:
+            temp={}
+            match method:
+                case intg.surface_ff:
+                    temp["patch_i"]=self.patch_1.pts
+                    temp["patch_j"]=self.patch_2.pts
+                    temp["patch_i_normal"]=self.patch_1.normal
+                    temp["patch_j_normal"]=self.patch_2.normal
 
 if __name__=="__main__":
     test=integration_test()

@@ -308,16 +308,17 @@ def _load_Lambert_integrand(i_points: np.ndarray,
         f function value matrix (n_boundary_points_i , n_boundary_points_j)
 
     """
-    form_mat=np.zeros()
+    form_mat=np.zeros((i_points.size, j_points.size))
     for i,ip in enumerate(i_points):
         for j,jp in enumerate(j_points):
             r = ip-jp
             if np.linalg.norm(r)==0:
-                ll=1e-14
+                form_mat[i,j] = 0
             else:
                 ll=np.linalg.norm(r)
 
-            form_mat[i,j] = np.abs(np.dot(r,i_normal)*np.dot(r,j_normal))/ll**4
+                form_mat[i,j] = np.abs(np.dot(r,i_normal)*
+                                       np.dot(r,j_normal))/ll**4
 
     return form_mat
 
@@ -500,6 +501,86 @@ def surface_ff_Nusselt(patch_i: np.ndarray, patch_j: np.ndarray,
 
     out = _surface_integral(integrand=int_int,
                             steps=(stepx,stepy),
+                            area=patch_i_area)
+
+    out *= 1 / ( np.pi )
+
+    return out
+
+def surface_ff_naive(patch_i: np.ndarray, patch_j: np.ndarray,
+                     patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
+                     patch_i_area: float, patch_j_area: float,
+                     nsamples=3, random=False, poly=True) -> float:
+    """Estimate form factors based on double surface integration.
+
+    Integrates both surfaces by sampling points across the surfaces
+
+    Parameters
+    ----------
+    patch_i: np.ndarray
+        vertex coordinates of the source patch
+
+    patch_j: np.ndarray
+        vertex coordinates of the receiver patch
+
+    patch_i_normal: np.ndarray
+        source patch normal (3,)
+
+    patch_j_normal: np.ndarray
+        receiver patch normal (3,)
+
+    patch_i_area: float
+        source patch area
+
+    patch_j_area: float
+        receiver patch area
+
+    nsamples: int
+        number of receiver surface samples for integration
+
+    random: bool
+        determines the distribution of the samples on patch_i surface
+        if True, the samples are randomly distributed in a uniform way
+        if False, a regular sampling of the surface is performed
+
+    Returns
+    -------
+    out: float
+        form factor between patches i and j
+
+    """
+
+    if random:
+        pi_array = _surf_sample_random(patch_j,nsamples)
+        stepix=None
+        stepiy=None
+        pj_array = _surf_sample_random(patch_j,nsamples)
+        stepjx=None
+        stepjy=None
+    else:
+        pi_array, stepix, stepiy = _surf_sample_regulargrid(patch_i,nsamples,
+                                                          gridoutput=poly)
+        pj_array, stepjx, stepjy = _surf_sample_regulargrid(patch_j,nsamples,
+                                                          gridoutput=poly)
+    if poly:
+        patch_i_area=None
+
+    lambert = _load_Lambert_integrand(
+        i_points=pi_array.reshape((pi_array.shape[0]*pi_array.shape[1],3)),
+        i_normal=patch_i_normal,
+        j_points=pj_array.reshape((pj_array.shape[0]*pj_array.shape[1],3)),
+        j_normal=patch_j_normal)
+
+    int_int=np.empty(pi_array.shape[:-1])
+
+    for i in prange(pi_array.shape[0]):
+        for j in prange(pi_array.shape[1]):
+            int_int[i,j] = _surface_integral(
+                integrand=lambert[int(i/pi_array.shape[0])+j%pi_array.shape[1],:],
+                steps=(stepjx,stepjy),area=patch_j_area)
+
+    out = _surface_integral(integrand=int_int,
+                            steps=(stepix,stepiy),
                             area=patch_i_area)
 
     out *= 1 / ( np.pi )
