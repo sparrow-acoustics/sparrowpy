@@ -500,6 +500,39 @@ def surface_ff(patch_i: np.ndarray, patch_j: np.ndarray,
 
     return out
 
+def _surface_integral(integrand:np.ndarray,steps=None,area=None):
+    """Numerically integrate a given integrand over a surface.
+
+    Parameters
+    ----------
+    integrand: np.ndarray (n_x_samples,n_y_samples) or (n_samples)
+        integrand samples. The shape of the array determines if the
+        integration employs 2-D Newton-Cotes formulae or a simple
+        center-point average approach.
+
+    steps: tuple (int,int)
+        step sizes for the 2D Newton-Cotes formulae.
+
+    Returns
+    -------
+    out: float
+        integration result.
+    """
+
+    if integrand.ndim==2 and steps is not None:
+        # 2D Newton-Cotes
+        in1=np.empty((integrand.shape[0]))
+        x1 = np.arange(0,integrand.shape[1]*steps[1],steps[1])
+        x2 = np.arange(0,integrand.shape[0]*steps[0],steps[0])
+        for i in prange(integrand.shape[0]):
+            in1[i]=_lagrange_integral(x1,integrand[i,:])
+        out = _lagrange_integral(x2,in1)
+    elif integrand.ndim==1 and area is not None:
+        out = np.mean(integrand)/area
+
+    return out
+
+
 def nusselt_analog(surf_origin, surf_normal,
                    patch_points, patch_normal) -> float:
     """Calculate the Nusselt analog for a single point.
