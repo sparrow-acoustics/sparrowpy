@@ -324,7 +324,7 @@ def _load_Lambert_integrand(i_points: np.ndarray,
 def contour_ff(
     patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float,
     integrand_fcn=_load_analytical_integrand,
-    order=6) -> float:
+    order=100) -> float:
     """Calculate an estimation of the form factor between two patches.
 
     Computationally integrates a modified form function over
@@ -435,9 +435,10 @@ def contour_integration(patch_coords: np.ndarray, patch_conn: list,
 
     return out
 
-def surface_ff(patch_i: np.ndarray, patch_j: np.ndarray,
+def surface_ff_Nusselt(patch_i: np.ndarray, patch_j: np.ndarray,
                patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
-               nsamples=12, random=False) -> float:
+               patch_i_area: float,
+               nsamples=80, random=True) -> float:
     """Estimate form factors based on double surface integration.
 
     Integrates the differential form factor (Nusselt analogue output)
@@ -477,24 +478,28 @@ def surface_ff(patch_i: np.ndarray, patch_j: np.ndarray,
         form factor between patches i and j
 
     """
+
     if random:
         p0_array = _surf_sample_random(patch_i,nsamples)
+        stepx=None
+        stepy=None
     else:
-        p0_array, stepx, stepy = _surf_sample_regulargrid(patch_i,nsamples, gridoutput=True)
+        p0_array, stepx, stepy = _surf_sample_regulargrid(patch_i,nsamples,
+                                                          gridoutput=True)
+        patch_i_area=None
 
-    nuss1=np.empty(nsamples)
-    nuss2=np.empty(nsamples)
+    int_int=np.empty((p0_array.shape[0],p0_array.shape[1]))
 
     for i in prange(p0_array.shape[0]):
-        for j in prange(p0_array.shape[0]):
-            nuss1[j] = nusselt_analog( surf_origin=p0_array[i,j],
+        for j in range(p0_array.shape[1]):
+            int_int[i,j] = nusselt_analog( surf_origin=p0_array[i,j],
                                 surf_normal=patch_i_normal,
                                 patch_points=patch_j,
                                 patch_normal=patch_j_normal )
-        nuss2[i]=_lagrange_integral(np.arange(0,nsamples*stepy,stepy),nuss1)
 
-
-    out=_lagrange_integral(np.arange(0,nsamples*stepx,stepx),nuss2)
+    out = _surface_integral(integrand=int_int,
+                            steps=(stepx,stepy),
+                            area=patch_i_area)
 
     out *= 1 / ( np.pi )
 
@@ -519,7 +524,7 @@ def _surface_integral(integrand:np.ndarray,steps=None,area=None):
         integration result.
     """
 
-    if integrand.ndim==2 and steps is not None:
+    if area is None:
         # 2D Newton-Cotes
         in1=np.empty((integrand.shape[0]))
         x1 = np.arange(0,integrand.shape[1]*steps[1],steps[1])
@@ -527,7 +532,8 @@ def _surface_integral(integrand:np.ndarray,steps=None,area=None):
         for i in prange(integrand.shape[0]):
             in1[i]=_lagrange_integral(x1,integrand[i,:])
         out = _lagrange_integral(x2,in1)
-    elif integrand.ndim==1 and area is not None:
+
+    else:
         out = np.mean(integrand)/area
 
     return out
@@ -580,8 +586,11 @@ def nusselt_analog(surf_origin, surf_normal,
 
     for ii in prange(len(boundary_points)):
         # patch j points projected on the hemisphere
-        sphPts[ii] = ( (boundary_points[ii]-surf_origin) /
-                        np.linalg.norm(boundary_points[ii]-surf_origin) )
+        if np.linalg.norm(boundary_points[ii]-surf_origin)!=0:
+            sphPts[ii] = ( (boundary_points[ii]-surf_origin) /
+                            np.linalg.norm(boundary_points[ii]-surf_origin) )
+        else:
+            sphPts[ii] = 0
 
     rotmat = geom._rotation_matrix(n_in=surf_normal)
 
@@ -729,7 +738,7 @@ def _surf_sample_random(el: np.ndarray, npoints=100):
 
         ptlist[i] = s*u + t*v + el[0]
 
-    return ptlist
+    return ptlist[np.newaxis,:]
 
 
 def _surf_sample_regulargrid(el: np.ndarray, npoints=10, gridoutput=True):
