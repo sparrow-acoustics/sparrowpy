@@ -7,13 +7,13 @@ import numpy as np
 class integration_test:
     """Class for convenient testing of integration methods."""
 
-    def __init__(self, gtype="a", ww=1, hh=2, ll=1):
+    def __init__(self, gtype="a", ww=1, hh=1, ll=1):
         self._select_geometry(gtype,ww,hh,ll)
         self.int_method = intg.surface_ff_naive
         self.result=None
         self.error=None
 
-    def _select_geometry(self,gtype="a",ww=1,hh=1,ll=2):
+    def _select_geometry(self,gtype="a",ww=1,hh=1,ll=1):
         """Select geometry (parallel or coincident line patches)."""
 
         match gtype:

@@ -308,7 +308,7 @@ def _load_Lambert_integrand(i_points: np.ndarray,
         f function value matrix (n_boundary_points_i , n_boundary_points_j)
 
     """
-    form_mat=np.zeros((i_points.size, j_points.size))
+    form_mat=np.zeros((i_points.shape[0], j_points.shape[0]))
     for i,ip in enumerate(i_points):
         for j,jp in enumerate(j_points):
             r = ip-jp
@@ -439,7 +439,7 @@ def contour_integration(patch_coords: np.ndarray, patch_conn: list,
 def surface_ff_Nusselt(patch_i: np.ndarray, patch_j: np.ndarray,
                patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
                patch_i_area: float,
-               nsamples=12, random=False, poly=True) -> float:
+               nsamples=9, style='reg_surf') -> float:
     """Estimate form factors based on double surface integration.
 
     Integrates the differential form factor (Nusselt analogue output)
@@ -480,37 +480,29 @@ def surface_ff_Nusselt(patch_i: np.ndarray, patch_j: np.ndarray,
 
     """
 
-    if random:
-        p0_array = _surf_sample_random(patch_i,nsamples)
-        stepx=None
-        stepy=None
-    else:
-        p0_array, stepx, stepy = _surf_sample_regulargrid(patch_i,nsamples,
-                                                          gridoutput=poly)
-    if poly:
-        patch_i_area=None
+    p0_array, nu,nv,stepx,stepy = _surf_sampling(patch_i,npoints=nsamples,style=style)
 
-    int_int=np.empty(p0_array.shape[:-1])
+    int_int=np.empty((nu,nv))
 
-    for i in prange(p0_array.shape[0]):
-        for j in range(p0_array.shape[1]):
-            int_int[i,j] = nusselt_analog( surf_origin=p0_array[i,j],
-                                surf_normal=patch_i_normal,
-                                patch_points=patch_j,
-                                patch_normal=patch_j_normal )
+    for k in prange(p0_array.shape[0]):
+        int_int[int(k/nu),k%nv] = nusselt_analog( surf_origin=p0_array[k],
+                                                        surf_normal=patch_i_normal,
+                                                        patch_points=patch_j,
+                                                        patch_normal=patch_j_normal )
 
     out = _surface_integral(integrand=int_int,
                             steps=(stepx,stepy),
+                            nn=(nu,nv),
                             area=patch_i_area)
 
-    out *= 1 / ( np.pi )
+    out *= 1 / ( np.pi*patch_i_area )
 
     return out
 
 def surface_ff_naive(patch_i: np.ndarray, patch_j: np.ndarray,
                      patch_i_normal: np.ndarray, patch_j_normal: np.ndarray,
                      patch_i_area: float, patch_j_area: float,
-                     nsamples=3, random=False, poly=True) -> float:
+                     nsamples=9, style='random') -> float:
     """Estimate form factors based on double surface integration.
 
     Integrates both surfaces by sampling points across the surfaces
@@ -550,44 +542,35 @@ def surface_ff_naive(patch_i: np.ndarray, patch_j: np.ndarray,
 
     """
 
-    if random:
-        pi_array = _surf_sample_random(patch_j,nsamples)
-        stepix=None
-        stepiy=None
-        pj_array = _surf_sample_random(patch_j,nsamples)
-        stepjx=None
-        stepjy=None
-    else:
-        pi_array, stepix, stepiy = _surf_sample_regulargrid(patch_i,nsamples,
-                                                          gridoutput=poly)
-        pj_array, stepjx, stepjy = _surf_sample_regulargrid(patch_j,nsamples,
-                                                          gridoutput=poly)
-    if poly:
-        patch_i_area=None
+    pi_array,niu,niv,stepix,stepiy = _surf_sampling(patch_i,nsamples,style)
+    pj_array,nju,njv,stepjx,stepjy = _surf_sampling(patch_j,nsamples,style)
+
 
     lambert = _load_Lambert_integrand(
-        i_points=pi_array.reshape((pi_array.shape[0]*pi_array.shape[1],3)),
+        i_points=pi_array,
         i_normal=patch_i_normal,
-        j_points=pj_array.reshape((pj_array.shape[0]*pj_array.shape[1],3)),
+        j_points=pj_array,
         j_normal=patch_j_normal)
 
     int_int=np.empty(pi_array.shape[:-1])
 
     for i in prange(pi_array.shape[0]):
-        for j in prange(pi_array.shape[1]):
-            int_int[i,j] = _surface_integral(
-                integrand=lambert[int(i/pi_array.shape[0])+j%pi_array.shape[1],:],
-                steps=(stepjx,stepjy),area=patch_j_area)
+            int_int[i] = _surface_integral(
+                integrand=lambert[int(i/pi_array.shape[0])+i%pi_array.shape[1],:],
+                steps=(stepjx,stepjy),
+                nn=(nju,njv),
+                area=patch_j_area)
 
     out = _surface_integral(integrand=int_int,
                             steps=(stepix,stepiy),
+                            nn=(niu,niv),
                             area=patch_i_area)
 
-    out *= 1 / ( np.pi )
+    out *= 1 / ( np.pi*patch_i_area )
 
     return out
 
-def _surface_integral(integrand:np.ndarray,steps=None,area=None):
+def _surface_integral(integrand:np.ndarray,nn=(1,1),steps=None,area=None):
     """Numerically integrate a given integrand over a surface.
 
     Parameters
@@ -606,17 +589,19 @@ def _surface_integral(integrand:np.ndarray,steps=None,area=None):
         integration result.
     """
 
-    if area is None:
+    if steps[0] and steps[1]:
         # 2D Newton-Cotes
+        integrand=integrand.reshape((int(nn[0]),
+                                     int(nn[1])))
         in1=np.empty((integrand.shape[0]))
-        x1 = np.arange(0,integrand.shape[1]*steps[1],steps[1])
-        x2 = np.arange(0,integrand.shape[0]*steps[0],steps[0])
+        x2 = np.arange(0,integrand.shape[1]*steps[1],steps[1])
+        x1 = np.arange(0,integrand.shape[0]*steps[0],steps[0])
         for i in prange(integrand.shape[0]):
             in1[i]=_lagrange_integral(x1,integrand[i,:])
         out = _lagrange_integral(x2,in1)
 
     else:
-        out = np.mean(integrand)/area
+        out = np.mean(integrand)*area
 
     return out
 
@@ -789,41 +774,7 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
 ####################################################
 # sampling
 ################# surface
-def _surf_sample_random(el: np.ndarray, npoints=100):
-    """Randomly sample points on the surface of a patch.
-
-    ! currently only supports triangular, rectangular, or parallelogram patches
-
-    Parameters
-    ----------
-    el : geometry.Polygon object
-        patch to sample
-
-    npoints : int
-        number of sample points to generate
-
-    Returns
-    -------
-    ptlist: np.ndarray
-        list of sample points in patch el
-
-    """
-
-    ptlist=np.zeros((npoints**2,3))
-
-    u = el[1]-el[0]
-    v = el[-1]-el[0]
-
-    for i in range(npoints):
-        s = np.random.uniform()
-        t = np.random.uniform()
-
-        ptlist[i] = s*u + t*v + el[0]
-
-    return ptlist[np.newaxis,:]
-
-
-def _surf_sample_regulargrid(el: np.ndarray, npoints=10, gridoutput=True):
+def _surf_sampling(el: np.ndarray, npoints=10, style='random'):
     """Sample points on the surface of a patch using a regular distribution.
 
     over the directions defined by the patches' sides
@@ -849,20 +800,45 @@ def _surf_sample_regulargrid(el: np.ndarray, npoints=10, gridoutput=True):
     u = el[1]-el[0]
     v = el[-1]-el[0]
 
-    tt = np.linspace(0,1,npoints)
+    ratio = np.linalg.norm(u)/np.linalg.norm(v)
 
-    tz = np.linspace(0,1,npoints)
+    nu = int(np.sqrt(npoints*ratio))
+    nv = int(np.sqrt(npoints/ratio))
 
+    ptlist =np.empty((nu*nv,3))
 
-    ptgrid=np.array([[s*u + t*v + el[0] for t in tt] for s in tz])
+    match style:
+        case 'random':
+            for i in prange(nu*nv):
+                s = np.random.uniform()
+                t = np.random.uniform()
+                ptlist[i] = s*u + t*v + el[0]
 
-    if not gridoutput:
-        ptgrid = np.reshape(ptgrid,(1,npoints**2,3))
+            stepx = None
+            stepy = None
 
-    stepx = np.abs(tt[1]-tt[0])
-    stepy = np.abs(tz[1]-tz[0])
+        case 'reg_surf':
 
-    return ptgrid, stepx, stepy
+            stepv = 1/(nv+1)
+            stepu = 1/(nu+1)
+
+            tt = np.linspace(.5*stepv,1-.5*stepv,nv)
+            ts = np.linspace(.5*stepu,1-.5*stepv,nu)
+
+            ptlist=np.array([s*u +  + t*v + el[0] for t in tt for s in ts])
+
+            stepx = None
+            stepy = None
+
+        case 'reg_poly':
+            tt = np.linspace(0,1,nv)
+            ts = np.linspace(0,1,nu)
+            ptlist=np.array([s*u + t*v + el[0] for t in tt for s in ts])
+
+            stepx = np.abs(ts[1]-ts[0])*np.linalg.norm(u)
+            stepy = np.abs(tt[1]-tt[0])*np.linalg.norm(v)
+
+    return ptlist, nu,nv, stepx, stepy
 
 ################# boundary
 def _sample_boundary_regular(el: np.ndarray, npoints=3):
@@ -921,8 +897,6 @@ if numba is not None:
     _poly_integration = numba.njit()(_poly_integration)
     _first_integration_analytical = numba.njit()(_first_integration_analytical)
     _g_integral = numba.njit()(_g_integral)
-    _surf_sample_random = numba.njit()(_surf_sample_random)
-    _surf_sample_regulargrid = numba.njit()(_surf_sample_regulargrid)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
     _area_under_curve = numba.njit()(_area_under_curve)
     _lagrange_integral=numba.njit()(_lagrange_integral)
