@@ -22,8 +22,9 @@ class integration_test:
         self.order = order
         self.nsamples = (order+1)**2
 
-    def set_int_method(self,op1="contour",op2="analytical"):
+    def set_int_method(self,op1="contour",op2="poly"):
 
+        self.intg_op1=op1
         if op1.lower()=="contour":
             self.intg_method=intg.contour_ff
             self.intg_op2=op2
@@ -101,7 +102,7 @@ class integration_test:
                                 self.patch_2.area,
                                 self.nsamples,
                                 self.intg_op2)
-        if self.intg_method == intg.surface_ff_Nusselt:
+        elif self.intg_method == intg.surface_ff_Nusselt:
             self.result = self.intg_method(self.patch_1.pts,
                                 self.patch_2.pts,
                                 self.patch_1.normal,
@@ -109,7 +110,7 @@ class integration_test:
                                 self.patch_1.area,
                                 self.nsamples,
                                 self.intg_op2)
-        if self.intg_method == intg.surface_ff_naive:
+        elif self.intg_method == intg.contour_ff:
             self.result = self.intg_method(self.patch_1.pts,
                                 self.patch_2.pts,
                                 self.patch_1.area,
@@ -134,12 +135,22 @@ class integration_test:
         if self.error is None:
             self.calc_error()
 
-        print(f'\nrelative ff error:       {self.error-1:.4%}')
-        print(f'gain per 100 bounces:      {10*np.log10(self.error**100):.1f}'+
+        print(f'\n -> relative ff error:       {self.error-1:.4%}')
+        print(f' -> gain per 100 bounces:      {10*np.log10(self.error**100):.1f}'+
                'dB\n')
 
+    def print_stats(self):
+        print('\n\n############################################')
+        print(f'Form Factor approach: {self.intg_op1}')
+        print(f'Internal integral approach: {self.intg_op2}')
+        if (self.intg_op1.lower()=='contour' or
+            self.intg_op2.lower()=='poly'):
+            print(f'Newton-Cotes polynomial order: {self.order}')
+        else:
+            print(f'# of samples in each patch: {self.nsamples}')
 
 
 if __name__=="__main__":
     test=integration_test()
+    test.print_stats()
     test.print_results()

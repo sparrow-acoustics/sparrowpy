@@ -362,7 +362,7 @@ def contour_ff(
                                                             npoints=3)
         internal_int_function = _first_integration_analytical
         intf=_load_analytical_integrand
-    else:
+    elif integrand_fcn=="poly":
         j_bpoints, j_conn = _sample_boundary_regular(patch_j,
                                                             npoints=order+1)
         internal_int_function = _lagrange_integral
