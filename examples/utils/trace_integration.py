@@ -9,9 +9,31 @@ class integration_test:
 
     def __init__(self, gtype="a", ww=1, hh=1, ll=1):
         self._select_geometry(gtype,ww,hh,ll)
-        self.int_method = intg.surface_ff_naive
+        self.set_int_method()
         self.result=None
         self.error=None
+        self.set_nsamples(9)
+
+    def set_nsamples(self,nsamples:int):
+        self.nsamples = nsamples
+        self.order = int(nsamples**.5)-1
+
+    def set_poly_order(self,order:int):
+        self.order = order
+        self.nsamples = (order+1)**2
+
+    def set_int_method(self,op1="contour",op2="analytical"):
+
+        if op1.lower()=="contour":
+            self.intg_method=intg.contour_ff
+            self.intg_op2=op2
+        elif op1.lower()=="nusselt":
+            self.intg_method=intg.surface_ff_Nusselt
+            self.intg_op2=op2
+        elif op1.lower()=="naive":
+            self.intg_method=intg.surface_ff_naive
+            self.intg_op2=op2
+
 
     def _select_geometry(self,gtype="a",ww=1,hh=1,ll=1):
         """Select geometry (parallel or coincident line patches)."""
@@ -69,12 +91,31 @@ class integration_test:
 
     def integrate(self):
         """Run integration method."""
-        self.result = self.int_method(self.patch_1.pts,
-                               self.patch_2.pts,
-                               self.patch_1.normal,
-                               self.patch_2.normal,
-                               self.patch_1.area,
-                               self.patch_2.area)
+
+        if self.intg_method == intg.surface_ff_naive:
+            self.result = self.intg_method(self.patch_1.pts,
+                                self.patch_2.pts,
+                                self.patch_1.normal,
+                                self.patch_2.normal,
+                                self.patch_1.area,
+                                self.patch_2.area,
+                                self.nsamples,
+                                self.intg_op2)
+        if self.intg_method == intg.surface_ff_Nusselt:
+            self.result = self.intg_method(self.patch_1.pts,
+                                self.patch_2.pts,
+                                self.patch_1.normal,
+                                self.patch_2.normal,
+                                self.patch_1.area,
+                                self.nsamples,
+                                self.intg_op2)
+        if self.intg_method == intg.surface_ff_naive:
+            self.result = self.intg_method(self.patch_1.pts,
+                                self.patch_2.pts,
+                                self.patch_1.area,
+                                self.intg_op2,
+                                self.order)
+
 
     def calc_error(self):
         """Calculate integration error."""
@@ -97,16 +138,7 @@ class integration_test:
         print(f'gain per 100 bounces:      {10*np.log10(self.error**100):.1f}'+
                'dB\n')
 
-    def _update_kwargs(self):
-        self.kwargs_list=[]
-        for method in self.int_method:
-            temp={}
-            match method:
-                case intg.surface_ff:
-                    temp["patch_i"]=self.patch_1.pts
-                    temp["patch_j"]=self.patch_2.pts
-                    temp["patch_i_normal"]=self.patch_1.normal
-                    temp["patch_j_normal"]=self.patch_2.normal
+
 
 if __name__=="__main__":
     test=integration_test()
