@@ -324,8 +324,8 @@ def _load_Lambert_integrand(i_points: np.ndarray,
 
 def contour_ff(
     patch_i: np.ndarray, patch_j: np.ndarray, patch_i_area: float,
-    integrand_fcn=_load_analytical_integrand,
-    order=100) -> float:
+    integrand_fcn="analytical",
+    order=7) -> float:
     """Calculate an estimation of the form factor between two patches.
 
     Computationally integrates a modified form function over
@@ -357,19 +357,21 @@ def contour_ff(
     """
     i_bpoints, i_conn = _sample_boundary_regular(patch_i,
                                                          npoints=order+1)
-    if integrand_fcn==_load_analytical_integrand:
+    if integrand_fcn=="analytical":
         j_bpoints, j_conn = _sample_boundary_regular(patch_j,
                                                             npoints=3)
         internal_int_function = _first_integration_analytical
+        intf=_load_analytical_integrand
     else:
         j_bpoints, j_conn = _sample_boundary_regular(patch_j,
                                                             npoints=order+1)
         internal_int_function = _lagrange_integral
+        intf=_load_stokes_integrand
 
     integrand = np.zeros((i_bpoints.shape[0],j_bpoints.shape[0]))
 
     # first compute and store form function sample values
-    integrand = integrand_fcn(i_bpoints,j_bpoints)
+    integrand = intf(i_bpoints,j_bpoints)
 
     # double polynomial integration (per dimension (x,y,z))
     outer_integral = 0
@@ -831,6 +833,8 @@ def _surf_sampling(el: np.ndarray, npoints=10, style='random'):
             stepy = None
 
         case 'reg_poly':
+            nu = int(np.sqrt(npoints))
+            nv = nu
             tt = np.linspace(0,1,nv)
             ts = np.linspace(0,1,nu)
             ptlist=np.array([s*u + t*v + el[0] for t in tt for s in ts])
