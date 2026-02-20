@@ -187,6 +187,61 @@ def _lagrange_integral(x:np.ndarray,y:np.ndarray):
 
     return out
 
+def _gauss_legendre_integral(x:np.ndarray,y:np.ndarray):
+    """Integrate samples by Legendre polynomial estimation.
+
+    Input function is approximated by a Lagrange polynomial
+    and integrated. The order of the polynomial approximation
+    is defined by the number of samples (order=n_samples-1)
+    Approximations up to polynomial order 6 employ closed
+    Newton-Cotes formulas. If the samples are not equally spaced,
+    the generalized approach is used.
+
+    Parameters
+    ----------
+    x: np.ndarray (n_samples,)
+        sample x-coordinates.
+    y: np.ndarray (n_samples,)
+        sample y-coordinates.
+
+    Returns
+    -------
+    out: integral of the approximated function.
+    """
+    if x.shape[0]!=y.shape[0]:
+        ValueError("x and y arrays must have the same length!")
+    if x.shape[1:]!=(1,):
+        ValueError(f"x array shape {x.shape} must be one-dimensional")
+    if y.shape[1:]!=(1,):
+        ValueError(f"y array shape {y.shape} must be one-dimensional")
+    if x.shape[0]==1:
+        ValueError("Impossible to evaluate integral with a single sample.")
+    if x.shape[0]>5:
+        ValueError("No existing solutions above 5 samples.")
+
+    o = x.shape[0]-1
+    steps = x[1:]-x[:-1]
+
+    if o<7 and (steps==steps[0]).all():
+        match o:
+            case 1:
+                GL_coefs=np.array([1.,1.])
+            case 2:
+                GL_coefs=1/3*np.array([8/9,5/9,5/9])
+            case 3:
+                a = (18+30**.5)/36
+                b = (18-30**.5)/36
+                GL_coefs=3/8*np.array([a,a,b,b])
+            case 4:
+                a=128/225
+                b=(322+13*70**.5)/900
+                c=(322-13*70**.5)/900
+                GL_coefs=2/45*np.array([a,b,b,c,c])
+
+        out=np.dot(y,GL_coefs)
+
+    return out
+
 def _first_integration_analytical(x: np.ndarray,
                                  rsquared: np.ndarray):
     """Calculate first integral analytically."""
@@ -355,15 +410,15 @@ def contour_ff(
     form factor between patch i and j
 
     """
-    i_bpoints, i_conn = _sample_boundary_regular(patch_i,
+    i_bpoints, i_conn = _sample_boundary(patch_i,
                                                          npoints=order+1)
     if integrand_fcn=="analytical":
-        j_bpoints, j_conn = _sample_boundary_regular(patch_j,
+        j_bpoints, j_conn = _sample_boundary(patch_j,
                                                             npoints=3)
         internal_int_function = _first_integration_analytical
         intf=_load_analytical_integrand
     elif integrand_fcn=="poly":
-        j_bpoints, j_conn = _sample_boundary_regular(patch_j,
+        j_bpoints, j_conn = _sample_boundary(patch_j,
                                                             npoints=order+1)
         internal_int_function = _lagrange_integral
         intf=_load_stokes_integrand
@@ -639,7 +694,7 @@ def nusselt_analog(surf_origin, surf_normal,
     (differential form factor)
 
     """
-    boundary_points, connectivity = _sample_boundary_regular(
+    boundary_points, connectivity = _sample_boundary(
                                                             patch_points,
                                                             npoints=3)
 
@@ -845,7 +900,7 @@ def _surf_sampling(el: np.ndarray, npoints=10, style='random'):
     return ptlist, nu,nv, stepx, stepy
 
 ################# boundary
-def _sample_boundary_regular(el: np.ndarray, npoints=3):
+def _sample_boundary(el: np.ndarray, npoints=3,style='regular'):
     """Sample points on the boundary of a patch at fractional intervals.
 
     returns an array of points on the patch boundary (pts)
@@ -872,23 +927,49 @@ def _sample_boundary_regular(el: np.ndarray, npoints=3):
 
     """
     n_div = npoints - 1
+    conn = np.empty((len(el),npoints))
 
-    pts  = np.empty((len(el)*(npoints-1),len(el[0])))
-    conn = np.empty((len(el),npoints), dtype=np.int8)
+    if style=='regular':
+        pts  = np.empty((len(el)*(npoints-1),len(el[0])))
+        for i in range(len(el)):
+            conn[i][0]= (i*n_div)%(n_div*len(el))
+            conn[i][-1]= (i*n_div+n_div)%(n_div*len(el))
 
-    for i in range(len(el)):
+            for ii in range(0,n_div):
 
-        conn[i][0]= (i*n_div)%(n_div*len(el))
-        conn[i][-1]= (i*n_div+n_div)%(n_div*len(el))
+                pts[i*n_div+ii,:]= (el[i] + ii*(el[(i+1)%len(el)]-el[i])/n_div)
 
-        for ii in range(0,n_div):
+                conn[i][ii]=(i*n_div+ii)%(n_div*len(el))
 
-            pts[i*n_div+ii,:]= (el[i] + ii*(el[(i+1)%len(el)]-el[i])/n_div)
+    elif style=='GL':
+        pts  = np.empty((len(el)*(npoints),len(el[0])))
+        match npoints:
+            case 2:
+                a=1/3**.5
+                x=np.array([-a,a])+.5
+            case 3:
+                b=(3/5)**.5
+                a=0
+                x=np.array([a,b,-b])+.5
+            case 4:
+                b=(3/7-2/7*(6/5)**.5)**.5
+                c=(3/7+2/7*(6/5)**.5)**.5
+                x=np.array([b,-b,c,-c])+.5
+            case 5:
+                a=0
+                b=1/3*(5-2*(10/7)**.5)**.5
+                c=1/3*(5+2*(10/7)**.5)**.5
+                x=np.array([a,b,-b,c,-c])+.5
+            case _:
+                ValueError("No implementation of Gauss-Legendre quadrature above 5 points.")
 
-            conn[i][ii]=(i*n_div+ii)%(n_div*len(el))
+        for i in range(len(el)):
+            u = el[i]-el[i-1]
+            pts[i*npoints:(i+1)*npoints-1,:]= x*u + el[i-1]
 
+            conn[i]=i*len(x)+np.arange(len(x))
 
-    return pts,conn.astype(np.int8)
+    return pts,conn
 
 if numba is not None:
     pt_solution = numba.njit(parallel=True)(pt_solution)
@@ -901,6 +982,6 @@ if numba is not None:
     _poly_integration = numba.njit()(_poly_integration)
     _first_integration_analytical = numba.njit()(_first_integration_analytical)
     _g_integral = numba.njit()(_g_integral)
-    _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
+    _sample_boundary = numba.njit()(_sample_boundary)
     _area_under_curve = numba.njit()(_area_under_curve)
     _lagrange_integral=numba.njit()(_lagrange_integral)
