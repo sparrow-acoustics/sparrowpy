@@ -243,7 +243,7 @@ def _gauss_legendre_integral(x: np.ndarray, y: np.ndarray, d):
             c = (322 - 13 * 70**0.5) / 900
             GL_coefs = 2 / 45 * np.array([a, b, b, c, c])
 
-    out = d / 2 * np.dot(y, GL_coefs)
+    out = d / 2 * np.dot(y, np.abs(GL_coefs))
 
     return out
 
@@ -1094,8 +1094,8 @@ def _sample_boundary(el: np.ndarray, npoints=3, style="regular"):
         x = _GL_samples(npoints)
 
         for i in range(len(el)):
-            u = (el[i] - el[i - 1]) / 2
-            v = (el[i] + el[i - 1]) / 2
+            u = (el[(i + 1) % len(el)] - el[i]) / 2
+            v = (el[(i + 1) % len(el)] + el[i]) / 2
 
             pts[i * npoints : (i + 1) * npoints, :] = np.outer(x, u) + v
 
