@@ -232,7 +232,7 @@ def _gauss_legendre_integral(x: np.ndarray, y: np.ndarray, d):
         case 1:
             GL_coefs = np.array([1.0, 1.0])
         case 2:
-            GL_coefs = 1 / 3 * np.array([8 / 9, 5 / 9, 5 / 9])
+            GL_coefs = np.array([8 / 9, 5 / 9, 5 / 9])
         case 3:
             a = (18 + 30**0.5) / 36
             b = (18 - 30**0.5) / 36
@@ -764,16 +764,17 @@ def _surface_integral(
     else:
         integrand = integrand.reshape((int(nn[0]), int(nn[1])))
         in1 = np.empty((integrand.shape[0]))
-        if style == "reg_NC":
-            x2 = np.arange(0, integrand.shape[1] * steps[1], steps[1])
-            x1 = np.arange(0, integrand.shape[0] * steps[0], steps[0])
+
+        x2 = np.arange(0, integrand.shape[1] * steps[1], steps[1])
+        x1 = np.arange(0, integrand.shape[0] * steps[0], steps[0])
+        if style == "poly_NC":
             for i in prange(integrand.shape[0]):
-                in1[i] = _lagrange_integral(x1, integrand[i, :])
+                in1[i] = _lagrange_integral(x1, integrand[i, :],d=)
             out = _lagrange_integral(x2, in1)
-        elif style == "reg_GL":
+        elif style == "poly_GL":
             for i in prange(integrand.shape[0]):
-                in1[i] = _gauss_legendre_integral(integrand[i, :])
-            out = _gauss_legendre_integral(in1)
+                in1[i] = _gauss_legendre_integral(x1, integrand[i, :])
+            out = _gauss_legendre_integral(x2, in1)
 
     return out
 
@@ -1022,7 +1023,7 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
             stepx = None
             stepy = None
 
-        case "reg_NC":
+        case "poly_NC":
             nu = int(np.sqrt(npoints))
             nv = nu
             tt = np.linspace(0, 1, nv)
@@ -1032,7 +1033,7 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
             stepx = np.abs(ts[1] - ts[0]) * np.linalg.norm(u)
             stepy = np.abs(tt[1] - tt[0]) * np.linalg.norm(v)
 
-        case "reg_GL":
+        case "poly_GL":
             nu = int(np.sqrt(npoints))
             nv = nu
             tt = _GL_samples(nu)
@@ -1110,13 +1111,13 @@ def _GL_samples(n: int):
             a = 1 / 3**0.5
             x = np.array([-a, a])
         case 3:
-            b = (3 / 5) ** 0.5
             a = 0
+            b = (3 / 5) ** 0.5
             x = np.array([a, b, -b])
         case 4:
-            b = (3 / 7 - 2 / 7 * (6 / 5) ** 0.5) ** 0.5
-            c = (3 / 7 + 2 / 7 * (6 / 5) ** 0.5) ** 0.5
-            x = np.array([b, -b, c, -c])
+            a = (3 / 7 - 2 / 7 * (6 / 5) ** 0.5) ** 0.5
+            b = (3 / 7 + 2 / 7 * (6 / 5) ** 0.5) ** 0.5
+            x = np.array([a, -a, b, -b])
         case 5:
             a = 0
             b = 1 / 3 * (5 - 2 * (10 / 7) ** 0.5) ** 0.5
