@@ -1,5 +1,6 @@
 """methods for tracing and evaluating ff integration."""
 
+import tracemalloc
 from time import time
 
 import numpy as np
@@ -12,7 +13,7 @@ import sparrowpy.testing.exact_ff_solutions as ffsol
 class integration_test:
     """Class for convenient testing of integration methods."""
 
-    def __init__(self, gtype="a", ww=1, hh=1, ll=1):
+    def __init__(self, gtype="a", ww=2, hh=3, ll=1):
         self._select_geometry(gtype, ww, hh, ll)
         self.set_int_method()
         self.result = None
@@ -95,12 +96,14 @@ class integration_test:
     def integrate(self, trace_time=False, trace_mem=False):
         """Run integration method."""
 
-        if not trace_time:
-            t0 = -1
+        t0 = -1
+        if trace_mem:
+            tracemalloc.start()
 
         if self.intg_method == intg.surface_ff_naive:
             if trace_time:
-                t0 = time.now()
+                t0 = time()
+
             self.result = self.intg_method(
                 self.patch_1.pts,
                 self.patch_2.pts,
@@ -111,9 +114,11 @@ class integration_test:
                 self.nsamples,
                 self.intg_op2,
             )
+            tf = time() - t0
+
         elif self.intg_method == intg.surface_ff_Nusselt:
             if trace_time:
-                t0 = time.now()
+                t0 = time()
             self.result = self.intg_method(
                 self.patch_1.pts,
                 self.patch_2.pts,
@@ -123,9 +128,11 @@ class integration_test:
                 self.nsamples,
                 self.intg_op2,
             )
+            tf = time() - t0
+
         elif self.intg_method == intg.contour_ff:
             if trace_time:
-                t0 = time.now()
+                t0 = time()
             self.result = self.intg_method(
                 self.patch_1.pts,
                 self.patch_2.pts,
@@ -134,6 +141,14 @@ class integration_test:
                 self.intg_op3,
                 self.order,
             )
+            tf = time() - t0
+
+            if trace_time:
+                return self.error, tf
+            elif trace_mem:
+                mem = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
+                return self.error, mem
 
     def calc_error(self):
         """Calculate integration error."""
@@ -160,19 +175,25 @@ class integration_test:
         """Print important simulation properties."""
         print("\n\n############################################")
         print(f"Form Factor approach: {self.intg_op1}")
-        print(f"Internal integral approach: {self.intg_op2}")
+        if self.intg_op3 is not None:
+            print(f"Internal integral approach: {self.intg_op2}")
+            print(f"External integral approach: {self.intg_op3}")
+        else:
+            print(f"Integral approach: {self.intg_op2}")
+
         if (
             self.intg_op1.lower() == "contour"
-            or self.intg_op2.lower() == "poly"
+            or "poly" in self.intg_op2.lower()
         ):
-            print(f"Newton-Cotes polynomial order: {self.order}")
+            print(f"Polynomial order: {self.order}")
         else:
             print(f"# of samples in each patch: {self.nsamples}")
 
 
 if __name__ == "__main__":
-    test = integration_test()
-    test.set_int_method(op1="contour", op2="analytical", op3="poly_NC")
+    test = integration_test(gtype="a", ww=1, hh=1, ll=1)
+    test.set_int_method(op1="contour", op2="analytical", op3="poly_GL")
+
     test.set_poly_order(2)
     test.print_stats()
     test.print_results()
