@@ -759,7 +759,7 @@ def _surface_integral(
         integration result.
     """
 
-    if style == "random" or style == "reg_surf":
+    if style == "random" or style == "regular" or style == "poly_GL":
         out = np.mean(integrand) * area
     else:
         integrand = integrand.reshape((int(nn[0]), int(nn[1])))
@@ -767,14 +767,19 @@ def _surface_integral(
 
         x2 = np.arange(0, integrand.shape[1] * steps[1], steps[1])
         x1 = np.arange(0, integrand.shape[0] * steps[0], steps[0])
+
         if style == "poly_NC":
             for i in prange(integrand.shape[0]):
-                in1[i] = _lagrange_integral(x1, integrand[i, :],d=)
-            out = _lagrange_integral(x2, in1)
+                in1[i] = _lagrange_integral(x1, integrand[i, :], d=steps[0])
+            out = _lagrange_integral(x2, in1, d=steps[1])
         elif style == "poly_GL":
             for i in prange(integrand.shape[0]):
-                in1[i] = _gauss_legendre_integral(x1, integrand[i, :])
-            out = _gauss_legendre_integral(x2, in1)
+                in1[i] = _gauss_legendre_integral(
+                    x1,
+                    integrand[i, :],
+                    d=steps[0],
+                )
+            out = _gauss_legendre_integral(x2, in1, d=steps[1])
 
     return out
 
@@ -956,11 +961,10 @@ def _area_under_curve(ps: np.ndarray, order=2) -> float:
 
         # rotate point around origin to align with new axis
         cc = geom._matrix_vector_product(matrix=rotation_matrix, vector=c)
-
         x[k] = cc[0]
         y[k] = cc[1]
 
-    area = _lagrange_integral(x, y)
+    area = _lagrange_integral(x, y, d=np.linalg.norm(f))
 
     return area
 
@@ -1011,9 +1015,9 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
             stepx = None
             stepy = None
 
-        case "reg_surf":
-            stepv = 1 / (nv + 1)
-            stepu = 1 / (nu + 1)
+        case "regular":
+            stepv = 1 / (nv)
+            stepu = 1 / (nu)
 
             tt = np.linspace(0.5 * stepv, 1 - 0.5 * stepv, nv)
             ts = np.linspace(0.5 * stepu, 1 - 0.5 * stepv, nu)
@@ -1030,18 +1034,27 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
             ts = np.linspace(0, 1, nu)
             ptlist = np.array([s * u + t * v + el[0] for t in tt for s in ts])
 
-            stepx = np.abs(ts[1] - ts[0]) * np.linalg.norm(u)
-            stepy = np.abs(tt[1] - tt[0]) * np.linalg.norm(v)
+            stepx = np.linalg.norm(u)
+            stepy = np.linalg.norm(v)
 
         case "poly_GL":
             nu = int(np.sqrt(npoints))
-            nv = nu
-            tt = _GL_samples(nu)
-            ts = _GL_samples(nv)
-            ptlist = np.array([s * u + t * v + el[0] for t in tt for s in ts])
+            xa, _ = _sample_boundary(el[0:2], npoints=nu, style="GL")
+            xb, _ = _sample_boundary(
+                np.roll(el[2:4], -1, axis=0),
+                npoints=nu,
+                style="GL",
+            )
 
-            stepx = 1
-            stepy = 1
+            for k in range(nu):
+                ptlist[k * nu : (k + 1) * nu, :], _ = _sample_boundary(
+                    el=np.array([xa[k], xb[k]]),
+                    npoints=nu,
+                    style="GL",
+                )
+
+            stepx = np.linalg.norm(el[1] - el[0])
+            stepy = np.linalg.norm(el[2] - el[1])
 
     return ptlist, nu, nv, stepx, stepy
 
@@ -1091,10 +1104,16 @@ def _sample_boundary(el: np.ndarray, npoints=3, style="regular"):
                 conn[i][ii] = (i * n_div + ii) % (n_div * len(el))
 
     elif style == "GL":
-        pts = np.empty((len(el) * (npoints), len(el[0])))
+        if len(el) > 2:
+            pts = np.empty((len(el) * (npoints), len(el[0])))
+            nsides = len(el)
+        else:
+            pts = np.empty((npoints, len(el[0])))
+            nsides = 1
+
         x = _GL_samples(npoints)
 
-        for i in range(len(el)):
+        for i in range(nsides):
             u = (el[(i + 1) % len(el)] - el[i]) / 2
             v = (el[(i + 1) % len(el)] + el[i]) / 2
 
