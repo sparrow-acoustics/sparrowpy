@@ -392,10 +392,10 @@ def _load_Lambert_integrand(
             if np.linalg.norm(r) == 0:
                 form_mat[i, j] = 0
             else:
-                ll = np.linalg.norm(r)
+                rr = np.linalg.norm(r)
 
                 form_mat[i, j] = (
-                    np.abs(np.dot(r, i_normal) * np.dot(r, j_normal)) / ll**4
+                    np.dot(-r, i_normal) * np.dot(r, j_normal) / rr**4
                 )
 
     return form_mat
@@ -710,16 +710,25 @@ def surface_ff_naive(
     int_int = np.empty(pi_array.shape[:-1])
 
     for i in prange(pi_array.shape[0]):
-        int_int[i] = _surface_integral(
-            integrand=lambert[
-                int(i / pi_array.shape[0]) + i % pi_array.shape[1],
-                :,
-            ],
-            steps=(stepjx, stepjy),
-            nn=(nju, njv),
-            area=patch_j_area,
-            style=style,
-        )
+        if pi_array.ndim > 2:
+            int_int[i] = _surface_integral(
+                integrand=lambert[
+                    int(i / pi_array.shape[0]) + i % pi_array.shape[1],
+                    :,
+                ],
+                steps=(stepjx, stepjy),
+                nn=(nju, njv),
+                area=patch_j_area,
+                style=style,
+            )
+        else:
+            int_int[i] = _surface_integral(
+                integrand=lambert[i, :],
+                steps=(stepjx, stepjy),
+                nn=(nju, njv),
+                area=patch_j_area,
+                style=style,
+            )
 
     out = _surface_integral(
         integrand=int_int,
@@ -759,8 +768,8 @@ def _surface_integral(
         integration result.
     """
 
-    if style == "random" or style == "regular" or style == "poly_GL":
-        out = np.mean(integrand) * area
+    if style == "random" or style == "regular":
+        out = np.sum(integrand) * area / integrand.shape[0]
     else:
         integrand = integrand.reshape((int(nn[0]), int(nn[1])))
         in1 = np.empty((integrand.shape[0]))
@@ -998,15 +1007,12 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
     u = el[1] - el[0]
     v = el[-1] - el[0]
 
-    ratio = np.linalg.norm(u) / np.linalg.norm(v)
-
-    nu = int(np.sqrt(npoints * ratio))
-    nv = int(np.sqrt(npoints / ratio))
-
-    ptlist = np.empty((nu * nv, 3))
+    nu = int(np.sqrt(npoints))
+    nv = nu
 
     match style:
         case "random":
+            ptlist = np.empty((nu * nv, 3))
             for i in prange(nu * nv):
                 s = np.random.uniform()
                 t = np.random.uniform()
@@ -1016,13 +1022,13 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
             stepy = None
 
         case "regular":
+            ptlist = np.empty((nu * nv, 3))
             stepv = 1 / (nv)
             stepu = 1 / (nu)
 
             tt = np.linspace(0.5 * stepv, 1 - 0.5 * stepv, nv)
             ts = np.linspace(0.5 * stepu, 1 - 0.5 * stepv, nu)
-
-            ptlist = np.array([s * u + +t * v + el[0] for t in tt for s in ts])
+            ptlist = np.array([s * u + t * v + el[0] for t in tt for s in ts])
 
             stepx = None
             stepy = None
@@ -1039,6 +1045,7 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
 
         case "poly_GL":
             nu = int(np.sqrt(npoints))
+            ptlist = np.empty((npoints, 3))
             xa, _ = _sample_boundary(el[0:2], npoints=nu, style="GL")
             xb, _ = _sample_boundary(
                 np.roll(el[2:4], -1, axis=0),
