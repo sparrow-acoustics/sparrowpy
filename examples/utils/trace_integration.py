@@ -13,7 +13,7 @@ import sparrowpy.testing.exact_ff_solutions as ffsol
 class integration_test:
     """Class for convenient testing of integration methods."""
 
-    def __init__(self, gtype="a", ww=2, hh=3, ll=1):
+    def __init__(self, gtype="a", ww=1, hh=1, ll=1):
         self._select_geometry(gtype, ww, hh, ll)
         self.set_int_method()
         self.result = None
@@ -42,9 +42,11 @@ class integration_test:
         elif op1.lower() == "nusselt":
             self.intg_method = intg.surface_ff_Nusselt
             self.intg_op2 = op2
+            self.intg_op3 = None
         elif op1.lower() == "naive":
             self.intg_method = intg.surface_ff_naive
             self.intg_op2 = op2
+            self.intg_op3 = None
 
     def _select_geometry(self, gtype="a", ww=1, hh=1, ll=1):
         """Select geometry (parallel or coincident line patches)."""
@@ -93,62 +95,68 @@ class integration_test:
                     f"{gtype} does not correspond to any known geometries.",
                 )
 
-    def integrate(self, trace_time=False, trace_mem=False):
+    def integrate(self, trace_time=False, trace_mem=False, n=None):
         """Run integration method."""
-
         t0 = -1
         if trace_mem:
             tracemalloc.start()
+        if n is None:
+            if trace_time:
+                n = 100
+            else:
+                n = 1
 
         if self.intg_method == intg.surface_ff_naive:
             if trace_time:
                 t0 = time()
-
-            self.result = self.intg_method(
-                self.patch_1.pts,
-                self.patch_2.pts,
-                self.patch_1.normal,
-                self.patch_2.normal,
-                self.patch_1.area,
-                self.patch_2.area,
-                self.nsamples,
-                self.intg_op2,
-            )
+            for _ in range(n):
+                self.result = self.intg_method(
+                    self.patch_1.pts,
+                    self.patch_2.pts,
+                    self.patch_1.normal,
+                    self.patch_2.normal,
+                    self.patch_1.area,
+                    self.patch_2.area,
+                    self.nsamples,
+                    self.intg_op2,
+                )
             tf = time() - t0
 
         elif self.intg_method == intg.surface_ff_Nusselt:
             if trace_time:
                 t0 = time()
-            self.result = self.intg_method(
-                self.patch_1.pts,
-                self.patch_2.pts,
-                self.patch_1.normal,
-                self.patch_2.normal,
-                self.patch_1.area,
-                self.nsamples,
-                self.intg_op2,
-            )
+            for _ in range(n):
+                self.result = self.intg_method(
+                    self.patch_1.pts,
+                    self.patch_2.pts,
+                    self.patch_1.normal,
+                    self.patch_2.normal,
+                    self.patch_1.area,
+                    self.nsamples,
+                    self.intg_op2,
+                )
             tf = time() - t0
 
         elif self.intg_method == intg.contour_ff:
             if trace_time:
                 t0 = time()
-            self.result = self.intg_method(
-                self.patch_1.pts,
-                self.patch_2.pts,
-                self.patch_1.area,
-                self.intg_op2,
-                self.intg_op3,
-                self.order,
-            )
+            for _ in range(n):
+                self.result = self.intg_method(
+                    self.patch_1.pts,
+                    self.patch_2.pts,
+                    self.patch_1.area,
+                    self.intg_op2,
+                    self.intg_op3,
+                    self.order,
+                )
             tf = time() - t0
 
-            if trace_time:
-                return self.error, tf
-            elif trace_mem:
-                mem = tracemalloc.get_traced_memory()
-                tracemalloc.stop()
-                return self.error, mem
+        if trace_time:
+            return tf / n
+        elif trace_mem:
+            mem = tracemalloc.get_traced_memory()[1]
+            tracemalloc.stop()
+            return mem
 
     def calc_error(self):
         """Calculate integration error."""
@@ -191,8 +199,8 @@ class integration_test:
 
 
 if __name__ == "__main__":
-    test = integration_test(gtype="a", ww=1, hh=1, ll=1)
-    test.set_int_method(op1="contour", op2="analytical", op3="poly_GL")
+    test = integration_test(gtype="a", ww=4, hh=1, ll=1)
+    test.set_int_method(op1="nusselt", op2="poly_GL")
 
     test.set_poly_order(2)
     test.print_stats()
