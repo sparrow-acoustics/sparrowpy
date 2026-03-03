@@ -126,7 +126,7 @@ def universal_form_factor(
                 nsamples=(integration_args["order"] + 1) ** 2,
                 style=integration_args["int1"],
             )
-        case "nusselt":
+        case "naive":
             form_factor = integration.surface_ff_naive(
                 patch_i=source_pts,
                 patch_j=receiver_pts,
