@@ -1,16 +1,25 @@
 """methods for universal form factor calculation."""
+
 import numpy as np
+
 from sparrowpy.form_factor import integration
+
 try:
     import numba
+
     prange = numba.prange
 except ImportError:
     numba = None
     prange = range
 
-def patch2patch_ff_universal(patches_points: np.ndarray,
-                             patches_areas: np.ndarray,
-                             visible_patches:np.ndarray):
+
+def patch2patch_ff_universal(
+    patches_points: np.ndarray,
+    patches_areas: np.ndarray,
+    patches_normals: np.ndarray,
+    visible_patches: np.ndarray,
+    integration_kwargs=None,
+):
     """Calculate the form factors between patches (universal method).
 
     This method computes form factors between polygonal patches via numerical
@@ -43,15 +52,26 @@ def patch2patch_ff_universal(patches_points: np.ndarray,
     for visID in prange(visible_patches.shape[0]):
         i = int(visible_patches[visID, 0])
         j = int(visible_patches[visID, 1])
-        form_factors[i,j] = universal_form_factor(
-                    patches_points[i], patches_areas[i], patches_points[j])
+        form_factors[i, j] = universal_form_factor(
+            patches_points[i],
+            patches_areas[i],
+            patches_normals[i],
+            patches_points[j],
+            patches_normals[j],
+            integration_kwargs,
+        )
 
     return form_factors
 
-def universal_form_factor(source_pts: np.ndarray,
-                          source_area: np.ndarray,
-                          receiver_pts: np.ndarray,
-                         ) -> float:
+
+def universal_form_factor(
+    source_pts: np.ndarray,
+    source_area: np.ndarray,
+    source_normal: np.ndarray,
+    receiver_pts: np.ndarray,
+    receiver_normal: np.ndarray,
+    integration_args=None,
+) -> float:
     """Return the form factor based on input patches geometry.
 
     Parameters
@@ -80,16 +100,54 @@ def universal_form_factor(source_pts: np.ndarray,
         form factor
 
     """
-    form_factor = integration.contour_ff(patch_i=source_pts,
-                                             patch_j=receiver_pts,
-                                             patch_i_area=source_area)
+    if not integration_args:
+        integration_args = {
+            "method": "contour",
+            "int1": "analytical",
+            "int2": "poly_GL",
+            "order": 2,
+        }
+
+    match integration_args["method"]:
+        case "contour":
+            form_factor = integration.contour_ff(
+                patch_i=source_pts,
+                patch_j=receiver_pts,
+                patch_i_area=source_area,
+                inner_style=integration_args["int1"],
+                outer_style=integration_args["int2"],
+                order=integration_args["order"],
+            )
+        case "nusselt":
+            form_factor = integration.surface_ff_Nusselt(
+                patch_i=source_pts,
+                patch_j=receiver_pts,
+                patch_i_area=source_area,
+                nsamples=(integration_args["order"] + 1) ** 2,
+                style=integration_args["int1"],
+            )
+        case "nusselt":
+            form_factor = integration.surface_ff_naive(
+                patch_i=source_pts,
+                patch_j=receiver_pts,
+                patch_i_normal=source_normal,
+                patch_j_area=receiver_normal,
+                patch_i_area=source_area,
+                nsamples=(integration_args["order"] + 1) ** 2,
+                style=integration_args["int1"],
+            )
 
     return form_factor
 
+
 def _source2patch_energy_universal(
-        source_position: np.ndarray, patches_center: np.ndarray,
-        patches_points: np.ndarray, source_visibility: np.ndarray,
-        air_attenuation:np.ndarray, n_bins:float):
+    source_position: np.ndarray,
+    patches_center: np.ndarray,
+    patches_points: np.ndarray,
+    source_visibility: np.ndarray,
+    air_attenuation: np.ndarray,
+    n_bins: float,
+):
     """Calculate the initial energy from the source.
 
     Parameters
@@ -117,45 +175,59 @@ def _source2patch_energy_universal(
     """
     n_patches = patches_center.shape[0]
     energy = np.zeros((n_patches, n_bins))
-    distance_out = np.zeros((n_patches, ))
+    distance_out = np.zeros((n_patches,))
     for j in prange(n_patches):
         if source_visibility[j]:
             source_pos = source_position.copy()
             receiver_pos = patches_center[j, :].copy()
             receiver_pts = patches_points[j, :, :].copy()
 
-            distance_out[j] = np.linalg.norm(source_pos-receiver_pos)
+            distance_out[j] = np.linalg.norm(source_pos - receiver_pos)
 
             if air_attenuation is not None:
-                energy[j,:] = np.exp(
-                    -air_attenuation*distance_out[j])*integration.pt_solution(
-                        point=source_pos, patch_points=receiver_pts,
-                        mode="source")
+                energy[j, :] = np.exp(
+                    -air_attenuation * distance_out[j],
+                ) * integration.pt_solution(
+                    point=source_pos,
+                    patch_points=receiver_pts,
+                    mode="source",
+                )
             else:
-                energy[j,:] = integration.pt_solution(
-                    point=source_pos, patch_points=receiver_pts, mode="source")
+                energy[j, :] = integration.pt_solution(
+                    point=source_pos,
+                    patch_points=receiver_pts,
+                    mode="source",
+                )
 
     return (energy, distance_out)
 
+
 def _patch2receiver_energy_universal(
-        receiver_pos, patches_points, receiver_visibility):
-
+    receiver_pos,
+    patches_points,
+    receiver_visibility,
+):
     receiver_factor = np.zeros((patches_points.shape[0]))
-
 
     for i in prange(patches_points.shape[0]):
         if receiver_visibility[i]:
-            receiver_factor[i] = integration.pt_solution(point=receiver_pos,
-                            patch_points=patches_points[i,:], mode="receiver")
+            receiver_factor[i] = integration.pt_solution(
+                point=receiver_pos,
+                patch_points=patches_points[i, :],
+                mode="receiver",
+            )
 
     return receiver_factor
 
 
 if numba is not None:
     patch2patch_ff_universal = numba.njit(parallel=True)(
-        patch2patch_ff_universal)
+        patch2patch_ff_universal,
+    )
     universal_form_factor = numba.njit()(universal_form_factor)
     _source2patch_energy_universal = numba.njit(parallel=True)(
-        _source2patch_energy_universal)
+        _source2patch_energy_universal,
+    )
     _patch2receiver_energy_universal = numba.njit(parallel=True)(
-        _patch2receiver_energy_universal)
+        _patch2receiver_energy_universal,
+    )
