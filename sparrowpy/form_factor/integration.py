@@ -1172,3 +1172,4 @@ if numba is not None:
     _sample_boundary = numba.njit()(_sample_boundary)
     _area_under_curve = numba.njit()(_area_under_curve)
     _lagrange_integral = numba.njit()(_lagrange_integral)
+    _gauss_legendre_integral = numba.njit()(_gauss_legendre_integral)
