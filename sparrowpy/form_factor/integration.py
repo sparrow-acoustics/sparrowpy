@@ -480,7 +480,7 @@ def contour_ff(
     integrand = integrand_fcn(i_bpoints, j_bpoints)
 
     # double polynomial integration (per dimension (x,y,z))
-    outer_integral = 0
+    outer_integral = np.zeros((1, 1))
     inner_integral = np.zeros((1, i_bpoints.shape[0]))
 
     for dim in range(len(j_bpoints[0])):  # for each dimension x,y,x
@@ -507,11 +507,11 @@ def contour_ff(
 
 def contour_integration(
     patch_coords: np.ndarray,
-    patch_conn: list,
+    patch_conn: np.ndarray,
     integrand: np.ndarray,
     delta: np.ndarray,
     style="analytical",
-) -> float:
+):
     """Integrate a sampled integrand over a patch contour.
 
     Parameters
@@ -1098,8 +1098,7 @@ def _sample_boundary(el: np.ndarray, npoints=3, style="regular"):
 
     """
     n_div = npoints - 1
-    conn = np.empty((len(el), npoints), dtype=int)
-    step = np.empty((len(el)))
+    conn = np.empty((len(el), npoints), dtype=numba.int64)
 
     if style == "regular":
         pts = np.empty((len(el) * (npoints - 1), len(el[0])))
@@ -1132,7 +1131,7 @@ def _sample_boundary(el: np.ndarray, npoints=3, style="regular"):
 
             conn[i] = i * len(x) + np.arange(len(x))
 
-    return pts, conn.astype(int)
+    return pts, conn
 
 
 def _GL_samples(n: int):
@@ -1177,3 +1176,5 @@ if numba is not None:
     _area_under_curve = numba.njit()(_area_under_curve)
     _lagrange_integral = numba.njit()(_lagrange_integral)
     _gauss_legendre_integral = numba.njit()(_gauss_legendre_integral)
+    contour_integration = numba.njit()(contour_integration)
+    _GL_samples = numba.njit()(_GL_samples)
