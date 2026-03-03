@@ -440,7 +440,6 @@ def contour_ff(
     """
     if inner_style == "analytical":
         j_bpoints, j_conn = _sample_boundary(patch_j, npoints=3)
-        inner_integral_fcn = _first_integration_analytical
         integrand_fcn = _load_analytical_integrand
 
     elif inner_style == "poly_NC":
@@ -449,7 +448,6 @@ def contour_ff(
             npoints=order + 1,
             style="regular",
         )
-        inner_integral_fcn = _lagrange_integral
         integrand_fcn = _load_stokes_integrand
 
     elif inner_style == "poly_GL":
@@ -458,21 +456,18 @@ def contour_ff(
             npoints=order + 1,
             style="GL",
         )
-        inner_integral_fcn = _gauss_legendre_integral
         integrand_fcn = _load_stokes_integrand
 
     else:
         ValueError(f"{inner_style} integration method unknown")
 
     if outer_style == "poly_NC":
-        outer_integral_fcn = _lagrange_integral
         i_bpoints, i_conn = _sample_boundary(
             patch_i,
             npoints=order + 1,
             style="regular",
         )
     elif outer_style == "poly_GL":
-        outer_integral_fcn = _gauss_legendre_integral
         i_bpoints, i_conn = _sample_boundary(
             patch_i,
             npoints=order + 1,
@@ -494,7 +489,7 @@ def contour_ff(
             patch_coords=j_bpoints[:, dim],
             patch_conn=j_conn,
             integrand=integrand,
-            int_function=inner_integral_fcn,
+            style=inner_style,
             delta=patch_j[:, dim],
         )
 
@@ -503,7 +498,7 @@ def contour_ff(
             patch_coords=i_bpoints[:, dim],
             patch_conn=i_conn,
             integrand=inner_integral,
-            int_function=outer_integral_fcn,
+            style=outer_style,
             delta=patch_i[:, dim],
         )
 
@@ -515,7 +510,7 @@ def contour_integration(
     patch_conn: list,
     integrand: np.ndarray,
     delta: np.ndarray,
-    int_function=_first_integration_analytical,
+    style="analytical",
 ) -> float:
     """Integrate a sampled integrand over a patch contour.
 
@@ -557,7 +552,16 @@ def contour_integration(
                     subsecj[k] = integrand[i][seg[k]]
 
                 # add separate integral approx contributions
-                out[:, i] += int_function(x, subsecj, d[ii])
+                if style == "analytical":
+                    out[:, i] += _first_integration_analytical(
+                        x,
+                        subsecj,
+                        d[ii],
+                    )
+                elif style == "poly_GL":
+                    out[:, i] += _gauss_legendre_integral(x, subsecj, d[ii])
+                else:
+                    out[:, i] += _lagrange_integral(x, subsecj, d[ii])
 
     return out
 
