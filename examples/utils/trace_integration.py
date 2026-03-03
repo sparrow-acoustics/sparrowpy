@@ -156,7 +156,7 @@ class integration_test:
         elif trace_mem:
             mem = tracemalloc.get_traced_memory()[1]
             tracemalloc.stop()
-            return mem
+            return mem / n
 
     def calc_error(self):
         """Calculate integration error."""
@@ -200,8 +200,8 @@ class integration_test:
 
 if __name__ == "__main__":
     test = integration_test(gtype="a", ww=4, hh=1, ll=1)
-    test.set_int_method(op1="nusselt", op2="poly_GL")
+    test.set_int_method(op1="nusselt", op2="regular")
 
-    test.set_poly_order(2)
+    test.set_poly_order(6)
     test.print_stats()
     test.print_results()

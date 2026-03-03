@@ -773,7 +773,7 @@ def _surface_integral(
     """
 
     if style == "random" or style == "regular":
-        out = np.sum(integrand) * area / integrand.shape[0]
+        out = np.mean(integrand) * area
     else:
         integrand = integrand.reshape((int(nn[0]), int(nn[1])))
         in1 = np.empty((integrand.shape[0]))
