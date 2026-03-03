@@ -437,7 +437,7 @@ class DirectionalRadiosityFast:
             self.patches_area,
             self.patches_normal,
             self._visible_patches,
-            integration_args,
+            **integration_args,
         )
 
         # Calculate the form factors with directivity.

@@ -1032,17 +1032,25 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
 
             tt = np.linspace(0.5 * stepv, 1 - 0.5 * stepv, nv)
             ts = np.linspace(0.5 * stepu, 1 - 0.5 * stepv, nu)
-            ptlist = np.array([s * u + t * v + el[0] for t in tt for s in ts])
-
+            for i in prange(ts.shape[0]):
+                for j in prange(tt.shape[0]):
+                    ptlist[i * tt.shape[0] + j, :] = (
+                        u * ts[i] + tt[j] * v + el[0]
+                    )
             stepx = None
             stepy = None
 
         case "poly_NC":
+            ptlist = np.empty((npoints, 3))
             nu = int(np.sqrt(npoints))
             nv = nu
             tt = np.linspace(0, 1, nv)
             ts = np.linspace(0, 1, nu)
-            ptlist = np.array([s * u + t * v + el[0] for t in tt for s in ts])
+            for i in prange(ts.shape[0]):
+                for j in prange(tt.shape[0]):
+                    ptlist[i * tt.shape[0] + j, :] = (
+                        u * ts[i] + tt[j] * v + el[0]
+                    )
 
             stepx = np.linalg.norm(u)
             stepy = np.linalg.norm(v)
@@ -1051,15 +1059,20 @@ def _surf_sampling(el: np.ndarray, npoints=10, style="random"):
             nu = int(np.sqrt(npoints))
             ptlist = np.empty((npoints, 3))
             xa, _ = _sample_boundary(el[0:2], npoints=nu, style="GL")
+            elb = np.empty((2, 3))
+            elb[0] = el[1]
+            elb[1] = el[0]
             xb, _ = _sample_boundary(
-                np.roll(el[2:4], -1, axis=0),
+                elb,
                 npoints=nu,
                 style="GL",
             )
 
             for k in range(nu):
+                elb[0] = xa[k]
+                elb[1] = xb[k]
                 ptlist[k * nu : (k + 1) * nu, :], _ = _sample_boundary(
-                    el=np.array([xa[k], xb[k]]),
+                    el=elb,
                     npoints=nu,
                     style="GL",
                 )
@@ -1178,3 +1191,8 @@ if numba is not None:
     _gauss_legendre_integral = numba.njit()(_gauss_legendre_integral)
     contour_integration = numba.njit()(contour_integration)
     _GL_samples = numba.njit()(_GL_samples)
+    surface_ff_naive = numba.njit()(surface_ff_naive)
+    surface_ff_Nusselt = numba.njit()(surface_ff_Nusselt)
+    _surf_sampling = numba.njit()(_surf_sampling)
+    _load_Lambert_integrand = numba.njit()(_load_Lambert_integrand)
+    _surface_integral = numba.njit()(_surface_integral)

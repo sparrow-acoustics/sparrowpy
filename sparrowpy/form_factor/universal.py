@@ -18,7 +18,10 @@ def patch2patch_ff_universal(
     patches_areas: np.ndarray,
     patches_normals: np.ndarray,
     visible_patches: np.ndarray,
-    integration_kwargs=None,
+    method: str,
+    int1: str,
+    int2: str,
+    order: str,
 ):
     """Calculate the form factors between patches (universal method).
 
@@ -59,7 +62,10 @@ def patch2patch_ff_universal(
             patches_points[j],
             patches_areas[j],
             patches_normals[j],
-            integration_kwargs,
+            method=method,
+            int1=int1,
+            int2=int2,
+            order=order,
         )
 
     return form_factors
@@ -72,7 +78,10 @@ def universal_form_factor(
     receiver_pts: np.ndarray,
     receiver_area: np.ndarray,
     receiver_normal: np.ndarray,
-    integration_args=None,
+    method: str,
+    int1: str,
+    int2: str,
+    order: str,
 ) -> float:
     """Return the form factor based on input patches geometry.
 
@@ -102,31 +111,25 @@ def universal_form_factor(
         form factor
 
     """
-    if not integration_args:
-        integration_args = {
-            "method": "contour",
-            "int1": "analytical",
-            "int2": "poly_GL",
-            "order": 2,
-        }
-
-    match integration_args["method"]:
+    match method:
         case "contour":
             form_factor = integration.contour_ff(
                 patch_i=source_pts,
                 patch_j=receiver_pts,
                 patch_i_area=source_area,
-                inner_style=integration_args["int1"],
-                outer_style=integration_args["int2"],
-                order=integration_args["order"],
+                inner_style=int1,
+                outer_style=int2,
+                order=order,
             )
         case "nusselt":
             form_factor = integration.surface_ff_Nusselt(
                 patch_i=source_pts,
                 patch_j=receiver_pts,
+                patch_i_normal=source_normal,
+                patch_j_normal=receiver_normal,
                 patch_i_area=source_area,
-                nsamples=(integration_args["order"] + 1) ** 2,
-                style=integration_args["int1"],
+                nsamples=(order + 1) ** 2,
+                style=int1,
             )
         case "naive":
             form_factor = integration.surface_ff_naive(
@@ -136,8 +139,8 @@ def universal_form_factor(
                 patch_j_normal=receiver_normal,
                 patch_i_area=source_area,
                 patch_j_area=receiver_area,
-                nsamples=(integration_args["order"] + 1) ** 2,
-                style=integration_args["int1"],
+                nsamples=(order + 1) ** 2,
+                style=int1,
             )
 
     return form_factor
