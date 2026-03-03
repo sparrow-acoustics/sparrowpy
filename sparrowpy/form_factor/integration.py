@@ -440,7 +440,6 @@ def contour_ff(
     """
     if inner_style == "analytical":
         j_bpoints, j_conn = _sample_boundary(patch_j, npoints=3)
-        inner_integral_fcn = _first_integration_analytical
         integrand_fcn = _load_analytical_integrand
 
     elif inner_style == "poly_NC":
@@ -449,7 +448,6 @@ def contour_ff(
             npoints=order + 1,
             style="regular",
         )
-        inner_integral_fcn = _lagrange_integral
         integrand_fcn = _load_stokes_integrand
 
     elif inner_style == "poly_GL":
@@ -458,21 +456,18 @@ def contour_ff(
             npoints=order + 1,
             style="GL",
         )
-        inner_integral_fcn = _gauss_legendre_integral
         integrand_fcn = _load_stokes_integrand
 
     else:
         ValueError(f"{inner_style} integration method unknown")
 
     if outer_style == "poly_NC":
-        outer_integral_fcn = _lagrange_integral
         i_bpoints, i_conn = _sample_boundary(
             patch_i,
             npoints=order + 1,
             style="regular",
         )
     elif outer_style == "poly_GL":
-        outer_integral_fcn = _gauss_legendre_integral
         i_bpoints, i_conn = _sample_boundary(
             patch_i,
             npoints=order + 1,
@@ -494,8 +489,8 @@ def contour_ff(
             patch_coords=j_bpoints[:, dim],
             patch_conn=j_conn,
             integrand=integrand,
-            int_function=inner_integral_fcn,
             delta=patch_j[:, dim],
+            style=inner_style,
         )
 
         # second integral over source patch
@@ -503,8 +498,8 @@ def contour_ff(
             patch_coords=i_bpoints[:, dim],
             patch_conn=i_conn,
             integrand=inner_integral,
-            int_function=outer_integral_fcn,
             delta=patch_i[:, dim],
+            style=outer_style,
         )
 
     return np.abs(outer_integral[0, 0] / (2 * np.pi * patch_i_area))
@@ -512,11 +507,11 @@ def contour_ff(
 
 def contour_integration(
     patch_coords: np.ndarray,
-    patch_conn: list,
+    patch_conn: np.ndarray,
     integrand: np.ndarray,
     delta: np.ndarray,
-    int_function=_first_integration_analytical,
-) -> float:
+    style="analytical",
+):
     """Integrate a sampled integrand over a patch contour.
 
     Parameters
@@ -545,19 +540,58 @@ def contour_integration(
     out = np.zeros(((1,) + integrand.shape[:1]))
 
     d = np.roll(delta, -1) - delta
+    if style == "analytical":
+        for i in range(integrand.shape[0]):  # for each eval point
+            for ii, seg in enumerate(
+                patch_conn,
+            ):  # for each segment seg in patch  boundary
+                x = patch_coords[seg][:]
 
-    for i in range(integrand.shape[0]):  # for each eval point
-        for ii, seg in enumerate(
-            patch_conn,
-        ):  # for each segment seg in patch  boundary
-            x = patch_coords[seg][:]
+                if np.abs(d[ii]) > 1e-3:
+                    for k in range(seg.shape[0]):
+                        subsecj[k] = integrand[i][seg[k]]
 
-            if np.abs(d[ii]) > 1e-3:
-                for k in range(len(seg)):
-                    subsecj[k] = integrand[i][seg[k]]
+                        # add separate integral approx contributions
+                        out[:, i] += _first_integration_analytical(
+                            x,
+                            subsecj,
+                            d[ii],
+                        )
 
-                # add separate integral approx contributions
-                out[:, i] += int_function(x, subsecj, d[ii])
+    elif style == "poly_NC":
+        for i in range(integrand.shape[0]):  # for each eval point
+            for ii, seg in enumerate(
+                patch_conn,
+            ):  # for each segment seg in patch  boundary
+                x = patch_coords[seg][:]
+
+                if np.abs(d[ii]) > 1e-3:
+                    for k in range(len(seg)):
+                        subsecj[k] = integrand[i][seg[k]]
+
+                        # add separate integral approx contributions
+                        out[:, i] += _lagrange_integral(
+                            x,
+                            subsecj,
+                            d[ii],
+                        )
+    elif style == "poly_GL":
+        for i in range(integrand.shape[0]):  # for each eval point
+            for ii, seg in enumerate(
+                patch_conn,
+            ):  # for each segment seg in patch  boundary
+                x = patch_coords[seg][:]
+
+                if np.abs(d[ii]) > 1e-3:
+                    for k in range(len(seg)):
+                        subsecj[k] = integrand[0][0]
+
+                        # add separate integral approx contributions
+                        out[:, i] += _gauss_legendre_integral(
+                            x,
+                            subsecj,
+                            d[ii],
+                        )
 
     return out
 
@@ -1172,3 +1206,6 @@ if numba is not None:
     _sample_boundary = numba.njit()(_sample_boundary)
     _area_under_curve = numba.njit()(_area_under_curve)
     _lagrange_integral = numba.njit()(_lagrange_integral)
+    _GL_samples = numba.njit()(_GL_samples)
+    _gauss_legendre_integral = numba.njit()(_gauss_legendre_integral)
+    contour_integration = numba.njit()(contour_integration)
