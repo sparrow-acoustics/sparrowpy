@@ -57,6 +57,7 @@ def patch2patch_ff_universal(
             patches_areas[i],
             patches_normals[i],
             patches_points[j],
+            patches_areas[j],
             patches_normals[j],
             integration_kwargs,
         )
@@ -69,6 +70,7 @@ def universal_form_factor(
     source_area: np.ndarray,
     source_normal: np.ndarray,
     receiver_pts: np.ndarray,
+    receiver_area: np.ndarray,
     receiver_normal: np.ndarray,
     integration_args=None,
 ) -> float:
@@ -131,8 +133,9 @@ def universal_form_factor(
                 patch_i=source_pts,
                 patch_j=receiver_pts,
                 patch_i_normal=source_normal,
-                patch_j_area=receiver_normal,
+                patch_j_normal=receiver_normal,
                 patch_i_area=source_area,
+                patch_j_area=receiver_area,
                 nsamples=(integration_args["order"] + 1) ** 2,
                 style=integration_args["int1"],
             )
