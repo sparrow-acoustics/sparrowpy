@@ -104,7 +104,7 @@ def stokes_integration(
                 xj = j_bpoints[segj][:, dim]
 
                 if np.abs(xj[-1] - xj[0]) > 1e-6:
-                    for k in range(len(segj)):
+                    for k in range(segj.shape[0]):
                         subsecj[k] = form_mat[i][segj[k]]
 
                     # analytical integration of the approx polynomials
@@ -118,7 +118,7 @@ def stokes_integration(
             xi = i_bpoints[segi][:, dim]
 
             if np.abs(xi[-1] - xi[0]) > 1e-6:
-                for k in range(len(segi)):
+                for k in range(segi.shape[0]):
                     subseci[k] = inner_integral[segi[k]][dim]
 
                 # gauss-legendre integration (2nd order)
@@ -349,5 +349,5 @@ if numba is not None:
     _first_integration_analytical = numba.njit()(_first_integration_analytical)
     _g_integral = numba.njit()(_g_integral)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
-    _poly_estimation_Lagrange = numba.njit(_sample_boundary_regular)
+    _poly_estimation_Lagrange = numba.njit(_poly_estimation_Lagrange)
     _sample_boundary_GL2 = numba.njit()(_sample_boundary_GL2)
