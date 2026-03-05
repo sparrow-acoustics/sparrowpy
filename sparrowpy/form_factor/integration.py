@@ -44,7 +44,7 @@ def load_stokes_integrand(
     return form_mat
 
 
-def stokes_integration(
+def contour_integration(
     patch_i: np.ndarray,
     patch_j: np.ndarray,
     patch_i_area: float,
@@ -93,9 +93,9 @@ def stokes_integration(
 
     # double polynomial integration (per dimension (x,y,z))
     outer_integral = 0
-    inner_integral = np.zeros((len(i_bpoints), len(j_bpoints[0])))
 
     for dim in prange(j_bpoints.shape[1]):  # for each dimension
+        inner_integral = np.zeros((i_bpoints.shape[0],))
         # integrate stokes integrand over each point on patch i boundary
         for i in range(
             i_bpoints.shape[0],
@@ -104,31 +104,31 @@ def stokes_integration(
                 xj = j_bpoints[segj][:, dim]
 
                 if np.abs(xj[-1] - xj[0]) > 1e-6:
-                    for k in range(segj.shape[0]):
-                        subsecj[k] = form_mat[i][segj[k]]
+                    subsecj = form_mat[i][segj]
 
                     # analytical integration of the approx polynomials
-                    inner_integral[i][dim] += _first_integration_analytical(
+                    inner_integral[i] += _first_integration_analytical(
                         x=xj,
                         rsquared=subsecj,
                     )
 
         # integrate previously computed integral over patch i
-        for segi in i_conn:  # for each segment segi in patch i boundary
+        for i, segi in enumerate(
+            i_conn,
+        ):  # for each segment segi in patch i boundary
             xi = i_bpoints[segi][:, dim]
 
             if np.abs(xi[-1] - xi[0]) > 1e-6:
-                for k in range(segi.shape[0]):
-                    subseci[k] = inner_integral[segi[k]][dim]
+                subseci = inner_integral[segi]
 
                 # gauss-legendre integration (2nd order)
-                outer_integral += di * np.dot(
+                outer_integral += di[i, dim] * np.dot(
                     subseci,
                     np.array(
                         [
-                            0.8888888888888888,
-                            0.5555555555555556,
-                            0.5555555555555556,
+                            8 / 9,
+                            5 / 9,
+                            5 / 9,
                         ],
                     ),
                 )
@@ -268,11 +268,11 @@ def _g_integral(abc: np.ndarray, x: np.ndarray):
 
     kk[kk <= 0] = 1e-20
 
-    aa = 2 * np.sqrt(k)
-    bb = np.arctan((2 * a * x + b) / np.sqrt(k))
-    cc = b * np.log(kk) - 4 * a * x
+    A = 2 * np.sqrt(k)
+    B = np.arctan((2 * a * x + b) / np.sqrt(k))
+    C = b * np.log(kk) - 4 * a * x
 
-    g = (aa * bb + cc) / 4 * a
+    g = (A * B + C) / 4 * a
 
     return g
 
@@ -282,9 +282,10 @@ def _g_integral(abc: np.ndarray, x: np.ndarray):
 ################# boundary
 def _sample_boundary_GL2(el: np.ndarray):
     """Sample element boundary after order 2 gauss-legendre quadrature."""
-    conn = np.empty((el.shape[0], 3), dtype=numba.int16)
+    conn = np.empty((el.shape[0], 3), dtype=np.int16)
     pts = np.empty((el.shape[0] * (3), el.shape[1]))
-    x = np.array([0, 1.3416407864998738, -1.3416407864998738])
+    d = np.empty_like(pts)
+    x = np.array([0, (3 / 5) ** 0.5, -((3 / 5) ** 0.5)])
 
     for i in prange(el.shape[0]):
         u = (el[(i + 1) % el.shape[0]] - el[i]) / 2
@@ -293,8 +294,9 @@ def _sample_boundary_GL2(el: np.ndarray):
         pts[i * 3 : (i + 1) * 3, :] = np.outer(x, u) + v
 
         conn[i] = i * x.shape[0] + np.arange(x.shape[0])
+        d[i] = u
 
-    return pts, conn.astype(np.int16), u
+    return pts, conn.astype(np.int16), d
 
 
 def _sample_boundary_regular(el: np.ndarray):
@@ -344,7 +346,7 @@ def _sample_boundary_regular(el: np.ndarray):
 
 if numba is not None:
     pt_solution = numba.njit(parallel=True)(pt_solution)
-    stokes_integration = numba.njit(parallel=False)(stokes_integration)
+    contour_integration = numba.njit(parallel=False)(contour_integration)
     load_stokes_integrand = numba.njit(parallel=True)(load_stokes_integrand)
     _first_integration_analytical = numba.njit()(_first_integration_analytical)
     _g_integral = numba.njit()(_g_integral)

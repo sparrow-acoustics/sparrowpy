@@ -50,10 +50,10 @@ def patch2patch_ff_universal(
     for visID in prange(visible_patches.shape[0]):
         i = int(visible_patches[visID, 0])
         j = int(visible_patches[visID, 1])
-        form_factors[i, j] = integration.stokes_integration(
+        form_factors[i, j] = integration.contour_integration(
             patch_i=patches_points[i],
             patch_j=patches_points[j],
-            patch_i_area=patches_points[j],
+            patch_i_area=patches_areas[j],
         )
 
     return form_factors
