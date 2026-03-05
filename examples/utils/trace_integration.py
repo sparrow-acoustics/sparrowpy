@@ -199,9 +199,9 @@ class integration_test:
 
 
 if __name__ == "__main__":
-    test = integration_test(gtype="a", ww=4, hh=1, ll=1)
-    test.set_int_method(op1="nusselt", op2="regular")
+    test = integration_test(gtype="b", ww=1, hh=1, ll=4)
+    test.set_int_method(op1="contour", op2="analytical", op3="poly_GL")
 
-    test.set_poly_order(6)
+    test.set_poly_order(2)
     test.print_stats()
     test.print_results()

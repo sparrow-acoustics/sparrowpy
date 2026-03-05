@@ -1111,7 +1111,7 @@ def _sample_boundary(el: np.ndarray, npoints=3, style="regular"):
 
     """
     n_div = npoints - 1
-    conn = np.empty((len(el), npoints), dtype=numba.int64)
+    conn = np.empty((len(el), npoints), dtype=np.int64)
 
     if style == "regular":
         pts = np.empty((len(el) * (npoints - 1), len(el[0])))
