@@ -379,13 +379,13 @@ def weight_signal_by_etc(
             raise ValueError(
                 f"bandwidth shape {bandwidth.shape} does not "
                 "match signal bands "
-                f"{signal.cshape[-bandwidth.ndim:]}",
+                f"{signal.cshape[-1:]}",
             )
-        if bandwidth.shape != energy_time_curve.cshape[(-bandwidth.ndim):]:
+        if bandwidth.shape != energy_time_curve.cshape[-1:]:
             raise ValueError(
                 f"bandwidth shape {bandwidth.shape} does not "
                 "match etc shape "
-                f"{energy_time_curve.cshape[-bandwidth.ndim:]}",
+                f"{energy_time_curve.cshape[-1:]}",
             )
 
     if type(energy_time_curve) is not pf.TimeData:
@@ -446,14 +446,14 @@ def energy_time_curve_from_impulse_response(
     ----------
     signal : pyfar.Signal
         The impulse responses from which the energy time curve is
-        calculated. The cshape should be ``(n_bands, ...)``.
+        calculated. The cshape should be ``(..., n_bands)``.
     delta_time : float, optional
         The time resolution of the energy time curve,
         by default ``0.01`` seconds.
     bandwidth : float, array_like, optional
         Bandwidth for each signal channel, by default None, which means its
         assumed for the full bandwidth :math:`BW = f_s/2`.
-        The shape should be ``(n_bands)``.
+        The shape should be ``(n_bands,)``.
 
     Returns
     -------
@@ -489,6 +489,8 @@ def energy_time_curve_from_impulse_response(
         >>> bw = cutoff_freq[1] - cutoff_freq[0]
         >>> filtered_white_noise = pf.dsp.filter.fractional_octave_bands(
         ...     white_noise, 1, frequency_range=(1e3, 20e3),)
+        >>> filtered_white_noise.time = np.rollaxis(filtered_white_noise.time,
+        ...     0,-1)
         >>> etc = sp.dsp.energy_time_curve_from_impulse_response(
         ...     filtered_white_noise, 0.01, bw)
         >>> ax = pf.plot.time(etc, dB=True, log_prefix=10)
@@ -511,10 +513,10 @@ def energy_time_curve_from_impulse_response(
             bandwidth = np.asarray(bandwidth)
             if np.any(bandwidth <= 0):
                 raise ValueError("All bandwidth values must be positive.")
-            if bandwidth.shape != signal.cshape[:1]:
+            if bandwidth.shape != signal.cshape[-1:]:
                 raise ValueError(
                     f"bandwidth shape {bandwidth.shape} does not "
-                    f"match signal bands {signal.cshape[:1]}",
+                    f"match signal bands {signal.cshape[-1:]}",
                 )
 
     if bandwidth is None:
@@ -529,7 +531,6 @@ def energy_time_curve_from_impulse_response(
         np.arange(n_samples_E) * delta_time,
         )
     bw_factor = np.asarray((signal.sampling_rate/2)/bandwidth)
-    bw_factor = bw_factor.reshape(bw_factor.shape + (1,) * (signal.cdim - 1))
 
     for k in range(n_samples_E):
         upper = g_k[k+1] if k < n_samples_E-1 else signal.n_samples
