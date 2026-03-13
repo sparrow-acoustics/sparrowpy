@@ -12,24 +12,24 @@ import numpy as np
 import sparrowpy.geometry as geom
 
 
-def load_stokes_integrand(
+def _load_contour_integrand(
     i_bpoints: np.ndarray,
     j_bpoints: np.ndarray,
 ) -> np.ndarray:
-    """Load all the stokes form function values between two patches.
+    """Estimate integrand of contour integral on given samples.
 
     Parameters
     ----------
     i_bpoints: np.ndarray
-        list of points in patch i boundary (n_boundary_points_i , 3)
+        list of sample points in patch i boundary (n_boundary_points_i , 3)
 
     j_bpoints: np.ndarray
-        list of points in patch j boundary (n_boundary_points_j , 3)
+        list of sample points in patch j boundary (n_boundary_points_j , 3)
 
     Returns
     -------
     form_mat: np.ndarray
-        f function value matrix (n_boundary_points_i , n_boundary_points_j)
+        integrand value matrix (n_boundary_points_i , n_boundary_points_j)
 
     """
     eps = 1e-20
@@ -49,14 +49,14 @@ def contour_integration(
     patch_j: np.ndarray,
     patch_i_area: float,
 ) -> float:
-    """Calculate an estimation of the form factor between two patches.
+    """Estimate the form factor between two patches via contour integration.
 
-    Computationally integrates a modified form function over
-    the boundaries of both patches.
-    The modified form function follows Stokes' theorem.
+    Computationally integrates form factors following a contour integration
+    approach, over finite samples on the boundaries of both patches.
 
-    The modified form function integral is calculated using a
-    polynomial approximation based on sampled values.
+    The inner integral (patch j) is performed using an analytical solution.
+    The outer integral (patch i) is approximated via a 1-D 2nd order
+    Gauss-Legendre quadrature.
 
     Parameters
     ----------
@@ -69,16 +69,10 @@ def contour_integration(
     patch_j : np.ndarray
         vertex coordinates of patch j (n_vertices, 3)
 
-    source_area: float
-        area of the source patch
-
-    approx_order: int
-        polynomial order of the form function integration estimation
-
     Returns
     -------
     float
-    form factor between two patches
+    form factor between two patches (i and j)
 
     """
     i_bpoints, i_conn, di = _sample_boundary_GL2(patch_i)
@@ -89,7 +83,7 @@ def contour_integration(
     form_mat = np.zeros((i_bpoints.shape[0], j_bpoints.shape[0]))
 
     # first compute and store form function sample values
-    form_mat = load_stokes_integrand(i_bpoints, j_bpoints)
+    form_mat = _load_contour_integrand(i_bpoints, j_bpoints)
 
     # double polynomial integration (per dimension (x,y,z))
     outer_integral = 0
@@ -142,8 +136,7 @@ def contour_integration(
 def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode="source"):
     """Calculate the geometric factor between a point and a patch.
 
-    applies a modified version of the Nusselt analogue,
-    transformed for a -point- source rather than differential surface element.
+    The geometric factor is estimated via spherical-triangle method [#]_.
 
     Parameters
     ----------
@@ -159,7 +152,17 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode="source"):
 
     Returns
     -------
+    float
     geometric factor
+
+    References
+    ----------
+    .. [#]  E.-M. Nosal, M. Hodgson, and I. Ashdown,
+            “Improved algorithms and methods for room sound-field prediction by
+            acoustical radiosity in arbitrary polyhedral rooms,”
+            The Journal of the Acoustical Society of America, vol. 116, no. 2,
+            pp. 970–980, Aug. 2004, doi: 10.1121/1.1772400.
+
 
     """
     if mode == "receiver":
@@ -199,13 +202,10 @@ def pt_solution(point: np.ndarray, patch_points: np.ndarray, mode="source"):
 # integration
 ################# 1D , polynomial
 def _poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """Calculate Lagrange polynomial coefficients based on sample points.
+    """Calculate 2nd order Lagrange polynomial coefficients from sample points.
 
-    Computes coefficients of a polynomial curve passing through points (x,y)
-    the order of the polynomial depends on the number of sample points
-    input in the function. Uses the Lagrange method to estimate the polynomial.
-        ex. a polynomial P estimated with 4 sample points:
-            P4(x) = b[0]*x**3 + b[1]*x**2 + b[2]*x + b[3] = y
+    ex. a 2nd order polynomial P2, estimated with 3 sample points:
+            P2(x) = b[1]*x**2 + b[2]*x + b[3] = y
 
     Parameters
     ----------
@@ -235,7 +235,7 @@ def _poly_estimation_Lagrange(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 
 def _first_integration_analytical(x: np.ndarray, rsquared: np.ndarray):
-    """Calculate first integral analytically."""
+    """Calculate first form factor integral analytically."""
 
     a = np.zeros((2,))
     g = np.zeros((2,))
@@ -254,7 +254,7 @@ def _first_integration_analytical(x: np.ndarray, rsquared: np.ndarray):
 
 
 def _g_integral(abc: np.ndarray, x: np.ndarray):
-    """Calculate second half of integral."""
+    """Calculate second half of analytical form factor integral."""
 
     g = np.empty_like(x)
     a = abc[0]
@@ -281,7 +281,7 @@ def _g_integral(abc: np.ndarray, x: np.ndarray):
 # sampling
 ################# boundary
 def _sample_boundary_GL2(el: np.ndarray):
-    """Sample element boundary after order 2 gauss-legendre quadrature."""
+    """Sample patch boundary after 2nd order Gauss-Legendre quadrature."""
     conn = np.empty((el.shape[0], 3), dtype=np.int16)
     pts = np.empty((el.shape[0] * (3), el.shape[1]))
     d = np.empty_like(pts)
@@ -300,12 +300,11 @@ def _sample_boundary_GL2(el: np.ndarray):
 
 
 def _sample_boundary_regular(el: np.ndarray):
-    """Sample points on the boundary of a patch at fractional intervals.
+    """Sample patch boundary uniformly with 3 points per side.
 
-    returns an array of points on the patch boundary (pts)
-                                        and a connectivity array (conn)
-    which stores a list of ordered indices of the points
-    found on the same boundary segment.
+    Returns an array of points on the patch boundary (pts) and a connectivity
+    array (conn), which stores a list of ordered indices of the points found on
+    the same boundary segment.
 
     Parameters
     ----------
@@ -347,7 +346,9 @@ def _sample_boundary_regular(el: np.ndarray):
 if numba is not None:
     pt_solution = numba.njit(parallel=True)(pt_solution)
     contour_integration = numba.njit(parallel=False)(contour_integration)
-    load_stokes_integrand = numba.njit(parallel=True)(load_stokes_integrand)
+    _load_contour_integrand = numba.njit(parallel=True)(
+        _load_contour_integrand,
+    )
     _first_integration_analytical = numba.njit()(_first_integration_analytical)
     _g_integral = numba.njit()(_g_integral)
     _sample_boundary_regular = numba.njit()(_sample_boundary_regular)
