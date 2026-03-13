@@ -53,7 +53,7 @@ def patch2patch_ff_universal(
         form_factors[i, j] = integration.contour_integration(
             patch_i=patches_points[i],
             patch_j=patches_points[j],
-            patch_i_area=patches_areas[j],
+            patch_i_area=patches_areas[i],
         )
 
     return form_factors
