@@ -56,6 +56,9 @@ tests = [
     "sparrowpy[fast]",
     "nbmake",
 ]
+examples = [
+    "spharpy",
+]
 docs = [
     "sphinx",
     "autodocsumm>=0.2.14",
@@ -68,7 +71,7 @@ docs = [
     "nbsphinx_link",
     "ipython",
 ]
-dev = ["sparrowpy[deploy,tests,docs,blender]"]
+dev = ["sparrowpy[deploy,tests,examples,docs,blender]"]
 
 [project.urls]
 Tracker = "https://github.com/sparrow-acoustics/sparrowpy/issues"
