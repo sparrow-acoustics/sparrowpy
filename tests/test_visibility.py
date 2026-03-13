@@ -245,3 +245,24 @@ def test_receiver_vis(basicscene):
                               np.zeros((5))]),
                      )
     assert (etc.time[-1,0,:] != 0).any()
+
+def test_vis_matrix_assembly():
+    """Check if visibility matrices are correctly assembled."""
+
+    surfs_points = np.array([[[0,0,0],[0,1,0],[0,1,1],[0,0,1]],
+                             [[0,1,0],[0,2,0],[0,2,1],[0,1,1]],
+                             [[0,0,0],[0,0,1],[1,0,1],[1,0,0]]],
+                            dtype=float)
+    patches_centers = np.array([[0,.5,.5],[0,1.5,.5],[.5,0,.5]])
+
+    surfs_normals = np.array([[1,0,0],[1,0,0],[0,1,0]],
+                             dtype=float)
+
+    tru_matrix = np.array([[0,0,1],[0,0,1],[0,0,0]],dtype=bool)
+
+    vis_matrix = sp.geometry._check_patch2patch_visibility(
+                                            patches_center=patches_centers,
+                                           surf_normal=surfs_normals,
+                                           surf_points=surfs_points)
+
+    npt.assert_equal(tru_matrix,vis_matrix)
