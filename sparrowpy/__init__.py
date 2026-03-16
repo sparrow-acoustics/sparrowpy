@@ -19,6 +19,7 @@ from . import testing
 from . import form_factor
 from . import brdf
 from . import utils
+from . import plot
 
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     'testing',
     'brdf',
     'utils',
+    'plot',
 ]
