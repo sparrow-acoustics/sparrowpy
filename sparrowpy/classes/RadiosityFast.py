@@ -862,7 +862,7 @@ class DirectionalRadiosityFast():
         wall_indexes : list[int]
             List of wall indices for the given BRDF data.
         brdf : pf.FrequencyData
-            BRDF data with shape
+            BRDF data with cshape
             (n_incoming_directions, n_outgoing_directions).
         incoming_directions : pf.Coordinates
             Incoming directions of the BRDF data.
@@ -870,10 +870,25 @@ class DirectionalRadiosityFast():
             Outgoing directions of the BRDF data.
 
         """
+        wall_indexes = np.atleast_1d(np.array(wall_indexes, dtype=int))
+        assert isinstance(incoming_directions, pf.Coordinates), \
+            "Incoming directions must be of type pf.Coordinates"
+        assert isinstance(outgoing_directions, pf.Coordinates), \
+            "Outgoing directions must be of type pf.Coordinates"
+        assert isinstance(brdf, pf.FrequencyData), \
+            "brdf must be of type pf.FrequencyData"
         assert (incoming_directions.z >= 0).all(), \
             "Sources must be in the positive half space"
         assert (outgoing_directions.z >= 0).all(), \
             "Receivers must be in the positive half space"
+        assert brdf.cdim == 2, (
+            "BRDF data must be of cshape "
+            "(n_incoming_directions, n_outgoing_directions)")
+        n_in = incoming_directions.csize
+        n_out = outgoing_directions.csize
+        assert n_in == brdf.cshape[0] and \
+            n_out == brdf.cshape[1], \
+            "BRDF data does not match incoming and outgoing directions."
         self._check_set_frequency(brdf.frequencies)
         if self._brdf_incoming_directions is None:
             self._brdf_incoming_directions = np.empty(
