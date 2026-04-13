@@ -186,6 +186,8 @@ for i, material in enumerate(materials):
 
 radi.bake_geometry()
 
+
+radi.write("cowabunga.far")
 # In[146]:
 
 
@@ -204,6 +206,8 @@ radi.calculate_energy_exchange(
     recalculate=True,
 )
 
+
+radi.write("cowabunga.far")
 
 # In[148]:
 
