@@ -142,7 +142,7 @@ for i, material in enumerate(materials):
 
 
 # set brdfs
-samples = spharpy.samplings.gaussian(16)
+samples = spharpy.samplings.gaussian(11)
 brdf_sources = samples[np.where((samples.elevation * 180 / np.pi >= 0))].copy()
 brdf_receivers = samples[
     np.where((samples.elevation * 180 / np.pi >= 0))
@@ -181,93 +181,95 @@ for i, material in enumerate(materials):
     )
 
 
-# In[145]:
+# radi.write("cowabunga.far", compress=False)
 
+# # In[145]:
 
+print("baking...")
 radi.bake_geometry()
 
-
+print("writing...")
 radi.write("cowabunga.far")
-# In[146]:
+# # In[146]:
 
 
-source = pf.Coordinates(0.0254 * 924.05, 0.0254 * -820.39, 0.0254 * 310.546)
-# initialize source energy
-radi.init_source_energy(source)
+# source = pf.Coordinates(0.0254 * 924.05, 0.0254 * -820.39, 0.0254 * 310.546)
+# # initialize source energy
+# radi.init_source_energy(source)
 
-# In[147]:
-
-
-radi.calculate_energy_exchange(
-    speed_of_sound=speed_of_sound,
-    etc_time_resolution=etc_time_resolution,
-    etc_duration=etc_measurement.signal_length,
-    max_reflection_order=50,
-    recalculate=True,
-)
+# # In[147]:
 
 
-radi.write("cowabunga.far")
-
-# In[148]:
-
-
-receiver = pf.Coordinates(0.0254 * 2629.9, 0.0254 * 85.71, 0.0254 * -10.967)
-
-etc_radiosity = radi.collect_energy_receiver_mono(
-    receivers=receiver,
-    direct_sound=True,
-)
-
-radi.write("cowabunga.far")
-
-# In[16]:
+# radi.calculate_energy_exchange(
+#     speed_of_sound=speed_of_sound,
+#     etc_time_resolution=etc_time_resolution,
+#     etc_duration=etc_measurement.signal_length,
+#     max_reflection_order=50,
+#     recalculate=True,
+# )
 
 
-figure, ax = plt.subplots(figsize=(5, 3))
-pf.plot.time(
-    signal=etc_measurement,
-    dB=True,
-    log_prefix=10,
-    ax=ax,
-    label="measured ETC",
-)
-plt.legend(fontsize=14)
-plt.ylim([-125, -40])
-ax.set_ylabel("Magnitude [dB]")
-ax.set_xlabel("Time [s]")
-plt.grid()
-plt.title(f"IHTA Park ETC comparison [{freqcy}Hz]")
-figure.savefig(
-    os.path.join(os.getcwd(), "figures", "ETCs_ref.svg"),
-    bbox_inches="tight",
-)
-plt.show()
+# radi.write("cowabunga.far")
+
+# # In[148]:
 
 
-figure, ax = plt.subplots(figsize=(5, 3))
-pf.plot.time(
-    signal=etc_measurement,
-    dB=True,
-    log_prefix=10,
-    ax=ax,
-    label="measured ETC",
-)
-pf.plot.time(
-    signal=etc_radiosity[0],
-    dB=True,
-    log_prefix=10,
-    ax=ax,
-    linestyle="--",
-    label="simulated ETC",
-)
-ax.set_ylabel("Magnitude [dB]")
-ax.set_xlabel("Time [s]")
-plt.grid()
-plt.legend(fontsize=14)
+# receiver = pf.Coordinates(0.0254 * 2629.9, 0.0254 * 85.71, 0.0254 * -10.967)
 
-figure.savefig(
-    os.path.join(os.getcwd(), "figures", "ETCs_vs.svg"),
-    bbox_inches="tight",
-)
-plt.show()
+# etc_radiosity = radi.collect_energy_receiver_mono(
+#     receivers=receiver,
+#     direct_sound=True,
+# )
+
+# radi.write("cowabunga.far")
+
+# # In[16]:
+
+
+# figure, ax = plt.subplots(figsize=(5, 3))
+# pf.plot.time(
+#     signal=etc_measurement,
+#     dB=True,
+#     log_prefix=10,
+#     ax=ax,
+#     label="measured ETC",
+# )
+# plt.legend(fontsize=14)
+# plt.ylim([-125, -40])
+# ax.set_ylabel("Magnitude [dB]")
+# ax.set_xlabel("Time [s]")
+# plt.grid()
+# plt.title(f"IHTA Park ETC comparison [{freqcy}Hz]")
+# figure.savefig(
+#     os.path.join(os.getcwd(), "figures", "ETCs_ref.svg"),
+#     bbox_inches="tight",
+# )
+# plt.show()
+
+
+# figure, ax = plt.subplots(figsize=(5, 3))
+# pf.plot.time(
+#     signal=etc_measurement,
+#     dB=True,
+#     log_prefix=10,
+#     ax=ax,
+#     label="measured ETC",
+# )
+# pf.plot.time(
+#     signal=etc_radiosity[0],
+#     dB=True,
+#     log_prefix=10,
+#     ax=ax,
+#     linestyle="--",
+#     label="simulated ETC",
+# )
+# ax.set_ylabel("Magnitude [dB]")
+# ax.set_xlabel("Time [s]")
+# plt.grid()
+# plt.legend(fontsize=14)
+
+# figure.savefig(
+#     os.path.join(os.getcwd(), "figures", "ETCs_vs.svg"),
+#     bbox_inches="tight",
+# )
+# plt.show()
