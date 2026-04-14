@@ -191,7 +191,7 @@ radi.write("cowabunga.far")
 # In[146]:
 
 
-source = pf.Coordinates(0.0254 * 924.05, 0.0254 * -820.39, 0.0254 * 310.546)
+source = pf.Coordinates(23.470961, -20.837936, 0.801269)
 # initialize source energy
 radi.init_source_energy(source)
 
@@ -212,7 +212,7 @@ radi.write("cowabunga.far")
 # In[148]:
 
 
-receiver = pf.Coordinates(0.0254 * 2629.9, 0.0254 * 85.71, 0.0254 * -10.967)
+receiver = pf.Coordinates(66.798965999999993, 2.177035, -0.278573)
 
 etc_radiosity = radi.collect_energy_receiver_mono(
     receivers=receiver,
