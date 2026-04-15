@@ -9,7 +9,7 @@ sparrowpy
    examples
    api_reference
    contributing
-   changelog
+   history
 
 
 
@@ -69,11 +69,11 @@ sparrowpy
             <i class="fa-solid fa-pen icon-style"></i>
 
     .. grid-item-card::
-        :link: changelog.html
+        :link: history.html
         :text-align: center
         :padding: 0 0 3 3
 
-        **Changelog**
+        **History**
         ^^^^
 
         .. raw:: html
