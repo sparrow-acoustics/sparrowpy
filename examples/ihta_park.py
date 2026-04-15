@@ -92,7 +92,7 @@ etc_measurement = pf.Signal(
 radi = sp.DirectionalRadiosityFast.from_file(
     filepath="examples/resources/reduced_ihtapark2.blend",
     wall_auto_assembly=False,
-    geometry_identifier="Geometry",
+    geometry_identifier="reduced",
 )
 
 # In[142]:
@@ -142,7 +142,7 @@ for i, material in enumerate(materials):
 
 
 # set brdfs
-samples = spharpy.samplings.gaussian(11)
+samples = spharpy.samplings.gaussian(16)
 brdf_sources = samples[np.where((samples.elevation * 180 / np.pi >= 0))].copy()
 brdf_receivers = samples[
     np.where((samples.elevation * 180 / np.pi >= 0))
@@ -180,16 +180,12 @@ for i, material in enumerate(materials):
         brdf_receivers,
     )
 
-
-# radi.write("cowabunga.far", compress=False)
-
 # # In[145]:
 
 print("baking...")
 radi.bake_geometry()
 
-print("writing...")
-radi.write("cowabunga.far")
+
 # # In[146]:
 
 
@@ -197,79 +193,79 @@ source = pf.Coordinates(23.470961, -20.837936, 0.801269)
 # initialize source energy
 radi.init_source_energy(source)
 
-# # In[147]:
+# In[147]:
 
 
-# radi.calculate_energy_exchange(
-#     speed_of_sound=speed_of_sound,
-#     etc_time_resolution=etc_time_resolution,
-#     etc_duration=etc_measurement.signal_length,
-#     max_reflection_order=50,
-#     recalculate=True,
-# )
+radi.calculate_energy_exchange(
+    speed_of_sound=speed_of_sound,
+    etc_time_resolution=etc_time_resolution,
+    etc_duration=etc_measurement.signal_length,
+    max_reflection_order=50,
+    recalculate=True,
+)
 
 
-# radi.write("cowabunga.far")
-
-# # In[148]:
+# In[148]:
 
 
 receiver = pf.Coordinates(66.798965999999993, 2.177035, -0.278573)
 
-# etc_radiosity = radi.collect_energy_receiver_mono(
-#     receivers=receiver,
-#     direct_sound=True,
-# )
+print("collecting...")
+etc_radiosity = radi.collect_energy_receiver_mono(
+    receivers=receiver,
+    direct_sound=True,
+)
 
-# radi.write("cowabunga.far")
+out = np.array([etc_radiosity.times, etc_radiosity[0].time[0]])
+np.savetxt("cowabunga.txt", out)
 
-# # In[16]:
-
-
-# figure, ax = plt.subplots(figsize=(5, 3))
-# pf.plot.time(
-#     signal=etc_measurement,
-#     dB=True,
-#     log_prefix=10,
-#     ax=ax,
-#     label="measured ETC",
-# )
-# plt.legend(fontsize=14)
-# plt.ylim([-125, -40])
-# ax.set_ylabel("Magnitude [dB]")
-# ax.set_xlabel("Time [s]")
-# plt.grid()
-# plt.title(f"IHTA Park ETC comparison [{freqcy}Hz]")
-# figure.savefig(
-#     os.path.join(os.getcwd(), "figures", "ETCs_ref.svg"),
-#     bbox_inches="tight",
-# )
-# plt.show()
+# In[16]:
 
 
-# figure, ax = plt.subplots(figsize=(5, 3))
-# pf.plot.time(
-#     signal=etc_measurement,
-#     dB=True,
-#     log_prefix=10,
-#     ax=ax,
-#     label="measured ETC",
-# )
-# pf.plot.time(
-#     signal=etc_radiosity[0],
-#     dB=True,
-#     log_prefix=10,
-#     ax=ax,
-#     linestyle="--",
-#     label="simulated ETC",
-# )
-# ax.set_ylabel("Magnitude [dB]")
-# ax.set_xlabel("Time [s]")
-# plt.grid()
-# plt.legend(fontsize=14)
+figure, ax = plt.subplots(figsize=(5, 3))
+pf.plot.time(
+    signal=etc_measurement,
+    dB=True,
+    log_prefix=10,
+    ax=ax,
+    label="measured ETC",
+)
+plt.legend(fontsize=14)
+plt.ylim([-125, -40])
+ax.set_ylabel("Magnitude [dB]")
+ax.set_xlabel("Time [s]")
+plt.grid()
+plt.title(f"IHTA Park ETC comparison [{freqcy}Hz]")
+figure.savefig(
+    os.path.join(os.getcwd(), "examples", "figures", "ETCs_ref.svg"),
+    bbox_inches="tight",
+)
+plt.show()
 
-# figure.savefig(
-#     os.path.join(os.getcwd(), "figures", "ETCs_vs.svg"),
-#     bbox_inches="tight",
-# )
-# plt.show()
+
+figure, ax = plt.subplots(figsize=(5, 3))
+pf.plot.time(
+    signal=etc_measurement,
+    dB=True,
+    log_prefix=10,
+    ax=ax,
+    label="measured ETC",
+)
+pf.plot.time(
+    signal=etc_radiosity[0],
+    dB=True,
+    log_prefix=10,
+    ax=ax,
+    linestyle="--",
+    label="simulated ETC",
+)
+ax.set_ylabel("Magnitude [dB]")
+ax.set_xlabel("Time [s]")
+plt.grid()
+plt.legend(fontsize=14)
+
+figure.savefig(
+    os.path.join(os.getcwd(), "examples", "figures", "ETCs_vs.svg"),
+    bbox_inches="tight",
+)
+plt.show()
