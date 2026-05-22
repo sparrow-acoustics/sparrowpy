@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import os
 
 import matplotlib.pyplot as plt
@@ -23,8 +17,6 @@ plt.rcParams.update(font)
 
 base_dir = os.path.join(os.getcwd(), "examples", "resources/")
 
-# In[2]:
-
 
 # simulation settings
 sr_etc = 200
@@ -33,15 +25,13 @@ speed_of_sound = 337
 att_dB = 2.7 / 1000
 freqcy = 500
 
-# In[3]:
-
 
 IR_measured = pf.io.read_audio(base_dir + "raw.wav")
 
 latency = int(2300) - int(etc_time_resolution * IR_measured.sampling_rate)
 
 IR_measured = pf.Signal(
-    data=IR_measured.time[0, latency:],
+    data=IR_measured.time[:, latency:],
     sampling_rate=IR_measured.sampling_rate,
 )
 
@@ -55,9 +45,6 @@ IR_filtered = pf.dsp.filter.fractional_octave_bands(
 center_freqs = pf.dsp.filter.fractional_octave_frequencies(3, (20, 20000))
 
 
-# In[4]:
-
-
 # generate measured etc from IR data
 sr_src = IR_measured.sampling_rate
 
@@ -67,9 +54,11 @@ n_etc_samples = int(duration * sr_etc) + 1
 etc_array = np.zeros((IR_filtered.cshape[0], n_etc_samples))
 
 for freqbin in range(IR_filtered.cshape[0]):
-    src = IR_filtered.time[freqbin, 0, :]
+    src = IR_filtered.time[freqbin]
     for i in range(src.shape[0]):
-        etc_array[freqbin, int(sr_etc * i / sr_src)] += np.square(src[i])
+        etc_array[freqbin, int(sr_etc * i / sr_src)] += np.mean(
+            np.square(src[:, i])
+        )
     etc_level = np.sum(np.square(src[2 : int(0.1 * sr_src)])) / (
         int(0.1 * sr_src) - 2
     )
@@ -85,17 +74,12 @@ etc_measurement = pf.Signal(
 )
 
 
-# In[141]:
-
-
 # radiosity object from file, whole wall-patch shabang
 radi = sp.DirectionalRadiosityFast.from_file(
     filepath="examples/resources/reduced_ihtapark2.blend",
     wall_auto_assembly=False,
     geometry_identifier="reduced",
 )
-
-# In[142]:
 
 
 # set material properties
@@ -138,9 +122,6 @@ for i, material in enumerate(materials):
             sigma[i] = 0.0
 
 
-# In[143]:
-
-
 # set brdfs
 samples = spharpy.samplings.gaussian(16)
 brdf_sources = samples[np.where((samples.elevation * 180 / np.pi >= 0))].copy()
@@ -149,9 +130,6 @@ brdf_receivers = samples[
 ].copy()
 
 brdf_sources.show()
-
-
-# In[144]:
 
 
 # set brdfs
@@ -180,20 +158,14 @@ for i, material in enumerate(materials):
         brdf_receivers,
     )
 
-# # In[145]:
 
 print("baking...")
 radi.bake_geometry()
 
 
-# # In[146]:
-
-
 source = pf.Coordinates(23.470961, -20.837936, 0.801269)
 # initialize source energy
 radi.init_source_energy(source)
-
-# In[147]:
 
 
 radi.calculate_energy_exchange(
@@ -205,9 +177,6 @@ radi.calculate_energy_exchange(
 )
 
 
-# In[148]:
-
-
 receiver = pf.Coordinates(66.798965999999993, 2.177035, -0.278573)
 
 print("collecting...")
@@ -216,10 +185,12 @@ etc_radiosity = radi.collect_energy_receiver_mono(
     direct_sound=True,
 )
 
+bw = freqcy * (2 ** (1 / 6) - 2 ** (-1 / 6))
+scale = bw / (IR_measured.sampling_rate / 2)
+etc_radiosity.time *= scale
+
 out = np.array([etc_radiosity.times, etc_radiosity[0].time[0]])
 np.savetxt("cowabunga.txt", out)
-
-# In[16]:
 
 
 figure, ax = plt.subplots(figsize=(5, 3))
