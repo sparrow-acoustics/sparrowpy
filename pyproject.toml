@@ -1,10 +1,11 @@
 [project]
 name = "sparrowpy"
-version = "0.1.0"
+version = "1.0.0"
 description = "Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds."
 readme = "README.md"
-license = {file = "LICENSE"}
-requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
 authors = [
     { name = "The sparrowpy developers" },
 ]
@@ -17,10 +18,8 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -37,13 +36,14 @@ dependencies = [
 [project.optional-dependencies]
 blender = ['bpy',]
 fast = ['numba',]
-progress = ['tqdm']
 deploy = [
     "twine",
     "wheel",
     "build",
     "setuptools",
     "bump-my-version",
+    "sparrowpy[fast]",
+    "sparrowpy[blender]",
 ]
 tests = [
     "pytest",
@@ -54,7 +54,6 @@ tests = [
     "watermark",
     "ipykernel",
     "sparrowpy[fast]",
-    "sparrowpy[blender]",
     "nbmake",
 ]
 docs = [
@@ -69,7 +68,7 @@ docs = [
     "nbsphinx_link",
     "ipython",
 ]
-dev = ["sparrowpy[deploy,tests,docs]"]
+dev = ["sparrowpy[deploy,tests,docs,blender]"]
 
 [project.urls]
 Tracker = "https://github.com/sparrow-acoustics/sparrowpy/issues"
@@ -77,7 +76,7 @@ Documentation = "https://sparrowpy.readthedocs.io/"
 Download = "https://pypi.org/project/sparrowpy/"
 Homepage = "https://pyfar.org/"
 Source = "https://github.com/sparrow-acoustics/sparrowpy"
-Changelog = "https://github.com/sparrow-acoustics/sparrowpy/blob/main/HISTORY.rst"
+Changelog = "https://github.com/sparrow-acoustics/sparrowpy/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -139,7 +138,7 @@ convention = "numpy"
 
 
 [tool.bumpversion]
-current_version = "0.1.0"
+current_version = "1.0.0"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
@@ -168,3 +167,8 @@ replace = '\nversion = "{new_version}"'
 filename = "sparrowpy/__init__.py"
 search = "__version__ = '{current_version}'"
 replace = "__version__ = '{new_version}'"
+
+[[tool.bumpversion.files]]
+filename = "docs/_static/logo.svg"
+search = ">{current_version}</tspan>"
+replace = ">{new_version}</tspan>"

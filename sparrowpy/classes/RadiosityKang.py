@@ -3,12 +3,6 @@ import matplotlib as mpl
 import numpy as np
 import pyfar as pf
 import sofar as sf
-try:
-    from tqdm import tqdm
-except ImportError:
-    def tqdm(x):
-        """Dummy tqdm function."""
-        return x
 from sparrowpy.geometry import Polygon, SoundSource
 
 
@@ -1025,7 +1019,7 @@ class RadiosityKang():
 
         # D. Energy exchange between patches
         if len(self.patch_list) > 1:
-            for k in tqdm(range(1, self.max_order_k+1)):
+            for k in range(1, self.max_order_k+1):
                 for patches in self.patch_list:
                     patches.calculate_energy_exchange(
                         self.patch_list, k, speed_of_sound=self.speed_of_sound,
@@ -1183,7 +1177,7 @@ class DirectionalRadiosityKang():
 
         # D. Energy exchange between patches
         if len(self.patch_list) > 1:
-            for k in tqdm(range(1, self.max_order_k+1)):
+            for k in range(1, self.max_order_k+1):
                 for patches in self.patch_list:
                     patches.calculate_energy_exchange(
                         self.patch_list, k, speed_of_sound=self.speed_of_sound,

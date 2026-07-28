@@ -99,3 +99,16 @@ def basicscene():
     scene["walls"] = sp.testing.shoebox_room_stub(1, 1, 1)
 
     return scene
+
+
+@pytest.fixture
+def six_axis_unit():
+    """±x, ±y, ±z unit vectors as (6,3) array."""
+    return np.array([
+        [ 1, 0, 0],
+        [-1, 0, 0],
+        [ 0, 1, 0],
+        [ 0,-1, 0],
+        [ 0, 0, 1],
+        [ 0, 0,-1],
+    ], dtype=float)
