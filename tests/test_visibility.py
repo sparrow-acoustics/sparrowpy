@@ -4,7 +4,6 @@ import numpy as np
 import pyfar as pf
 import sparrowpy as sp
 bpy = pytest.importorskip("bpy")
-import sparrowpy.utils.blender as bh  # noqa: E402
 
 @pytest.mark.parametrize("origin", [np.array([0.,1.,3.])])
 @pytest.mark.parametrize("point", [np.array([0.,1.,-1])])
@@ -71,140 +70,6 @@ def test_basic_visibility(point, origin, plpt):
         solution = 0
     assert solution==out
 
-@pytest.mark.parametrize("model", [
-    "./tests/test_data/cube_simple.blend",
-    "./tests/test_data/cube.blend",
-    "./tests/test_data/cube_blocked.blend",
-    ])
-def test_vis_matrix_assembly(model):
-    """Check if visibility matrices are correctly assembled."""
-    gmodel = bh.read_geometry_file(model, wall_auto_assembly=True)
-
-    m1=gmodel["wall"]
-    m2=gmodel["patch"]
-
-    patches_points = np.empty((len(m1["conn"]),len(m1["conn"][0]),3))
-    patches_centers = np.empty((len(m1["conn"]),3))
-    patches_normals = np.empty_like(patches_centers)
-
-    for i in range(len(m1["conn"])):
-            patches_points[i]=m1["verts"][m1["conn"][i]]
-            patches_centers[i]=sp.geometry._calculate_center(m1["verts"][m1["conn"][i]])
-            patches_normals[i]=np.cross(m1["verts"][m1["conn"][i]][1]
-                                            -m1["verts"][m1["conn"][i]][0],
-                                      m1["verts"][m1["conn"][i]][2]
-                                            -m1["verts"][m1["conn"][i]][0])
-            patches_normals[i]/=np.linalg.norm(patches_normals[i])
-
-    for m in [m1,m2]:
-        surfs=m
-
-        surfs_points = []
-        surfs_normals =list([np.empty((3,))]*len(surfs["conn"]))
-
-        if model=="./tests/test_data/cube.blend":
-            solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
-                           dtype=bool)
-            for i in range(solution.shape[0]):
-                for j in range(i+1,solution.shape[1]):
-                    ray=patches_centers[j]-patches_centers[i]
-                    ray/=np.linalg.norm(ray)
-                    if np.dot(patches_normals[i], ray)>1e-6:
-                        solution[i,j]=True
-        elif model=="./tests/test_data/cube_blocked.blend":
-            solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
-                            dtype=bool)
-            for ids in A:
-                solution[ids[0],ids[1]]=True
-        elif model=="./tests/test_data/cube_simple.blend":
-            solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
-                            dtype=bool)
-            for i in range(solution.shape[0]):
-                for j in range(i+1,solution.shape[1]):
-                        solution[i,j]=True
-
-        for i in range(len(surfs["conn"])):
-            surfs_points.append(surfs["verts"][surfs["conn"][i]])
-            surfs_normals[i]=np.cross(surfs["verts"][m["conn"][i]][1]
-                                            -m["verts"][m["conn"][i]][0],
-                                      m["verts"][m["conn"][i]][2]
-                                            -m["verts"][m["conn"][i]][0])
-            surfs_normals[i]/=np.linalg.norm(surfs_normals[i])
-
-        vis_matrix = sp.geometry._check_patch2patch_visibility(
-                                            patches_center=patches_centers,
-                                           surf_normal=surfs_normals,
-                                           surf_points=surfs_points)
-
-        npt.assert_array_equal(vis_matrix,solution)
-
-A=[
-    [0,2],
-    [0,3],
-    [0,4],
-    [0,5],
-    [0,6],
-    [0,10],
-    [0,11],
-    [0,13],
-    [0,14],
-    [1,2],
-    [1,4],
-    [1,6],
-    [1,7],
-    [1,12],
-    [1,15],
-    [2,4],
-    [2,6],
-    [2,7],
-    [2,8],
-    [2,12],
-    [2,15],
-    [3,4],
-    [3,5],
-    [3,6],
-    [3,11],
-    [3,13],
-    [3,14],
-    [4,5],
-    [4,6],
-    [4,7],
-    [4,8],
-    [4,9],
-    [4,10],
-    [4,13],
-    [4,14],
-    [4,15],
-    [5,6],
-    [5,10],
-    [5,11],
-    [5,14],
-    [6,7],
-    [6,8],
-    [6,9],
-    [6,10],
-    [6,11],
-    [6,12],
-    [6,13],
-    [7,8],
-    [7,9],
-    [7,10],
-    [7,12],
-    [7,15],
-    [8,9],
-    [8,12],
-    [8,15],
-    [9,12],
-    [9,15],
-    [10,11],
-    [10,13],
-    [10,14],
-    [11,13],
-    [11,14],
-    [12,15],
-    [13,14],
-   ]
-
 
 def test_source_vis(basicscene):
     """Test visibility check between source and patches."""
@@ -245,3 +110,24 @@ def test_receiver_vis(basicscene):
                               np.zeros((5))]),
                      )
     assert (etc.time[-1,0,:] != 0).any()
+
+def test_vis_matrix_assembly():
+    """Check if visibility matrices are correctly assembled."""
+
+    surfs_points = np.array([[[0,0,0],[0,1,0],[0,1,1],[0,0,1]],
+                             [[0,1,0],[0,2,0],[0,2,1],[0,1,1]],
+                             [[0,0,0],[0,0,1],[1,0,1],[1,0,0]]],
+                            dtype=float)
+    patches_centers = np.array([[0,.5,.5],[0,1.5,.5],[.5,0,.5]])
+
+    surfs_normals = np.array([[1,0,0],[1,0,0],[0,1,0]],
+                             dtype=float)
+
+    tru_matrix = np.array([[0,0,1],[0,0,1],[0,0,0]],dtype=bool)
+
+    vis_matrix = sp.geometry._check_patch2patch_visibility(
+                                            patches_center=patches_centers,
+                                           surf_normal=surfs_normals,
+                                           surf_points=surfs_points)
+
+    npt.assert_equal(tru_matrix,vis_matrix)
