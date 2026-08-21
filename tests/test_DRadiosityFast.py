@@ -43,7 +43,7 @@ def test_compute_form_factors(sample_walls):
     radiosity.bake_geometry()
     npt.assert_almost_equal(radiosity.form_factors.shape, (24, 24))
 
-def test_patch_2_out_dir_mapping(sampling_gaussian):
+def test_patch_2_out_dir_mapping():
     """Test patch centroid to brdf receiver direction map."""
 
     # input: two orthogonal walls with flipped up vector
@@ -61,8 +61,13 @@ def test_patch_2_out_dir_mapping(sampling_gaussian):
 
     # set brdf sampling with 45º resolution:
     # ensure predictable positions and some outgoing directions in horiz. plane
-    samples = sampling_gaussian(11)
-    samples.weights=np.ones(samples.cshape[0])
+    samples = pf.Coordinates.from_spherical_elevation(
+        np.arange(0, 360, 45)[None]/180*np.pi,
+        np.arange(45, 180, 45)[:, None]/180*np.pi,
+        1,
+    )
+    samples.cartesian = samples.cartesian.reshape((-1, 3))
+    samples.weights=np.ones(samples.cshape)
 
     brdf_sources = samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
     brdf_receivers=samples[np.where((samples.elevation*180/np.pi >= 0))].copy()
