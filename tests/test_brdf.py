@@ -134,7 +134,8 @@ def test_create_from_scattering_0_3(tmp_path, sampling_gaussian):
     check_reciprocity(data)
 
 
-def test_create_from_scattering_0_3_with_absorption(tmp_path, sampling_gaussian):
+def test_create_from_scattering_0_3_with_absorption(
+        tmp_path, sampling_gaussian):
     # Prepare test data
     scattering_data = 0.3
     absorption_data = 0.3
@@ -154,7 +155,8 @@ def test_create_from_scattering_0_3_with_absorption(tmp_path, sampling_gaussian)
     assert data.freq.shape == (s.csize, r.csize, 3)
 
     check_energy_conservation(
-        sampling_gaussian(1), sampling_gaussian(1).weights, data, absorption_data)
+        sampling_gaussian(1), sampling_gaussian(1).weights,
+        data, absorption_data)
     check_reciprocity(data)
 
 
@@ -167,18 +169,21 @@ def test_create_from_scattering_with_invalid_data(tmp_path, sampling_gaussian):
             TypeError,
             match="scattering_coefficient must be a pf.FrequencyData object"):
         sp.brdf.create_from_scattering(
-            sampling_gaussian(1), sampling_gaussian(1), 'invalid', file_path=tmp_path)
+            sampling_gaussian(1), sampling_gaussian(1),
+            'invalid', file_path=tmp_path)
     # Call the function and expect it to raise an error
     with pytest.raises(
             TypeError,
             match="source_directions must be a pf.Coordinates object"):
         sp.brdf.create_from_scattering(
-            'coords', sampling_gaussian(1), scattering_data, file_path=tmp_path)
+            'coords', sampling_gaussian(1),
+            scattering_data, file_path=tmp_path)
     with pytest.raises(
             TypeError,
             match="receiver_directions must be a pf.Coordinates object"):
         sp.brdf.create_from_scattering(
-            sampling_gaussian(1), 'coords', scattering_data, file_path=tmp_path)
+            sampling_gaussian(1),
+            'coords', scattering_data, file_path=tmp_path)
 
 
 @pytest.mark.parametrize('scattering_data', [0, 0.3, 1])
