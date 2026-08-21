@@ -1,5 +1,13 @@
 # Changelog
 
+
+### Fixes
+
+- changed default python version to 3.13, as blender did (#160)
+- adapted to new pyfar version (#160)
+- remove ``numpy<2`` restriction, as it is not relevant anymore (#160)
+
+
 ## 1.0.1 (2025-09-16)
 
 ### Added
