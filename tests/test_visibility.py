@@ -98,7 +98,7 @@ def test_vis_matrix_assembly(model):
         surfs=m
 
         surfs_points = []
-        surfs_normals =list([np.empty((3,))]*len(surfs["conn"]))
+        surfs_normals = np.empty((len(surfs["conn"]), 3))
 
         if model=="./tests/test_data/cube.blend":
             solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
@@ -122,7 +122,8 @@ def test_vis_matrix_assembly(model):
                         solution[i,j]=True
 
         for i in range(len(surfs["conn"])):
-            surfs_points.append(surfs["verts"][surfs["conn"][i]])
+            surfs_points.append(
+                surfs["verts"][surfs["conn"][i]].astype(np.float64))
             surfs_normals[i]=np.cross(surfs["verts"][m["conn"][i]][1]
                                             -m["verts"][m["conn"][i]][0],
                                       m["verts"][m["conn"][i]][2]
