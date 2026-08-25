@@ -2,7 +2,6 @@
 """Module for filter generation and signal processing in sparrowpy."""
 import numpy as np
 import pyfar as pf
-import warnings
 
 def reflection_density_room(
         room_volume, n_samples, speed_of_sound=None,
