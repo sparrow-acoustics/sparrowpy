@@ -2,7 +2,9 @@
 
 ### Added
 
+- added module ``dsp`` to generate impulse responses from energy time curves (#158)
 - added Python 3.14 support
+
 ## 1.0.2 (2026-08-25)
 
 ### Fixes
