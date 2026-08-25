@@ -6,6 +6,7 @@
 
 - added module ``dsp`` to generate impulse responses from energy time curves (#124)
 - added Python 3.14 support
+- add sperical detector to receiver energy collection (#122)
 
 ## 1.0.2 (2026-08-25)
 
