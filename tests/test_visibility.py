@@ -75,9 +75,9 @@ def test_basic_visibility(point, origin, plpt):
     "./tests/test_data/cube.blend",
     "./tests/test_data/cube_blocked.blend",
     ])
-def test_vis_matrix_assembly(model_path):
+def test_vis_matrix_assembly(model):
     """Check if visibility matrices are correctly assembled."""
-    m1,m2 = sp.utils.read_geometry_file(model_path)
+    m1,m2 = sp.utils.read_geometry_file(model)
 
     patches_points = np.empty((len(m1["conn"]),len(m1["conn"][0]),3))
     patches_centers = np.empty((len(m1["conn"]),3))
@@ -98,7 +98,7 @@ def test_vis_matrix_assembly(model_path):
         surfs_points = []
         surfs_normals = np.empty((len(surfs["conn"]), 3))
 
-        if model_path=="./tests/test_data/cube.blend":
+        if model=="./tests/test_data/cube.blend":
             solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
                            dtype=bool)
             for i in range(solution.shape[0]):
@@ -107,12 +107,12 @@ def test_vis_matrix_assembly(model_path):
                     ray/=np.linalg.norm(ray)
                     if np.dot(patches_normals[i], ray)>1e-6:
                         solution[i,j]=True
-        elif model_path=="./tests/test_data/cube_blocked.blend":
+        elif model=="./tests/test_data/cube_blocked.blend":
             solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
                             dtype=bool)
             for ids in A:
                 solution[ids[0],ids[1]]=True
-        elif model_path=="./tests/test_data/cube_simple.blend":
+        elif model=="./tests/test_data/cube_simple.blend":
             solution=np.zeros((patches_centers.shape[0],patches_centers.shape[0]),
                             dtype=bool)
             for i in range(solution.shape[0]):
