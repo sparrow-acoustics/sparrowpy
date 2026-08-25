@@ -598,37 +598,15 @@ def band_filter_signal(signal:pf.Signal,
     cutoff_lower = frequencies * octave_ratio**(-1/2/num_fractions)
     bandwidth = cutoff_upper - cutoff_lower
 
-    frequency_range = (
-        np.min(frequencies * octave_ratio**(-1/4/num_fractions)),
-        np.max(frequencies * octave_ratio**(1/4/num_fractions)),
-    )
-
-    band_filtered_signal = pf.dsp.filter.fractional_octave_bands(
-        signal=signal,
-        num_fractions=num_fractions,
-        order=order,
-        frequency_range=frequency_range,
-    )
-
-    # force two dimensional cshape
-    if len(band_filtered_signal.cshape) == 1:
-        band_filtered_signal = band_filtered_signal[None]
-
-    # filter desired filtered channels based on input center frequencies
-    if len(frequencies) != band_filtered_signal.cshape[0]:
-        _, cutoff_lower, cutoff_upper = \
-            pf.constants.fractional_octave_frequencies_exact(
-            num_fractions, frequency_range)
-        mask = np.empty_like(frequencies,dtype=int)
-
-        for i,f in enumerate(frequencies):
-            mask[i] = np.where((cutoff_lower<f)*(cutoff_upper>f))[0][0]
-
-        band_filtered_signal.time = band_filtered_signal.time[mask]
-
-    # swap axes to match desired output
-    band_filtered_signal.time = np.swapaxes(
-        band_filtered_signal.time, 0, 1,
-        )
+    band_filtered_signal = []
+    for i_freq in range(frequencies.size):
+        band_filtered_signal.append(pf.dsp.filter.butterworth(
+            signal=signal,
+            frequency=[cutoff_lower[i_freq], cutoff_upper[i_freq]],
+            N=order,
+            btype='bandpass',
+        )[:, None])
+    band_filtered_signal = pf.utils.concatenate_channels(
+        band_filtered_signal, caxis=1)
 
     return band_filtered_signal, bandwidth
