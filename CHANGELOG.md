@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.1.0 (2026-08-25)
+
 ### Added
 
 - added module ``dsp`` to generate impulse responses from energy time curves (#124)
@@ -12,6 +14,7 @@
 - changed default python version to 3.13, as blender did (#160)
 - adapted to new pyfar version (#160)
 - remove ``numpy<2`` restriction, as it is not relevant anymore (#160)
+- DOC: Small typo in Readme, numba does jit compilation (#135)
 
 
 ## 1.0.1 (2025-09-16)
