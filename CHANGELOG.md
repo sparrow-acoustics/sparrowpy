@@ -1,5 +1,8 @@
 # Changelog
 
+### Added
+
+- added Python 3.14 support
 
 ### Fixes
 
