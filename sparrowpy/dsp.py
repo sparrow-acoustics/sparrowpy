@@ -1,5 +1,77 @@
 
-"""Module for filter generation and signal processing in sparrowpy."""
+"""
+Module for filter generation and signal processing in sparrowpy.
+
+This module provides functions to synthesize a room impulse response (IR)
+from an energy time curve (ETC), e.g. obtained from a sparrowpy radiosity
+simulation. This method follows [#]_.
+
+Examples
+--------
+Synthesize an impulse response from an ETC for the 500Hz, 1kHz and 2kHz octave
+bands.
+
+.. plot::
+
+    >>> import numpy as np
+    >>> import pyfar as pf
+    >>> import sparrowpy as sp
+
+    Room and simulation parameters.
+
+    >>> room_volume = 150  # m^3
+    >>> speed_of_sound = 343.2  # m/s
+    >>> sampling_rate = 44100  # Hz
+    >>> etc_duration = 1  # s
+    >>> etc_time_resolution = 1 / 1000  # s
+
+    Build an example ETC for three frequency bands.
+
+    >>> etc_times = np.arange(0, etc_duration, etc_time_resolution)[None]
+    >>> decays = np.array([-5, -10, -15])[:, None]
+    >>> etc_data = np.exp(decays * etc_times)
+    >>> etc = pf.TimeData(etc_data, etc_times)[None]
+    >>> center_frequencies = np.array([500, 1e3, 2e3])
+
+    Generate a dirac sequence based on the room's reflection density.
+
+    >>> n_samples = int(sampling_rate * etc_duration)
+    >>> reflection_density, t_start = sp.dsp.reflection_density_room(
+    ...     room_volume=room_volume,
+    ...     n_samples=n_samples,
+    ...     speed_of_sound=speed_of_sound,
+    ...     max_reflection_density=int(sampling_rate / 4),
+    ...     sampling_rate=sampling_rate)
+    >>> dirac_seq = sp.dsp.dirac_sequence(
+    ...     reflection_density, n_samples, t_start,
+    ...     sampling_rate=sampling_rate, seed=0)
+
+    Apply bandpass filtering using butterworth filtering.
+
+    >>> filtered_dirac_seq, bandwidth = sp.dsp.band_filter_signal(
+    ...     dirac_seq, center_frequencies, 1,
+    ... )
+
+    Weight the filtered dirac sequence by the ETC to synthesize the IR.
+
+    >>> impulse_response = sp.dsp.weight_signal_by_etc(
+    ...     energy_time_curve=etc,
+    ...     signal=filtered_dirac_seq,
+    ...     bandwidth=bandwidth,
+    ... )
+
+    Sum all frequency bands and plot the result.
+
+    >>> impulse_response.time = np.sum(impulse_response.time, axis=1)
+    >>> ax = pf.plot.time_freq(impulse_response, dB_time=True)
+
+References
+----------
+.. [#] D. Schröder, “Physically based real-time auralization of
+        interactive virtual environments,” PhD Thesis, Logos-Verlag,
+        Berlin, 2011. [Online].
+        Available: https://publications.rwth-aachen.de/record/50580
+"""
 import numpy as np
 import pyfar as pf
 
