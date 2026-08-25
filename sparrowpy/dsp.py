@@ -550,9 +550,8 @@ def band_filter_signal(signal:pf.Signal,
     with Butterworth filtering.
 
     .. note::
-        This function uses the pyfar methods
-        :py:func:`pyfar.dsp.filter.fractional_octave_bands`
-        and :py:func:`pyfar.dsp.filter.fractional_octave_frequencies`.
+        This function uses the pyfar method
+        :py:func:`pyfar.dsp.filter.butterworth`.
 
 
     Parameters
@@ -597,6 +596,7 @@ def band_filter_signal(signal:pf.Signal,
     cutoff_lower = frequencies * octave_ratio**(-1/2/num_fractions)
     bandwidth = cutoff_upper - cutoff_lower
 
+    # do the bandpass filtering
     band_filtered_signal = []
     for i_freq in range(frequencies.size):
         band_filtered_signal.append(pf.dsp.filter.butterworth(
