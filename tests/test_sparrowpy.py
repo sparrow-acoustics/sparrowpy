@@ -7,4 +7,4 @@ def test_import_sparrowpy():
     try:
         import sparrowpy           # noqa
     except ImportError:
-        pytest.fail('import pyfar failed')
+        pytest.fail('import sparrowpy failed')

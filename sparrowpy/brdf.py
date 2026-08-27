@@ -69,11 +69,12 @@ def create_from_scattering(
 
     Examples
     --------
+    >>> import spharpy
     >>> import pyfar as pf
     >>> import sparrowpy as sp
     >>> import numpy as np
     >>> scattering_coefficient = pf.FrequencyData(0.5, [100])
-    >>> directions = pf.samplings.sph_gaussian(sh_order=3)
+    >>> directions = spharpy.samplings.gaussian(n_max=3)
     >>> directions = directions[directions.z > 0]
     >>> brdf = sp.brdf.create_from_scattering(
     ...     directions, directions,
@@ -146,7 +147,7 @@ def create_from_directional_scattering(
     .. math::
         \rho(\mathbf{\Omega_i}, \mathbf{\Omega_o}) = \frac{(1-\alpha)}{
         (\mathbf{\Omega_o} \cdot \mathbf{n}) \cdot w_o} s_{d}(
-        \mathbf{\Omega_i}, mathbf{\Omega_o})
+        \mathbf{\Omega_i}, \mathbf{\Omega_o})
 
     where:
         - :math:`\mathbf{\Omega_i}` and :math:`\mathbf{\Omega_o}` are the

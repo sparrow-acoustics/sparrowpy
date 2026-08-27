@@ -2,9 +2,9 @@
 
 """Top-level package for sparrowpy."""
 
-__author__ = """The pyfar developers"""
+__author__ = """The sparrowpy developers"""
 __email__ = ''
-__version__ = '0.1.0'
+__version__ = '1.1.0'
 
 
 from . import geometry
@@ -18,6 +18,7 @@ from .classes.RadiosityKang import (
 from . import testing
 from . import form_factor
 from . import brdf
+from . import dsp
 from . import utils
 
 
@@ -32,5 +33,6 @@ __all__ = [
     'form_factor',
     'testing',
     'brdf',
+    'dsp',
     'utils',
 ]
