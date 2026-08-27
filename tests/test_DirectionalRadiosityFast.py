@@ -128,14 +128,15 @@ def test_io_within_simulation(tmpdir):
     radiosity_read.collect_energy_receiver_mono(pf.Coordinates(.1, .5, .5))
 
 
-@pytest.mark.parametrize(("delta_degree", "desired"), [
-    (30, [25]),
+@pytest.mark.parametrize(("sh_order", "desired"), [
+    (11, [9]),
     (10, [253, 254, 288, 289, 290, 324, 325, 326, 360]),
     ])
-def test_get_brdf_incidence_directions_from_surface(delta_degree, desired):
+def test_get_brdf_incidence_directions_from_surface(
+        sh_order, desired, sampling_gaussian):
 
     brdf_pos = pf.Coordinates(0, 0, 0, weights=1)
-    brdf_directions = pf.samplings.sph_equal_angle(delta_degree)
+    brdf_directions = sampling_gaussian(sh_order)
     patch_edges = pf.Coordinates.from_spherical_elevation(
         np.array([-15, 15, 15, -15])/180*np.pi,
         np.array([-15, -15, 15, 15])/180*np.pi,
@@ -153,10 +154,10 @@ def test_get_brdf_incidence_directions_from_surface(delta_degree, desired):
     npt.assert_almost_equal(indexes.shape, len(desired))
 
 
-def test_get_brdf_incidence_directions_from_surface_nearest():
+def test_get_brdf_incidence_directions_from_surface_nearest(sampling_gaussian):
 
     brdf_pos = pf.Coordinates(0, 0, 0, weights=1)
-    brdf_directions = pf.samplings.sph_equal_angle(30)
+    brdf_directions = sampling_gaussian(1)
     patch_edges = pf.Coordinates.from_spherical_elevation(
         np.array([10, 10, 5, 5])/180*np.pi,
         np.array([10, 5, 5, 10])/180*np.pi,
@@ -216,18 +217,16 @@ def test_bake_patch_2_brdf_outgoing_mask():
         radiosity._patch_2_brdf_outgoing_mask[0, 1, :-2], False)
 
 
-@pytest.mark.parametrize("delta_angle", [
-    15, 30])
-def test_specular_reflections(delta_angle):
+@pytest.mark.parametrize("sh_order", [
+    7, 11])
+def test_specular_reflections(sh_order, sampling_gaussian):
     """
     Test if specular reflections are larger than 0.
 
     For two parallel walls, and more than one direction of brdf facting
     towards it.
     """
-    brdf_directions = pf.samplings.sph_equal_angle(delta_angle)
-    brdf_directions.weights = pf.samplings.calculate_sph_voronoi_weights(
-        brdf_directions)
+    brdf_directions = sampling_gaussian(sh_order)
     brdf_directions = brdf_directions[brdf_directions.z>0]
     frequencies = np.array([1000])
     brdf = sp.brdf.create_from_scattering(
