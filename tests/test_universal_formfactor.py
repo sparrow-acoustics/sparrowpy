@@ -201,6 +201,7 @@ def test_different_areas(
         receivers=None,
         patches_points=patches_points,
         patches_normals=patches_normals,
+        brdf_vi_weights=None,
     )
 
     assert ff_tilde[0,1,0,0]==ff_tilde[1,0,0,0]/width

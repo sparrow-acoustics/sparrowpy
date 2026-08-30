@@ -436,8 +436,7 @@ class DirectionalRadiosityFast():
             scattering = None
             self._patch_2_brdf_outgoing_mask = np.ones((
                 self.n_patches, self.n_patches, 1), dtype=bool)
-            brdf_vi_weights = [
-                s.weights for s in self._brdf_incoming_directions]
+            brdf_vi_weights = None
 
         n_bins = 1 if self._frequencies is None else self.n_bins
 
@@ -1374,14 +1373,15 @@ def _form_factors_with_directivity_dim(
                     indexes = [0]
                 else:
                     indexes = get_brdf_incidence_directions_from_surface(
-                        brdf_position=patches_center[j],
+                        brdf_position=patches_center[i],
                         brdf_directions=sources[wall_id_i],
-                        patch_edges_points=patches_points[i],
-                        patch_normal=patches_normals[i])
+                        patch_edges_points=patches_points[j],
+                        patch_normal=patches_normals[j])
+                weights = np.asarray(brdf_vi_weights[wall_id_i])[indexes]
                 scattering_factor = np.sum(
-                    scattering[scattering_index[
-                        wall_id_i], indexes]*brdf_vi_weights[
-                            wall_id_i][indexes], axis=0)
+                    scattering[scattering_index[wall_id_i], indexes]
+                    * weights[:, np.newaxis, np.newaxis],
+                    axis=0) / np.sum(weights)
                 form_factors_tilde[i, j, :, :] = form_factors_tilde[
                     i, j, :, :] * scattering_factor
 
