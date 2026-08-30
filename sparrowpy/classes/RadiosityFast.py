@@ -891,7 +891,7 @@ class DirectionalRadiosityFast():
             self._brdf_incoming_directions[i] = incoming_rot
             self._brdf_outgoing_directions[i] = outgoing_rot
 
-        self._brdf.append(brdf.freq*np.pi)
+        self._brdf.append(np.real(brdf.freq*np.pi))
         self._brdf_index[wall_indexes] = len(self._brdf)-1
 
     def _check_set_frequency(self, frequencies:np.ndarray):
