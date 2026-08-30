@@ -1,8 +1,9 @@
 # Changelog
 
-### Fixes
+### Fixed
 
 - fix missing early energy in impulse response synthesis (#163)
+- force complex brdfs to real to prevent numba errors (#162)
 
 ## 1.1.0 (2026-08-25)
 
@@ -13,7 +14,7 @@
 
 ## 1.0.2 (2026-08-25)
 
-### Fixes
+### Fixed
 
 - changed default python version to 3.13, as blender did (#160)
 - adapted to new pyfar version (#160)
