@@ -279,25 +279,26 @@ def dirac_sequence(
 
     rng = np.random.default_rng(seed)
     dirac_sequence = pf.Signal(np.zeros(n_samples), sampling_rate)
-    mu_times = reflection_density.times
+    delta_mu_time = 1/sampling_rate
     t_current = t_start
-    i_current = np.argmin(np.abs(t_current-mu_times))
+    i_current =  int(t_current/delta_mu_time)
     t_max = reflection_density.times[-1]
     while True:
         # calculate next event time
         z = -rng.uniform(-1, 0) # uniform distribution in (0, 1]
         # Equation (5.43) interval size
-        delta_ta = 1 / reflection_density.time[..., i_current] * np.log(1 / z)
+        delta_ta = 1 / reflection_density.time[0, i_current] * np.log(1 / z)
         t_current += delta_ta
 
         if t_current > t_max:
             break
 
-        i_current = np.argmin(np.abs(t_current-mu_times))
+        i_current = int(t_current/delta_mu_time)
 
         dirac_sequence.time[..., i_current] = rng.choice([-1, 1], p=[0.5, 0.5])
 
     return dirac_sequence
+
 
 def weight_signal_by_etc(
     energy_time_curve: pf.TimeData,
