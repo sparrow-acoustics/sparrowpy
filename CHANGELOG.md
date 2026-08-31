@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.1.1 (2026-08-31)
+
 ### Fixed
 
 - fix missing early energy in impulse response synthesis (#163)
