@@ -118,3 +118,4 @@ tests/private/
 # ignore generated files
 *.pdf
 examples/radiosity_fast.far
+tests/test_plot_data/output/

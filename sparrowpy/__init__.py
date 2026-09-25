@@ -20,6 +20,7 @@ from . import form_factor
 from . import brdf
 from . import dsp
 from . import utils
+from . import plot
 
 
 __all__ = [
@@ -35,4 +36,5 @@ __all__ = [
     'brdf',
     'dsp',
     'utils',
+    'plot',
 ]
