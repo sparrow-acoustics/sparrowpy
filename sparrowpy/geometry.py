@@ -628,12 +628,13 @@ def _point_in_polygon(point3d: np.ndarray,
         normal of the polygon's plane
 
     eta: float
-        tolerance for point inside of line check.
+        tolerance for the checks if the point lies in the polygon's plane
+        and on the polygon's boundary.
 
     Returns
     -------
     out: bool
-        flags if point is inside polygon
+        flags if point is inside polygon or on its boundary
         (True if inside, False if not)
 
     """
@@ -655,33 +656,38 @@ def _point_in_polygon(point3d: np.ndarray,
                 matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
 
 
-        # winding number algorithm
+        # points on the boundary count as inside, so that e.g. a line
+        # through the shared edge of two walls is blocked by them
+        on_boundary = False
+        for i in range(poly.shape[0]):
+            a0 = poly[i]
+            side = poly[(i+1)%poly.shape[0]] - a0
+            t = np.dot(pt-a0, side) / np.dot(side, side)
+            t = min(max(t, 0.), 1.)
+            if np.linalg.norm(pt - (a0 + t*side)) <= eta:
+                on_boundary = True
+
+        # winding number algorithm: count the sides crossed by a line from
+        # the evaluation point in +x direction, signed by their direction.
+        # A side counts if it spans the evaluation point's y half-open
+        # (one end at or below, the other above). This way a vertex lying
+        # exactly on the line is counted once for a crossing and not at
+        # all for a touching vertex, instead of once for each of its sides.
         count = 0
-        for i in prange(poly.shape[0]):
+        for i in range(poly.shape[0]):
+            a0 = poly[i]
             a1 = poly[(i+1)%poly.shape[0]]
-            a0 = poly[i%poly.shape[0]]
-            side = a1-a0
 
-            # check if line from evaluation point in +x direction
-            # intersects polygon side
-            nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
-            b = _project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
-                                plane_pt=a1, plane_normal=nl,
-                                check_normal=False)
+            if (a0[1] <= pt[1]) != (a1[1] <= pt[1]):
+                x_cross = a0[0] + (pt[1]-a0[1]) * (a1[0]-a0[0]) / (
+                    a1[1]-a0[1])
+                if x_cross > pt[0]:
+                    if a1[1] > a0[1]:
+                        count += 1
+                    else:
+                        count -= 1
 
-            # check if intersection exists and if is inside side [a0,a1]
-            if (b is not None) and b[0]>pt[0]:
-                if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
-                                    -np.linalg.norm(a1-a0)) <= eta:
-                    if np.dot(b-pt,nl)>0:
-                        count+=1
-                    elif np.dot(b-pt,nl)<0:
-                        count-=1
-
-        if count != 0:
-            out = True
-        else:
-            out = False
+        out = on_boundary or count != 0
 
     return out
 
