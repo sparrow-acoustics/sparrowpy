@@ -1,5 +1,7 @@
 # Changelog
 
+- CI: allow manual test trigger on GitHub Actions (#164) 
+
 ## 1.1.1 (2026-08-31)
 
 ### Fixed
