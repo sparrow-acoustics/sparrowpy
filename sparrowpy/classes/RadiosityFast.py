@@ -1186,20 +1186,62 @@ def _energy_exchange(
         (n_patches, n_directions, n_bins, n_samples)
 
     """
-    n_patches = form_factors_tilde.shape[0]
-    n_directions = form_factors_tilde.shape[2]
     n_bins = energy_0_directivity.shape[2]
-    form_factors_tilde = form_factors_tilde[..., np.newaxis]
     E_matrix_total  = _energy_exchange_init_energy(
         n_samples, energy_0_directivity, distance_0, speed_of_sound,
         histogram_time_resolution)
-    E_matrix = np.zeros((2, n_patches, n_directions, n_bins, n_samples))
-    E_matrix[0] += E_matrix_total
     if max_order == 0:
         return E_matrix_total
+
+    # The frequency bins are independent of each other, so they are
+    # computed in parallel. Each bin only reads and writes its own slice.
+    # The work per bin lives in a separate serial function, so numba does
+    # not transform its array expressions as part of the parallel loop.
+    for b in prange(n_bins):
+        _energy_exchange_bin(
+            E_matrix_total[:, :, b, :], form_factors_tilde[:, :, :, b],
+            distance_ij, patch_2_out_directions, speed_of_sound,
+            histogram_time_resolution, max_order, visible_patches)
+    return E_matrix_total
+
+
+def _energy_exchange_bin(
+        E_total, form_factors_tilde, distance_ij, patch_2_out_directions,
+        speed_of_sound, histogram_time_resolution, max_order,
+        visible_patches):
+    """Calculate the energy exchange between patches for one frequency bin.
+
+    Parameters
+    ----------
+    E_total : np.ndarray
+        energy of all patches after the direct sound, of shape
+        (n_patches, n_directions, n_samples). The energy of all
+        reflections is added in place.
+    form_factors_tilde : np.ndarray
+        form factors of this bin of shape
+        (n_patches, n_patches, n_directions)
+    distance_ij : np.ndarray
+        distance between all patches of shape (n_patches, n_patches)
+    patch_2_out_directions: np.ndarray
+        patchwise map of patch centers to
+        scattering outgoing directions of shape (n_patches,n_patches)
+    speed_of_sound : float
+        speed of sound in m/s.
+    histogram_time_resolution : float
+        time resolution of the histogram in s.
+    max_order : int
+        maximum order of reflections.
+    visible_patches : np.ndarray
+        indexes of all visible patches of shape (n_visible, 2)
+
+    """
+    n_patches, n_directions, n_samples = E_total.shape
+    E_matrix = np.zeros((2, n_patches, n_directions, n_samples))
+    E_matrix[0] = E_total
     for k in range(max_order):
         current_index = (1+k) % 2
-        E_matrix[current_index, :, :, :] = 0
+        previous_index = 1 - current_index
+        E_matrix[current_index] = 0
         for ii in range(visible_patches.shape[0]):
             for jj in range(2):
                 if jj == 0:
@@ -1213,15 +1255,13 @@ def _energy_exchange(
 
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
-                if n_delay_samples > 0:
-                    E_matrix[current_index, j, :, :, n_delay_samples:] += \
-                        form_factors_tilde[i, j] * E_matrix[
-                            current_index-1, i, dir_id, :, :-n_delay_samples]
-                else:
-                    E_matrix[current_index, j, :, :, :] += form_factors_tilde[
-                        i, j] * E_matrix[current_index-1, i, dir_id, :, :]
-        E_matrix_total += E_matrix[current_index]
-    return E_matrix_total
+                if n_delay_samples >= n_samples:
+                    continue
+                n_shifted = n_samples - n_delay_samples
+                E_matrix[current_index, j, :, n_delay_samples:] += \
+                    np.expand_dims(form_factors_tilde[i, j], 1) * \
+                    E_matrix[previous_index, i, dir_id, :n_shifted]
+        E_total += E_matrix[current_index]
 
 
 def _collect_receiver_energy(
@@ -1537,7 +1577,8 @@ if numba is not None:
     _energy_exchange_init_energy = numba.njit(cache=True)(
         _energy_exchange_init_energy)
     _collect_receiver_energy = numba.njit(cache=True)(_collect_receiver_energy)
-    _energy_exchange = numba.njit(cache=True)(_energy_exchange)
+    _energy_exchange = numba.njit(parallel=True, cache=True)(_energy_exchange)
+    _energy_exchange_bin = numba.njit(cache=True)(_energy_exchange_bin)
     _form_factors_with_directivity_dim = numba.njit(parallel=True, cache=True)(
         _form_factors_with_directivity_dim)
     _form_factors_with_directivity = numba.njit(parallel=True, cache=True)(
