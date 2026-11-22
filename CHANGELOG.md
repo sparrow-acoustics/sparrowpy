@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- compile ``pt_solution`` and ``load_stokes_entries`` without ``parallel=True``, as they are only called from parallel loops; the nested parallel launch aborted the process with numba's default ``workqueue`` threading layer (e.g. on macOS arm64)
+- cache numba compilations on disk (``cache=True``), so only the first run pays the JIT compilation time
+
 ## 1.1.1 (2026-08-31)
 
 ### Fixed
