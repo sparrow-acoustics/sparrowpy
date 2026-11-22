@@ -4,7 +4,8 @@
 
 ### Changed
 
-- compute the energy exchange of ``DirectionalRadiosityFast`` for all frequency bins in parallel (#166)
+- compute the energy exchange of ``DirectionalRadiosityFast`` for all frequency bins in parallel
+- ``DirectionalRadiosityFast.bake_geometry`` uses a ``visibility_matrix`` passed to the constructor instead of computing it again
 
 ### Fixed
 

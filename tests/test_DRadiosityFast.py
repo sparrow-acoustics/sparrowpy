@@ -38,6 +38,56 @@ def test_check_visibility_wrapper(sample_walls):
     npt.assert_almost_equal(radiosity._visibility_matrix, visibility_matrix)
 
 
+def _radiosity_with_visibility(walls, patch_size, visibility_matrix):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
+    return sp.DirectionalRadiosityFast(
+        walls_points=radiosity._walls_points,
+        walls_normal=radiosity._walls_normal,
+        walls_up_vector=radiosity._walls_up_vector,
+        patches_points=radiosity._patches_points,
+        n_patches=radiosity.n_patches,
+        patch_to_wall_ids=radiosity._patch_to_wall_ids,
+        visibility_matrix=visibility_matrix,
+    )
+
+
+def test_bake_geometry_uses_given_visibility_matrix(
+        sample_walls, monkeypatch):
+    reference = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    reference.bake_geometry()
+
+    radiosity = _radiosity_with_visibility(
+        sample_walls, .5, reference.visibility_matrix)
+
+    def fail(*_args, **_kwargs):
+        raise AssertionError("visibility must not be computed again")
+    monkeypatch.setattr(sp.geometry, "_check_patch2patch_visibility", fail)
+    radiosity.bake_geometry()
+
+    npt.assert_array_equal(
+        radiosity.visibility_matrix, reference.visibility_matrix)
+    npt.assert_array_equal(
+        radiosity._visible_patches, reference._visible_patches)
+    npt.assert_array_equal(radiosity.form_factors, reference.form_factors)
+
+
+def test_given_visibility_matrix_uses_upper_triangle(sample_walls):
+    reference = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    reference.bake_geometry()
+    symmetric = reference.visibility_matrix | reference.visibility_matrix.T
+
+    radiosity = _radiosity_with_visibility(sample_walls, .5, symmetric)
+
+    npt.assert_array_equal(
+        radiosity.visibility_matrix, reference.visibility_matrix)
+
+
+def test_given_visibility_matrix_wrong_shape(sample_walls):
+    with pytest.raises(ValueError, match="visibility_matrix must be"):
+        _radiosity_with_visibility(
+            sample_walls, .5, np.ones((3, 3), dtype=bool))
+
+
 def test_compute_form_factors(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
     radiosity.bake_geometry()
