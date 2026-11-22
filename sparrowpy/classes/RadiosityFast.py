@@ -94,7 +94,10 @@ class DirectionalRadiosityFast():
         patch_to_wall_ids : np.ndarray
             maps each patch to a wall of shape (n_patches)
         visibility_matrix : np.ndarray, optional
-            patch to patch boolean visibility matrix, by default None.
+            patch to patch boolean visibility matrix of shape
+            (n_patches, n_patches), by default None. Only the upper
+            triangle (``i < j``) is used. If given, :py:meth:`bake_geometry`
+            uses it instead of computing the visibility itself.
         visible_patches : np.ndarray, optional
             list of all patches which are visible, by default None
         form_factors : np.ndarray, optional
@@ -149,7 +152,13 @@ class DirectionalRadiosityFast():
         if visible_patches is not None:
             visible_patches = np.array(visible_patches)
         if visibility_matrix is not None:
-            visibility_matrix = np.array(visibility_matrix)
+            visibility_matrix = np.array(visibility_matrix, dtype=bool)
+            if visibility_matrix.shape != (n_patches, n_patches):
+                raise ValueError(
+                    "visibility_matrix must be of shape (n_patches, "
+                    f"n_patches) = ({n_patches}, {n_patches}), but is "
+                    f"{visibility_matrix.shape}.")
+            visibility_matrix = np.triu(visibility_matrix, 1)
         if form_factors is not None:
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
@@ -370,22 +379,18 @@ class DirectionalRadiosityFast():
     def bake_geometry(self):
         """Bake the geometry by calculating all the form factors.
 
+        The visibility between the patches is only computed if it is not
+        known yet, i.e. if no ``visibility_matrix`` was passed when creating
+        the object and ``bake_geometry`` was not called before.
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry._check_patch2patch_visibility(
-            self.patches_center, self.patches_normal, self.patches_points)
+        if self._visibility_matrix is None:
+            self._visibility_matrix = geometry._check_patch2patch_visibility(
+                self.patches_center, self.patches_normal, self.patches_points)
 
-        n_combinations = np.sum(self.visibility_matrix)
-        visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
-        i_counter = 0
-        for i_source in range(self.n_patches):
-            for i_receiver in range(self.n_patches):
-                if not self.visibility_matrix[i_source, i_receiver]:
-                    continue
-                visible_patches[i_counter, 0] = i_source
-                visible_patches[i_counter, 1] = i_receiver
-                i_counter += 1
-        self._visible_patches = visible_patches
+        # index pairs (i, j) of all visible patches, in row-major order
+        self._visible_patches = np.argwhere(
+            self.visibility_matrix).astype(np.int32)
 
         self._form_factors = form_factor.patch2patch_ff_universal(
             self.patches_points, self.patches_normal,
