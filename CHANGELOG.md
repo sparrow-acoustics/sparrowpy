@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- compute the energy exchange of ``DirectionalRadiosityFast`` for all frequency bins in parallel
+
 ### Fixed
 
 - compile ``pt_solution`` and ``load_stokes_entries`` without ``parallel=True``, as they are only called from parallel loops; the nested parallel launch aborted the process with numba's default ``workqueue`` threading layer (e.g. on macOS arm64)
