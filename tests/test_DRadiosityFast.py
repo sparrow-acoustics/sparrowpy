@@ -593,7 +593,7 @@ def test_collect_receiver_mono_direct_sound_with_brdf(
 def test_set_wall_brdf_valid_input(sample_walls):
     """Test set_wall_brdf with valid inputs."""
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
     wall_indexes = [0, 1]
     brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
     incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
@@ -607,16 +607,41 @@ def test_set_wall_brdf_valid_input(sample_walls):
     assert radiosity._brdf_index[1] == 0
 
 
-def test_set_wall_brdf_invalid_wall_indexes(sample_walls):
+@pytest.mark.parametrize("brdf_shape", [
+    (3, 1),  # wrong number of outgoing directions
+    (2, 3, 1),  # wrong number of incoming directions
+    (3, 1, 3, 1),  # wrong number of channel dimensions
+    (9, 1),  # flattened BRDF
+])
+def test_set_wall_brdf_invalid_brdf_shape(sample_walls, brdf_shape):
+    """Test set_wall_brdf with BRDF data of the wrong cshape."""
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
 
-    wall_indexes = "invalid"
-    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones(brdf_shape), np.array([1000]))
     incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
     outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
 
-    with pytest.raises(AssertionError, match="Wall indexes must be a list"):
+    with pytest.raises(
+            AssertionError,
+            match=r"BRDF data must be of cshape .* \(3, 3\)"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_invalid_brdf_type(sample_walls):
+    """Test set_wall_brdf with BRDF data that is not FrequencyData."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = np.ones((3, 3, 1))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError, match="brdf must be of type pf.FrequencyData"):
         radiosity.set_wall_brdf(
             wall_indexes, brdf, incoming_directions, outgoing_directions)
 
@@ -624,7 +649,7 @@ def test_set_wall_brdf_invalid_wall_indexes(sample_walls):
 def test_set_wall_brdf_invalid_incoming_directions(sample_walls):
     """Test set_wall_brdf with invalid incoming_directions."""
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
 
     wall_indexes = [0, 1]
     brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
@@ -641,7 +666,7 @@ def test_set_wall_brdf_invalid_incoming_directions(sample_walls):
 def test_set_wall_brdf_invalid_outgoing_directions(sample_walls):
     """Test set_wall_brdf with invalid outgoing_directions."""
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
 
     wall_indexes = [0, 1]
     brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
@@ -658,7 +683,7 @@ def test_set_wall_brdf_invalid_outgoing_directions(sample_walls):
 def test_set_wall_brdf_negative_z_incoming(sample_walls):
     """Test set_wall_brdf with negative z-component in incoming_directions."""
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
 
     wall_indexes = [0, 1]
     brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
@@ -675,7 +700,7 @@ def test_set_wall_brdf_negative_z_incoming(sample_walls):
 def test_set_wall_brdf_negative_z_outgoing(sample_walls):
     """Test set_wall_brdf with negative z-component in outgoing_directions."""
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
-        sample_walls[:2], 0.2)
+        sample_walls, 0.2)
 
     wall_indexes = [0, 1]
     brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
