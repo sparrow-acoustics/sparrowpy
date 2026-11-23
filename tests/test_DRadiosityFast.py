@@ -481,7 +481,7 @@ def _cube_with_partition():
     radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
     radiosity.bake_geometry()
     radiosity.init_source_energy(pf.Coordinates(.25, .5, .5))
-    radiosity.calculate_energy_exchange(343, 0.0001, 0.01)
+    radiosity.calculate_energy_exchange(343, 0.001, 0.01)
     return radiosity
 
 
