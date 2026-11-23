@@ -440,7 +440,7 @@ class DirectionalRadiosityFast():
 
 
     def init_source_energy(
-            self, source):
+            self, source, source_visibility=None):
         """Initialize the source energy.
 
         Parameters
@@ -450,6 +450,10 @@ class DirectionalRadiosityFast():
             orientation and directivity for SoundSource object. If no
             directivity is given, the directivity is set to 1 for all
             frequencies.
+        source_visibility : np.ndarray, optional
+            boolean vector of shape (n_patches) which is True for all
+            patches visible from the source. By default None, then it is
+            computed.
 
         """
         if isinstance(source, pf.Coordinates):
@@ -485,11 +489,15 @@ class DirectionalRadiosityFast():
         brdf = np.array(self._brdf)
         brdf_index = self._brdf_index
         patches_center = self.patches_center
-        source_visibility = geometry._check_point2patch_visibility(
+        if source_visibility is None:
+            source_visibility = geometry._check_point2patch_visibility(
                                         eval_point=source_position,
                                         patches_center=patches_center,
                                         surf_points=self.walls_points,
                                         surf_normal=self.walls_normal)
+        else:
+            source_visibility = _check_visibility_shape(
+                source_visibility, (self.n_patches, ), "source_visibility")
         self._source_visibility = source_visibility
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
@@ -573,7 +581,8 @@ class DirectionalRadiosityFast():
         self._speed_of_sound = float(speed_of_sound)
         self._etc_duration = float(etc_duration)
 
-    def collect_energy_receiver_mono(self, receivers, direct_sound=False):
+    def collect_energy_receiver_mono(
+            self, receivers, direct_sound=False, receiver_visibility=None):
         """Collect the energy at the receivers.
 
         Parameters
@@ -584,6 +593,10 @@ class DirectionalRadiosityFast():
             If True, the direct sound is collected as well, by default False.
             The direct sound includes spreading loss, air attenuation and
             source directivity.
+        receiver_visibility : np.ndarray, optional
+            boolean matrix of shape (n_receivers, n_patches) which is True
+            for all patches visible from each receiver. By default None,
+            then it is computed.
 
         Returns
         -------
@@ -594,7 +607,8 @@ class DirectionalRadiosityFast():
         if not isinstance(direct_sound, bool):
             raise ValueError(
                 "direct_sound must be of type boolean")
-        etc = self.collect_energy_receiver_patchwise(receivers)
+        etc = self.collect_energy_receiver_patchwise(
+            receivers, receiver_visibility=receiver_visibility)
         etc.time = np.sum(etc.time, axis=1)
 
         if direct_sound:
@@ -663,7 +677,8 @@ class DirectionalRadiosityFast():
         return direct_sound, n_sample_delay
 
 
-    def collect_energy_receiver_patchwise(self, receivers):
+    def collect_energy_receiver_patchwise(
+            self, receivers, receiver_visibility=None):
         """Collect the energy for each patch at the receivers without summing
         up the patches.
 
@@ -671,6 +686,10 @@ class DirectionalRadiosityFast():
         ----------
         receivers : pf.Coordinates
             receiver Coordinates in of cshape (n_receivers).
+        receiver_visibility : np.ndarray, optional
+            boolean matrix of shape (n_receivers, n_patches) which is True
+            for all patches visible from each receiver. By default None,
+            then it is computed.
 
         Returns
         -------
@@ -684,8 +703,13 @@ class DirectionalRadiosityFast():
         if receivers.cdim != 1:
             raise ValueError(
                 "Receiver positions must be of shape (n_receivers, 3)")
+        if receiver_visibility is not None:
+            receiver_visibility = _check_visibility_shape(
+                receiver_visibility, (receivers.csize, self.n_patches),
+                "receiver_visibility")
         etc_data = self._collect_energy_patches(
-            receivers.cartesian, propagation_fx=True)
+            receivers.cartesian, propagation_fx=True,
+            receiver_visibility=receiver_visibility)
         times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
 
@@ -769,7 +793,7 @@ class DirectionalRadiosityFast():
 
     def _collect_energy_patches(
             self, receiver_pos,
-            propagation_fx=False):
+            propagation_fx=False, receiver_visibility=None):
         """Collect patch histograms as detected by receiver."""
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
@@ -790,16 +814,19 @@ class DirectionalRadiosityFast():
             n_receivers, n_patches, n_bins,
             self._energy_exchange_etc.shape[-1]))
 
-        receiver_visibility=np.empty((n_receivers,n_patches),dtype=bool)
+        if receiver_visibility is None:
+            receiver_visibility = np.empty(
+                (n_receivers, n_patches), dtype=bool)
+            for i in range(n_receivers):
+                receiver_visibility[i] = \
+                    geometry._check_point2patch_visibility(
+                        eval_point=receiver_pos[i],
+                        patches_center=patches_center,
+                        surf_points=self.walls_points,
+                        surf_normal=self.walls_normal)
 
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
-
-            receiver_visibility[i] = geometry._check_point2patch_visibility(
-                                        eval_point=receiver_pos[i],
-                                        patches_center=patches_center,
-                                        surf_points=self.walls_points,
-                                        surf_normal=self.walls_normal)
 
             # geometrical weighting
             patch_receiver_energy=form_factor._patch2receiver_energy_universal(
@@ -1050,6 +1077,15 @@ class DirectionalRadiosityFast():
     def speed_of_sound(self):
         """Return the speed of sound in m/s."""
         return self._speed_of_sound
+
+
+def _check_visibility_shape(visibility, shape, name):
+    """Return ``visibility`` as boolean array, check that it has ``shape``."""
+    visibility = np.asarray(visibility, dtype=bool)
+    if visibility.shape != shape:
+        raise ValueError(
+            f"{name} must be of shape {shape}, but is {visibility.shape}.")
+    return visibility
 
 
 def _rotate_coords_to_normal(
