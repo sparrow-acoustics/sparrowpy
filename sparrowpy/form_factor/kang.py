@@ -278,7 +278,9 @@ def _patch2receiver_energy_kang(
     return receiver_factor
 
 if numba is not None:
-    patch2patch_ff_kang = numba.njit(parallel=True)(patch2patch_ff_kang)
-    _source2patch_energy_kang = numba.njit(parallel=True)(
+    patch2patch_ff_kang = numba.njit(parallel=True, cache=True)(
+        patch2patch_ff_kang)
+    _source2patch_energy_kang = numba.njit(parallel=True, cache=True)(
         _source2patch_energy_kang)
-    _patch2receiver_energy_kang = numba.njit()(_patch2receiver_energy_kang)
+    _patch2receiver_energy_kang = numba.njit(cache=True)(
+        _patch2receiver_energy_kang)

@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.1.2 (2026-11-23)
+
+### Added
+
+- CI: allow manual trigger of the tests on GitHub Actions (#164)
+- CI: run the tests on ``main`` and ``develop`` once a week (#164)
+- DOC: note in the README and on the documentation landing page that sparrowpy is part of [CHORAS](https://github.com/choras-org/CHORAS), including the limitations of the integration (#171)
+
+### Changed
+
+- compute the energy exchange of ``DirectionalRadiosityFast`` for all frequency bins in parallel (#166)
+- ``DirectionalRadiosityFast.bake_geometry`` uses a ``visibility_matrix`` passed to the constructor instead of computing it again (#167)
+- ``DirectionalRadiosityFast.init_source_energy`` accepts a ``source_visibility`` and ``collect_energy_receiver_mono`` / ``collect_energy_receiver_patchwise`` accept a ``receiver_visibility``, so the point to patch visibility can be computed outside of sparrowpy (#167)
+
+### Fixed
+
+- ``DirectionalRadiosityFast.set_wall_brdf`` checks the input types and that the BRDF cshape can be broadcast to ``(n_incoming_directions, n_outgoing_directions)``; before, broadcastable BRDFs like ``(1, 1)`` were not broadcast and silently gave wrong results; the default BRDF set in ``init_source_energy`` had the wrong cshape (#85)
+- DOC: adapted the documentation to sphinx-design 0.8.0 (#172)
+- compile ``pt_solution`` and ``load_stokes_entries`` without ``parallel=True``, as they are only called from parallel loops; the nested parallel launch aborted the process with numba's default ``workqueue`` threading layer (e.g. on macOS arm64) (#165)
+- cache numba compilations on disk (``cache=True``), so only the first run pays the JIT compilation time (#165)
+- ``DirectionalRadiosityFast.calculate_direct_sound`` does not add the direct sound if source and receiver do not see each other; the visibility is checked separately for each source-receiver pair (#170)
+- ``_point_in_polygon`` counted a polygon vertex lying exactly on its test line once per adjacent side, so points level with a vertex could be reported inside; this made ``_check_patch2patch_visibility`` report visible patch pairs as blocked (#168)
+
+## 1.1.1 (2026-08-31)
+
+### Fixed
+
+- fix missing early energy in impulse response synthesis (#163)
+- force complex brdfs to real to prevent numba errors (#162)
+
 ## 1.1.0 (2026-08-25)
 
 ### Added
@@ -10,7 +40,7 @@
 
 ## 1.0.2 (2026-08-25)
 
-### Fixes
+### Fixed
 
 - changed default python version to 3.13, as blender did (#160)
 - adapted to new pyfar version (#160)

@@ -81,6 +81,25 @@ def test_dirac_sequence_dirac(
     assert np.sum(np.abs(sequence.time[..., :n_start])) == 0
 
 
+@pytest.mark.parametrize("t_start", [0, 0.01])
+@pytest.mark.parametrize("n_samples", [44100])
+@pytest.mark.parametrize("sampling_rate", [44100])
+def test_dirac_sequence_dirac_t_start(
+        t_start, n_samples, sampling_rate):
+    reflection_density = pf.TimeData(
+        np.zeros(n_samples)+5000,
+        pf.Signal(np.zeros(n_samples), sampling_rate).times,
+    )
+    sequence = sp.dsp.dirac_sequence(
+        reflection_density, n_samples=n_samples, t_start=t_start,
+        sampling_rate=sampling_rate,
+        )
+    i_start = sequence.find_nearest_time(t_start)
+    if i_start > 0:
+        assert np.sum(np.abs(sequence.time[..., :i_start])) == 0
+    assert np.sum(np.abs(sequence.time[..., i_start:i_start+50])) > 0
+
+
 @pytest.mark.parametrize("n_samples", [22050, 44100])
 @pytest.mark.parametrize("sampling_rate", [44100, 48000])
 def test_dirac_sequence_constant_reflection_density(

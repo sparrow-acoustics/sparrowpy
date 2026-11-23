@@ -38,6 +38,146 @@ def test_check_visibility_wrapper(sample_walls):
     npt.assert_almost_equal(radiosity._visibility_matrix, visibility_matrix)
 
 
+def _radiosity_with_visibility(walls, patch_size, visibility_matrix):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, patch_size)
+    return sp.DirectionalRadiosityFast(
+        walls_points=radiosity._walls_points,
+        walls_normal=radiosity._walls_normal,
+        walls_up_vector=radiosity._walls_up_vector,
+        patches_points=radiosity._patches_points,
+        n_patches=radiosity.n_patches,
+        patch_to_wall_ids=radiosity._patch_to_wall_ids,
+        visibility_matrix=visibility_matrix,
+    )
+
+
+def test_bake_geometry_uses_given_visibility_matrix(
+        sample_walls, monkeypatch):
+    reference = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    reference.bake_geometry()
+
+    radiosity = _radiosity_with_visibility(
+        sample_walls, .5, reference.visibility_matrix)
+
+    def fail(*_args, **_kwargs):
+        raise AssertionError("visibility must not be computed again")
+    monkeypatch.setattr(sp.geometry, "_check_patch2patch_visibility", fail)
+    radiosity.bake_geometry()
+
+    npt.assert_array_equal(
+        radiosity.visibility_matrix, reference.visibility_matrix)
+    npt.assert_array_equal(
+        radiosity._visible_patches, reference._visible_patches)
+    npt.assert_array_equal(radiosity.form_factors, reference.form_factors)
+
+
+def test_given_visibility_matrix_uses_upper_triangle(sample_walls):
+    reference = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    reference.bake_geometry()
+    symmetric = reference.visibility_matrix | reference.visibility_matrix.T
+
+    radiosity = _radiosity_with_visibility(sample_walls, .5, symmetric)
+
+    npt.assert_array_equal(
+        radiosity.visibility_matrix, reference.visibility_matrix)
+
+
+def test_given_visibility_matrix_wrong_shape(sample_walls):
+    with pytest.raises(ValueError, match="visibility_matrix must be"):
+        _radiosity_with_visibility(
+            sample_walls, .5, np.ones((3, 3), dtype=bool))
+
+
+_SOURCE = pf.Coordinates(.3, .4, .6)
+_RECEIVERS = pf.Coordinates([.6, .2], [.5, .7], [.4, .3])
+
+
+def _fail(*_args, **_kwargs):
+    raise AssertionError("visibility must not be computed again")
+
+
+def test_init_source_energy_uses_given_source_visibility(
+        sample_walls, monkeypatch):
+    reference = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    reference.init_source_energy(_SOURCE)
+
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    monkeypatch.setattr(sp.geometry, "_check_point2patch_visibility", _fail)
+    radiosity.init_source_energy(
+        _SOURCE, source_visibility=reference._source_visibility)
+
+    npt.assert_array_equal(
+        radiosity._energy_init_source, reference._energy_init_source)
+
+
+def test_init_source_energy_hidden_patches_get_no_energy(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    source_visibility = np.ones(radiosity.n_patches, dtype=bool)
+    source_visibility[:4] = False
+    radiosity.init_source_energy(
+        _SOURCE, source_visibility=source_visibility)
+
+    assert np.all(radiosity._energy_init_source[:4] == 0)
+    assert np.all(radiosity._energy_init_source[4:] > 0)
+
+
+def test_init_source_energy_source_visibility_wrong_shape(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    with pytest.raises(ValueError, match="source_visibility must be"):
+        radiosity.init_source_energy(
+            _SOURCE, source_visibility=np.ones(3, dtype=bool))
+
+
+def _simulated_room(walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, .5)
+    radiosity.bake_geometry()
+    radiosity.init_source_energy(_SOURCE)
+    radiosity.calculate_energy_exchange(343, 0.001, .02)
+    return radiosity
+
+
+def test_collect_energy_receiver_uses_given_receiver_visibility(
+        sample_walls, monkeypatch):
+    radiosity = _simulated_room(sample_walls)
+    expected = radiosity.collect_energy_receiver_mono(_RECEIVERS, True)
+    expected_patchwise = radiosity.collect_energy_receiver_patchwise(
+        _RECEIVERS)
+    receiver_visibility = np.array([
+        sp.geometry._check_point2patch_visibility(
+            receiver, radiosity.patches_center, radiosity.walls_normal,
+            radiosity.walls_points)
+        for receiver in _RECEIVERS.cartesian])
+
+    monkeypatch.setattr(sp.geometry, "_check_point2patch_visibility", _fail)
+    actual = radiosity.collect_energy_receiver_mono(
+        _RECEIVERS, True, receiver_visibility=receiver_visibility)
+    npt.assert_array_equal(actual.time, expected.time)
+
+    actual = radiosity.collect_energy_receiver_patchwise(
+        _RECEIVERS, receiver_visibility=receiver_visibility)
+    npt.assert_array_equal(actual.time, expected_patchwise.time)
+
+
+def test_collect_energy_receiver_hidden_patches_add_no_energy(sample_walls):
+    radiosity = _simulated_room(sample_walls)
+    receiver_visibility = np.ones(
+        (_RECEIVERS.csize, radiosity.n_patches), dtype=bool)
+    receiver_visibility[1, :4] = False
+    etc = radiosity.collect_energy_receiver_patchwise(
+        _RECEIVERS, receiver_visibility=receiver_visibility)
+
+    assert np.all(etc.time[1, :4] == 0)
+    assert np.any(etc.time[0, :4] > 0)
+
+
+def test_collect_energy_receiver_visibility_wrong_shape(sample_walls):
+    radiosity = _simulated_room(sample_walls)
+    with pytest.raises(ValueError, match="receiver_visibility must be"):
+        radiosity.collect_energy_receiver_mono(
+            _RECEIVERS, receiver_visibility=np.ones(
+                (1, radiosity.n_patches), dtype=bool))
+
+
 def test_compute_form_factors(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
     radiosity.bake_geometry()
@@ -332,6 +472,53 @@ def test_collect_receiver_direct_sound(sample_walls):
     npt.assert_almost_equal(delay_samples[0], delay_samples[1])
 
 
+def _cube_with_partition():
+    """Return a unit cube divided by a wall at x=0.5 into two halves."""
+    walls = sp.testing.shoebox_room_stub(1, 1, 1)
+    walls.append(sp.geometry.Polygon(
+        [[.5, 0, 0], [.5, 1, 0], [.5, 1, 1], [.5, 0, 1]],
+        [0, 0, 1], [1, 0, 0]))
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
+    radiosity.bake_geometry()
+    radiosity.init_source_energy(pf.Coordinates(.25, .5, .5))
+    radiosity.calculate_energy_exchange(343, 0.001, 0.01)
+    return radiosity
+
+
+def test_direct_sound_blocked_by_wall():
+    radiosity = _cube_with_partition()
+    # behind the partition, and in the same half as the source
+    receivers = pf.Coordinates([.75, .25], [.5, .2], [.5, .7])
+    direct_sound, _ = radiosity.calculate_direct_sound(receivers)
+
+    npt.assert_array_equal(direct_sound[0], 0)
+    assert np.all(direct_sound[1] > 0)
+
+
+def test_direct_sound_source_and_receivers_on_walls(sample_walls):
+    """Points on a wall are not hidden by the walls they lie on.
+
+    E.g. a source in a corner of the room.
+    """
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 1)
+    radiosity.init_source_energy(pf.Coordinates(0, 0, 0))
+    radiosity.calculate_energy_exchange(343, 0.1, 1)
+    receivers = pf.Coordinates([.5, .5, 1], [0, .5, 1], [0, .5, 1])
+    direct_sound, _ = radiosity.calculate_direct_sound(receivers)
+
+    r = np.linalg.norm(receivers.cartesian, axis=1)
+    npt.assert_allclose(direct_sound[:, 0], 1 / (4 * np.pi * r**2))
+
+
+def test_collect_receiver_mono_no_direct_sound_behind_wall():
+    radiosity = _cube_with_partition()
+    receivers = pf.Coordinates(.75, .5, .5)
+    with_direct = radiosity.collect_energy_receiver_mono(receivers, True)
+    without_direct = radiosity.collect_energy_receiver_mono(receivers)
+
+    npt.assert_array_equal(with_direct.time, without_direct.time)
+
+
 def test_collect_receiver_mono_direct_sound(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
         sample_walls, 1)
@@ -401,3 +588,162 @@ def test_collect_receiver_mono_direct_sound_with_brdf(
     npt.assert_almost_equal(
         etc.time[
             np.arange(len(delay_samples)), : , delay_samples], direct_sound)
+
+
+def test_set_wall_brdf_valid_input(sample_walls):
+    """Test set_wall_brdf with valid inputs."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    radiosity.set_wall_brdf(
+        wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+    assert len(radiosity._brdf) == 1
+    assert radiosity._brdf_index[0] == 0
+    assert radiosity._brdf_index[1] == 0
+
+
+@pytest.mark.parametrize("brdf_shape", [
+    (2, 1),  # wrong number of outgoing directions
+    (2, 3, 1),  # wrong number of incoming directions
+    (3, 1, 3, 1),  # too many channel dimensions
+    (9, 1),  # flattened BRDF
+])
+def test_set_wall_brdf_invalid_brdf_shape(sample_walls, brdf_shape):
+    """Test set_wall_brdf with BRDF data of the wrong cshape."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones(brdf_shape), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match=r"BRDF data must be of cshape .* \(3, 3\) or broadcast"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+@pytest.mark.parametrize("brdf_cshape", [
+    (1, 1), (3, 1), (1, 3), (3,), (1,), ()])
+def test_set_wall_brdf_broadcast(sample_walls, brdf_cshape):
+    """Test BRDFs broadcastable to (n_incoming, n_outgoing).
+
+    They must give the same result as the full BRDF.
+    """
+    directions = pf.Coordinates(
+        [0, 0, 1], [0, 1, 0], [1, 0, 0], weights=[1, 1, 1])
+    frequencies = np.array([500, 1000])
+    # BRDF values vary over frequency to make sure the frequency axis is
+    # not broadcast against the directions
+    brdf_values = np.array([.1, .2])
+
+    results = []
+    for cshape in [(3, 3), brdf_cshape]:
+        radiosity = sp.DirectionalRadiosityFast.from_polygon(
+            sample_walls, 0.5)
+        brdf = pf.FrequencyData(
+            np.ones(cshape + (2, )) * brdf_values, frequencies)
+        radiosity.set_wall_brdf(
+            np.arange(len(sample_walls)), brdf, directions, directions)
+        assert radiosity._brdf[0].shape == (3, 3, 2)
+        radiosity.set_air_attenuation(
+            pf.FrequencyData(np.zeros(2), frequencies))
+        radiosity.bake_geometry()
+        radiosity.init_source_energy(pf.Coordinates(.5, .5, .5))
+        radiosity.calculate_energy_exchange(343, 1/1000, 1, 2)
+        results.append(radiosity.collect_energy_receiver_mono(
+            pf.Coordinates(.3, .3, .3)).time)
+
+    assert np.sum(results[0]) > 0
+    npt.assert_array_equal(results[1], results[0])
+
+
+def test_set_wall_brdf_invalid_brdf_type(sample_walls):
+    """Test set_wall_brdf with BRDF data that is not FrequencyData."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = np.ones((3, 3, 1))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError, match="brdf must be of type pf.FrequencyData"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_invalid_incoming_directions(sample_walls):
+    """Test set_wall_brdf with invalid incoming_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = "invalid"
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Incoming directions must be of type pf.Coordinates"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_invalid_outgoing_directions(sample_walls):
+    """Test set_wall_brdf with invalid outgoing_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = "invalid"
+
+    with pytest.raises(
+            AssertionError,
+            match="Outgoing directions must be of type pf.Coordinates"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_negative_z_incoming(sample_walls):
+    """Test set_wall_brdf with negative z-component in incoming_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, -1], [0, 1, 0], [-1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Sources must be in the positive half space"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+def test_set_wall_brdf_negative_z_outgoing(sample_walls):
+    """Test set_wall_brdf with negative z-component in outgoing_directions."""
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(
+        sample_walls, 0.2)
+
+    wall_indexes = [0, 1]
+    brdf = pf.FrequencyData(np.ones((3, 3, 1)), np.array([1000]))
+    incoming_directions = pf.Coordinates([0, 0, 1], [0, 1, 0], [1, 0, 0])
+    outgoing_directions = pf.Coordinates([0, 0, -1], [0, 1, 0], [-1, 0, 0])
+
+    with pytest.raises(
+            AssertionError,
+            match="Receivers must be in the positive half space"):
+        radiosity.set_wall_brdf(
+            wall_indexes, brdf, incoming_directions, outgoing_directions)
