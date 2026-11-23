@@ -5,12 +5,21 @@ on:
     branches:
       - main
       - develop
+  workflow_call:
+    inputs:
+      ref:
+        description: "Branch to test (defaults to the triggering ref)"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   pytest_blender:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: ./.github/actions/pytest
         with:
           blender: true
@@ -20,6 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: ./.github/actions/test_examples
 
   linting:
@@ -27,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: ./.github/actions/linting
 
   build_docs:
@@ -34,6 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: ./.github/actions/build_docs
 
   pytest_no_blender:
@@ -45,6 +60,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: ./.github/actions/pytest
         with:
           python-version: ${{ matrix.python-version }}
