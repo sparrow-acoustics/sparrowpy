@@ -123,3 +123,37 @@ def test_io_within_simulation(tmpdir):
 
     radiosity.collect_energy_receiver_mono(pf.Coordinates(.1, .5, .5))
     radiosity_read.collect_energy_receiver_mono(pf.Coordinates(.1, .5, .5))
+
+
+def test_complex_brdf_is_baked_like_real_brdf():
+    """Complex valued BRDFs are used with their real part (#137).
+
+    numba cannot cast complex BRDF data into the real valued form factor
+    arrays, so ``bake_geometry`` failed for complex BRDFs.
+    """
+    walls = sp.testing.shoebox_room_stub(1, 1, 1)
+    directions = pf.Coordinates(0, 0, 1, weights=1)
+    frequencies = np.array([500, 1000])
+    brdf_real = sp.brdf.create_from_scattering(
+        directions, directions,
+        pf.FrequencyData([1, 1], frequencies),
+        pf.FrequencyData([.1, .2], frequencies))
+    brdf_complex = pf.FrequencyData(
+        brdf_real.freq + 0j, frequencies)
+    assert np.iscomplexobj(brdf_complex.freq)
+
+    results = []
+    for brdf in [brdf_real, brdf_complex]:
+        radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, .5)
+        radiosity.set_wall_brdf(
+            np.arange(len(walls)), brdf, directions, directions)
+        radiosity.set_air_attenuation(
+            pf.FrequencyData(np.zeros(frequencies.size), frequencies))
+        radiosity.bake_geometry()
+        radiosity.init_source_energy(pf.Coordinates(.5, .5, .5))
+        radiosity.calculate_energy_exchange(343, 1/1000, 1, 2)
+        results.append(radiosity.collect_energy_receiver_mono(
+            pf.Coordinates(.3, .3, .3)))
+
+    assert not np.iscomplexobj(results[1].time)
+    npt.assert_array_equal(results[1].time, results[0].time)
