@@ -4,6 +4,8 @@
 
 ### Added
 
+- CI: allow manual trigger of the tests on GitHub Actions (#164)
+- CI: run the tests on ``main`` and ``develop`` once a week (#164)
 - DOC: note in the README and on the documentation landing page that sparrowpy is part of [CHORAS](https://github.com/choras-org/CHORAS), including the limitations of the integration (#171)
 
 ### Changed
