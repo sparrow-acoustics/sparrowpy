@@ -851,6 +851,8 @@ def _init_energy_exchange(
 def _add_delay(ir, delay_samples, axis=-1):
     """Add delay to impulse response.
 
+    Energy shifted beyond the end of the impulse response is discarded.
+
     Parameters
     ----------
     ir : np.ndarray
@@ -858,7 +860,7 @@ def _add_delay(ir, delay_samples, axis=-1):
     delay_samples : int
         delay samples.
     axis : int, optional
-        axis which should be rolled, by default -1
+        axis along which the impulse response is shifted, by default -1
 
     Returns
     -------
@@ -866,12 +868,16 @@ def _add_delay(ir, delay_samples, axis=-1):
         shifted impulse response.
 
     """
-    ## add delay
-    if delay_samples > ir.shape[axis]:
-        raise ValueError(
-            'length of ir is longer then ir delay is '
-            f'{delay_samples} > {ir.shape[-1]}')
-    ir_delayed = np.roll(ir, delay_samples, axis=axis)
+    ir = np.asarray(ir)
+    ir_delayed = np.zeros_like(ir)
+    n_samples = ir.shape[axis]
+    if delay_samples >= n_samples:
+        return ir_delayed
+    src = [slice(None)] * ir.ndim
+    dst = [slice(None)] * ir.ndim
+    src[axis] = slice(0, n_samples - delay_samples)
+    dst[axis] = slice(delay_samples, None)
+    ir_delayed[tuple(dst)] = ir[tuple(src)]
     return ir_delayed
 
 
@@ -1041,7 +1047,8 @@ class RadiosityKang():
             r = np.sqrt(np.sum((receiver.position-self.source.position)**2))
             direct_sound = (1/(4 * np.pi * np.square(r))) * np.exp(-M_value*r)
             delay_dir = int(r/self.speed_of_sound*self.sampling_rate)
-            ir[:, delay_dir] += direct_sound
+            if delay_dir < ir.shape[-1]:
+                ir[:, delay_dir] += direct_sound
 
         return ir
 
@@ -1197,6 +1204,7 @@ class DirectionalRadiosityKang():
         r = np.sqrt(np.sum((receiver.position-self.source.position)**2))
         direct_sound = (1/(4 * np.pi * np.square(r))) * np.exp(-M*r)
         delay_dir = int(r/self.speed_of_sound*self.sampling_rate)
-        ir[:, delay_dir] += direct_sound
+        if delay_dir < ir.shape[-1]:
+            ir[:, delay_dir] += direct_sound
 
         return ir
