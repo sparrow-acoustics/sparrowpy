@@ -7,10 +7,10 @@
 - compute the energy exchange of ``DirectionalRadiosityFast`` for all frequency bins in parallel (#166)
 - ``DirectionalRadiosityFast.bake_geometry`` uses a ``visibility_matrix`` passed to the constructor instead of computing it again (#167)
 - ``DirectionalRadiosityFast.init_source_energy`` accepts a ``source_visibility`` and ``collect_energy_receiver_mono`` / ``collect_energy_receiver_patchwise`` accept a ``receiver_visibility``, so the point to patch visibility can be computed outside of sparrowpy (#167)
-- DOC: the cards on the documentation landing page show their titles in the card header; building the documentation requires sphinx-design >= 0.8.0 (#172)
 
 ### Fixed
 
+- DOC: adapted the documentation to sphinx-design 0.8.0 (#172)
 - compile ``pt_solution`` and ``load_stokes_entries`` without ``parallel=True``, as they are only called from parallel loops; the nested parallel launch aborted the process with numba's default ``workqueue`` threading layer (e.g. on macOS arm64) (#165)
 - cache numba compilations on disk (``cache=True``), so only the first run pays the JIT compilation time (#165)
 - ``_point_in_polygon`` counted a polygon vertex lying exactly on its test line once per adjacent side, so points level with a vertex could be reported inside; this made ``_check_patch2patch_visibility`` report visible patch pairs as blocked (#168)
