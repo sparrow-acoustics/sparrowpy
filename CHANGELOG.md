@@ -6,6 +6,7 @@
 
 - compute the energy exchange of ``DirectionalRadiosityFast`` for all frequency bins in parallel
 - ``DirectionalRadiosityFast.bake_geometry`` uses a ``visibility_matrix`` passed to the constructor instead of computing it again (#167)
+- ``DirectionalRadiosityFast.init_source_energy`` accepts a ``source_visibility`` and ``collect_energy_receiver_mono`` / ``collect_energy_receiver_patchwise`` accept a ``receiver_visibility``, so the point to patch visibility can be computed outside of sparrowpy (#167)
 
 ### Fixed
 

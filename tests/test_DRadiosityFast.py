@@ -88,6 +88,96 @@ def test_given_visibility_matrix_wrong_shape(sample_walls):
             sample_walls, .5, np.ones((3, 3), dtype=bool))
 
 
+_SOURCE = pf.Coordinates(.3, .4, .6)
+_RECEIVERS = pf.Coordinates([.6, .2], [.5, .7], [.4, .3])
+
+
+def _fail(*_args, **_kwargs):
+    raise AssertionError("visibility must not be computed again")
+
+
+def test_init_source_energy_uses_given_source_visibility(
+        sample_walls, monkeypatch):
+    reference = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    reference.init_source_energy(_SOURCE)
+
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    monkeypatch.setattr(sp.geometry, "_check_point2patch_visibility", _fail)
+    radiosity.init_source_energy(
+        _SOURCE, source_visibility=reference._source_visibility)
+
+    npt.assert_array_equal(
+        radiosity._energy_init_source, reference._energy_init_source)
+
+
+def test_init_source_energy_hidden_patches_get_no_energy(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    source_visibility = np.ones(radiosity.n_patches, dtype=bool)
+    source_visibility[:4] = False
+    radiosity.init_source_energy(
+        _SOURCE, source_visibility=source_visibility)
+
+    assert np.all(radiosity._energy_init_source[:4] == 0)
+    assert np.all(radiosity._energy_init_source[4:] > 0)
+
+
+def test_init_source_energy_source_visibility_wrong_shape(sample_walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
+    with pytest.raises(ValueError, match="source_visibility must be"):
+        radiosity.init_source_energy(
+            _SOURCE, source_visibility=np.ones(3, dtype=bool))
+
+
+def _simulated_room(walls):
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, .5)
+    radiosity.bake_geometry()
+    radiosity.init_source_energy(_SOURCE)
+    radiosity.calculate_energy_exchange(343, 0.001, .02)
+    return radiosity
+
+
+def test_collect_energy_receiver_uses_given_receiver_visibility(
+        sample_walls, monkeypatch):
+    radiosity = _simulated_room(sample_walls)
+    expected = radiosity.collect_energy_receiver_mono(_RECEIVERS, True)
+    expected_patchwise = radiosity.collect_energy_receiver_patchwise(
+        _RECEIVERS)
+    receiver_visibility = np.array([
+        sp.geometry._check_point2patch_visibility(
+            receiver, radiosity.patches_center, radiosity.walls_normal,
+            radiosity.walls_points)
+        for receiver in _RECEIVERS.cartesian])
+
+    monkeypatch.setattr(sp.geometry, "_check_point2patch_visibility", _fail)
+    actual = radiosity.collect_energy_receiver_mono(
+        _RECEIVERS, True, receiver_visibility=receiver_visibility)
+    npt.assert_array_equal(actual.time, expected.time)
+
+    actual = radiosity.collect_energy_receiver_patchwise(
+        _RECEIVERS, receiver_visibility=receiver_visibility)
+    npt.assert_array_equal(actual.time, expected_patchwise.time)
+
+
+def test_collect_energy_receiver_hidden_patches_add_no_energy(sample_walls):
+    radiosity = _simulated_room(sample_walls)
+    receiver_visibility = np.ones(
+        (_RECEIVERS.csize, radiosity.n_patches), dtype=bool)
+    receiver_visibility[1, :4] = False
+    etc = radiosity.collect_energy_receiver_patchwise(
+        _RECEIVERS, receiver_visibility=receiver_visibility)
+
+    assert np.all(etc.time[1, :4] == 0)
+    assert np.any(etc.time[0, :4] > 0)
+
+
+def test_collect_energy_receiver_visibility_wrong_shape(sample_walls):
+    radiosity = _simulated_room(sample_walls)
+    with pytest.raises(ValueError, match="receiver_visibility must be"):
+        radiosity.collect_energy_receiver_mono(
+            _RECEIVERS, receiver_visibility=np.ones(
+                (1, radiosity.n_patches), dtype=bool))
+
+
 def test_compute_form_factors(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, .5)
     radiosity.bake_geometry()
