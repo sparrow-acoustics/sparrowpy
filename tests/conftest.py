@@ -6,7 +6,35 @@ import pytest
 
 
 @pytest.fixture
-def brdf_s_0(tmp_path_factory):
+def sampling_gaussian():
+    """Returns a simple gaussian hemispherical sampling of order 1.
+
+    Returns
+    -------
+    pf.Coordinates
+        Sampling, including weights.
+    """
+    def gaussian(n_max):
+        n_phi = (n_max+1)*2
+        legendre, weights = np.polynomial.legendre.leggauss(n_max+1)
+        theta_angles = np.arccos(legendre)
+
+        phi_angles = np.linspace(0, 2 * np.pi - (2 * np.pi / n_phi), n_phi)
+        theta, phi = np.meshgrid(theta_angles, phi_angles)
+        weights = np.tile(weights*np.pi/(n_max+1), 2*(n_max+1))
+
+        sampling = pf.Coordinates.from_spherical_colatitude(
+            phi.reshape(-1), theta.reshape(-1), 1,
+            weights=weights)
+
+        sampling = sampling[sampling.z > 0]
+        return sampling
+
+    return gaussian
+
+
+@pytest.fixture
+def brdf_s_0(tmp_path_factory, sampling_gaussian):
     """Temporary small SOFA file.
 
     To be used when data needs to be read from a SOFA file for testing.
@@ -20,15 +48,15 @@ def brdf_s_0(tmp_path_factory):
 
     """
     filename = tmp_path_factory.mktemp("data") / "brdf_tmp.sofa"
-    coords = pf.samplings.sph_gaussian(sh_order=1)
-    coords = coords[coords.z > 0]
     sp.brdf.create_from_scattering(
-        coords, coords, pf.FrequencyData(0, [100]), file_path=filename)
+        sampling_gaussian(1), sampling_gaussian(1),
+        pf.FrequencyData(0, [100]),
+        file_path=filename)
     return filename
 
 
 @pytest.fixture
-def brdf_s_1(tmp_path_factory):
+def brdf_s_1(tmp_path_factory, sampling_gaussian):
     """Temporary small SOFA file.
 
     To be used when data needs to be read from a SOFA file for testing.
@@ -42,10 +70,9 @@ def brdf_s_1(tmp_path_factory):
 
     """
     filename = tmp_path_factory.mktemp("data") / "brdf_tmp.sofa"
-    coords = pf.samplings.sph_gaussian(sh_order=1)
-    coords = coords[coords.z > 0]
     sp.brdf.create_from_scattering(
-        coords, coords, pf.FrequencyData(1, [100]), file_path=filename)
+        sampling_gaussian(1), sampling_gaussian(1),
+        pf.FrequencyData(1, [100]), file_path=filename)
     return filename
 
 
@@ -56,12 +83,10 @@ def sample_walls():
 
 
 @pytest.fixture
-def sofa_data_diffuse():
+def sofa_data_diffuse(sampling_gaussian):
     """Return a diffuse brdf set for five octave bands."""
-    gaussian = pf.samplings.sph_gaussian(sh_order=1)
-    gaussian = gaussian[gaussian.z>0]
-    sources = gaussian.copy()
-    receivers = gaussian.copy()
+    sources = sampling_gaussian(1)
+    receivers = sampling_gaussian(1)
     frequencies = np.array([125, 250, 500, 1000])
     brdf = sp.brdf.create_from_scattering(
         sources, receivers,
@@ -70,12 +95,10 @@ def sofa_data_diffuse():
 
 
 @pytest.fixture
-def sofa_data_diffuse_full_third_octave():
+def sofa_data_diffuse_full_third_octave(sampling_gaussian):
     """Return a diffuse brdf set for the full third octave band."""
-    gaussian = pf.samplings.sph_gaussian(sh_order=1)
-    gaussian = gaussian[gaussian.z>0]
-    sources = gaussian.copy()
-    receivers = gaussian.copy()
+    sources = sampling_gaussian(1)
+    receivers = sampling_gaussian(1)
     frequencies = np.array(
         [20.0, 25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0,
          250.0, 315.0, 400.0, 500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0,

@@ -9,6 +9,8 @@
 [![Documentation Status](https://readthedocs.org/projects/sparrowpy/badge/?version=latest)](https://sparrowpy.readthedocs.io/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sparrow-acoustics/sparrowpy/main?urlpath=%2Fdoc%2Ftree%2Fexamples%2Ffast_radiosity.ipynb)
 ![testing](https://github.com/sparrow-acoustics/sparrowpy/actions/workflows/pytest_pr.yml/badge.svg)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17130452.svg)](https://doi.org/10.5281/zenodo.17130452)
+
 
 Sound Propagation with Acoustic Radiosity for Realistic Outdoor Worlds.
 
@@ -24,7 +26,7 @@ Use pip to install sparrowpy
 
 (Requires Python >= 3.10)
 
-if numba is installed the code will be precompiled and will run faster. We strongly recommend to use numba to accelerate the simulations significantly
+if numba is installed the code will be jit-compiled and will run faster. We strongly recommend to use numba to accelerate the simulations significantly
 
     pip install sparrowpy numba
 
@@ -33,6 +35,13 @@ Geometry import via blender or STL files will be supported in a future release, 
     pip install bpy
 
 by default these packages are not installed
+
+## Use in CHORAS
+
+sparrowpy is part of [CHORAS](https://github.com/choras-org/CHORAS), so you can also run sparrowpy simulations there. Note the following limitations of the CHORAS integration:
+
+- Only Lambertian (diffuse) scattering is assumed, i.e., the scattering coefficient is always 1.
+- Only room acoustics simulations are supported; urban environments cannot be simulated in CHORAS.
 
 ## Contributing
 

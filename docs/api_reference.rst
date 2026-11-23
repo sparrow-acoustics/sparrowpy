@@ -28,6 +28,7 @@ Modules
    modules/sparrowpy.geometry
    modules/sparrowpy.sound_object
    modules/sparrowpy.brdf
+   modules/sparrowpy.dsp
 
 
 .. _examples: https://github.com/sparrow-acoustics/sparrowpy/tree/main/examples

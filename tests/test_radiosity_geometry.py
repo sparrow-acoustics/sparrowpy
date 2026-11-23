@@ -4,6 +4,7 @@ Geometry and wall directivity functionality in the radiosity package.
 """
 import numpy as np
 import numpy.testing as npt
+import pytest
 import sparrowpy.geometry as geo
 from sparrowpy.sound_object import Receiver, SoundSource
 
@@ -136,3 +137,31 @@ def test_polygon_from_dict():
     np.testing.assert_array_equal(polygon.pts, points)
     np.testing.assert_array_equal(polygon.up_vector, up_vector)
     np.testing.assert_array_equal(polygon._normal, normal)
+
+
+@pytest.mark.parametrize(("point", "expected"), [
+    ([.5, .5, 2], False),   # behind the square, path crosses it
+    ([3., .5, 2], True),    # behind the plane, crossing outside the square
+    ([.5, .5, .5], True),   # same side as the evaluation point
+    ([.5, .5, 1], True),    # on the square
+    ([2., .5, 1], True),    # in the plane, outside the square
+])
+def test_check_point2point_visibility(point, expected):
+    # unit square in the plane z=1
+    surf_points = np.array([[[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]],
+                           dtype=float)
+    surf_normal = np.array([[0, 0, -1]], dtype=float)
+    visible = geo._check_point2point_visibility(
+        np.array([.5, .5, 0.]), np.array([point], dtype=float),
+        surf_normal, surf_points)
+    assert visible[0] == expected
+
+
+def test_check_point2point_visibility_eval_point_on_surface():
+    surf_points = np.array([[[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]],
+                           dtype=float)
+    surf_normal = np.array([[0, 0, -1]], dtype=float)
+    visible = geo._check_point2point_visibility(
+        np.array([.5, .5, 1.]), np.array([[.5, .5, 0], [.5, .5, 2]]),
+        surf_normal, surf_points)
+    npt.assert_array_equal(visible, [True, True])

@@ -30,25 +30,23 @@ def check_reciprocity(data):
                 data_array[i_receiver, i_source])
 
 
-def test_create_from_scattering_with_valid_data(tmp_path):
+def test_create_from_scattering_with_valid_data(tmp_path, sampling_gaussian):
     # Prepare test data
     scattering_data = [0, 0.2, 1]
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=1)
-    coords = coords[coords.z > 0]
 
     # Call the function
     sp.brdf.create_from_scattering(
-        coords, coords,
+        sampling_gaussian(1), sampling_gaussian(1),
         pf.FrequencyData(scattering_data, frequency_data),
         file_path=file_path,
         )
     data, s, r = pf.io.read_sofa(file_path)
 
     # test coords
-    npt.assert_almost_equal(s.cartesian, coords.cartesian)
-    npt.assert_almost_equal(r.cartesian, coords.cartesian)
+    npt.assert_almost_equal(s.cartesian, sampling_gaussian(1).cartesian)
+    npt.assert_almost_equal(r.cartesian, sampling_gaussian(1).cartesian)
     # Assert the expected outcome
     assert data.freq.shape == (4, 4, 3)
     assert data.freq.shape == (s.csize, r.csize, 3)
@@ -58,13 +56,12 @@ def test_create_from_scattering_with_valid_data(tmp_path):
             npt.assert_almost_equal(data.freq[i, j], data.freq[j, i])
 
 
-def test_create_from_scattering_1(tmp_path):
+def test_create_from_scattering_1(tmp_path, sampling_gaussian):
     # Prepare test data
     scattering_data = np.ones((3, ))
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=11)
-    coords = coords[coords.z > 0]
+    coords = sampling_gaussian(11)
 
     # Call the function
     sp.brdf.create_from_scattering(
@@ -84,12 +81,12 @@ def test_create_from_scattering_1(tmp_path):
     check_reciprocity(data)
 
 
-def test_create_from_scattering_0(tmp_path):
+def test_create_from_scattering_0(tmp_path, sampling_gaussian):
     # Prepare test data
     scattering_data = np.zeros((3, ))
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=11)
+    coords = sampling_gaussian(11)
     coords = coords[coords.z > 0]
 
     # Call the function
@@ -113,12 +110,12 @@ def test_create_from_scattering_0(tmp_path):
     check_reciprocity(data)
 
 
-def test_create_from_scattering_0_3(tmp_path):
+def test_create_from_scattering_0_3(tmp_path, sampling_gaussian):
     # Prepare test data
     scattering_data = 0.3
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=11)
+    coords = sampling_gaussian(11)
     coords = coords[coords.z > 0]
 
     # Call the function
@@ -137,18 +134,17 @@ def test_create_from_scattering_0_3(tmp_path):
     check_reciprocity(data)
 
 
-def test_create_from_scattering_0_3_with_absorption(tmp_path):
+def test_create_from_scattering_0_3_with_absorption(
+        tmp_path, sampling_gaussian):
     # Prepare test data
     scattering_data = 0.3
     absorption_data = 0.3
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=1)
-    coords = coords[coords.z > 0]
 
     # Call the function
     sp.brdf.create_from_scattering(
-        coords, coords,
+        sampling_gaussian(1), sampling_gaussian(1),
         pf.FrequencyData(scattering_data + np.zeros((3, )), frequency_data),
         pf.FrequencyData(absorption_data + np.zeros((3, )), frequency_data),
         file_path=file_path,
@@ -159,43 +155,47 @@ def test_create_from_scattering_0_3_with_absorption(tmp_path):
     assert data.freq.shape == (s.csize, r.csize, 3)
 
     check_energy_conservation(
-        coords, coords.weights, data, absorption_data)
+        sampling_gaussian(1), sampling_gaussian(1).weights,
+        data, absorption_data)
     check_reciprocity(data)
 
 
-def test_create_from_scattering_with_invalid_data(tmp_path):
+def test_create_from_scattering_with_invalid_data(tmp_path, sampling_gaussian):
     # Prepare test data
     scattering_data = pf.FrequencyData(1, 100)
-    coords = pf.samplings.sph_gaussian(sh_order=1)
 
     # Call the function and expect it to raise an error
     with pytest.raises(
             TypeError,
             match="scattering_coefficient must be a pf.FrequencyData object"):
         sp.brdf.create_from_scattering(
-            coords, coords, 'invalid', file_path=tmp_path)
+            sampling_gaussian(1), sampling_gaussian(1),
+            'invalid', file_path=tmp_path)
     # Call the function and expect it to raise an error
     with pytest.raises(
             TypeError,
             match="source_directions must be a pf.Coordinates object"):
         sp.brdf.create_from_scattering(
-            'coords', coords, scattering_data, file_path=tmp_path)
+            'coords', sampling_gaussian(1),
+            scattering_data, file_path=tmp_path)
     with pytest.raises(
             TypeError,
             match="receiver_directions must be a pf.Coordinates object"):
         sp.brdf.create_from_scattering(
-            coords, 'coords', scattering_data, file_path=tmp_path)
+            sampling_gaussian(1),
+            'coords', scattering_data, file_path=tmp_path)
 
 
 @pytest.mark.parametrize('scattering_data', [0, 0.3, 1])
 @pytest.mark.parametrize('absorption_data', [0, 0.3, 1])
 @pytest.mark.parametrize('sh_order', [5, 11])
 def test_create_from_scattering_energy_conservation(
-        tmp_path, scattering_data, absorption_data, sh_order):
+        tmp_path, scattering_data, absorption_data, sh_order,
+        sampling_gaussian):
     # Prepare test data
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
+    coords = sampling_gaussian(sh_order)
     coords = coords[coords.z > 0]
 
     # Call the function
@@ -216,11 +216,12 @@ def test_create_from_scattering_energy_conservation(
 @pytest.mark.parametrize('absorption_data', [0, 0.3, 1])
 @pytest.mark.parametrize('sh_order', [5, 11])
 def test_create_from_scattering_reciprocal_principle(
-        tmp_path, scattering_data, absorption_data, sh_order):
+        tmp_path, scattering_data, absorption_data, sh_order,
+        sampling_gaussian):
     # Prepare test data
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
+    coords = sampling_gaussian(sh_order)
     coords = coords[coords.z > 0]
 
     # Call the function
@@ -240,11 +241,11 @@ def test_create_from_scattering_reciprocal_principle(
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
 @pytest.mark.parametrize('sh_order', [5, 11])
 def test_directional_energy_conservation_specular(
-        tmp_path, absorption_data, sh_order):
+        tmp_path, absorption_data, sh_order, sampling_gaussian):
     # Prepare test data
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
+    coords = sampling_gaussian(sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
     scattering_data[np.arange(coords.csize), np.arange(coords.csize)] = 1
@@ -269,10 +270,10 @@ def test_directional_energy_conservation_specular(
 @pytest.mark.parametrize('absorption_data', [0, 0.3, 1])
 @pytest.mark.parametrize('sh_order', [7, 11])
 def test_directional_energy_conservation_diffuse(
-        absorption_data, sh_order):
+        absorption_data, sh_order, sampling_gaussian):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
+    coords = sampling_gaussian(sh_order)
     coords = coords[coords.z > 0]
     coords.weights *= 2 * np.pi / np.sum(coords.weights)
     cos_receiver = np.cos(coords.colatitude)[np.newaxis, :, np.newaxis]
@@ -300,11 +301,11 @@ def test_directional_energy_conservation_diffuse(
 @pytest.mark.parametrize('absorption_data', [0, 0.3, 1])
 @pytest.mark.parametrize('sh_order', [5, 11])
 def test_directional_reciprocal_principle_specular(
-        tmp_path, absorption_data, sh_order):
+        tmp_path, absorption_data, sh_order, sampling_gaussian):
     # Prepare test data
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
+    coords = sampling_gaussian(sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
     scattering_data[np.arange(coords.csize), np.arange(coords.csize)] = 1
@@ -329,11 +330,11 @@ def test_directional_reciprocal_principle_specular(
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
 @pytest.mark.parametrize('sh_order', [5, 11])
 def test_directional_energy_conservation_two_directions(
-        tmp_path, absorption_data, sh_order):
+        tmp_path, absorption_data, sh_order, sampling_gaussian):
     # Prepare test data
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
+    coords = sampling_gaussian(sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
     scattering_data[np.arange(coords.csize), np.arange(coords.csize)] = 0.5
@@ -362,10 +363,10 @@ def test_directional_energy_conservation_two_directions(
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
 @pytest.mark.parametrize('sh_order', [5, 11])
 def test_directional_energy_conservation_two_directions_rand(
-        tmp_path, absorption_data, sh_order):
+        tmp_path, absorption_data, sh_order, sampling_gaussian):
     # Prepare test data
     frequency_data = [100, 200, 400]
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
+    coords = sampling_gaussian(sh_order)
     coords = coords[coords.z > 0]
     scattering_data = np.zeros((coords.csize, coords.csize, 3))
     scattering_data[
@@ -397,11 +398,11 @@ def test_directional_energy_conservation_two_directions_rand(
 @pytest.mark.parametrize('absorption_data', [0, 0.5])
 @pytest.mark.parametrize('sh_order', [5, 11])
 def test_directional_random_directional_scattering(
-        tmp_path, absorption_data, sh_order):
+        tmp_path, absorption_data, sh_order, sampling_gaussian):
     # Prepare test data
     frequency_data = [100, 200, 400]
     file_path = os.path.join(tmp_path, "test_brdf.sofa")
-    coords = pf.samplings.sph_gaussian(sh_order=sh_order)
+    coords = sampling_gaussian(sh_order)
     coords = coords[coords.z > 0]
     rng = np.random.default_rng(1337)
     scattering_data = rng.random((coords.csize, coords.csize, 3))
