@@ -10,7 +10,6 @@
 
 ### Fixed
 
-- compile ``pt_solution`` and ``load_stokes_entries`` without ``parallel=True``, as they are only called from parallel loops; the nested parallel launch aborted the process with numba's default ``workqueue`` threading layer (e.g. on macOS arm64)
 - compile ``pt_solution`` and ``load_stokes_entries`` without ``parallel=True``, as they are only called from parallel loops; the nested parallel launch aborted the process with numba's default ``workqueue`` threading layer (e.g. on macOS arm64) (#165)
 - cache numba compilations on disk (``cache=True``), so only the first run pays the JIT compilation time (#165)
 - ``_point_in_polygon`` counted a polygon vertex lying exactly on its test line once per adjacent side, so points level with a vertex could be reported inside; this made ``_check_patch2patch_visibility`` report visible patch pairs as blocked (#168)
