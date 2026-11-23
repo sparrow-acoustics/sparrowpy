@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- DOC: note in the README that sparrowpy is part of [CHORAS](https://github.com/choras-org/CHORAS), including the limitations of the integration
+
 ### Changed
 
 - compute the energy exchange of ``DirectionalRadiosityFast`` for all frequency bins in parallel (#166)

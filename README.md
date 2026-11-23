@@ -36,6 +36,13 @@ Geometry import via blender or STL files will be supported in a future release, 
 
 by default these packages are not installed
 
+## Use in CHORAS
+
+sparrowpy is part of [CHORAS](https://github.com/choras-org/CHORAS), so you can also run sparrowpy simulations there. Note the following limitations of the CHORAS integration:
+
+- Only Lambertian (diffuse) scattering is assumed, i.e., the scattering coefficient is always 1.
+- Only room acoustics simulations are supported; urban environments cannot be simulated in CHORAS.
+
 ## Contributing
 
 Check out the [contributing guidelines](https://sparrowpy.readthedocs.io/en/stable/contributing.html) if you want to become part of sparrowpy.
