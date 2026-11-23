@@ -626,7 +626,8 @@ class DirectionalRadiosityFast():
         """Calculate the direct sound at the receivers.
 
         It includes the spreading loss, air attenuation and
-        source directivity.
+        source directivity. The direct sound is zero at receivers which
+        are hidden from the source by a wall.
 
         Parameters
         ----------
@@ -669,6 +670,14 @@ class DirectionalRadiosityFast():
             for i in range(self.n_bins):
                 direct_sound[:, i] *= np.real(self._source.get_directivity(
                     np.squeeze(receivers.cartesian), self._frequencies[i]))
+
+        # no direct sound at receivers hidden from the source
+        visible = geometry._check_point2point_visibility(
+            eval_point=source_position.cartesian[0],
+            points=np.atleast_2d(receivers.cartesian),
+            surf_points=self.walls_points,
+            surf_normal=self.walls_normal)
+        direct_sound[~visible] = 0
 
         # calculate the number of samples for the delay
         n_sample_delay = np.array(

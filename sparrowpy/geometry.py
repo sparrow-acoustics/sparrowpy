@@ -844,6 +844,58 @@ def _check_point2patch_visibility(
 
     return visibility_vector
 
+def _check_point2point_visibility(
+        eval_point: np.ndarray, points: np.ndarray,
+        surf_normal: np.ndarray, surf_points: np.ndarray,
+        eta=1e-6) -> np.ndarray:
+    """Check the visibility between a point and other points.
+
+    It is intended to check the direct sound path between a source and
+    receivers. A surface only blocks the path if the two points lie on
+    different sides of its plane and the path crosses the plane inside the
+    surface. Points lying on a surface, e.g. a source in a corner of the
+    room, are therefore not hidden by it.
+
+    Parameters
+    ----------
+    eval_point : np.ndarray
+        evaluation point for visibility of shape (3)
+    points : np.ndarray
+        points to check of shape (n_points, 3)
+    surf_normal : np.ndarray
+        normal vectors of all surfaces of shape (n_surfaces, 3)
+    surf_points : np.ndarray
+        boundary points of possible blocking surfaces
+        (n_surfaces, n_boundary_points, 3)
+    eta : float
+        tolerance for points lying in a surface's plane
+
+    Returns
+    -------
+    visibility_vector : np.ndarray
+        boolean vector of shape (n_points) with True if the points
+        are visible from the evaluation point, otherwise false
+
+    """
+    n_points = points.shape[0]
+    visibility_vector = np.ones((n_points), dtype=np.bool_)
+    for i in range(n_points):
+        for surfid in range(surf_normal.shape[0]):
+            d0 = np.dot(eval_point - surf_points[surfid, 0],
+                        surf_normal[surfid])
+            d1 = np.dot(points[i] - surf_points[surfid, 0],
+                        surf_normal[surfid])
+            if np.abs(d0) < eta or np.abs(d1) < eta or d0 * d1 > 0:
+                continue
+            crossing = eval_point + d0 / (d0 - d1) * (points[i] - eval_point)
+            if _point_in_polygon(point3d=crossing,
+                                 polygon3d=surf_points[surfid],
+                                 plane_normal=surf_normal[surfid]):
+                visibility_vector[i] = False
+                break
+
+    return visibility_vector
+
 def _basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
                      surf_points: np.ndarray,
@@ -926,6 +978,8 @@ if numba is not None:
         _check_patch2patch_visibility)
     _check_point2patch_visibility = numba.njit(parallel=True, cache=True)(
         _check_point2patch_visibility)
+    _check_point2point_visibility = numba.njit(cache=True)(
+        _check_point2point_visibility)
     _calculate_normals = numba.njit(cache=True)(_calculate_normals)
     _coincidence_check = numba.njit(cache=True)(_coincidence_check)
     _basic_visibility = numba.njit(cache=True)(_basic_visibility)

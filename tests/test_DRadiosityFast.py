@@ -472,6 +472,53 @@ def test_collect_receiver_direct_sound(sample_walls):
     npt.assert_almost_equal(delay_samples[0], delay_samples[1])
 
 
+def _cube_with_partition():
+    """Return a unit cube divided by a wall at x=0.5 into two halves."""
+    walls = sp.testing.shoebox_room_stub(1, 1, 1)
+    walls.append(sp.geometry.Polygon(
+        [[.5, 0, 0], [.5, 1, 0], [.5, 1, 1], [.5, 0, 1]],
+        [0, 0, 1], [1, 0, 0]))
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(walls, 1)
+    radiosity.bake_geometry()
+    radiosity.init_source_energy(pf.Coordinates(.25, .5, .5))
+    radiosity.calculate_energy_exchange(343, 0.0001, 0.01)
+    return radiosity
+
+
+def test_direct_sound_blocked_by_wall():
+    radiosity = _cube_with_partition()
+    # behind the partition, and in the same half as the source
+    receivers = pf.Coordinates([.75, .25], [.5, .2], [.5, .7])
+    direct_sound, _ = radiosity.calculate_direct_sound(receivers)
+
+    npt.assert_array_equal(direct_sound[0], 0)
+    assert np.all(direct_sound[1] > 0)
+
+
+def test_direct_sound_source_and_receivers_on_walls(sample_walls):
+    """Points on a wall are not hidden by the walls they lie on.
+
+    E.g. a source in a corner of the room.
+    """
+    radiosity = sp.DirectionalRadiosityFast.from_polygon(sample_walls, 1)
+    radiosity.init_source_energy(pf.Coordinates(0, 0, 0))
+    radiosity.calculate_energy_exchange(343, 0.1, 1)
+    receivers = pf.Coordinates([.5, .5, 1], [0, .5, 1], [0, .5, 1])
+    direct_sound, _ = radiosity.calculate_direct_sound(receivers)
+
+    r = np.linalg.norm(receivers.cartesian, axis=1)
+    npt.assert_allclose(direct_sound[:, 0], 1 / (4 * np.pi * r**2))
+
+
+def test_collect_receiver_mono_no_direct_sound_behind_wall():
+    radiosity = _cube_with_partition()
+    receivers = pf.Coordinates(.75, .5, .5)
+    with_direct = radiosity.collect_energy_receiver_mono(receivers, True)
+    without_direct = radiosity.collect_energy_receiver_mono(receivers)
+
+    npt.assert_array_equal(with_direct.time, without_direct.time)
+
+
 def test_collect_receiver_mono_direct_sound(sample_walls):
     radiosity = sp.DirectionalRadiosityFast.from_polygon(
         sample_walls, 1)

@@ -13,6 +13,7 @@
 - DOC: adapted the documentation to sphinx-design 0.8.0 (#172)
 - compile ``pt_solution`` and ``load_stokes_entries`` without ``parallel=True``, as they are only called from parallel loops; the nested parallel launch aborted the process with numba's default ``workqueue`` threading layer (e.g. on macOS arm64) (#165)
 - cache numba compilations on disk (``cache=True``), so only the first run pays the JIT compilation time (#165)
+- ``DirectionalRadiosityFast.calculate_direct_sound`` added the direct sound also at receivers hidden from the source by a wall; it is now zero there
 - ``_point_in_polygon`` counted a polygon vertex lying exactly on its test line once per adjacent side, so points level with a vertex could be reported inside; this made ``_check_patch2patch_visibility`` report visible patch pairs as blocked (#168)
 
 ## 1.1.1 (2026-08-31)
