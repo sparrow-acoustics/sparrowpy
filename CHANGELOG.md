@@ -14,7 +14,7 @@
 
 ### Fixed
 
-- ``DirectionalRadiosityFast.set_wall_brdf`` checks the input types and that the BRDF has the cshape ``(n_incoming_directions, n_outgoing_directions)``; the default BRDF set in ``init_source_energy`` had the wrong cshape (#85)
+- ``DirectionalRadiosityFast.set_wall_brdf`` checks the input types and that the BRDF cshape can be broadcast to ``(n_incoming_directions, n_outgoing_directions)``; before, broadcastable BRDFs like ``(1, 1)`` were not broadcast and silently gave wrong results; the default BRDF set in ``init_source_energy`` had the wrong cshape (#85)
 - DOC: adapted the documentation to sphinx-design 0.8.0 (#172)
 - compile ``pt_solution`` and ``load_stokes_entries`` without ``parallel=True``, as they are only called from parallel loops; the nested parallel launch aborted the process with numba's default ``workqueue`` threading layer (e.g. on macOS arm64) (#165)
 - cache numba compilations on disk (``cache=True``), so only the first run pays the JIT compilation time (#165)

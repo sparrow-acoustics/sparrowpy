@@ -905,7 +905,10 @@ class DirectionalRadiosityFast():
             List of wall indices for the given BRDF data.
         brdf : pf.FrequencyData
             BRDF data with channel shape (``brdf.cshape``)
-            (n_incoming_directions, n_outgoing_directions).
+            (n_incoming_directions, n_outgoing_directions). The cshape
+            can also be any shape that can be broadcast to this shape
+            following the numpy broadcasting rules, e.g., ``(1, 1)`` for
+            a BRDF that is constant for all directions.
         incoming_directions : pf.Coordinates
             Incoming directions of the BRDF data.
         outgoing_directions : pf.Coordinates
@@ -924,10 +927,17 @@ class DirectionalRadiosityFast():
             "Receivers must be in the positive half space"
         n_in = incoming_directions.csize
         n_out = outgoing_directions.csize
-        assert brdf.cshape == (n_in, n_out), (
+        try:
+            # the frequency axis is the last axis in both shapes, so only
+            # the cshape is broadcast
+            brdf_freq = np.broadcast_to(
+                brdf.freq, (n_in, n_out, brdf.n_bins))
+        except ValueError:
+            brdf_freq = None
+        assert brdf_freq is not None, (
             "BRDF data must be of cshape (n_incoming_directions, "
-            f"n_outgoing_directions) = ({n_in}, {n_out}), "
-            f"but has cshape {brdf.cshape}.")
+            f"n_outgoing_directions) = ({n_in}, {n_out}) or broadcastable "
+            f"to it, but has cshape {brdf.cshape}.")
         self._check_set_frequency(brdf.frequencies)
         if self._brdf_incoming_directions is None:
             self._brdf_incoming_directions = np.empty(
@@ -945,7 +955,7 @@ class DirectionalRadiosityFast():
             self._brdf_incoming_directions[i] = incoming_rot
             self._brdf_outgoing_directions[i] = outgoing_rot
 
-        self._brdf.append(np.real(brdf.freq*np.pi))
+        self._brdf.append(np.real(brdf_freq*np.pi))
         self._brdf_index[wall_indexes] = len(self._brdf)-1
 
     def _check_set_frequency(self, frequencies:np.ndarray):

@@ -608,9 +608,9 @@ def test_set_wall_brdf_valid_input(sample_walls):
 
 
 @pytest.mark.parametrize("brdf_shape", [
-    (3, 1),  # wrong number of outgoing directions
+    (2, 1),  # wrong number of outgoing directions
     (2, 3, 1),  # wrong number of incoming directions
-    (3, 1, 3, 1),  # wrong number of channel dimensions
+    (3, 1, 3, 1),  # too many channel dimensions
     (9, 1),  # flattened BRDF
 ])
 def test_set_wall_brdf_invalid_brdf_shape(sample_walls, brdf_shape):
@@ -625,9 +625,44 @@ def test_set_wall_brdf_invalid_brdf_shape(sample_walls, brdf_shape):
 
     with pytest.raises(
             AssertionError,
-            match=r"BRDF data must be of cshape .* \(3, 3\)"):
+            match=r"BRDF data must be of cshape .* \(3, 3\) or broadcast"):
         radiosity.set_wall_brdf(
             wall_indexes, brdf, incoming_directions, outgoing_directions)
+
+
+@pytest.mark.parametrize("brdf_cshape", [
+    (1, 1), (3, 1), (1, 3), (3,), (1,), ()])
+def test_set_wall_brdf_broadcast(sample_walls, brdf_cshape):
+    """Test BRDFs broadcastable to (n_incoming, n_outgoing).
+
+    They must give the same result as the full BRDF.
+    """
+    directions = pf.Coordinates(
+        [0, 0, 1], [0, 1, 0], [1, 0, 0], weights=[1, 1, 1])
+    frequencies = np.array([500, 1000])
+    # BRDF values vary over frequency to make sure the frequency axis is
+    # not broadcast against the directions
+    brdf_values = np.array([.1, .2])
+
+    results = []
+    for cshape in [(3, 3), brdf_cshape]:
+        radiosity = sp.DirectionalRadiosityFast.from_polygon(
+            sample_walls, 0.5)
+        brdf = pf.FrequencyData(
+            np.ones(cshape + (2, )) * brdf_values, frequencies)
+        radiosity.set_wall_brdf(
+            np.arange(len(sample_walls)), brdf, directions, directions)
+        assert radiosity._brdf[0].shape == (3, 3, 2)
+        radiosity.set_air_attenuation(
+            pf.FrequencyData(np.zeros(2), frequencies))
+        radiosity.bake_geometry()
+        radiosity.init_source_energy(pf.Coordinates(.5, .5, .5))
+        radiosity.calculate_energy_exchange(343, 1/1000, 1, 2)
+        results.append(radiosity.collect_energy_receiver_mono(
+            pf.Coordinates(.3, .3, .3)).time)
+
+    assert np.sum(results[0]) > 0
+    npt.assert_array_equal(results[1], results[0])
 
 
 def test_set_wall_brdf_invalid_brdf_type(sample_walls):
