@@ -94,7 +94,10 @@ class DirectionalRadiosityFast():
         patch_to_wall_ids : np.ndarray
             maps each patch to a wall of shape (n_patches)
         visibility_matrix : np.ndarray, optional
-            patch to patch boolean visibility matrix, by default None.
+            patch to patch boolean visibility matrix of shape
+            (n_patches, n_patches), by default None. Only the upper
+            triangle (``i < j``) is used. If given, :py:meth:`bake_geometry`
+            uses it instead of computing the visibility itself.
         visible_patches : np.ndarray, optional
             list of all patches which are visible, by default None
         form_factors : np.ndarray, optional
@@ -149,7 +152,13 @@ class DirectionalRadiosityFast():
         if visible_patches is not None:
             visible_patches = np.array(visible_patches)
         if visibility_matrix is not None:
-            visibility_matrix = np.array(visibility_matrix)
+            visibility_matrix = np.array(visibility_matrix, dtype=bool)
+            if visibility_matrix.shape != (n_patches, n_patches):
+                raise ValueError(
+                    "visibility_matrix must be of shape (n_patches, "
+                    f"n_patches) = ({n_patches}, {n_patches}), but is "
+                    f"{visibility_matrix.shape}.")
+            visibility_matrix = np.triu(visibility_matrix, 1)
         if form_factors is not None:
             form_factors = np.array(form_factors)
         if form_factors_tilde is not None:
@@ -370,22 +379,18 @@ class DirectionalRadiosityFast():
     def bake_geometry(self):
         """Bake the geometry by calculating all the form factors.
 
+        The visibility between the patches is only computed if it is not
+        known yet, i.e. if no ``visibility_matrix`` was passed when creating
+        the object and ``bake_geometry`` was not called before.
         """
         # Check the visibility between patches.
-        self._visibility_matrix = geometry._check_patch2patch_visibility(
-            self.patches_center, self.patches_normal, self.patches_points)
+        if self._visibility_matrix is None:
+            self._visibility_matrix = geometry._check_patch2patch_visibility(
+                self.patches_center, self.patches_normal, self.patches_points)
 
-        n_combinations = np.sum(self.visibility_matrix)
-        visible_patches = np.empty((n_combinations, 2), dtype=np.int32)
-        i_counter = 0
-        for i_source in range(self.n_patches):
-            for i_receiver in range(self.n_patches):
-                if not self.visibility_matrix[i_source, i_receiver]:
-                    continue
-                visible_patches[i_counter, 0] = i_source
-                visible_patches[i_counter, 1] = i_receiver
-                i_counter += 1
-        self._visible_patches = visible_patches
+        # index pairs (i, j) of all visible patches, in row-major order
+        self._visible_patches = np.argwhere(
+            self.visibility_matrix).astype(np.int32)
 
         self._form_factors = form_factor.patch2patch_ff_universal(
             self.patches_points, self.patches_normal,
@@ -435,7 +440,7 @@ class DirectionalRadiosityFast():
 
 
     def init_source_energy(
-            self, source):
+            self, source, source_visibility=None):
         """Initialize the source energy.
 
         Parameters
@@ -445,6 +450,10 @@ class DirectionalRadiosityFast():
             orientation and directivity for SoundSource object. If no
             directivity is given, the directivity is set to 1 for all
             frequencies.
+        source_visibility : np.ndarray, optional
+            boolean vector of shape (n_patches) which is True for all
+            patches visible from the source. By default None, then it is
+            computed.
 
         """
         if isinstance(source, pf.Coordinates):
@@ -480,11 +489,15 @@ class DirectionalRadiosityFast():
         brdf = np.array(self._brdf)
         brdf_index = self._brdf_index
         patches_center = self.patches_center
-        source_visibility = geometry._check_point2patch_visibility(
+        if source_visibility is None:
+            source_visibility = geometry._check_point2patch_visibility(
                                         eval_point=source_position,
                                         patches_center=patches_center,
                                         surf_points=self.walls_points,
                                         surf_normal=self.walls_normal)
+        else:
+            source_visibility = _check_visibility_shape(
+                source_visibility, (self.n_patches, ), "source_visibility")
         self._source_visibility = source_visibility
         energy_0, distance_0 = form_factor._source2patch_energy_universal(
             source_position, patches_center, self.patches_points,
@@ -568,7 +581,8 @@ class DirectionalRadiosityFast():
         self._speed_of_sound = float(speed_of_sound)
         self._etc_duration = float(etc_duration)
 
-    def collect_energy_receiver_mono(self, receivers, direct_sound=False):
+    def collect_energy_receiver_mono(
+            self, receivers, direct_sound=False, receiver_visibility=None):
         """Collect the energy at the receivers.
 
         Parameters
@@ -579,6 +593,10 @@ class DirectionalRadiosityFast():
             If True, the direct sound is collected as well, by default False.
             The direct sound includes spreading loss, air attenuation and
             source directivity.
+        receiver_visibility : np.ndarray, optional
+            boolean matrix of shape (n_receivers, n_patches) which is True
+            for all patches visible from each receiver. By default None,
+            then it is computed.
 
         Returns
         -------
@@ -589,7 +607,8 @@ class DirectionalRadiosityFast():
         if not isinstance(direct_sound, bool):
             raise ValueError(
                 "direct_sound must be of type boolean")
-        etc = self.collect_energy_receiver_patchwise(receivers)
+        etc = self.collect_energy_receiver_patchwise(
+            receivers, receiver_visibility=receiver_visibility)
         etc.time = np.sum(etc.time, axis=1)
 
         if direct_sound:
@@ -607,7 +626,8 @@ class DirectionalRadiosityFast():
         """Calculate the direct sound at the receivers.
 
         It includes the spreading loss, air attenuation and
-        source directivity.
+        source directivity. The direct sound is zero at receivers which
+        are hidden from the source by a wall.
 
         Parameters
         ----------
@@ -651,6 +671,14 @@ class DirectionalRadiosityFast():
                 direct_sound[:, i] *= np.real(self._source.get_directivity(
                     np.squeeze(receivers.cartesian), self._frequencies[i]))
 
+        # no direct sound at receivers hidden from the source
+        visible = geometry._check_point2point_visibility(
+            eval_point=source_position.cartesian[0],
+            points=np.atleast_2d(receivers.cartesian),
+            surf_points=self.walls_points,
+            surf_normal=self.walls_normal)
+        direct_sound[~visible] = 0
+
         # calculate the number of samples for the delay
         n_sample_delay = np.array(
             r/self.speed_of_sound/self._etc_time_resolution, dtype=int)
@@ -658,7 +686,8 @@ class DirectionalRadiosityFast():
         return direct_sound, n_sample_delay
 
 
-    def collect_energy_receiver_patchwise(self, receivers):
+    def collect_energy_receiver_patchwise(
+            self, receivers, receiver_visibility=None):
         """Collect the energy for each patch at the receivers without summing
         up the patches.
 
@@ -666,6 +695,10 @@ class DirectionalRadiosityFast():
         ----------
         receivers : pf.Coordinates
             receiver Coordinates in of cshape (n_receivers).
+        receiver_visibility : np.ndarray, optional
+            boolean matrix of shape (n_receivers, n_patches) which is True
+            for all patches visible from each receiver. By default None,
+            then it is computed.
 
         Returns
         -------
@@ -679,8 +712,13 @@ class DirectionalRadiosityFast():
         if receivers.cdim != 1:
             raise ValueError(
                 "Receiver positions must be of shape (n_receivers, 3)")
+        if receiver_visibility is not None:
+            receiver_visibility = _check_visibility_shape(
+                receiver_visibility, (receivers.csize, self.n_patches),
+                "receiver_visibility")
         etc_data = self._collect_energy_patches(
-            receivers.cartesian, propagation_fx=True)
+            receivers.cartesian, propagation_fx=True,
+            receiver_visibility=receiver_visibility)
         times = np.arange(etc_data.shape[-1]) * self._etc_time_resolution
         return pf.TimeData(etc_data, times)
 
@@ -764,7 +802,7 @@ class DirectionalRadiosityFast():
 
     def _collect_energy_patches(
             self, receiver_pos,
-            propagation_fx=False):
+            propagation_fx=False, receiver_visibility=None):
         """Collect patch histograms as detected by receiver."""
         air_attenuation = self._air_attenuation
         patches_points = self._patches_points
@@ -785,16 +823,19 @@ class DirectionalRadiosityFast():
             n_receivers, n_patches, n_bins,
             self._energy_exchange_etc.shape[-1]))
 
-        receiver_visibility=np.empty((n_receivers,n_patches),dtype=bool)
+        if receiver_visibility is None:
+            receiver_visibility = np.empty(
+                (n_receivers, n_patches), dtype=bool)
+            for i in range(n_receivers):
+                receiver_visibility[i] = \
+                    geometry._check_point2patch_visibility(
+                        eval_point=receiver_pos[i],
+                        patches_center=patches_center,
+                        surf_points=self.walls_points,
+                        surf_normal=self.walls_normal)
 
         for i in range(n_receivers):
             patches_receiver_distance = patches_center - receiver_pos[i]
-
-            receiver_visibility[i] = geometry._check_point2patch_visibility(
-                                        eval_point=receiver_pos[i],
-                                        patches_center=patches_center,
-                                        surf_points=self.walls_points,
-                                        surf_normal=self.walls_normal)
 
             # geometrical weighting
             patch_receiver_energy=form_factor._patch2receiver_energy_universal(
@@ -1047,6 +1088,15 @@ class DirectionalRadiosityFast():
         return self._speed_of_sound
 
 
+def _check_visibility_shape(visibility, shape, name):
+    """Return ``visibility`` as boolean array, check that it has ``shape``."""
+    visibility = np.asarray(visibility, dtype=bool)
+    if visibility.shape != shape:
+        raise ValueError(
+            f"{name} must be of shape {shape}, but is {visibility.shape}.")
+    return visibility
+
+
 def _rotate_coords_to_normal(
         wall_normal:np.ndarray, wall_up_vector:np.ndarray,
         sources:pf.Coordinates, receivers:pf.Coordinates):
@@ -1186,20 +1236,62 @@ def _energy_exchange(
         (n_patches, n_directions, n_bins, n_samples)
 
     """
-    n_patches = form_factors_tilde.shape[0]
-    n_directions = form_factors_tilde.shape[2]
     n_bins = energy_0_directivity.shape[2]
-    form_factors_tilde = form_factors_tilde[..., np.newaxis]
     E_matrix_total  = _energy_exchange_init_energy(
         n_samples, energy_0_directivity, distance_0, speed_of_sound,
         histogram_time_resolution)
-    E_matrix = np.zeros((2, n_patches, n_directions, n_bins, n_samples))
-    E_matrix[0] += E_matrix_total
     if max_order == 0:
         return E_matrix_total
+
+    # The frequency bins are independent of each other, so they are
+    # computed in parallel. Each bin only reads and writes its own slice.
+    # The work per bin lives in a separate serial function, so numba does
+    # not transform its array expressions as part of the parallel loop.
+    for b in prange(n_bins):
+        _energy_exchange_bin(
+            E_matrix_total[:, :, b, :], form_factors_tilde[:, :, :, b],
+            distance_ij, patch_2_out_directions, speed_of_sound,
+            histogram_time_resolution, max_order, visible_patches)
+    return E_matrix_total
+
+
+def _energy_exchange_bin(
+        E_total, form_factors_tilde, distance_ij, patch_2_out_directions,
+        speed_of_sound, histogram_time_resolution, max_order,
+        visible_patches):
+    """Calculate the energy exchange between patches for one frequency bin.
+
+    Parameters
+    ----------
+    E_total : np.ndarray
+        energy of all patches after the direct sound, of shape
+        (n_patches, n_directions, n_samples). The energy of all
+        reflections is added in place.
+    form_factors_tilde : np.ndarray
+        form factors of this bin of shape
+        (n_patches, n_patches, n_directions)
+    distance_ij : np.ndarray
+        distance between all patches of shape (n_patches, n_patches)
+    patch_2_out_directions: np.ndarray
+        patchwise map of patch centers to
+        scattering outgoing directions of shape (n_patches,n_patches)
+    speed_of_sound : float
+        speed of sound in m/s.
+    histogram_time_resolution : float
+        time resolution of the histogram in s.
+    max_order : int
+        maximum order of reflections.
+    visible_patches : np.ndarray
+        indexes of all visible patches of shape (n_visible, 2)
+
+    """
+    n_patches, n_directions, n_samples = E_total.shape
+    E_matrix = np.zeros((2, n_patches, n_directions, n_samples))
+    E_matrix[0] = E_total
     for k in range(max_order):
         current_index = (1+k) % 2
-        E_matrix[current_index, :, :, :] = 0
+        previous_index = 1 - current_index
+        E_matrix[current_index] = 0
         for ii in range(visible_patches.shape[0]):
             for jj in range(2):
                 if jj == 0:
@@ -1213,15 +1305,13 @@ def _energy_exchange(
 
                 n_delay_samples = int(
                     distance_ij[i, j]/speed_of_sound/histogram_time_resolution)
-                if n_delay_samples > 0:
-                    E_matrix[current_index, j, :, :, n_delay_samples:] += \
-                        form_factors_tilde[i, j] * E_matrix[
-                            current_index-1, i, dir_id, :, :-n_delay_samples]
-                else:
-                    E_matrix[current_index, j, :, :, :] += form_factors_tilde[
-                        i, j] * E_matrix[current_index-1, i, dir_id, :, :]
-        E_matrix_total += E_matrix[current_index]
-    return E_matrix_total
+                if n_delay_samples >= n_samples:
+                    continue
+                n_shifted = n_samples - n_delay_samples
+                E_matrix[current_index, j, :, n_delay_samples:] += \
+                    np.expand_dims(form_factors_tilde[i, j], 1) * \
+                    E_matrix[previous_index, i, dir_id, :n_shifted]
+        E_total += E_matrix[current_index]
 
 
 def _collect_receiver_energy(
@@ -1533,18 +1623,21 @@ def _accumulate_direct_sound_into_bins(
 
 
 if numba is not None:
-    _add_directional = numba.njit(parallel=True)(_add_directional)
-    _energy_exchange_init_energy = numba.njit()(_energy_exchange_init_energy)
-    _collect_receiver_energy = numba.njit()(_collect_receiver_energy)
-    _energy_exchange = numba.njit()(_energy_exchange)
-    _form_factors_with_directivity_dim = numba.njit(parallel=True)(
+    _add_directional = numba.njit(parallel=True, cache=True)(_add_directional)
+    _energy_exchange_init_energy = numba.njit(cache=True)(
+        _energy_exchange_init_energy)
+    _collect_receiver_energy = numba.njit(cache=True)(_collect_receiver_energy)
+    _energy_exchange = numba.njit(parallel=True, cache=True)(_energy_exchange)
+    _energy_exchange_bin = numba.njit(cache=True)(_energy_exchange_bin)
+    _form_factors_with_directivity_dim = numba.njit(parallel=True, cache=True)(
         _form_factors_with_directivity_dim)
-    _form_factors_with_directivity = numba.njit(parallel=True)(
+    _form_factors_with_directivity = numba.njit(parallel=True, cache=True)(
         _form_factors_with_directivity)
-    get_scattering_data_receiver_index = numba.njit()(
+    get_scattering_data_receiver_index = numba.njit(cache=True)(
         get_scattering_data_receiver_index)
-    get_scattering_data = numba.njit()(get_scattering_data)
-    get_scattering_data_source = numba.njit()(get_scattering_data_source)
+    get_scattering_data = numba.njit(cache=True)(get_scattering_data)
+    get_scattering_data_source = numba.njit(cache=True)(
+        get_scattering_data_source)
 
 
 

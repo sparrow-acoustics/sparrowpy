@@ -628,12 +628,13 @@ def _point_in_polygon(point3d: np.ndarray,
         normal of the polygon's plane
 
     eta: float
-        tolerance for point inside of line check.
+        tolerance for the checks if the point lies in the polygon's plane
+        and on the polygon's boundary.
 
     Returns
     -------
     out: bool
-        flags if point is inside polygon
+        flags if point is inside polygon or on its boundary
         (True if inside, False if not)
 
     """
@@ -655,33 +656,38 @@ def _point_in_polygon(point3d: np.ndarray,
                 matrix=rotmat,vector=polygon3d[i])[0:point3d.shape[0]-1]
 
 
-        # winding number algorithm
+        # points on the boundary count as inside, so that e.g. a line
+        # through the shared edge of two walls is blocked by them
+        on_boundary = False
+        for i in range(poly.shape[0]):
+            a0 = poly[i]
+            side = poly[(i+1)%poly.shape[0]] - a0
+            t = np.dot(pt-a0, side) / np.dot(side, side)
+            t = min(max(t, 0.), 1.)
+            if np.linalg.norm(pt - (a0 + t*side)) <= eta:
+                on_boundary = True
+
+        # winding number algorithm: count the sides crossed by a line from
+        # the evaluation point in +x direction, signed by their direction.
+        # A side counts if it spans the evaluation point's y half-open
+        # (one end at or below, the other above). This way a vertex lying
+        # exactly on the line is counted once for a crossing and not at
+        # all for a touching vertex, instead of once for each of its sides.
         count = 0
-        for i in prange(poly.shape[0]):
+        for i in range(poly.shape[0]):
+            a0 = poly[i]
             a1 = poly[(i+1)%poly.shape[0]]
-            a0 = poly[i%poly.shape[0]]
-            side = a1-a0
 
-            # check if line from evaluation point in +x direction
-            # intersects polygon side
-            nl = np.array([-side[1],side[0]])/np.linalg.norm(side)
-            b = _project_to_plane(origin=pt, point=pt+np.array([1.,0.]),
-                                plane_pt=a1, plane_normal=nl,
-                                check_normal=False)
+            if (a0[1] <= pt[1]) != (a1[1] <= pt[1]):
+                x_cross = a0[0] + (pt[1]-a0[1]) * (a1[0]-a0[0]) / (
+                    a1[1]-a0[1])
+                if x_cross > pt[0]:
+                    if a1[1] > a0[1]:
+                        count += 1
+                    else:
+                        count -= 1
 
-            # check if intersection exists and if is inside side [a0,a1]
-            if (b is not None) and b[0]>pt[0]:
-                if abs(np.linalg.norm(b-a0)+np.linalg.norm(b-a1)
-                                    -np.linalg.norm(a1-a0)) <= eta:
-                    if np.dot(b-pt,nl)>0:
-                        count+=1
-                    elif np.dot(b-pt,nl)<0:
-                        count-=1
-
-        if count != 0:
-            out = True
-        else:
-            out = False
+        out = on_boundary or count != 0
 
     return out
 
@@ -838,6 +844,58 @@ def _check_point2patch_visibility(
 
     return visibility_vector
 
+def _check_point2point_visibility(
+        eval_point: np.ndarray, points: np.ndarray,
+        surf_normal: np.ndarray, surf_points: np.ndarray,
+        eta=1e-6) -> np.ndarray:
+    """Check the visibility between a point and other points.
+
+    It is intended to check the direct sound path between a source and
+    receivers. A surface only blocks the path if the two points lie on
+    different sides of its plane and the path crosses the plane inside the
+    surface. Points lying on a surface, e.g. a source in a corner of the
+    room, are therefore not hidden by it.
+
+    Parameters
+    ----------
+    eval_point : np.ndarray
+        evaluation point for visibility of shape (3)
+    points : np.ndarray
+        points to check of shape (n_points, 3)
+    surf_normal : np.ndarray
+        normal vectors of all surfaces of shape (n_surfaces, 3)
+    surf_points : np.ndarray
+        boundary points of possible blocking surfaces
+        (n_surfaces, n_boundary_points, 3)
+    eta : float
+        tolerance for points lying in a surface's plane
+
+    Returns
+    -------
+    visibility_vector : np.ndarray
+        boolean vector of shape (n_points) with True if the points
+        are visible from the evaluation point, otherwise false
+
+    """
+    n_points = points.shape[0]
+    visibility_vector = np.ones((n_points), dtype=np.bool_)
+    for i in range(n_points):
+        for surfid in range(surf_normal.shape[0]):
+            d0 = np.dot(eval_point - surf_points[surfid, 0],
+                        surf_normal[surfid])
+            d1 = np.dot(points[i] - surf_points[surfid, 0],
+                        surf_normal[surfid])
+            if np.abs(d0) < eta or np.abs(d1) < eta or d0 * d1 > 0:
+                continue
+            crossing = eval_point + d0 / (d0 - d1) * (points[i] - eval_point)
+            if _point_in_polygon(point3d=crossing,
+                                 polygon3d=surf_points[surfid],
+                                 plane_normal=surf_normal[surfid]):
+                visibility_vector[i] = False
+                break
+
+    return visibility_vector
+
 def _basic_visibility(vis_point: np.ndarray,
                      eval_point: np.ndarray,
                      surf_points: np.ndarray,
@@ -910,24 +968,26 @@ def _basic_visibility(vis_point: np.ndarray,
 
 
 if numba is not None:
-    _total_number_of_patches = numba.njit()(_total_number_of_patches)
-    _process_patches = numba.njit()(_process_patches)
-    _calculate_area = numba.njit()(_calculate_area)
-    _calculate_center = numba.njit()(_calculate_center)
-    _calculate_size = numba.njit()(_calculate_size)
-    _create_patches = numba.njit()(_create_patches)
-    _check_patch2patch_visibility = numba.njit(parallel=True)(
+    _total_number_of_patches = numba.njit(cache=True)(_total_number_of_patches)
+    _process_patches = numba.njit(cache=True)(_process_patches)
+    _calculate_area = numba.njit(cache=True)(_calculate_area)
+    _calculate_center = numba.njit(cache=True)(_calculate_center)
+    _calculate_size = numba.njit(cache=True)(_calculate_size)
+    _create_patches = numba.njit(cache=True)(_create_patches)
+    _check_patch2patch_visibility = numba.njit(parallel=True, cache=True)(
         _check_patch2patch_visibility)
-    _check_point2patch_visibility = numba.njit(parallel=True)(
+    _check_point2patch_visibility = numba.njit(parallel=True, cache=True)(
         _check_point2patch_visibility)
-    _calculate_normals = numba.njit()(_calculate_normals)
-    _coincidence_check = numba.njit()(_coincidence_check)
-    _basic_visibility = numba.njit()(_basic_visibility)
-    _project_to_plane = numba.njit()(_project_to_plane)
-    _point_in_polygon = numba.njit()(_point_in_polygon)
-    _matrix_vector_product = numba.njit()(_matrix_vector_product)
-    _rotation_matrix = numba.njit()(_rotation_matrix)
-    _polygon_area = numba.njit()(_polygon_area)
-    _sphere_tangent_vector = numba.njit()(_sphere_tangent_vector)
+    _check_point2point_visibility = numba.njit(cache=True)(
+        _check_point2point_visibility)
+    _calculate_normals = numba.njit(cache=True)(_calculate_normals)
+    _coincidence_check = numba.njit(cache=True)(_coincidence_check)
+    _basic_visibility = numba.njit(cache=True)(_basic_visibility)
+    _project_to_plane = numba.njit(cache=True)(_project_to_plane)
+    _point_in_polygon = numba.njit(cache=True)(_point_in_polygon)
+    _matrix_vector_product = numba.njit(cache=True)(_matrix_vector_product)
+    _rotation_matrix = numba.njit(cache=True)(_rotation_matrix)
+    _polygon_area = numba.njit(cache=True)(_polygon_area)
+    _sphere_tangent_vector = numba.njit(cache=True)(_sphere_tangent_vector)
 
 

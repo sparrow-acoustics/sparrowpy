@@ -12,6 +12,11 @@ sparrowpy
    changelog
 
 
+.. note::
+
+   sparrowpy is part of `CHORAS <https://github.com/choras-org/CHORAS>`_.
+   See :doc:`readme` for the limitations of the CHORAS integration.
+
 
 .. grid:: 1 2 2 2
     :gutter: 4
@@ -20,9 +25,7 @@ sparrowpy
         :link: readme.html
         :text-align: center
         :padding: 0 0 3 3
-
-        **Getting Started**
-        ^^^^
+        :header: **Getting Started**
 
         .. raw:: html
 
@@ -33,9 +36,7 @@ sparrowpy
         :link: examples.html
         :text-align: center
         :padding: 0 0 3 3
-
-        **Examples**
-        ^^^^
+        :header: **Examples**
 
         .. raw:: html
 
@@ -47,9 +48,7 @@ sparrowpy
         :link-type: ref
         :text-align: center
         :padding: 0 0 3 3
-
-        **API Reference**
-        ^^^^
+        :header: **API Reference**
 
         .. raw:: html
 
@@ -60,9 +59,7 @@ sparrowpy
         :link: contributing.html
         :text-align: center
         :padding: 0 0 3 3
-
-        **Contributing**
-        ^^^^
+        :header: **Contributing**
 
         .. raw:: html
 
@@ -72,9 +69,7 @@ sparrowpy
         :link: changelog.html
         :text-align: center
         :padding: 0 0 3 3
-
-        **Changelog**
-        ^^^^
+        :header: **Changelog**
 
         .. raw:: html
 
