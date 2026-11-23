@@ -7,7 +7,7 @@
 - compute the energy exchange of ``DirectionalRadiosityFast`` for all frequency bins in parallel (#166)
 - ``DirectionalRadiosityFast.bake_geometry`` uses a ``visibility_matrix`` passed to the constructor instead of computing it again (#167)
 - ``DirectionalRadiosityFast.init_source_energy`` accepts a ``source_visibility`` and ``collect_energy_receiver_mono`` / ``collect_energy_receiver_patchwise`` accept a ``receiver_visibility``, so the point to patch visibility can be computed outside of sparrowpy (#167)
-- DOC: set the titles of the cards on the documentation landing page with the ``:header:`` option of ``grid-item-card`` (requires sphinx-design >= 0.8.0) (#172)
+- DOC: the cards on the documentation landing page show their titles in the card header; building the documentation requires sphinx-design >= 0.8.0 (#172)
 
 ### Fixed
 
