@@ -4,7 +4,7 @@
 
 ### Added
 
-- DOC: note in the README that sparrowpy is part of [CHORAS](https://github.com/choras-org/CHORAS), including the limitations of the integration
+- DOC: note in the README that sparrowpy is part of [CHORAS](https://github.com/choras-org/CHORAS), including the limitations of the integration (#171)
 
 ### Changed
 
