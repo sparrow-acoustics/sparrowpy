@@ -2,11 +2,12 @@ Radiosity after Kang
 --------------------
 
 This module contains the implementation of the radiosity algorithm after
-Kang (2002).
+Kang (2000).
 It was used to simulate sound propagation in street canyons, where the walls are
-assumed to be diffusely reflecting. The limitations of the implementation are
-- it is not optimized for speed 
-- it does not support other patches then parallel or perpendicular relationships
+assumed to be diffusely reflecting. The limitations of the implementation are:
+
+- it is not optimized for speed
+- it does not support other patches than parallel or perpendicular relationships
 - it only supports rectangular patches
 
 This was extended in the :py:class:`sparrowpy.DirectionalRadiosityKang` class,
