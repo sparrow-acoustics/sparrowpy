@@ -20,10 +20,7 @@ sparrowpy
         :link: readme.html
         :text-align: center
         :padding: 0 0 3 3
-
-        .. card-header::
-
-            **Getting Started**
+        :header: **Getting Started**
 
         .. raw:: html
 
@@ -34,10 +31,7 @@ sparrowpy
         :link: examples.html
         :text-align: center
         :padding: 0 0 3 3
-
-        .. card-header::
-
-            **Examples**
+        :header: **Examples**
 
         .. raw:: html
 
@@ -49,10 +43,7 @@ sparrowpy
         :link-type: ref
         :text-align: center
         :padding: 0 0 3 3
-
-        .. card-header::
-
-            **API Reference**
+        :header: **API Reference**
 
         .. raw:: html
 
@@ -63,10 +54,7 @@ sparrowpy
         :link: contributing.html
         :text-align: center
         :padding: 0 0 3 3
-
-        .. card-header::
-
-            **Contributing**
+        :header: **Contributing**
 
         .. raw:: html
 
@@ -76,10 +64,7 @@ sparrowpy
         :link: changelog.html
         :text-align: center
         :padding: 0 0 3 3
-
-        .. card-header::
-
-            **Changelog**
+        :header: **Changelog**
 
         .. raw:: html
 
