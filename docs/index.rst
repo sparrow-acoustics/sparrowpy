@@ -12,6 +12,11 @@ sparrowpy
    changelog
 
 
+.. note::
+
+   sparrowpy is part of `CHORAS <https://github.com/choras-org/CHORAS>`_.
+   See :doc:`readme` for the limitations of the CHORAS integration.
+
 
 .. grid:: 1 2 2 2
     :gutter: 4
