@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- energy delayed beyond the end of the energy time curve is discarded instead of wrapping around to its start (``np.roll``) in ``DirectionalRadiosityFast`` (patch to receiver) and ``RadiosityKang``; initial source energy and direct sound arriving after the end of the energy time curve are discarded as well instead of being written out of bounds, raising an ``IndexError`` or being clipped onto the last sample (#174)
+
 ## 1.1.2 (2026-11-23)
 
 ### Added

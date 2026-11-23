@@ -617,8 +617,10 @@ class DirectionalRadiosityFast():
                 receivers)
 
             # add the direct sound to the etc
-            i_receivers = np.arange(len(n_sample_delay))
-            etc.time[i_receivers, :, n_sample_delay] += direct_sound
+            # discard direct sound arriving after the end of the etc
+            i_receivers = np.flatnonzero(n_sample_delay < etc.n_samples)
+            etc.time[i_receivers, :, n_sample_delay[i_receivers]] += \
+                direct_sound[i_receivers]
 
         return etc
 
@@ -1218,6 +1220,9 @@ def _energy_exchange_init_energy(
     for i in prange(n_patches):
         n_delay_samples = int(
             distance_0[i]/speed_of_sound/histogram_time_resolution)
+        if n_delay_samples >= n_samples:
+            # energy arrives after the end of the histogram
+            continue
         E_matrix_total[i, :, :, n_delay_samples] += energy_0_directivity[i]
     return E_matrix_total
 
@@ -1369,10 +1374,15 @@ def _collect_receiver_energy(
     for i in prange(n_patches):
         n_delay_samples = int(np.ceil(
             patch_receiver_distance[i]/speed_of_sound/histogram_time_resolution))
+        n_samples = E_matrix_total.shape[-1]
+        if n_delay_samples >= n_samples:
+            # energy arrives after the end of the histogram
+            continue
+        n_shifted = n_samples - n_delay_samples
         for j in range(n_bins):
-            E_mat_out[i,j] = np.roll(
-                E_matrix_total[i,j]*np.exp(-air_attenuation[j]*patch_receiver_distance[i]),
-                n_delay_samples)
+            E_mat_out[i, j, n_delay_samples:] = \
+                E_matrix_total[i, j, :n_shifted] * np.exp(
+                    -air_attenuation[j]*patch_receiver_distance[i])
 
     return E_mat_out
 
@@ -1638,11 +1648,12 @@ def _accumulate_direct_sound_into_bins(
     sdir = svec / snorm[:, None]         # (R,3) unit vectors
 
     d_idx_all = det_tree.query(sdir, k=1)[1]       # (R,)
-    # clipping should raise an error, this should not happen?
-    tt = np.clip(n_delay_all_r, 0, S - 1).astype(int)  # (R,)
-    rr = np.arange(R)
+    # discard direct sound arriving after the end of the histogram
+    tt = np.asarray(n_delay_all_r).astype(int)  # (R,)
+    rr = np.flatnonzero(tt < S)
 
-    np.add.at(out_rdbs, (rr, d_idx_all, slice(None), tt), ds_all_rb)
+    np.add.at(
+        out_rdbs, (rr, d_idx_all[rr], slice(None), tt[rr]), ds_all_rb[rr])
 
 
 if numba is not None:

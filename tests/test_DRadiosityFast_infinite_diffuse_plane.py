@@ -45,8 +45,8 @@ def run_energy_diff_specular_ratio(
     reflection_len =  (receiver - source_is).radius[0]
     speed_of_sound = 343
     sampling_rate = 1
-    etc_duration = reflection_len/speed_of_sound
-    etc_duration=1
+    # two samples, so that all delayed energy fits into the etc
+    etc_duration = 2
 
     plane = sp.geometry.Polygon(
             [[-width/2, -length/2, 0],
